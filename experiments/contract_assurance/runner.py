@@ -7,7 +7,7 @@ from typing import Any
 from .evaluate import evaluate_raw
 from .inventory import assert_complete_inventory, assert_inventory_paths, inventory
 from .snapshot import verify_snapshot_against_contract
-from .mutations import deduplicate, mutations
+from .mutations import deduplicate, mutations, write_fixture_manifest
 from .registry import contract_registry
 from .report import coverage_ledger, summarize, summarize_by_contract, write_history
 
@@ -19,11 +19,13 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
     if package_issues:
         raise ValueError("Frozen public package verification failed: " + "; ".join(package_issues))
     results = []
+    fixture_dir = root / "experiments/contract_assurance/fixtures"
     for name, spec in contract_registry().items():
         sample = _sample_for(spec.schema)
         if sample is None:
             continue
         required = tuple(name for name, field in spec.schema.model_fields.items() if field.is_required())
+        write_fixture_manifest(fixture_dir / f"{name}.json", name, sample, required)
         for mutation in deduplicate(mutations(sample, required_fields=required)):
             result = evaluate_raw(mutation.raw_output, spec.schema)
             result.details.update({"contract": name, "mutation": mutation.name, "intended_code": mutation.intended_code})

@@ -1,0 +1,62 @@
+{
+  "canonical": {
+    "hypothesis_updates": [],
+    "new_hypotheses": [],
+    "new_uncertainties": [],
+    "revision_rationale": "No state change is justified by this release.",
+    "uncertainty_updates": []
+  },
+  "contract": "RevisionResponse",
+  "mutations": [
+    {
+      "intended_code": "S0",
+      "name": "empty",
+      "raw_output": ""
+    },
+    {
+      "intended_code": "S0",
+      "name": "whitespace",
+      "raw_output": "   "
+    },
+    {
+      "intended_code": "S0",
+      "name": "prose_only",
+      "raw_output": "Here is the requested object."
+    },
+    {
+      "intended_code": "S0",
+      "name": "malformed_json",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []"
+    },
+    {
+      "intended_code": "S0",
+      "name": "prose_before_json",
+      "raw_output": "Here is the object:\n{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "trailing_material",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}\nDone."
+    },
+    {
+      "intended_code": "valid",
+      "name": "fenced_json",
+      "raw_output": "```json\n{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}\n```"
+    },
+    {
+      "intended_code": "S1",
+      "name": "remove_revision_rationale",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "unexpected_field",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [], \"unexpected_field\": \"x\"}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "placeholder_text",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\", \"uncertainty_updates\": []}"
+    }
+  ]
+}
