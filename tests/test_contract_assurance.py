@@ -232,3 +232,14 @@ def test_initial_state_boundary_rejects_unknown_evidence_without_mutation():
     bad = {"hypotheses": [{"id": "H1", "statement": "A", "status": "active", "supported_by": ["E999"], "conflicted_by": [], "unresolved": ["U"], "specificity_basis_evidence_ids": []}], **valid_action()}
     result = evaluate_initial(json.dumps(bad), schema=InitialResponse, build_state=lambda response: (_ for _ in ()).throw(ValueError("Unknown evidence ID: E999")))
     assert not result.accepted and result.code is FailureCode.S3 and result.stage == "state_operation_preflight"
+
+
+def test_real_case_state_rejects_unreleased_valid_looking_evidence():
+    from investigator.environments.case_01 import Case1ControlledEnvironment
+    from investigator.services.contracts import InitialResponse
+    environment = Case1ControlledEnvironment(Path(__file__).resolve().parents[1] / "experiments/investigation_smoke/case_01/artifacts")
+    state = environment.build_initial_state(InitialResponse.model_validate({"hypotheses": [{"id": "H1", "statement": "A", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["U"], "specificity_basis_evidence_ids": []}], **valid_action()}))
+    raw = {"hypothesis_updates": [{"hypothesis_id": "H1", "transition": "keep", "reason": "r", "add_supporting_evidence_ids": ["A2_RELEASE"]}], "new_hypotheses": [], "uncertainty_updates": [], "new_uncertainties": [], "revision_rationale": "r"}
+    result = evaluate_revision(json.dumps(raw), state)
+    assert not result.accepted and result.code is FailureCode.S3
+    assert "A2_RELEASE" not in state.evidence
