@@ -148,6 +148,11 @@
       "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"A1\", \"target_uncertainty\": \"An open question.\", \"unexpected_field\": \"x\", \"why_this_action_now\": \"It is available now.\"}"
     },
     {
+      "intended_code": "S1",
+      "name": "extra_wrapper",
+      "raw_output": "{\"response\": {\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"A1\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"It is available now.\"}}"
+    },
+    {
       "intended_code": "S2",
       "name": "invented_literal",
       "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"inactive\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"It is available now.\"}"

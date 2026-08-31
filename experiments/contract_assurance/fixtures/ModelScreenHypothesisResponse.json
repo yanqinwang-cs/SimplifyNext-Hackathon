@@ -117,6 +117,11 @@
     },
     {
       "intended_code": "S1",
+      "name": "extra_wrapper",
+      "raw_output": "{\"response\": {\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}}"
+    },
+    {
+      "intended_code": "S1",
       "name": "unexpected_nested_hypotheses",
       "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\", \"unexpected_nested_field\": true}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}"
     },

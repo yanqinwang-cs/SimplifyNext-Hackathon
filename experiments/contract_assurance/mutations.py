@@ -55,9 +55,34 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
                 empty = copy.deepcopy(value)
                 empty[field] = []
                 result.append(Mutation(f"empty_required_{field}", "S1", json.dumps(empty, sort_keys=True)))
+    # Exercise shape boundaries for optional fields too.  These mutations are
+    # deliberately generic: the production schema, not this harness, decides
+    # whether a nullable/optional value is allowed.
+    for field, original in value.items():
+        if field in required_fields:
+            continue
+        if original is None:
+            continue
+        wrong_shape = copy.deepcopy(value)
+        if isinstance(original, list):
+            wrong_shape[field] = "not an array"
+        elif isinstance(original, dict):
+            wrong_shape[field] = []
+        elif isinstance(original, str):
+            wrong_shape[field] = 7
+        elif isinstance(original, bool):
+            wrong_shape[field] = "not a boolean"
+        else:
+            wrong_shape[field] = "not the declared primitive"
+        result.append(Mutation(f"wrong_shape_{field}", "S1", json.dumps(wrong_shape, sort_keys=True)))
+        renamed = copy.deepcopy(value)
+        del renamed[field]
+        renamed[f"{field}_value"] = original
+        result.append(Mutation(f"renamed_field_{field}", "S1", json.dumps(renamed, sort_keys=True)))
     extra = copy.deepcopy(value)
     extra["unexpected_field"] = "x"
     result.append(Mutation("unexpected_field", "S1", json.dumps(extra, sort_keys=True)))
+    result.append(Mutation("extra_wrapper", "S1", json.dumps({"response": value}, sort_keys=True)))
     for field, field_value in value.items():
         if isinstance(field_value, list) and field_value and isinstance(field_value[0], dict):
             nested = copy.deepcopy(value)

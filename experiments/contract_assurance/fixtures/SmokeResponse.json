@@ -100,6 +100,11 @@
       "raw_output": "{\"answer\": \"4\", \"unexpected_field\": \"x\"}"
     },
     {
+      "intended_code": "S1",
+      "name": "extra_wrapper",
+      "raw_output": "{\"response\": {\"answer\": \"4\"}}"
+    },
+    {
       "intended_code": "S4",
       "name": "placeholder_text",
       "raw_output": "{\"answer\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\"}"

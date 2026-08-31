@@ -100,8 +100,53 @@
     },
     {
       "intended_code": "S1",
+      "name": "wrong_shape_hypothesis_updates",
+      "raw_output": "{\"hypothesis_updates\": \"not an array\", \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "renamed_field_hypothesis_updates",
+      "raw_output": "{\"hypothesis_updates_value\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_new_hypotheses",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": \"not an array\", \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "renamed_field_new_hypotheses",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses_value\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_uncertainty_updates",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": \"not an array\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "renamed_field_uncertainty_updates",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates_value\": []}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_new_uncertainties",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": \"not an array\", \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "renamed_field_new_uncertainties",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties_value\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S1",
       "name": "unexpected_field",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [], \"unexpected_field\": \"x\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "extra_wrapper",
+      "raw_output": "{\"response\": {\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}}"
     },
     {
       "intended_code": "S4",
