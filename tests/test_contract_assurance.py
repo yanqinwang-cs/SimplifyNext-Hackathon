@@ -11,7 +11,7 @@ from experiments.contract_assurance.mutations import deduplicate, mutations
 from experiments.contract_assurance.lint import lint_contract
 from experiments.contract_assurance.registry import contract_registry, validate_registry
 from experiments.contract_assurance.report import coverage_ledger, failure_rate_statistics, render_markdown, summarize, summarize_blind, summarize_by_contract, write_history
-from experiments.contract_assurance.snapshot import fingerprint, verify_snapshot, write_public_snapshot, write_snapshot
+from experiments.contract_assurance.snapshot import fingerprint, verify_snapshot, verify_snapshot_against_contract, write_public_snapshot, write_snapshot
 from experiments.contract_assurance.snapshot import validate_public_package
 from experiments.contract_assurance.audit import audit_public_package
 from experiments.contract_assurance.taxonomy import FailureCode
@@ -87,6 +87,7 @@ def test_snapshots_are_hashable_and_public(tmp_path: Path):
     assert "validator" not in json.dumps(payload).lower()
     assert validate_public_package(payload) == []
     assert verify_snapshot(payload) == []
+    assert verify_snapshot_against_contract(payload, spec) == []
     payload["prompt"] = "tampered"
     assert "prompt_hash drift" in verify_snapshot(payload)
     contaminated = dict(payload, prior_results=["known failure"])

@@ -55,3 +55,13 @@ def verify_snapshot(package: dict[str, Any]) -> list[str]:
     manifest = package.get("manifest", {})
     values = {"schema_hash": fingerprint(package.get("output_schema")), "prompt_hash": fingerprint(package.get("prompt")), "case_input_hash": fingerprint(package.get("case_input")), "template_hash": fingerprint(package.get("template"))}
     return [f"{key} drift" for key, value in values.items() if manifest.get(key) != value]
+
+
+def verify_snapshot_against_contract(package: dict[str, Any], spec: ContractSpec) -> list[str]:
+    issues = verify_snapshot(package)
+    expected = fingerprint(spec.schema.model_json_schema())
+    if package.get("manifest", {}).get("contract") != spec.name:
+        issues.append("contract identity mismatch")
+    if expected != package.get("manifest", {}).get("schema_hash"):
+        issues.append("registered schema drift")
+    return issues
