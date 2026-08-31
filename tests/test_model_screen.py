@@ -1,9 +1,11 @@
 from pathlib import Path
+import json
 
 import pytest
 
 from experiments.model_screen.cases import CASES, render_case
 from experiments.model_screen.run import run_case
+from experiments.model_screen.schemas import CaseResult, RunSummary
 from experiments.model_screen.schemas import HypothesisResponse
 from investigator.llm.base import ModelCallMetadata, ModelCallResult
 
@@ -85,3 +87,34 @@ def test_api_error_is_recorded_without_retry() -> None:
     assert len(client.calls) == 1
     assert result.parse_success is False
     assert result.error_message == "Bedrock unavailable"
+
+
+def test_offline_reparse_repairs_failed_result_and_is_idempotent(tmp_path: Path) -> None:
+    from scripts.reparse_model_screen_results import reparse_results
+
+    directory = tmp_path / "screen_run"
+    directory.mkdir()
+    raw = '```json\n{"hypotheses": [{"statement": "A", "justification": "E1", "uncertainty": "U1"}, {"statement": "B", "justification": "E2", "uncertainty": "U2"}]}\n```'
+    failed = CaseResult(
+        case_id="case_01", model_id="model", case_input="case", prompt="prompt",
+        raw_model_output=raw, parse_success=False, error_message="fenced output",
+    )
+    (directory / "case_01.json").write_text(failed.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    (directory / "run_summary.json").write_text(RunSummary(
+        model_id="model", result_directory=str(directory), case_ids=["case_01"],
+        successful_cases=0, failed_cases=1,
+    ).model_dump_json(indent=2) + "\n", encoding="utf-8")
+
+    summary = reparse_results(directory)
+    repaired = json.loads((directory / "case_01.json").read_text(encoding="utf-8"))
+    assert summary.successful_cases == 1
+    assert summary.failed_cases == 0
+    assert repaired["parse_success"] is True
+    assert repaired["error_message"] is None
+    assert repaired["raw_model_output"] == raw
+    first_repaired = (directory / "case_01.json").read_bytes()
+
+    summary_again = reparse_results(directory)
+    assert summary_again.successful_cases == 1
+    assert summary_again.failed_cases == 0
+    assert (directory / "case_01.json").read_bytes() == first_repaired

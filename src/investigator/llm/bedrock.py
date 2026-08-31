@@ -10,6 +10,7 @@ from investigator.llm.base import (
     ModelCallMetadata,
     ModelCallResult,
     ModelParseError,
+    normalize_json_text,
     parse_model_output,
 )
 
@@ -50,7 +51,7 @@ class BedrockModelClient:
         metadata_response = response.get("usage", {})
         stop_reason = response.get("stopReason")
         try:
-            parsed = parse_model_output(json.loads(raw_text), output_schema)
+            parsed = parse_model_output(json.loads(normalize_json_text(raw_text)), output_schema)
         except (json.JSONDecodeError, ModelParseError) as exc:
             raise ModelParseError(
                 f"Bedrock returned invalid structured output for {output_schema.__name__}: {exc}",

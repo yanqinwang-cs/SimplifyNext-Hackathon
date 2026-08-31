@@ -7,6 +7,15 @@ T = TypeVar("T", bound=BaseModel)
 MessageInput = str | Sequence[Mapping[str, Any]]
 
 
+def normalize_json_text(raw_text: str) -> str:
+    """Remove one complete outer JSON Markdown fence, without repairing content."""
+    text = raw_text.strip()
+    first_line, separator, remainder = text.partition("\n")
+    if first_line.strip().lower() in {"```", "```json"} and separator and remainder.endswith("```"):
+        return remainder[:-3]
+    return text
+
+
 class ModelParseError(ValueError):
     """Raised when a model response cannot be validated against its schema."""
 

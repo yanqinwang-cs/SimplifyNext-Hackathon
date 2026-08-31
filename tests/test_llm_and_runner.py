@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from experiments.gate1.runner import ExperimentRunner
 from experiments.gate1.schemas import ExperimentInput
 from investigator.llm.base import ModelCallMetadata, ModelParseError
+from investigator.llm.base import normalize_json_text
 from investigator.llm.bedrock import BedrockConfigurationError, BedrockModelClient
 from investigator.llm.mock import MockModelClient
 
@@ -50,3 +51,43 @@ def test_missing_bedrock_configuration_is_clear(monkeypatch) -> None:
     with pytest.raises(BedrockConfigurationError, match="BEDROCK_MODEL_ID"):
         BedrockModelClient()
 
+
+@pytest.mark.parametrize("raw, expected", [
+    ('{"answer": "ok"}', '{"answer": "ok"}'),
+    ('```json\n{"answer": "ok"}\n```', '{"answer": "ok"}\n'),
+    ('```\n {"answer": "ok"} \n```', ' {"answer": "ok"} \n'),
+    ('  {"answer": "ok"}  ', '{"answer": "ok"}'),
+])
+def test_json_normalization_accepts_only_minimal_outer_fences(raw: str, expected: str) -> None:
+    assert normalize_json_text(raw) == expected
+
+
+@pytest.mark.parametrize("raw", [
+    'Here is the JSON:\n{"answer": "ok"}',
+    '{"answer": "ok"}\nThis is the answer.',
+    '```json\n{"answer": }\n```',
+])
+def test_json_normalization_does_not_extract_or_repair(raw: str) -> None:
+    import json
+
+    with pytest.raises(json.JSONDecodeError):
+        json.loads(normalize_json_text(raw))
+
+
+def test_bedrock_adapter_parses_fenced_json_without_network() -> None:
+    class BedrockOutput(BaseModel):
+        answer: str
+
+    class FakeBedrock:
+        def converse(self, **kwargs):
+            return {
+                "output": {"message": {"content": [{"text": '```json\n{"answer": "4"}\n```'}]}},
+                "usage": {"inputTokens": 5, "outputTokens": 2},
+                "stopReason": "end_turn",
+            }
+
+    result = BedrockModelClient(model_id="test-model", region="us-east-1", client=FakeBedrock()).call(
+        "What is 2 + 2?", BedrockOutput
+    )
+    assert result.parsed.answer == "4"
+    assert result.raw_output == '```json\n{"answer": "4"}\n```'
