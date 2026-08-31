@@ -369,6 +369,16 @@
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"A reason.\", \"transition\": \"keep\", \"uncertainty_id\": \"H999:U1\"}]}"
     },
     {
+      "intended_code": "S2",
+      "name": "hypothesis_id_in_evidence_update",
+      "raw_output": "{\"hypothesis_updates\": [{\"add_supporting_evidence_ids\": [\"H1\"], \"hypothesis_id\": \"H1\", \"reason\": \"A reason.\", \"transition\": \"keep\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S2",
+      "name": "action_id_in_evidence_update",
+      "raw_output": "{\"hypothesis_updates\": [{\"add_supporting_evidence_ids\": [\"A1\"], \"hypothesis_id\": \"H1\", \"reason\": \"A reason.\", \"transition\": \"keep\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
       "intended_code": "S3",
       "name": "unreleased_evidence_reference",
       "raw_output": "{\"hypothesis_updates\": [{\"add_supporting_evidence_ids\": [\"A2_RELEASE\"], \"hypothesis_id\": \"H1\", \"reason\": \"A reason.\", \"transition\": \"keep\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
