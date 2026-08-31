@@ -2,12 +2,11 @@ import json
 
 from experiments.model_screen.cases import get_case, render_case
 from experiments.investigation_smoke.case_01.catalog import ENQUIRY_CATALOG
+from experiments.investigation_smoke.context import render_assessment_context
+from experiments.investigation_smoke.prompt_layers import GLOBAL_INVESTIGATION_RULES, render_assessment_layer, render_current_case
 
 
-RULES = """Use only released evidence. Previous hypotheses are not evidence and must not be cited as support.
-Keep hypotheses at the broadest level that is still decision-useful. Do not specify a mechanism, actor, direction, device, tool, location, source, communication channel, or sequence unless released evidence supports that specificity.
-Use conditional language for unestablished mechanisms. Do not decide whether misconduct occurred, assign numerical confidence, or propose a final verdict.
-Distinguish observations from possible explanations. Prefer a small number of broad competing explanations."""
+RULES = GLOBAL_INVESTIGATION_RULES
 
 
 def visible_case_input() -> str:
@@ -57,12 +56,17 @@ def revision_output_template(release_evidence_id: str) -> dict:
 
 
 def initial_prompt() -> str:
+    task = """TASK-SPECIFIC INSTRUCTION
+Generate an initial hypothesis tree grounded in the case information below. Use exactly the schema field names; do not rename unresolved. Then choose exactly one available enquiry that most usefully changes the explanation space. Do not choose an action because it proves a preferred hypothesis. Use only released evidence; context resources are not evidence."""
     return f"""{RULES}
 
-Generate an initial hypothesis tree grounded in the case information below. Use exactly these field names; do not rename unresolved. Arrays must remain arrays even when empty. Do not add extra fields. Do not use hypothesis IDs in evidence-reference fields.
+{render_assessment_layer(render_assessment_context())}
 
-Then choose exactly one available enquiry. Choose the enquiry that would most usefully change the current explanation space by discriminating between active explanations or reducing consequential uncertainty. Do not choose an action because it proves a preferred hypothesis.
+{render_current_case(visible_case_input())}
 
+{task}
+
+CANONICAL JSON OUTPUT TEMPLATE
 Fill this one canonical JSON template:
 {json.dumps(initial_output_template(), indent=2)}
 Use bare canonical IDs only in ID fields. Use natural-language explanations only in text fields. Do not place explanations in fields ending with `_id`, `_ids`, or `_evidence_ids`.
@@ -70,29 +74,25 @@ Use bare canonical IDs only in ID fields. Use natural-language explanations only
 Available enquiries:
 {catalogue_text()}
 
-Case information:
-{visible_case_input()}"""
+"""
 
 
 def revision_prompt(case_input: str, prior_hypotheses: list[dict], prior_uncertainties: list[dict], selected_action: dict, release_evidence_id: str, release_content: str) -> str:
+    task = """TASK-SPECIFIC INSTRUCTION
+Revise the existing hypothesis tree after one controlled evidence release. Only original case evidence plus the newly released artefact may justify revision. Preserve viable broad parents and narrow only when justified. Do not select another enquiry. Use uncertainty updates for unresolved questions; do not invent mechanisms."""
     return f"""{RULES}
 
-Revise the existing hypothesis tree after one controlled evidence release. Only the original case evidence plus the newly released artefact may justify revision. Do not rewrite history. Preserve broad parent hypotheses unless the new evidence genuinely conflicts with them. Narrow only when the new evidence supports increased specificity. If a narrow child is contradicted while its parent remains viable, weaken or remove the child and preserve or reactivate the parent. Do not invent a replacement mechanism merely because one branch failed. Unresolved uncertainty is a valid endpoint.
+{render_assessment_layer(render_assessment_context())}
+
+{render_current_case(case_input, prior_hypotheses, prior_uncertainties)}
+
+{task}
 
 Return only JSON with exactly these keys and no extras. Fill the one canonical template below: do not add, remove, or rename fields. `reason` is REQUIRED for every hypothesis update and every uncertainty update. Use defined transitions only; use `other` as a last resort when none can faithfully express the update. All evidence-reference fields are arrays of bare IDs. Use `uncertainty_updates` to keep, refine, resolve, or remove an existing uncertainty ID, and `new_uncertainties` for newly identified uncertainties.
 
 Canonical JSON template:
 {json.dumps(revision_output_template(release_evidence_id), indent=2)}
 ID FIELDS: bare canonical IDs only. TEXT FIELDS: natural-language explanations only. Do not place explanations in any field ending with `_id`, `_ids`, or `_evidence_ids`. Keep every array as an array even when empty. New uncertainty IDs must use the canonical H1:U1 form and belong to their declared hypothesis. `other` fields must be null unless the transition is `other`; `other` never executes arbitrary semantics.
-
-Original visible case:
-{case_input}
-
-Prior hypotheses/tree (NOT evidence):
-{json.dumps(prior_hypotheses, indent=2)}
-
-Prior unresolved uncertainties:
-{json.dumps(prior_uncertainties, indent=2)}
 
 Selected enquiry:
 {json.dumps(selected_action, indent=2)}

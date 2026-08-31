@@ -175,6 +175,8 @@ def test_two_call_run_trace_applies_updates_and_round_trips(tmp_path: Path) -> N
     assert trace.final_hypothesis_state.get_hypothesis("H1").status is HypothesisStatus.ACTIVE
     assert trace.final_hypothesis_state.get_hypothesis("H1").supporting_evidence_ids == ["E1", "A3_RELEASE"]
     assert trace.final_hypothesis_state.get_hypothesis("H1.1").conflicting_evidence_ids == ["A3_RELEASE"]
+    assert trace.initial_hypothesis_state.revision == 0
+    assert trace.final_hypothesis_state.revision == 1
     assert trace.final_hypothesis_state.get_evidence("A3_RELEASE").raw_content == trace.release.content
 
 

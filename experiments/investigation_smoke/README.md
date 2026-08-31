@@ -9,7 +9,7 @@ The fixed catalogue is:
 - A3: compare with prior observed behaviour → `A3_prior_behaviour_statements.md`
 - A4: targeted oral explanation → `A4_student_interview_record.md`
 
-The original evidence IDs remain `E1`–`E7`. A released artefact is represented as one observation with an immutable ID such as `A2_RELEASE`; prior hypotheses are serialized separately and are never evidence. Narrower children must cite `specificity_basis` evidence IDs, while broad parents remain available if a child is weakened or removed. The experiment records reasoning quality and revision discipline, not whether a model reaches one privileged hidden conclusion.
+The original evidence IDs remain `E1`–`E7`. A released artefact is represented as one observation with an immutable ID such as `A2_RELEASE`; prior hypotheses are serialized separately and are never evidence. Narrower children must cite `specificity_basis_evidence_ids`, while broad parents remain available if a child is weakened or removed. Assessment context defines policy and resource capabilities; it is not evidence that a resource was used. Repeated investigation may cause hypothesis/evidence references to accumulate, duplicate, or become stale; evaluate explicit links, maintenance, pruning, archival, provenance-preserving summaries, or active-context selection only if later gates demonstrate that failure. The experiment records reasoning quality and revision discipline, not whether a model reaches one privileged hidden conclusion.
 
 Manual runs (one model at a time):
 
@@ -25,4 +25,3 @@ Results are written to timestamped directories under `experiments/investigation_
 - Revision: incorporates the released artefact, narrows only when justified, preserves viable parents, and avoids treating prior hypotheses as evidence.
 
 The artefacts are synthetic and the builder truth is intentionally not encoded as a required final answer.
-

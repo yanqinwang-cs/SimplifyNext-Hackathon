@@ -19,6 +19,8 @@ from investigator.state import CaseState
 from investigator.llm.base import ModelCallMetadata, ModelCallResult
 from experiments.investigation_smoke.case_01.runner import run
 from experiments.investigation_smoke.case_01.schemas import ControlledRunTrace
+from experiments.investigation_smoke.context import render_assessment_context
+from experiments.investigation_smoke.case_01.prompts import initial_prompt, revision_prompt
 
 
 def proposal(identifier: str = "H1") -> HypothesisProposal:
@@ -104,6 +106,7 @@ def test_refine_updates_description_and_other_preserves_state() -> None:
         )], new_uncertainties=[], revision_rationale="refined",
     ))
     assert refined.uncertainties["H1:U1"].description == "A more precise question."
+    assert refined.uncertainties["H1:U1"].evidence_ids == ["E1"]
     assert state.uncertainties["H1:U1"].description != refined.uncertainties["H1:U1"].description
 
     other = HypothesisTransition(
@@ -114,7 +117,27 @@ def test_refine_updates_description_and_other_preserves_state() -> None:
     unchanged = apply_revision(state, RevisionResponse(
         hypothesis_updates=[other], new_hypotheses=[], uncertainty_updates=[], new_uncertainties=[], revision_rationale="other",
     ))
-    assert unchanged.model_dump() == state.model_dump()
+    assert unchanged.model_copy(update={"revision": state.revision}).model_dump() == state.model_dump()
+    assert unchanged.revision == state.revision + 1
+
+
+def test_uncertainty_provenance_is_deduplicated_and_unknown_ids_fail() -> None:
+    state = initial_state(initial_response())
+    state.uncertainties["H1:U1"].evidence_ids = ["E1"]
+    refined = apply_revision(state, RevisionResponse(
+        hypothesis_updates=[], new_hypotheses=[],
+        uncertainty_updates=[UncertaintyTransition(
+            uncertainty_id="H1:U1", transition="keep", reason="Same basis remains relevant.", basis_evidence_ids=["E1", "E2"],
+        )], new_uncertainties=[], revision_rationale="kept",
+    ))
+    assert refined.uncertainties["H1:U1"].evidence_ids == ["E1", "E2"]
+    with pytest.raises(KeyError, match="Unknown evidence"):
+        apply_revision(state, RevisionResponse(
+            hypothesis_updates=[], new_hypotheses=[],
+            uncertainty_updates=[UncertaintyTransition(
+                uncertainty_id="H1:U1", transition="keep", reason="bad", basis_evidence_ids=["E99"],
+            )], new_uncertainties=[], revision_rationale="bad",
+        ))
 
 
 def test_other_operation_is_preserved_in_trace_without_state_mutation(tmp_path) -> None:
@@ -155,3 +178,23 @@ def test_state_referential_integrity_rejects_missing_source_and_uncertainty() ->
     state.hypotheses["H1"].unresolved_issue_ids.append("H1:U99")
     with pytest.raises(ValueError, match="Unknown uncertainty"):
         CaseState.model_validate(state.model_dump())
+
+
+def test_prompt_layers_and_case_context_keep_policy_separate_from_evidence() -> None:
+    context = render_assessment_context()
+    assert "ordinary tutoring and preparation before the examination" in context
+    assert "External assistance or communication during the examination is prohibited" in context
+    assert "Phone / smartwatch" in context
+    assert "not evidence" in context
+    assert "RESOURCE_DEVICE" not in initial_state(initial_response()).evidence
+    with pytest.raises(ValidationError):
+        values = proposal().model_dump()
+        values["supported_by"] = ["RESOURCE_TUTOR"]
+        HypothesisProposal.model_validate(values)
+    prompt = initial_prompt()
+    assert prompt.index("GLOBAL INVESTIGATION RULES") < prompt.index("ASSESSMENT ONTOLOGY / POLICY") < prompt.index("CURRENT CASE EVIDENCE / PRIOR STATE")
+    assert "CANONICAL JSON OUTPUT TEMPLATE" in prompt
+    revision = revision_prompt("EVIDENCE", [], [], {"action_id": "A1"}, "A1_RELEASE", "release")
+    assert revision.index("ASSESSMENT ONTOLOGY / POLICY") < revision.index("CURRENT CASE EVIDENCE / PRIOR STATE")
+    assert "TASK-SPECIFIC INSTRUCTION" in revision
+    assert "A1_RELEASE" in revision

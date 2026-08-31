@@ -121,10 +121,14 @@ def apply_revision(state: CaseState, response: RevisionResponse) -> CaseState:
             updated.get_evidence(evidence_id)
         if uncertainty_update.uncertainty_id not in updated.uncertainties:
             raise KeyError(f"Unknown uncertainty ID: {uncertainty_update.uncertainty_id!r}")
+        uncertainty = updated.uncertainties[uncertainty_update.uncertainty_id]
+        for evidence_id in uncertainty_update.basis_evidence_ids:
+            if evidence_id not in uncertainty.evidence_ids:
+                uncertainty.evidence_ids.append(evidence_id)
         if uncertainty_update.transition is UncertaintyTransitionType.OTHER:
             continue
         if uncertainty_update.transition is UncertaintyTransitionType.REFINE:
-            updated.uncertainties[uncertainty_update.uncertainty_id].description = uncertainty_update.new_description
+            uncertainty.description = uncertainty_update.new_description
         elif uncertainty_update.transition in {UncertaintyTransitionType.RESOLVE, UncertaintyTransitionType.REMOVE}:
             updated.uncertainties.pop(uncertainty_update.uncertainty_id)
             for hypothesis in updated.hypotheses.values():
@@ -154,6 +158,7 @@ def apply_revision(state: CaseState, response: RevisionResponse) -> CaseState:
                 raise ValueError(f"Duplicate uncertainty ID in revision: {uncertainty.id!r}")
             updated.uncertainties[uncertainty.id] = uncertainty
         updated.hypotheses[proposal.id] = _hypothesis_from_proposal(proposal)
+    updated.revision += 1
     return CaseState.model_validate(updated.model_dump())
 
 
