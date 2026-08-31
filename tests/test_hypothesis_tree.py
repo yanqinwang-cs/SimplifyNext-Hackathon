@@ -16,6 +16,7 @@ def evidence(evidence_id: str) -> EvidenceItem:
 def tree() -> CaseState:
     return CaseState(
         case_id="case", title="Tree",
+        sources={"source": Source(id="source", name="Source", source_type=SourceType.OTHER)},
         evidence={"E1": evidence("E1"), "E2": evidence("E2")},
         hypotheses={
             "H1": Hypothesis(id="H1", statement="Broad explanation", origin=HypothesisOrigin.HUMAN, status=HypothesisStatus.ACTIVE, supporting_evidence_ids=["E1"]),
@@ -69,12 +70,12 @@ def test_updates_add_evidence_provenance_without_replacing_existing_references()
 
 
 def test_updates_reject_unknown_or_hypothesis_evidence_ids() -> None:
-    with pytest.raises(KeyError, match="Unknown evidence"):
+    with pytest.raises(ValidationError, match="pattern"):
         apply_hypothesis_updates(tree(), [HypothesisTransition(
             hypothesis_id="H1", transition="keep", reason="audit",
             add_supporting_evidence_ids=["missing"],
         )])
-    with pytest.raises(ValueError, match="cannot be used as evidence"):
+    with pytest.raises(ValidationError, match="pattern"):
         apply_hypothesis_updates(tree(), [HypothesisTransition(
             hypothesis_id="H1", transition="keep", reason="audit",
             add_specificity_basis=["H1.1"],
@@ -99,7 +100,11 @@ def test_explicit_parent_activation_and_reason_is_not_evidence() -> None:
 ])
 def test_invalid_tree_structure_rejected(bad_hypotheses, message: str) -> None:
     with pytest.raises((ValidationError, ValueError), match=message):
-        CaseState(case_id="case", title="Bad", evidence={"E1": evidence("E1")}, hypotheses=bad_hypotheses)
+        CaseState(
+            case_id="case", title="Bad",
+            sources={"source": Source(id="source", name="Source", source_type=SourceType.OTHER)},
+            evidence={"E1": evidence("E1")}, hypotheses=bad_hypotheses,
+        )
 
 
 @pytest.mark.parametrize("field", ["supporting_evidence_ids", "conflicting_evidence_ids", "specificity_basis"])

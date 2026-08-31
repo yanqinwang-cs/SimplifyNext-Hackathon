@@ -4,6 +4,8 @@ This repository is a deterministic investigation-state kernel. It preserves evid
 
 The prototype uses typed Pydantic models and local JSON files under `data/cases/`. A minimal model-call abstraction and deterministic mock now support controlled structured experiments. No agent architecture has been selected; Gate 1 experiments will be added separately.
 
+Structured model outputs must keep identifiers separate from explanatory text: IDs identify existing records, while prose fields explain them. Future experiment schemas should use explicit identifier types or enums, and deterministic code should validate existence and namespace boundaries.
+
 ```bash
 uv sync
 uv run pytest

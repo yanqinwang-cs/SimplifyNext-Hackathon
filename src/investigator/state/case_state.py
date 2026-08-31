@@ -31,6 +31,12 @@ class CaseState(BaseModel):
 
         hypothesis_ids = set(self.hypotheses)
         evidence_ids = set(self.evidence)
+        uncertainty_ids = set(self.uncertainties)
+        if any(key != item.id for key, item in self.uncertainties.items()):
+            raise ValueError("Uncertainty dictionary keys must match uncertainty IDs")
+        for evidence_item in self.evidence.values():
+            if evidence_item.source_id not in self.sources:
+                raise ValueError(f"Unknown source ID: {evidence_item.source_id!r}")
         for hypothesis in self.hypotheses.values():
             parent_id = hypothesis.parent_hypothesis_id
             if parent_id == hypothesis.id:
@@ -43,6 +49,11 @@ class CaseState(BaseModel):
                         raise ValueError(f"Hypothesis ID {evidence_id!r} cannot be used as evidence")
                     if evidence_id not in evidence_ids:
                         raise ValueError(f"Unknown evidence ID: {evidence_id!r}")
+            for uncertainty_id in hypothesis.unresolved_issue_ids:
+                if uncertainty_id in hypothesis_ids or uncertainty_id not in uncertainty_ids:
+                    if uncertainty_id in hypothesis_ids:
+                        raise ValueError(f"Hypothesis ID {uncertainty_id!r} cannot be used as uncertainty")
+                    raise ValueError(f"Unknown uncertainty ID: {uncertainty_id!r}")
 
         for hypothesis in self.hypotheses.values():
             seen: set[str] = set()

@@ -1,5 +1,6 @@
 from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from investigator.models.identifiers import EvidenceId, HypothesisId, UncertaintyId
 
 
 class HypothesisOrigin(str, Enum):
@@ -69,9 +70,23 @@ class HypothesisTransitionType(str, Enum):
 class HypothesisTransition(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    hypothesis_id: str
+    hypothesis_id: HypothesisId
     transition: HypothesisTransitionType
     reason: str
-    add_supporting_evidence_ids: list[str] = Field(default_factory=list)
-    add_conflicting_evidence_ids: list[str] = Field(default_factory=list)
-    add_specificity_basis: list[str] = Field(default_factory=list)
+    add_supporting_evidence_ids: list[EvidenceId] = Field(default_factory=list)
+    add_conflicting_evidence_ids: list[EvidenceId] = Field(default_factory=list)
+    add_specificity_basis: list[EvidenceId] = Field(default_factory=list)
+
+
+class UncertaintyTransitionType(str, Enum):
+    KEEP = "keep"
+    RESOLVE = "resolve"
+    REMOVE = "remove"
+
+
+class UncertaintyTransition(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    uncertainty_id: UncertaintyId
+    transition: UncertaintyTransitionType
+    reason: str

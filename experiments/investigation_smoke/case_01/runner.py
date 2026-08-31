@@ -33,6 +33,7 @@ from investigator.models import (
     SourceType,
     Uncertainty,
     UncertaintyKind,
+    UncertaintyTransitionType,
 )
 from investigator.state import CaseState, apply_hypothesis_updates
 from experiments.model_screen.cases import get_case
@@ -82,10 +83,15 @@ def initial_state(response: InitialResponse) -> CaseState:
         for proposal in response.hypotheses
         for uncertainty in _uncertainties_for(proposal)
     }
+    hypotheses = {}
+    for proposal in response.hypotheses:
+        if proposal.id in hypotheses:
+            raise ValueError(f"Duplicate hypothesis ID in initial response: {proposal.id!r}")
+        hypotheses[proposal.id] = _hypothesis_from_proposal(proposal)
     state = CaseState(
         case_id="case_01", title=case["title"], sources={visible_source.id: visible_source},
         evidence=evidence,
-        hypotheses={proposal.id: _hypothesis_from_proposal(proposal) for proposal in response.hypotheses},
+        hypotheses=hypotheses,
         uncertainties=uncertainties,
     )
     return state
@@ -110,6 +116,27 @@ def release_selected_artifact(state: CaseState, action_id: str) -> ReleaseRecord
 
 def apply_revision(state: CaseState, response: RevisionResponse) -> CaseState:
     updated = apply_hypothesis_updates(state, response.hypothesis_updates)
+    for uncertainty_update in response.uncertainty_updates:
+        if uncertainty_update.uncertainty_id not in updated.uncertainties:
+            raise KeyError(f"Unknown uncertainty ID: {uncertainty_update.uncertainty_id!r}")
+        if uncertainty_update.transition in {UncertaintyTransitionType.RESOLVE, UncertaintyTransitionType.REMOVE}:
+            updated.uncertainties.pop(uncertainty_update.uncertainty_id)
+            for hypothesis in updated.hypotheses.values():
+                hypothesis.unresolved_issue_ids = [
+                    issue_id for issue_id in hypothesis.unresolved_issue_ids
+                    if issue_id != uncertainty_update.uncertainty_id
+                ]
+    for new_uncertainty in response.new_uncertainties:
+        if new_uncertainty.id in updated.uncertainties:
+            raise ValueError(f"Duplicate uncertainty ID in revision: {new_uncertainty.id!r}")
+        hypothesis = updated.get_hypothesis(new_uncertainty.hypothesis_id)
+        updated.uncertainties[new_uncertainty.id] = Uncertainty(
+            id=new_uncertainty.id,
+            kind=UncertaintyKind.UNKNOWN,
+            description=new_uncertainty.description,
+        )
+        if new_uncertainty.id not in hypothesis.unresolved_issue_ids:
+            hypothesis.unresolved_issue_ids.append(new_uncertainty.id)
     for proposal in response.new_hypotheses:
         if proposal.id in updated.hypotheses:
             raise ValueError(f"Duplicate hypothesis ID in revision: {proposal.id!r}")

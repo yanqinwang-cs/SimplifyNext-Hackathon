@@ -67,7 +67,8 @@ def revision_response():
             HypothesisTransition(hypothesis_id="H1.1", transition=HypothesisTransitionType.REMOVE, reason="The artefact does not support this narrow child.", add_conflicting_evidence_ids=["A3_RELEASE"]),
             HypothesisTransition(hypothesis_id="H1", transition=HypothesisTransitionType.ACTIVATE, reason="The broad explanation remains viable.", add_supporting_evidence_ids=["A3_RELEASE"]),
         ],
-        remaining_uncertainties=["The cause of the movements remains unresolved."],
+        uncertainty_updates=[],
+        new_uncertainties=[],
         revision_rationale="The released statements support a broader behavioural possibility without establishing a mechanism.",
     )
 

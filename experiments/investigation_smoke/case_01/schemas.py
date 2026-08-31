@@ -3,28 +3,33 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from investigator.llm.base import ModelCallMetadata
-from investigator.models.hypothesis import HypothesisStatus, HypothesisTransition
+from investigator.models.hypothesis import (
+    HypothesisStatus,
+    HypothesisTransition,
+    UncertaintyTransition,
+)
+from investigator.models.identifiers import Case1ActionId, EvidenceId, HypothesisId, UncertaintyId
 from investigator.state.case_state import CaseState
 
 
 class HypothesisProposal(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    id: str
-    parent_id: str | None = None
+    id: HypothesisId
+    parent_id: HypothesisId | None = None
     statement: str
     status: HypothesisStatus = HypothesisStatus.ACTIVE
-    supported_by: list[str]
-    conflicted_by: list[str]
+    supported_by: list[EvidenceId]
+    conflicted_by: list[EvidenceId]
     unresolved: list[str] = Field(min_length=1)
-    specificity_basis: list[str]
+    specificity_basis: list[EvidenceId]
 
 
 class InitialResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     hypotheses: list[HypothesisProposal] = Field(min_length=1)
-    selected_action_id: str
+    selected_action_id: Case1ActionId
     target_uncertainty: str
     expected_information_value: str
     why_this_action_now: str
@@ -35,13 +40,22 @@ class RevisionResponse(BaseModel):
 
     hypothesis_updates: list[HypothesisTransition] = Field(default_factory=list)
     new_hypotheses: list[HypothesisProposal] = Field(default_factory=list)
-    remaining_uncertainties: list[str] = Field(default_factory=list)
+    uncertainty_updates: list[UncertaintyTransition] = Field(default_factory=list)
+    new_uncertainties: list["NewUncertainty"] = Field(default_factory=list)
     revision_rationale: str
 
 
+class NewUncertainty(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UncertaintyId
+    hypothesis_id: HypothesisId
+    description: str
+
+
 class ReleaseRecord(BaseModel):
-    action_id: str
-    artifact_id: str
+    action_id: Case1ActionId
+    artifact_id: EvidenceId
     artifact_path: str
     source_type: str
     content: str
@@ -56,7 +70,7 @@ class ControlledRunTrace(BaseModel):
     initial_response: InitialResponse | None = None
     initial_hypothesis_state: CaseState | None = None
     initial_metadata: ModelCallMetadata | None = None
-    selected_action_id: str | None = None
+    selected_action_id: Case1ActionId | None = None
     target_uncertainty: str | None = None
     expected_information_value: str | None = None
     why_this_action_now: str | None = None

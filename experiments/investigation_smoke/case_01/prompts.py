@@ -50,7 +50,7 @@ def revision_prompt(case_input: str, prior_hypotheses: list[dict], prior_uncerta
 
 Revise the existing hypothesis tree after one controlled evidence release. Only the original case evidence plus the newly released artefact may justify revision. Do not rewrite history. Preserve broad parent hypotheses unless the new evidence genuinely conflicts with them. Narrow only when the new evidence supports increased specificity. If a narrow child is contradicted while its parent remains viable, weaken or remove the child and preserve or reactivate the parent. Do not invent a replacement mechanism merely because one branch failed. Unresolved uncertainty is a valid endpoint.
 
-Return only JSON with exactly these keys and no extras. `reason` is REQUIRED for every hypothesis update. All additive evidence fields are arrays. Use exactly these field names. Attach the newly released artefact evidence ID only where it genuinely supports, conflicts with, or justifies narrowing a hypothesis; not every update needs it. Do not select another enquiry.
+Return only JSON with exactly these keys and no extras. `reason` is REQUIRED for every hypothesis update and every uncertainty update. All additive evidence fields are arrays. Use exactly these field names. Attach the newly released artefact evidence ID only where it genuinely supports, conflicts with, or justifies narrowing a hypothesis; not every update needs it. Use uncertainty_updates only to keep, resolve, or remove an existing uncertainty by ID. Use new_uncertainties for newly identified uncertainties with an explicit ID, hypothesis_id, and description. Do not select another enquiry.
 
 Example JSON shape:
 {{
@@ -61,9 +61,12 @@ Example JSON shape:
     "add_conflicting_evidence_ids": [], "add_specificity_basis": []
   }}],
   "new_hypotheses": [],
-  "remaining_uncertainties": ["An important uncertainty still unresolved after this release."],
+  "uncertainty_updates": [],
+  "new_uncertainties": [],
   "revision_rationale": "Short explanation of how the new evidence changed the state."
 }}
+
+Use exactly these field names, keep every array as an array even when empty, and return JSON only. Do not add extra fields. New uncertainty IDs must use the canonical H1:U1 form and their hypothesis_id must identify an existing hypothesis. Uncertainty reasons and descriptions are explanatory text, not evidence references.
 
 Original visible case:
 {case_input}
