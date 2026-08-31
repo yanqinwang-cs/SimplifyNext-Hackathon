@@ -6,6 +6,13 @@ from typing import Any
 from .snapshot import fingerprint, validate_public_package
 
 
+def _disclosed_implementation_path(path: str) -> bool:
+    """Treat self-reported implementation/test paths as contamination evidence."""
+    normalized = path.replace("\\", "/").lower().strip("/")
+    parts = set(normalized.split("/"))
+    return bool(parts & {"src", "tests", "test", ".git", "implementation", "contract_assurance", "results"}) or normalized in {"repo", "repository", "worktree"}
+
+
 @dataclass(frozen=True)
 class BlindBatchAudit:
     worker_id: str
@@ -18,7 +25,8 @@ class BlindBatchAudit:
 
     @property
     def qualifies_as_blind(self) -> bool:
-        return self.repository_access_disabled and not self.implementation_access_available and not self.contamination_risks
+        disclosed_paths = tuple(path for path in self.provided_files if _disclosed_implementation_path(path))
+        return self.repository_access_disabled and not self.implementation_access_available and not self.contamination_risks and not disclosed_paths
 
     def manifest(self) -> dict[str, Any]:
         return {**asdict(self), "qualifies_as_blind": self.qualifies_as_blind}
@@ -42,6 +50,9 @@ def audit_batch_package(package_path: str | Path, audit: BlindBatchAudit) -> dic
         issues.append("batch contract does not match package contract")
     if fingerprint(package) != audit.package_hash:
         issues.append("batch package hash mismatch")
+    disclosed_paths = [path for path in audit.provided_files if _disclosed_implementation_path(path)]
+    if disclosed_paths:
+        issues.append("provided files disclose implementation or repository paths: " + ", ".join(disclosed_paths))
     if not audit.qualifies_as_blind:
         issues.append("batch is NOT_BLIND")
     return {"accepted": not issues, "issues": issues}

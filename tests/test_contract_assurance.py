@@ -119,6 +119,9 @@ def test_blind_batch_audit_verifies_exact_package_and_isolation(tmp_path: Path):
     audit = BlindBatchAudit("worker", spec.name, __import__("experiments.contract_assurance.snapshot", fromlist=["fingerprint"]).fingerprint(package), (path.name,), True, False)
     assert audit_batch_package(path, audit) == {"accepted": True, "issues": []}
     assert "batch package hash mismatch" in audit_batch_package(path, BlindBatchAudit("worker", spec.name, "stale", (path.name,), True, False))["issues"]
+    disclosed = BlindBatchAudit("worker", spec.name, __import__("experiments.contract_assurance.snapshot", fromlist=["fingerprint"]).fingerprint(package), ("package.json", "src/investigator/services/contracts.py"), True, False)
+    assert not disclosed.qualifies_as_blind
+    assert "implementation or repository paths" in audit_batch_package(path, disclosed)["issues"][-2]
 
 
 def test_record_batch_persists_exact_outputs_and_status(tmp_path: Path):
