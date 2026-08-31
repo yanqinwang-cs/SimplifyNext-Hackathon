@@ -40,6 +40,7 @@ def test_outer_json_fence_is_the_only_normalization():
     assert evaluate_raw("```json\n" + json.dumps(valid_action()), NextActionResponse).code is FailureCode.S0
     assert evaluate_raw("[" + json.dumps(valid_action()) + "]", NextActionResponse).code is FailureCode.S1
     assert evaluate_raw(json.dumps(valid_action()) + "\n" + json.dumps(valid_action()), NextActionResponse).code is FailureCode.S0
+    assert evaluate_raw(b'{"selected_action_id":"A1"}', NextActionResponse).code is FailureCode.S0
 
 
 def test_canonical_placeholders_are_rejected_by_real_contracts():

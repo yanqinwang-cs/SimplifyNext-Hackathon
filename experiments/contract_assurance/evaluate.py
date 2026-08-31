@@ -33,6 +33,8 @@ class Evaluation:
 
 
 def evaluate_raw(raw_output: Any, schema: type[Any]) -> Evaluation:
+    if isinstance(raw_output, (bytes, bytearray)):
+        return Evaluation(False, FailureCode.S0, "serialization", "binary output is not an accepted response medium", raw_output=raw_output)
     if not isinstance(raw_output, str):
         try:
             parsed = schema.model_validate(raw_output)
