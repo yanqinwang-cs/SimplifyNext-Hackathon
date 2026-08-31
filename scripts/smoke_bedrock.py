@@ -13,7 +13,10 @@ class SmokeResponse(BaseModel):
     @field_validator("answer")
     @classmethod
     def reject_template_sentinel(cls, value: str) -> str:
-        if value.strip().startswith("REPLACE_WITH_"):
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Substantive text cannot be empty")
+        if normalized.startswith("REPLACE_WITH_"):
             raise ValueError("Template placeholder is not valid model output")
         return value
 

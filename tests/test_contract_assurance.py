@@ -24,6 +24,7 @@ from investigator.services.contracts import NextStepResponse
 from investigator.services.contracts import InitialExpansionResponse, HypothesisTransition, UncertaintyTransition
 from investigator.services.contracts import NewUncertainty
 from experiments.model_screen.schemas import HypothesisResponse
+from scripts.smoke_bedrock import SmokeResponse
 
 
 def valid_action():
@@ -252,6 +253,11 @@ def test_model_screen_hypothesis_text_must_be_substantive():
     value = {"hypotheses": [{"statement": "A", "justification": "B", "uncertainty": "C"}, {"statement": "D", "justification": "E", "uncertainty": "F"}]}
     value["hypotheses"][0]["statement"] = ""
     result = evaluate_raw(json.dumps(value), HypothesisResponse)
+    assert result.code is FailureCode.S4
+
+
+def test_smoke_response_answer_must_be_substantive():
+    result = evaluate_raw(json.dumps({"answer": ""}), SmokeResponse)
     assert result.code is FailureCode.S4
 
 
