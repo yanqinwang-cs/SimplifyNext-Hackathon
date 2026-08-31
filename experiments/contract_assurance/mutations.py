@@ -400,6 +400,12 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         empty["hypotheses"] = []
         result.append(Mutation("empty_hypotheses", "S1", json.dumps(empty, sort_keys=True)))
     if contract == "InitialExpansionResponse":
+        empty_statement = copy.deepcopy(value)
+        empty_statement["competing_hypotheses"][0]["statement"] = ""
+        result.append(Mutation("empty_expansion_statement", "S4", json.dumps(empty_statement, sort_keys=True)))
+        empty_question = copy.deepcopy(value)
+        empty_question["competing_hypotheses"][0]["unresolved"] = [""]
+        result.append(Mutation("empty_expansion_unresolved_question", "S4", json.dumps(empty_question, sort_keys=True)))
         unsupported = copy.deepcopy(value)
         unsupported["competing_hypotheses"][0]["relationship"] = "related"
         result.append(Mutation("unsupported_relationship", "S2", json.dumps(unsupported, sort_keys=True)))
@@ -457,6 +463,12 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         target["supported_by"] = ["E999"]
         result.append(Mutation("unknown_evidence_reference", "S3", json.dumps(unknown, sort_keys=True)))
     if contract == "InitialResponse" and value.get("hypotheses"):
+        empty_statement = copy.deepcopy(value)
+        empty_statement["hypotheses"][0]["statement"] = ""
+        result.append(Mutation("empty_initial_statement", "S4", json.dumps(empty_statement, sort_keys=True)))
+        empty_question = copy.deepcopy(value)
+        empty_question["hypotheses"][0]["unresolved"] = [""]
+        result.append(Mutation("empty_initial_unresolved_question", "S4", json.dumps(empty_question, sort_keys=True)))
         for field in ("supported_by", "conflicted_by", "specificity_basis_evidence_ids"):
             wrong_namespace = copy.deepcopy(value)
             wrong_namespace["hypotheses"][0][field] = ["H1"]

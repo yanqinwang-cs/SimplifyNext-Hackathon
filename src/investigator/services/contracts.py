@@ -24,6 +24,12 @@ def _reject_placeholder(value: str | None) -> str | None:
     return value
 
 
+def _reject_empty_items(values: list[str]) -> list[str]:
+    if any(not value.strip() for value in values):
+        raise ValueError("Substantive text cannot be empty")
+    return values
+
+
 class HypothesisProposal(BaseModel):
     model_config = ConfigDict(extra="forbid")
     id: HypothesisId
@@ -34,6 +40,9 @@ class HypothesisProposal(BaseModel):
     conflicted_by: list[EvidenceId]
     unresolved: list[str] = Field(min_length=1)
     specificity_basis_evidence_ids: list[EvidenceId]
+
+    _valid_text = field_validator("statement")(_reject_placeholder)
+    _valid_unresolved = field_validator("unresolved")(_reject_empty_items)
 
 
 class InitialHypothesisProposal(HypothesisProposal):
@@ -71,6 +80,8 @@ class SeedHypothesisAnalysis(BaseModel):
     unresolved: list[str] = Field(min_length=1)
     specificity_basis_evidence_ids: list[EvidenceId]
 
+    _valid_unresolved = field_validator("unresolved")(_reject_empty_items)
+
 
 class InitialExpansionHypothesis(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -85,6 +96,9 @@ class InitialExpansionHypothesis(BaseModel):
     relationship: Literal["competing_root", "specialization"]
     contrasted_hypothesis_id: HypothesisId | None = None
     material_difference: str | None = None
+
+    _valid_text = field_validator("statement", "material_difference")(_reject_placeholder)
+    _valid_unresolved = field_validator("unresolved")(_reject_empty_items)
 
     @model_validator(mode="after")
     def validate_relationship(self) -> "InitialExpansionHypothesis":
