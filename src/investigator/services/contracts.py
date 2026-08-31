@@ -12,6 +12,8 @@ def _reject_placeholder(value: str | None) -> str | None:
     if value is None:
         return value
     normalized = value.strip()
+    if not normalized:
+        raise ValueError("Substantive text cannot be empty")
     if normalized.startswith("REPLACE_WITH_") or normalized in {
         "The uncertainty this enquiry addresses.",
         "How the result could change the explanation space.",

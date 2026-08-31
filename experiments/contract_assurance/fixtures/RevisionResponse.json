@@ -225,6 +225,11 @@
     },
     {
       "intended_code": "S4",
+      "name": "empty_substantive_text",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S4",
       "name": "canonical_sentinel_revision_rationale",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"How the evidence changed the state.\", \"uncertainty_updates\": []}"
     },
