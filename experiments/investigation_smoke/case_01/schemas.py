@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from investigator.llm.base import ModelCallMetadata
 from investigator.models.hypothesis import (
@@ -22,7 +22,7 @@ class HypothesisProposal(BaseModel):
     supported_by: list[EvidenceId]
     conflicted_by: list[EvidenceId]
     unresolved: list[str] = Field(min_length=1)
-    specificity_basis: list[EvidenceId]
+    specificity_basis_evidence_ids: list[EvidenceId]
 
 
 class InitialResponse(BaseModel):
@@ -51,6 +51,13 @@ class NewUncertainty(BaseModel):
     id: UncertaintyId
     hypothesis_id: HypothesisId
     description: str
+    basis_evidence_ids: list[EvidenceId] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_owner(self) -> "NewUncertainty":
+        if self.id.split(":", 1)[0] != self.hypothesis_id:
+            raise ValueError("New uncertainty ID must belong to its hypothesis_id")
+        return self
 
 
 class ReleaseRecord(BaseModel):
@@ -83,3 +90,4 @@ class ControlledRunTrace(BaseModel):
     parse_success: bool = False
     failure_stage: str | None = None
     error_message: str | None = None
+    unsupported_operations: list[dict[str, Any]] = Field(default_factory=list)

@@ -60,7 +60,7 @@ def test_updates_add_evidence_provenance_without_replacing_existing_references()
         reason="New evidence is relevant.",
         add_supporting_evidence_ids=["E2", "E2"],
         add_conflicting_evidence_ids=["E2"],
-        add_specificity_basis=["E2"],
+        add_specificity_basis_evidence_ids=["E2"],
     )])
     hypothesis = updated.get_hypothesis("H1")
     assert hypothesis.supporting_evidence_ids == ["E1", "E2"]
@@ -78,7 +78,7 @@ def test_updates_reject_unknown_or_hypothesis_evidence_ids() -> None:
     with pytest.raises(ValidationError, match="pattern"):
         apply_hypothesis_updates(tree(), [HypothesisTransition(
             hypothesis_id="H1", transition="keep", reason="audit",
-            add_specificity_basis=["H1.1"],
+            add_specificity_basis_evidence_ids=["H1.1"],
         )])
 
 

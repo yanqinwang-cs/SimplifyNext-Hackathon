@@ -12,7 +12,7 @@ from experiments.investigation_smoke.case_01.runner import (
     release_selected_artifact,
     run,
 )
-from experiments.investigation_smoke.case_01.prompts import revision_prompt
+from experiments.investigation_smoke.case_01.prompts import initial_output_template, revision_output_template, revision_prompt
 from experiments.investigation_smoke.case_01.schemas import (
     ControlledRunTrace,
     HypothesisProposal,
@@ -47,11 +47,11 @@ def initial_response(selected_action_id="A3"):
         hypotheses=[
             HypothesisProposal(
                 id="H1", statement="Some explanation may account for the observed result.",
-                supported_by=["E1"], conflicted_by=[], unresolved=["The explanation remains uncertain."], specificity_basis=[],
+                supported_by=["E1"], conflicted_by=[], unresolved=["The explanation remains uncertain."], specificity_basis_evidence_ids=[],
             ),
             HypothesisProposal(
                 id="H1.1", parent_id="H1", statement="A narrower explanation may account for the result.",
-                supported_by=["E3"], conflicted_by=[], unresolved=["The narrower explanation remains uncertain."], specificity_basis=["E3"],
+                supported_by=["E3"], conflicted_by=[], unresolved=["The narrower explanation remains uncertain."], specificity_basis_evidence_ids=["E3"],
             ),
         ],
         selected_action_id=selected_action_id,
@@ -109,11 +109,11 @@ def test_initial_state_rejects_invalid_evidence_and_hypothesis_references() -> N
 def test_experiment_schema_rejects_wrong_or_missing_fields() -> None:
     with pytest.raises(ValidationError):
         HypothesisProposal(
-            id="H1", statement="x", supported_by=[], conflicted_by=[], unresolved=[], specificity_basis=[],
+            id="H1", statement="x", supported_by=[], conflicted_by=[], unresolved=[], specificity_basis_evidence_ids=[],
             unresolved_uncertainty="wrong field",
         )
     with pytest.raises(ValidationError):
-        HypothesisProposal(id="H1", statement="x", supported_by=[], conflicted_by=[], specificity_basis=[])
+        HypothesisProposal(id="H1", statement="x", supported_by=[], conflicted_by=[], specificity_basis_evidence_ids=[])
 
 
 def test_initial_prompt_has_exact_json_contract() -> None:
@@ -121,9 +121,14 @@ def test_initial_prompt_has_exact_json_contract() -> None:
 
     prompt = initial_prompt()
     assert '"unresolved"' in prompt
-    assert '"specificity_basis"' in prompt
+    assert '"specificity_basis_evidence_ids"' in prompt
     assert '"selected_action_id"' in prompt
     assert "do not rename unresolved" in prompt.lower()
+
+
+def test_canonical_prompt_templates_validate_against_response_models() -> None:
+    assert InitialResponse.model_validate(initial_output_template())
+    assert RevisionResponse.model_validate(revision_output_template("A1_RELEASE"))
 
 
 def test_revision_schema_requires_reason_and_accepts_valid_response() -> None:
@@ -131,7 +136,7 @@ def test_revision_schema_requires_reason_and_accepts_valid_response() -> None:
         RevisionResponse.model_validate({
             "hypothesis_updates": [{
                 "hypothesis_id": "H1", "transition": "keep",
-                "add_supporting_evidence_ids": [], "add_conflicting_evidence_ids": [], "add_specificity_basis": [],
+                "add_supporting_evidence_ids": [], "add_conflicting_evidence_ids": [], "add_specificity_basis_evidence_ids": [],
             }], "new_hypotheses": [], "remaining_uncertainties": [], "revision_rationale": "x",
         })
     assert revision_response().hypothesis_updates[0].reason
@@ -200,7 +205,7 @@ def test_revision_prompt_separates_hypotheses_from_evidence() -> None:
     assert '"reason"' in prompt
     assert '"add_supporting_evidence_ids"' in prompt
     assert '"add_conflicting_evidence_ids"' in prompt
-    assert '"add_specificity_basis"' in prompt
+    assert '"add_specificity_basis_evidence_ids"' in prompt
 
 
 def test_failed_call_raw_output_is_preserved_in_trace(tmp_path: Path) -> None:

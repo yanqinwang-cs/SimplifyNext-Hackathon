@@ -22,18 +22,20 @@ def apply_hypothesis_updates(
         for evidence_id in (
             update.add_supporting_evidence_ids
             + update.add_conflicting_evidence_ids
-            + update.add_specificity_basis
+            + update.add_specificity_basis_evidence_ids
         ):
             if evidence_id in updated.hypotheses:
                 raise ValueError(f"Hypothesis ID {evidence_id!r} cannot be used as evidence")
             updated.get_evidence(evidence_id)
+        if update.transition is HypothesisTransitionType.OTHER:
+            continue
         for evidence_id in update.add_supporting_evidence_ids:
             if evidence_id not in hypothesis.supporting_evidence_ids:
                 hypothesis.supporting_evidence_ids.append(evidence_id)
         for evidence_id in update.add_conflicting_evidence_ids:
             if evidence_id not in hypothesis.conflicting_evidence_ids:
                 hypothesis.conflicting_evidence_ids.append(evidence_id)
-        for evidence_id in update.add_specificity_basis:
+        for evidence_id in update.add_specificity_basis_evidence_ids:
             if evidence_id not in hypothesis.specificity_basis:
                 hypothesis.specificity_basis.append(evidence_id)
         if update.transition in status_by_transition:

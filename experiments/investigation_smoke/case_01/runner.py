@@ -64,7 +64,7 @@ def _hypothesis_from_proposal(proposal: HypothesisProposal) -> Hypothesis:
         supporting_evidence_ids=proposal.supported_by,
         conflicting_evidence_ids=proposal.conflicted_by,
         unresolved_issue_ids=[f"{proposal.id}:U{index}" for index in range(1, len(proposal.unresolved) + 1)],
-        specificity_basis=proposal.specificity_basis,
+        specificity_basis=proposal.specificity_basis_evidence_ids,
     )
 
 
@@ -117,9 +117,15 @@ def release_selected_artifact(state: CaseState, action_id: str) -> ReleaseRecord
 def apply_revision(state: CaseState, response: RevisionResponse) -> CaseState:
     updated = apply_hypothesis_updates(state, response.hypothesis_updates)
     for uncertainty_update in response.uncertainty_updates:
+        for evidence_id in uncertainty_update.basis_evidence_ids:
+            updated.get_evidence(evidence_id)
         if uncertainty_update.uncertainty_id not in updated.uncertainties:
             raise KeyError(f"Unknown uncertainty ID: {uncertainty_update.uncertainty_id!r}")
-        if uncertainty_update.transition in {UncertaintyTransitionType.RESOLVE, UncertaintyTransitionType.REMOVE}:
+        if uncertainty_update.transition is UncertaintyTransitionType.OTHER:
+            continue
+        if uncertainty_update.transition is UncertaintyTransitionType.REFINE:
+            updated.uncertainties[uncertainty_update.uncertainty_id].description = uncertainty_update.new_description
+        elif uncertainty_update.transition in {UncertaintyTransitionType.RESOLVE, UncertaintyTransitionType.REMOVE}:
             updated.uncertainties.pop(uncertainty_update.uncertainty_id)
             for hypothesis in updated.hypotheses.values():
                 hypothesis.unresolved_issue_ids = [
@@ -130,10 +136,13 @@ def apply_revision(state: CaseState, response: RevisionResponse) -> CaseState:
         if new_uncertainty.id in updated.uncertainties:
             raise ValueError(f"Duplicate uncertainty ID in revision: {new_uncertainty.id!r}")
         hypothesis = updated.get_hypothesis(new_uncertainty.hypothesis_id)
+        for evidence_id in new_uncertainty.basis_evidence_ids:
+            updated.get_evidence(evidence_id)
         updated.uncertainties[new_uncertainty.id] = Uncertainty(
             id=new_uncertainty.id,
             kind=UncertaintyKind.UNKNOWN,
             description=new_uncertainty.description,
+            evidence_ids=new_uncertainty.basis_evidence_ids,
         )
         if new_uncertainty.id not in hypothesis.unresolved_issue_ids:
             hypothesis.unresolved_issue_ids.append(new_uncertainty.id)
@@ -244,6 +253,15 @@ def run(
             "revision_response": revision_response,
             "final_hypothesis_state": final_state,
             "parse_success": True,
+            "unsupported_operations": [
+                {"kind": "hypothesis", **update.model_dump(mode="json")}
+                for update in revision_response.hypothesis_updates
+                if update.transition.value == "other"
+            ] + [
+                {"kind": "uncertainty", **update.model_dump(mode="json")}
+                for update in revision_response.uncertainty_updates
+                if update.transition.value == "other"
+            ],
         })
     except Exception as exc:
         return failed(trace, "state_apply", exc)

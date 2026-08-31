@@ -65,6 +65,7 @@ class HypothesisTransitionType(str, Enum):
     CONFLICT = "conflict"
     REMOVE = "remove"
     ACTIVATE = "activate"
+    OTHER = "other"
 
 
 class HypothesisTransition(BaseModel):
@@ -75,13 +76,28 @@ class HypothesisTransition(BaseModel):
     reason: str
     add_supporting_evidence_ids: list[EvidenceId] = Field(default_factory=list)
     add_conflicting_evidence_ids: list[EvidenceId] = Field(default_factory=list)
-    add_specificity_basis: list[EvidenceId] = Field(default_factory=list)
+    add_specificity_basis_evidence_ids: list[EvidenceId] = Field(default_factory=list)
+    requested_operation_name: str | None = None
+    requested_effect: str | None = None
+    why_existing_operations_do_not_fit: dict[str, str] | None = None
+
+    @model_validator(mode="after")
+    def validate_other_fields(self) -> "HypothesisTransition":
+        other_fields = (self.requested_operation_name, self.requested_effect, self.why_existing_operations_do_not_fit)
+        if self.transition is HypothesisTransitionType.OTHER:
+            if any(value is None for value in other_fields):
+                raise ValueError("Hypothesis transition 'other' requires requested operation details")
+        elif any(value is not None for value in other_fields):
+            raise ValueError("OTHER-only hypothesis fields require transition='other'")
+        return self
 
 
 class UncertaintyTransitionType(str, Enum):
     KEEP = "keep"
+    REFINE = "refine"
     RESOLVE = "resolve"
     REMOVE = "remove"
+    OTHER = "other"
 
 
 class UncertaintyTransition(BaseModel):
@@ -90,3 +106,22 @@ class UncertaintyTransition(BaseModel):
     uncertainty_id: UncertaintyId
     transition: UncertaintyTransitionType
     reason: str
+    new_description: str | None = None
+    basis_evidence_ids: list[EvidenceId] = Field(default_factory=list)
+    requested_operation_name: str | None = None
+    requested_effect: str | None = None
+    why_existing_operations_do_not_fit: dict[str, str] | None = None
+
+    @model_validator(mode="after")
+    def validate_transition_fields(self) -> "UncertaintyTransition":
+        other_fields = (self.requested_operation_name, self.requested_effect, self.why_existing_operations_do_not_fit)
+        if self.transition is UncertaintyTransitionType.REFINE and self.new_description is None:
+            raise ValueError("Uncertainty transition 'refine' requires new_description")
+        if self.transition is not UncertaintyTransitionType.REFINE and self.new_description is not None:
+            raise ValueError("new_description is only valid for uncertainty transition='refine'")
+        if self.transition is UncertaintyTransitionType.OTHER:
+            if any(value is None for value in other_fields):
+                raise ValueError("Uncertainty transition 'other' requires requested operation details")
+        elif any(value is not None for value in other_fields):
+            raise ValueError("OTHER-only uncertainty fields require transition='other'")
+        return self

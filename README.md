@@ -6,6 +6,10 @@ The prototype uses typed Pydantic models and local JSON files under `data/cases/
 
 Structured model outputs must keep identifiers separate from explanatory text: IDs identify existing records, while prose fields explain them. Future experiment schemas should use explicit identifier types or enums, and deterministic code should validate existence and namespace boundaries.
 
+In model-generated schemas, fields such as `id`, `parent_id`, `hypothesis_id`, `uncertainty_id`, `selected_action_id`, and fields ending in `_ids` or `_evidence_ids` contain bare machine IDs only. Fields such as `statement`, `reason`, `description`, and `rationale` contain explanatory text only.
+
+For every future structured LLM interface, validate raw output, JSON, schema, fields, cross-field relationships, and references before applying state changes. Undefined operations do not execute; a last-resort `other` operation may report a missing operation for later design work, but it cannot mutate state.
+
 ```bash
 uv sync
 uv run pytest
