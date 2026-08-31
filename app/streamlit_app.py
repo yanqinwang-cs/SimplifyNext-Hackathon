@@ -1,7 +1,9 @@
 import streamlit as st
 from dotenv import load_dotenv
+from pathlib import Path
 
 from demo_data import DEMO_MESSAGES
+from investigator.environments.case_01 import Case1ControlledEnvironment
 from investigator.llm.bedrock import BedrockModelClient
 from investigator.services import InvestigationService, InvestigationSession, SessionStatus
 
@@ -74,7 +76,8 @@ def render_chat() -> None:
 def start_investigation() -> None:
     load_dotenv()
     try:
-        service = InvestigationService(BedrockModelClient())
+        environment = Case1ControlledEnvironment(Path(__file__).resolve().parents[1] / "experiments/investigation_smoke/case_01/artifacts")
+        service = InvestigationService(BedrockModelClient(), environment)
         session = service.start_case()
     except Exception as exc:
         st.session_state.notice = f"Could not start the investigation: {exc}"

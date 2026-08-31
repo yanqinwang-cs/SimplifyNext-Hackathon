@@ -1,4 +1,5 @@
 from typing import TypedDict
+from investigator.environments.case_01 import CASE_01_ASSESSMENT_CONTEXT, CASE_01_EVIDENCE
 
 
 class ScreenCase(TypedDict):
@@ -12,16 +13,8 @@ CASES: list[ScreenCase] = [
     {
         "case_id": "case_01",
         "title": "Closed-book physical examination",
-        "assessment_context": "90-minute closed-book quantitative methods examination. 40 multiple-choice questions. Phones and smartwatches had to be surrendered before entry. Ordinary stationery and opaque pencil cases were permitted. The student scored between 52% and 64% on four earlier timed quizzes. Homework median: 66%.",
-        "evidence": [
-            "E1. The student scored 40/40 and submitted after 57 minutes.",
-            "E2. Examination-room footage shows no visible phone, no communication with another candidate, and no repeated looking toward another desk.",
-            "E3. On 11 occasions, the student touched the right side of their jaw or ear and repositioned the pencil case with the other hand. Most of these movements occurred after the student had spent at least 20 seconds reading a question.",
-            "E4. The student answered several computational questions without writing visible calculations. Mental calculation was possible, although these were among the more difficult questions.",
-            "E5. A pre-entry bag check found no prohibited object. The student was not searched after the examination.",
-            "E6. An invigilator who supervised an earlier quiz recalls that the student frequently tapped the desk and adjusted their glasses when nervous, but does not remember the jaw-touching pattern.",
-            "E7. The student says they had received intensive private tutoring during the previous week and that the movements were ordinary anxiety-related fidgeting. No information about the tutor has yet been obtained.",
-        ],
+        "assessment_context": CASE_01_ASSESSMENT_CONTEXT,
+        "evidence": list(CASE_01_EVIDENCE),
     },
     {
         "case_id": "case_02",
@@ -94,4 +87,3 @@ def get_case(case_id: str) -> ScreenCase:
         if case["case_id"] == case_id:
             return case
     raise KeyError(f"Unknown model-screen case: {case_id!r}")
-

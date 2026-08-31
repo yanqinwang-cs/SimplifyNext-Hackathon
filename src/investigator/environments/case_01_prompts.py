@@ -1,0 +1,24 @@
+import json
+
+from investigator.environments.case_01 import Case1ControlledEnvironment
+from investigator.prompts import GLOBAL_INVESTIGATION_RULES, render_assessment_context, render_current_case
+from investigator.services.contracts import InitialResponse, NextActionResponse, RevisionResponse
+
+
+def _initial_template() -> dict:
+    return {"hypotheses": [{"id": "H1", "parent_id": None, "statement": "A broad evidence-grounded explanation.", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["An important uncertainty that remains unresolved."], "specificity_basis_evidence_ids": []}], "selected_action_id": "A1", "target_uncertainty": "The uncertainty this enquiry addresses.", "expected_information_value": "How the result could change the explanation space.", "why_this_action_now": "Why this enquiry is useful now."}
+
+
+def initial_prompt(environment: Case1ControlledEnvironment) -> str:
+    return f"""{GLOBAL_INVESTIGATION_RULES}\n\nASSESSMENT ONTOLOGY / POLICY\n{render_assessment_context()}\n\nCURRENT CASE EVIDENCE / PRIOR STATE\n{environment.initial_case_input()}\n\nTASK-SPECIFIC INSTRUCTION\nGenerate an initial hypothesis tree and choose exactly one available enquiry. Use only released evidence; context resources are not evidence.\n\nCANONICAL JSON OUTPUT TEMPLATE\n{json.dumps(_initial_template(), indent=2)}\nUse exactly these fields, bare IDs in ID fields, and natural language in text fields. Return JSON only."""
+
+
+def next_action_prompt(environment, session, available_actions) -> str:
+    state = session.case_state.model_dump(mode="json")
+    return f"""{GLOBAL_INVESTIGATION_RULES}\n\nASSESSMENT ONTOLOGY / POLICY\n{render_assessment_context()}\n\nCURRENT CASE EVIDENCE / PRIOR STATE\n{render_current_case(environment.initial_case_input(), list(state['hypotheses'].values()), list(state['uncertainties'].values()))}\nCurrent evidence: {json.dumps(list(state['evidence'].values()), indent=2)}\n\nTASK-SPECIFIC INSTRUCTION\nSelect exactly one currently available enquiry. Do not revise state, execute an enquiry, or invent an action.\n\nCANONICAL JSON OUTPUT TEMPLATE\n{json.dumps({'selected_action_id': 'A2', 'target_uncertainty': 'The uncertainty this enquiry addresses.', 'expected_information_value': 'How the result could change the explanation space.', 'why_this_action_now': 'Why this enquiry is useful now.'}, indent=2)}\nUse exactly these fields, bare IDs in ID fields, and natural language in text fields. Return JSON only.\n\nAvailable enquiries:\n{json.dumps([a.__dict__ for a in available_actions], indent=2)}"""
+
+
+def revision_prompt(environment, session, release) -> str:
+    state = session.case_state.model_dump(mode="json")
+    template = {"hypothesis_updates": [{"hypothesis_id": "H1", "transition": "keep", "reason": "Why this update is justified.", "add_supporting_evidence_ids": [release.artifact_id], "add_conflicting_evidence_ids": [], "add_specificity_basis_evidence_ids": [], "requested_operation_name": None, "requested_effect": None, "why_existing_operations_do_not_fit": None}], "new_hypotheses": [], "uncertainty_updates": [], "new_uncertainties": [], "revision_rationale": "How the evidence changed the state."}
+    return f"""{GLOBAL_INVESTIGATION_RULES}\n\nASSESSMENT ONTOLOGY / POLICY\n{render_assessment_context()}\n\nCURRENT CASE EVIDENCE / PRIOR STATE\n{render_current_case(environment.initial_case_input(), list(state['hypotheses'].values()), list(state['uncertainties'].values()))}\nCurrent released evidence/state inventory:\n{json.dumps(list(state['evidence'].values()), indent=2)}\n\nTASK-SPECIFIC INSTRUCTION\nRevise the existing hypothesis tree after the controlled evidence release. Preserve viable broad parents and use only released evidence. Return JSON only with exactly these fields. `reason` is required for every update. Keep evidence-reference fields as arrays of bare IDs.\n\nCANONICAL JSON OUTPUT TEMPLATE\n{json.dumps(template, indent=2)}\nID FIELDS contain bare IDs only; TEXT FIELDS contain natural language only. Do not place explanations in any field ending with `_id`, `_ids`, or `_evidence_ids`.\n\nSelected enquiry/action ID: {release.action_id}\nNewly released evidence ID: {release.artifact_id}\nThe action ID must not appear in any evidence-reference field.\nNewly released artefact content:\n{release.content}"""

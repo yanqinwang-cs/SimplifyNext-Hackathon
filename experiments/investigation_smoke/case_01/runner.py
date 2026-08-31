@@ -35,8 +35,9 @@ from investigator.models import (
     UncertaintyKind,
     UncertaintyTransitionType,
 )
-from investigator.state import CaseState, apply_hypothesis_updates
+from investigator.state import CaseState, apply_revision as apply_core_revision
 from investigator.services import InvestigationService
+from investigator.environments.case_01 import Case1ControlledEnvironment
 from experiments.model_screen.cases import get_case
 
 
@@ -70,97 +71,15 @@ def _hypothesis_from_proposal(proposal: HypothesisProposal) -> Hypothesis:
 
 
 def initial_state(response: InitialResponse) -> CaseState:
-    case = get_case("case_01")
-    visible_source = Source(id="case_01_visible", name="Case 01 visible evidence", source_type=SourceType.OTHER)
-    evidence = {
-        f"E{index}": EvidenceItem(
-            id=f"E{index}", source_id=visible_source.id, raw_content=content,
-            kind=EvidenceKind.OTHER,
-        )
-        for index, content in enumerate(case["evidence"], start=1)
-    }
-    uncertainties = {
-        uncertainty.id: uncertainty
-        for proposal in response.hypotheses
-        for uncertainty in _uncertainties_for(proposal)
-    }
-    hypotheses = {}
-    for proposal in response.hypotheses:
-        if proposal.id in hypotheses:
-            raise ValueError(f"Duplicate hypothesis ID in initial response: {proposal.id!r}")
-        hypotheses[proposal.id] = _hypothesis_from_proposal(proposal)
-    state = CaseState(
-        case_id="case_01", title=case["title"], sources={visible_source.id: visible_source},
-        evidence=evidence,
-        hypotheses=hypotheses,
-        uncertainties=uncertainties,
-    )
-    return state
+    return Case1ControlledEnvironment(Path(__file__).resolve().parent / "artifacts").build_initial_state(response)
 
 
 def release_selected_artifact(state: CaseState, action_id: str) -> ReleaseRecord:
-    action = get_action(action_id)
-    path = artifact_path(action_id)
-    source = Source(id=f"{action_id}_source", name=action.title, source_type=SourceType.OTHER, metadata={"source_type": action.source_type})
-    content = render_artifact(path)
-    state.sources[source.id] = source
-    evidence_id = f"{action_id}_RELEASE"
-    state.evidence[evidence_id] = EvidenceItem(
-        id=evidence_id, source_id=source.id, raw_content=content,
-        kind=EvidenceKind.OTHER, metadata={"action_id": action_id, "artifact": action.artifact_filename},
-    )
-    return ReleaseRecord(
-        action_id=action_id, artifact_id=evidence_id,
-        artifact_path=str(path), source_type=action.source_type, content=content,
-    )
+    return Case1ControlledEnvironment(Path(__file__).resolve().parent / "artifacts").execute_action(state, action_id)
 
 
 def apply_revision(state: CaseState, response: RevisionResponse) -> CaseState:
-    updated = apply_hypothesis_updates(state, response.hypothesis_updates)
-    for uncertainty_update in response.uncertainty_updates:
-        for evidence_id in uncertainty_update.basis_evidence_ids:
-            updated.get_evidence(evidence_id)
-        if uncertainty_update.uncertainty_id not in updated.uncertainties:
-            raise KeyError(f"Unknown uncertainty ID: {uncertainty_update.uncertainty_id!r}")
-        uncertainty = updated.uncertainties[uncertainty_update.uncertainty_id]
-        for evidence_id in uncertainty_update.basis_evidence_ids:
-            if evidence_id not in uncertainty.evidence_ids:
-                uncertainty.evidence_ids.append(evidence_id)
-        if uncertainty_update.transition is UncertaintyTransitionType.OTHER:
-            continue
-        if uncertainty_update.transition is UncertaintyTransitionType.REFINE:
-            uncertainty.description = uncertainty_update.new_description
-        elif uncertainty_update.transition in {UncertaintyTransitionType.RESOLVE, UncertaintyTransitionType.REMOVE}:
-            updated.uncertainties.pop(uncertainty_update.uncertainty_id)
-            for hypothesis in updated.hypotheses.values():
-                hypothesis.unresolved_issue_ids = [
-                    issue_id for issue_id in hypothesis.unresolved_issue_ids
-                    if issue_id != uncertainty_update.uncertainty_id
-                ]
-    for new_uncertainty in response.new_uncertainties:
-        if new_uncertainty.id in updated.uncertainties:
-            raise ValueError(f"Duplicate uncertainty ID in revision: {new_uncertainty.id!r}")
-        hypothesis = updated.get_hypothesis(new_uncertainty.hypothesis_id)
-        for evidence_id in new_uncertainty.basis_evidence_ids:
-            updated.get_evidence(evidence_id)
-        updated.uncertainties[new_uncertainty.id] = Uncertainty(
-            id=new_uncertainty.id,
-            kind=UncertaintyKind.UNKNOWN,
-            description=new_uncertainty.description,
-            evidence_ids=new_uncertainty.basis_evidence_ids,
-        )
-        if new_uncertainty.id not in hypothesis.unresolved_issue_ids:
-            hypothesis.unresolved_issue_ids.append(new_uncertainty.id)
-    for proposal in response.new_hypotheses:
-        if proposal.id in updated.hypotheses:
-            raise ValueError(f"Duplicate hypothesis ID in revision: {proposal.id!r}")
-        for uncertainty in _uncertainties_for(proposal):
-            if uncertainty.id in updated.uncertainties:
-                raise ValueError(f"Duplicate uncertainty ID in revision: {uncertainty.id!r}")
-            updated.uncertainties[uncertainty.id] = uncertainty
-        updated.hypotheses[proposal.id] = _hypothesis_from_proposal(proposal)
-    updated.revision += 1
-    return CaseState.model_validate(updated.model_dump())
+    return apply_core_revision(state, response)
 
 
 def _write_trace(path: Path, trace: ControlledRunTrace) -> None:
@@ -180,8 +99,9 @@ def run(
     load_dotenv()
     active_client = client or BedrockModelClient(model_id=model_id)
     resolved_model_id = model_id or getattr(active_client, "model_id", "unknown-model")
-    case_input = visible_case_input()
-    first_prompt = initial_prompt()
+    environment = Case1ControlledEnvironment(Path(__file__).resolve().parent / "artifacts")
+    case_input = environment.initial_case_input()
+    first_prompt = environment.initial_prompt()
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     output_dir = Path(results_root) / f"{_safe_model_name(resolved_model_id)}_{timestamp}"
     output_dir.mkdir(parents=True, exist_ok=False)
@@ -197,7 +117,7 @@ def run(
         return trace_path
 
     try:
-        service = InvestigationService(active_client)
+        service = InvestigationService(active_client, environment)
         try:
             session = service.start_case()
         except ModelParseError as exc:

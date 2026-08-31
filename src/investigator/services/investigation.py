@@ -2,7 +2,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from investigator.environments.base import InvestigationEnvironment
 from investigator.llm.base import ModelClient
+from investigator.state import apply_revision
 
 
 class SessionStatus(str, Enum):
@@ -28,6 +30,7 @@ class InvestigationSession:
     pending_revision: Any | None = None
     completed_action_ids: set[str] = field(default_factory=set)
     action_reason: str | None = None
+    environment_id: str = ""
     initial_case_state: Any | None = None
     initial_response: Any | None = None
     initial_raw_model_output: Any | None = None
@@ -39,69 +42,54 @@ class InvestigationSession:
 
 
 class InvestigationService:
-    """One bounded semantic investigation operation per method, backed by Case 1 for now."""
+    """Advances one bounded semantic operation at a time in an explicit environment."""
 
-    def __init__(self, client: ModelClient) -> None:
+    def __init__(self, client: ModelClient, environment: InvestigationEnvironment) -> None:
         self.client = client
+        self.environment = environment
 
     def start_case(self) -> InvestigationSession:
-        from experiments.investigation_smoke.case_01.prompts import initial_prompt
-        from experiments.investigation_smoke.case_01.runner import initial_state
-        from experiments.investigation_smoke.case_01.schemas import InitialResponse
-        from experiments.investigation_smoke.case_01.catalog import get_action
+        from investigator.services.contracts import InitialResponse
 
-        result = self.client.call(initial_prompt(), InitialResponse)
+        result = self.client.call(self.environment.initial_prompt(), InitialResponse)
         response = InitialResponse.model_validate(result.parsed)
-        state = initial_state(response)
-        session = InvestigationSession(
+        state = self.environment.build_initial_state(response)
+        return InvestigationSession(
             case_state=state,
             initial_case_state=state.model_copy(deep=True),
             initial_response=response,
             initial_raw_model_output=result.raw_output,
             initial_metadata=result.metadata,
-            pending_action=get_action(response.selected_action_id),
+            pending_action=self.environment.get_action(response.selected_action_id),
             status=SessionStatus.AWAITING_ACTION_REVIEW,
+            environment_id=self.environment.environment_id,
         )
-        return session
 
     def propose_next_action(self, session: InvestigationSession) -> InvestigationSession:
         self._require_status(session, SessionStatus.READY)
-        from experiments.investigation_smoke.case_01.catalog import ENQUIRY_CATALOG, get_action
-        from experiments.investigation_smoke.case_01.prompts import next_action_prompt
-        from experiments.investigation_smoke.case_01.schemas import NextActionResponse
+        from investigator.services.contracts import NextActionResponse
 
-        available = [a for a in ENQUIRY_CATALOG if a.action_id not in session.completed_action_ids]
+        available = self.environment.available_actions(session.completed_action_ids)
         if not available:
             session.status = SessionStatus.PAUSED
             session.pending_action = None
             return session
-        state_dump = session.case_state.model_dump(mode="json")
-        state_dump["evidence"] = list(state_dump["evidence"].values())
-        state_dump["hypotheses"] = list(state_dump["hypotheses"].values())
-        state_dump["uncertainties"] = list(state_dump["uncertainties"].values())
-        result = self.client.call(
-            next_action_prompt(
-                "Current Case 01 evidence is represented in the state below.", state_dump,
-                [{"action_id": a.action_id, "title": a.title, "definition": a.definition} for a in available],
-            ),
-            NextActionResponse,
-        )
+        result = self.client.call(self.environment.next_action_prompt(session, available), NextActionResponse)
         response = NextActionResponse.model_validate(result.parsed)
-        if response.selected_action_id in session.completed_action_ids:
-            raise ValueError(f"Action already completed: {response.selected_action_id!r}")
-        session.pending_action = get_action(response.selected_action_id)
+        available_ids = {action.action_id for action in available}
+        if response.selected_action_id not in available_ids:
+            raise ValueError(f"Action is not currently available: {response.selected_action_id!r}")
+        session.pending_action = self.environment.get_action(response.selected_action_id)
         session.action_reason = response.why_this_action_now
         session.status = SessionStatus.AWAITING_ACTION_REVIEW
         return session
 
     def set_human_action(self, session: InvestigationSession, action_id: str, reason: str | None = None) -> InvestigationSession:
         self._require_status(session, SessionStatus.AWAITING_ACTION_REVIEW)
-        from experiments.investigation_smoke.case_01.catalog import ENQUIRY_CATALOG, get_action
-
-        action = get_action(action_id)
+        action = self.environment.get_action(action_id)
         if action.action_id in session.completed_action_ids:
             raise ValueError(f"Action already completed: {action.action_id!r}")
-        if action not in ENQUIRY_CATALOG:
+        if action.action_id not in {a.action_id for a in self.environment.available_actions(session.completed_action_ids)}:
             raise ValueError(f"Action is not available: {action.action_id!r}")
         session.pending_action = action
         session.action_reason = reason
@@ -111,10 +99,8 @@ class InvestigationService:
         self._require_status(session, SessionStatus.AWAITING_ACTION_REVIEW)
         if session.pending_action is None:
             raise InvalidSessionTransition("Cannot execute without a pending action")
-        from experiments.investigation_smoke.case_01.runner import release_selected_artifact
-
         updated = session.case_state.model_copy(deep=True)
-        release = release_selected_artifact(updated, session.pending_action.action_id)
+        release = self.environment.execute_action(updated, session.pending_action.action_id)
         session.case_state = updated
         session.pending_release = release
         session.completed_action_ids.add(session.pending_action.action_id)
@@ -125,18 +111,9 @@ class InvestigationService:
         self._require_status(session, SessionStatus.ACTION_EXECUTED)
         if session.pending_action is None or session.pending_release is None:
             raise InvalidSessionTransition("Cannot propose revision without an executed action")
-        from experiments.investigation_smoke.case_01.prompts import revision_prompt, visible_case_input
-        from experiments.investigation_smoke.case_01.schemas import RevisionResponse
+        from investigator.services.contracts import RevisionResponse
 
-        prompt = revision_prompt(
-                visible_case_input(),
-                [h.model_dump(mode="json") for h in session.case_state.hypotheses.values()],
-                [u.model_dump(mode="json") for u in session.case_state.uncertainties.values()],
-                {"action_id": session.pending_action.action_id, "title": session.pending_action.title, "definition": session.pending_action.definition},
-                session.pending_release.artifact_id,
-                session.pending_release.content,
-                [e.model_dump(mode="json") for e in session.case_state.evidence.values()],
-            )
+        prompt = self.environment.revision_prompt(session, session.pending_release)
         result = self.client.call(prompt, RevisionResponse)
         session.pending_revision = RevisionResponse.model_validate(result.parsed)
         session.revision_prompt = prompt
@@ -149,15 +126,14 @@ class InvestigationService:
         self._require_status(session, SessionStatus.AWAITING_REVISION_REVIEW)
         if session.pending_revision is None:
             raise InvalidSessionTransition("Cannot apply without a pending revision")
-        from experiments.investigation_smoke.case_01.runner import apply_revision
-
-        session.case_state = apply_revision(session.case_state, session.pending_revision)
+        pending = session.pending_revision
+        session.case_state = apply_revision(session.case_state, pending)
         session.unsupported_operations = [
             {"kind": "hypothesis", **u.model_dump(mode="json")}
-            for u in session.pending_revision.hypothesis_updates if u.transition.value == "other"
+            for u in pending.hypothesis_updates if u.transition.value == "other"
         ] + [
             {"kind": "uncertainty", **u.model_dump(mode="json")}
-            for u in session.pending_revision.uncertainty_updates if u.transition.value == "other"
+            for u in pending.uncertainty_updates if u.transition.value == "other"
         ]
         session.pending_revision = None
         session.pending_release = None
