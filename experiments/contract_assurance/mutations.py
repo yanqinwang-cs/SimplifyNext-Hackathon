@@ -115,6 +115,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         empty["hypotheses"] = []
         result.append(Mutation("empty_hypotheses", "S1", json.dumps(empty, sort_keys=True)))
     if contract == "InitialExpansionResponse":
+        specialization = copy.deepcopy(value)
+        specialization["competing_hypotheses"][0].update({"parent_id": "H1", "relationship": "specialization", "contrasted_hypothesis_id": None, "material_difference": None, "specificity_basis_evidence_ids": ["E1"]})
+        result.append(Mutation("valid_specialization_relationship", "valid", json.dumps(specialization, sort_keys=True)))
         empty = copy.deepcopy(value)
         empty["competing_hypotheses"] = []
         result.append(Mutation("empty_competing_hypotheses", "S1", json.dumps(empty, sort_keys=True)))
