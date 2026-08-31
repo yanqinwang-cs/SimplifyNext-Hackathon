@@ -1,0 +1,497 @@
+{
+  "blind_compliance": {
+    "batches": 5,
+    "by_contract": {
+      "InitialExpansionResponse": {
+        "accepted": 0,
+        "batches": 2,
+        "evaluations": 0,
+        "excluded_not_blind": 2,
+        "qualified": 0,
+        "rejected": 0
+      },
+      "NextStepResponse": {
+        "accepted": 0,
+        "batches": 1,
+        "evaluations": 2,
+        "excluded_not_blind": 1,
+        "qualified": 0,
+        "rejected": 2
+      }
+    },
+    "by_role": {
+      "adversary": {
+        "accepted": 0,
+        "batches": 3,
+        "evaluations": 1,
+        "excluded_not_blind": 3,
+        "qualified": 0,
+        "rejected": 1
+      },
+      "producer": {
+        "accepted": 0,
+        "batches": 2,
+        "evaluations": 1,
+        "excluded_not_blind": 2,
+        "qualified": 0,
+        "rejected": 1
+      }
+    },
+    "excluded_not_blind": 5,
+    "qualified_batches": 0,
+    "status": "NOT_BLIND"
+  },
+  "blind_results_included": false,
+  "coverage_ledger": {
+    "InitialExpansionResponse|S0|serialization|Expecting ',' delimiter: line 1 column 767 (char 766)": 1,
+    "InitialExpansionResponse|S0|serialization|Expecting property name enclosed in double quotes: line 1 column 2 (char 1)": 2,
+    "InitialExpansionResponse|S0|serialization|Expecting value: line 1 column 1 (char 0)": 4,
+    "InitialExpansionResponse|S0|serialization|Extra data: line 2 column 1 (char 768)": 3,
+    "InitialExpansionResponse|S0|serialization|Illegal trailing comma before end of object: line 1 column 767 (char 766)": 1,
+    "InitialExpansionResponse|S0|serialization|Unterminated string starting at: line 1 column 187 (char 186)": 1,
+    "InitialExpansionResponse|S0|serialization|Unterminated string starting at: line 1 column 354 (char 353)": 1,
+    "InitialExpansionResponse|S0|serialization|Unterminated string starting at: line 1 column 726 (char 725)": 1,
+    "InitialExpansionResponse|S0|serialization|empty model output": 2,
+    "InitialExpansionResponse|S0|serialization|top-level JSON value must be an object": 4,
+    "InitialExpansionResponse|S1|schema|1 validation error for InitialExpansionResponse": 27,
+    "InitialExpansionResponse|S1|schema|7 validation errors for InitialExpansionResponse": 1,
+    "InitialExpansionResponse|S2|schema|1 validation error for InitialExpansionResponse": 13,
+    "InitialExpansionResponse|S3|availability|Action is not currently available: 'A2'": 1,
+    "InitialExpansionResponse|S3|state_operation_preflight|Unknown competing hypothesis ID: 'H999'": 1,
+    "InitialExpansionResponse|S3|state_operation_preflight|Unknown evidence ID: 'E999'": 1,
+    "InitialExpansionResponse|S3|state_operation_preflight|Unknown parent hypothesis ID: 'H999'": 1,
+    "InitialExpansionResponse|S4|schema|1 validation error for InitialExpansionResponse": 5,
+    "InitialExpansionResponse|S4|state_operation_preflight|Duplicate hypothesis ID in initial expansion: 'H2'": 1,
+    "InitialResponse|S0|serialization|Expecting ',' delimiter: line 1 column 483 (char 482)": 1,
+    "InitialResponse|S0|serialization|Expecting property name enclosed in double quotes: line 1 column 2 (char 1)": 2,
+    "InitialResponse|S0|serialization|Expecting value: line 1 column 1 (char 0)": 4,
+    "InitialResponse|S0|serialization|Extra data: line 2 column 1 (char 484)": 3,
+    "InitialResponse|S0|serialization|Illegal trailing comma before end of object: line 1 column 483 (char 482)": 1,
+    "InitialResponse|S0|serialization|Unterminated string starting at: line 1 column 119 (char 118)": 1,
+    "InitialResponse|S0|serialization|Unterminated string starting at: line 1 column 239 (char 238)": 1,
+    "InitialResponse|S0|serialization|Unterminated string starting at: line 1 column 442 (char 441)": 1,
+    "InitialResponse|S0|serialization|empty model output": 2,
+    "InitialResponse|S0|serialization|top-level JSON value must be an object": 4,
+    "InitialResponse|S1|schema|1 validation error for InitialResponse": 21,
+    "InitialResponse|S1|schema|6 validation errors for InitialResponse": 1,
+    "InitialResponse|S2|schema|1 validation error for InitialResponse": 11,
+    "InitialResponse|S3|availability|Action is not currently available: 'A2'": 1,
+    "InitialResponse|S3|state_operation_preflight|1 validation error for CaseState": 2,
+    "InitialResponse|S4|schema|1 validation error for InitialResponse": 2,
+    "InitialResponse|S4|state_operation_preflight|1 validation error for CaseState": 2,
+    "InitialResponse|S4|state_operation_preflight|Duplicate hypothesis ID in initial response: 'H1'": 1,
+    "ModelScreenHypothesisResponse|S0|serialization|Expecting ',' delimiter: line 1 column 163 (char 162)": 1,
+    "ModelScreenHypothesisResponse|S0|serialization|Expecting ',' delimiter: line 1 column 164 (char 163)": 1,
+    "ModelScreenHypothesisResponse|S0|serialization|Expecting property name enclosed in double quotes: line 1 column 2 (char 1)": 2,
+    "ModelScreenHypothesisResponse|S0|serialization|Expecting value: line 1 column 1 (char 0)": 4,
+    "ModelScreenHypothesisResponse|S0|serialization|Extra data: line 2 column 1 (char 165)": 3,
+    "ModelScreenHypothesisResponse|S0|serialization|Illegal trailing comma before end of object: line 1 column 164 (char 163)": 1,
+    "ModelScreenHypothesisResponse|S0|serialization|Unterminated string starting at: line 1 column 35 (char 34)": 1,
+    "ModelScreenHypothesisResponse|S0|serialization|Unterminated string starting at: line 1 column 79 (char 78)": 1,
+    "ModelScreenHypothesisResponse|S0|serialization|empty model output": 2,
+    "ModelScreenHypothesisResponse|S0|serialization|top-level JSON value must be an object": 4,
+    "ModelScreenHypothesisResponse|S1|schema|1 validation error for HypothesisResponse": 9,
+    "ModelScreenHypothesisResponse|S1|schema|2 validation errors for HypothesisResponse": 1,
+    "NextActionResponse|S0|serialization|Expecting ',' delimiter: line 1 column 184 (char 183)": 1,
+    "NextActionResponse|S0|serialization|Expecting property name enclosed in double quotes: line 1 column 2 (char 1)": 2,
+    "NextActionResponse|S0|serialization|Expecting value: line 1 column 1 (char 0)": 4,
+    "NextActionResponse|S0|serialization|Extra data: line 2 column 1 (char 185)": 3,
+    "NextActionResponse|S0|serialization|Illegal trailing comma before end of object: line 1 column 184 (char 183)": 1,
+    "NextActionResponse|S0|serialization|Unterminated string starting at: line 1 column 162 (char 161)": 1,
+    "NextActionResponse|S0|serialization|Unterminated string starting at: line 1 column 32 (char 31)": 1,
+    "NextActionResponse|S0|serialization|Unterminated string starting at: line 1 column 90 (char 89)": 1,
+    "NextActionResponse|S0|serialization|empty model output": 2,
+    "NextActionResponse|S0|serialization|top-level JSON value must be an object": 4,
+    "NextActionResponse|S1|schema|1 validation error for NextActionResponse": 14,
+    "NextActionResponse|S1|schema|5 validation errors for NextActionResponse": 1,
+    "NextActionResponse|S2|schema|1 validation error for NextActionResponse": 7,
+    "NextActionResponse|S3|availability|Action is not currently available: 'A2'": 1,
+    "NextStepResponse|S0|serialization|Expecting ',' delimiter: line 1 column 319 (char 318)": 1,
+    "NextStepResponse|S0|serialization|Expecting property name enclosed in double quotes: line 1 column 2 (char 1)": 2,
+    "NextStepResponse|S0|serialization|Expecting value: line 1 column 1 (char 0)": 4,
+    "NextStepResponse|S0|serialization|Extra data: line 2 column 1 (char 320)": 3,
+    "NextStepResponse|S0|serialization|Illegal trailing comma before end of object: line 1 column 319 (char 318)": 1,
+    "NextStepResponse|S0|serialization|Unterminated string starting at: line 1 column 137 (char 136)": 1,
+    "NextStepResponse|S0|serialization|Unterminated string starting at: line 1 column 287 (char 286)": 1,
+    "NextStepResponse|S0|serialization|Unterminated string starting at: line 1 column 63 (char 62)": 1,
+    "NextStepResponse|S0|serialization|empty model output": 2,
+    "NextStepResponse|S0|serialization|top-level JSON value must be an object": 4,
+    "NextStepResponse|S1|schema|1 validation error for NextStepResponse": 16,
+    "NextStepResponse|S1|schema|2 validation errors for NextStepResponse": 1,
+    "NextStepResponse|S2|schema|1 validation error for NextStepResponse": 10,
+    "NextStepResponse|S4|schema|1 validation error for NextStepResponse": 7,
+    "RevisionResponse|S0|serialization|Expecting ',' delimiter: line 1 column 171 (char 170)": 1,
+    "RevisionResponse|S0|serialization|Expecting property name enclosed in double quotes: line 1 column 2 (char 1)": 2,
+    "RevisionResponse|S0|serialization|Expecting value: line 1 column 1 (char 0)": 4,
+    "RevisionResponse|S0|serialization|Expecting value: line 1 column 170 (char 169)": 1,
+    "RevisionResponse|S0|serialization|Extra data: line 2 column 1 (char 172)": 3,
+    "RevisionResponse|S0|serialization|Illegal trailing comma before end of object: line 1 column 171 (char 170)": 1,
+    "RevisionResponse|S0|serialization|Unterminated string starting at: line 1 column 28 (char 27)": 1,
+    "RevisionResponse|S0|serialization|Unterminated string starting at: line 1 column 75 (char 74)": 1,
+    "RevisionResponse|S0|serialization|empty model output": 2,
+    "RevisionResponse|S0|serialization|top-level JSON value must be an object": 4,
+    "RevisionResponse|S1|schema|1 validation error for RevisionResponse": 27,
+    "RevisionResponse|S1|schema|2 validation errors for RevisionResponse": 1,
+    "RevisionResponse|S2|schema|1 validation error for RevisionResponse": 9,
+    "RevisionResponse|S3|operation_preflight|\"Unknown evidence ID: 'A1_RELEASE'\"": 1,
+    "RevisionResponse|S3|operation_preflight|\"Unknown evidence ID: 'A2_RELEASE'\"": 1,
+    "RevisionResponse|S3|operation_preflight|\"Unknown evidence ID: 'A3_RELEASE'\"": 1,
+    "RevisionResponse|S3|operation_preflight|\"Unknown evidence ID: 'E999'\"": 3,
+    "RevisionResponse|S3|operation_preflight|\"Unknown hypothesis ID: 'H2'\"": 1,
+    "RevisionResponse|S3|operation_preflight|\"Unknown hypothesis ID: 'H999'\"": 1,
+    "RevisionResponse|S3|operation_preflight|\"Unknown uncertainty ID: 'H999:U1'\"": 1,
+    "RevisionResponse|S3|operation_preflight|1 validation error for CaseState": 4,
+    "RevisionResponse|S4|operation_preflight|1 validation error for CaseState": 1,
+    "RevisionResponse|S4|operation_preflight|Duplicate hypothesis ID in revision: 'H1'": 1,
+    "RevisionResponse|S4|operation_preflight|Duplicate hypothesis ID in revision: 'H2'": 1,
+    "RevisionResponse|S4|operation_preflight|Duplicate uncertainty ID in revision: 'H1:U1'": 1,
+    "RevisionResponse|S4|schema|1 validation error for RevisionResponse": 8,
+    "SmokeResponse|S0|serialization|Expecting ',' delimiter: line 1 column 15 (char 14)": 1,
+    "SmokeResponse|S0|serialization|Expecting property name enclosed in double quotes: line 1 column 2 (char 1)": 2,
+    "SmokeResponse|S0|serialization|Expecting value: line 1 column 1 (char 0)": 4,
+    "SmokeResponse|S0|serialization|Extra data: line 2 column 1 (char 16)": 3,
+    "SmokeResponse|S0|serialization|Illegal trailing comma before end of object: line 1 column 15 (char 14)": 1,
+    "SmokeResponse|S0|serialization|Unterminated string starting at: line 1 column 12 (char 11)": 1,
+    "SmokeResponse|S0|serialization|Unterminated string starting at: line 1 column 2 (char 1)": 2,
+    "SmokeResponse|S0|serialization|empty model output": 2,
+    "SmokeResponse|S0|serialization|top-level JSON value must be an object": 4,
+    "SmokeResponse|S1|schema|1 validation error for SmokeResponse": 5,
+    "SmokeResponse|S1|schema|2 validation errors for SmokeResponse": 1
+  },
+  "deterministic": {
+    "accepted": 21,
+    "failure_codes": {
+      "S0": 140,
+      "S1": 126,
+      "S2": 50,
+      "S3": 21,
+      "S4": 30
+    },
+    "rejected": 367,
+    "s5_candidates": 0,
+    "s6_limitations": 0,
+    "total": 388,
+    "unexpected_accepts": 0,
+    "unexpected_rejects": 0
+  },
+  "deterministic_by_contract": {
+    "InitialExpansionResponse": {
+      "accepted": 2,
+      "failure_codes": {
+        "S0": 20,
+        "S1": 28,
+        "S2": 13,
+        "S3": 4,
+        "S4": 6
+      },
+      "rejected": 71,
+      "s5_candidates": 0,
+      "s6_limitations": 0,
+      "total": 73
+    },
+    "InitialResponse": {
+      "accepted": 1,
+      "failure_codes": {
+        "S0": 20,
+        "S1": 22,
+        "S2": 11,
+        "S3": 3,
+        "S4": 5
+      },
+      "rejected": 61,
+      "s5_candidates": 0,
+      "s6_limitations": 0,
+      "total": 62
+    },
+    "ModelScreenHypothesisResponse": {
+      "accepted": 2,
+      "failure_codes": {
+        "S0": 20,
+        "S1": 10
+      },
+      "rejected": 30,
+      "s5_candidates": 0,
+      "s6_limitations": 0,
+      "total": 32
+    },
+    "NextActionResponse": {
+      "accepted": 1,
+      "failure_codes": {
+        "S0": 20,
+        "S1": 15,
+        "S2": 7,
+        "S3": 1
+      },
+      "rejected": 43,
+      "s5_candidates": 0,
+      "s6_limitations": 0,
+      "total": 44
+    },
+    "NextStepResponse": {
+      "accepted": 3,
+      "failure_codes": {
+        "S0": 20,
+        "S1": 17,
+        "S2": 10,
+        "S4": 7
+      },
+      "rejected": 54,
+      "s5_candidates": 0,
+      "s6_limitations": 0,
+      "total": 57
+    },
+    "RevisionResponse": {
+      "accepted": 11,
+      "failure_codes": {
+        "S0": 20,
+        "S1": 28,
+        "S2": 9,
+        "S3": 13,
+        "S4": 12
+      },
+      "rejected": 82,
+      "s5_candidates": 0,
+      "s6_limitations": 0,
+      "total": 93
+    },
+    "SmokeResponse": {
+      "accepted": 1,
+      "failure_codes": {
+        "S0": 20,
+        "S1": 6
+      },
+      "rejected": 26,
+      "s5_candidates": 0,
+      "s6_limitations": 0,
+      "total": 27
+    }
+  },
+  "generated_at": "2026-08-31T23:47:12.323522+00:00",
+  "inventory": {
+    "contracts": [
+      {
+        "boundary_stages": [
+          "JSON normalization",
+          "Pydantic schema validation",
+          "raw output retained by caller"
+        ],
+        "name": "SmokeResponse",
+        "production_path": "BedrockModelClient.call (manual smoke script; excluded from offline runs)",
+        "prompt_builders": [
+          "scripts.smoke_bedrock.main"
+        ],
+        "prompt_hashes": {
+          "scripts/smoke_bedrock.py": "10360c7ed7c44dbc63708cd0f34c56843248fb02a8cfb489856c413b7d00a0ca"
+        },
+        "prompt_sources": [
+          "scripts/smoke_bedrock.py"
+        ],
+        "public": true,
+        "schema": "SmokeResponse",
+        "schema_hash": "fc008e3ce54e1de048758174b829e39bd4c47b13edbd2574f60044ecce9e9f22",
+        "source": "scripts/smoke_bedrock.py",
+        "source_hash": "10360c7ed7c44dbc63708cd0f34c56843248fb02a8cfb489856c413b7d00a0ca",
+        "template_placeholders": [
+          "REPLACE_WITH_"
+        ]
+      },
+      {
+        "boundary_stages": [
+          "JSON normalization",
+          "Pydantic schema validation",
+          "experiment consumer"
+        ],
+        "name": "ModelScreenHypothesisResponse",
+        "production_path": "ExperimentRunner.run -> ModelClient.call",
+        "prompt_builders": [
+          "experiments.model_screen.prompt"
+        ],
+        "prompt_hashes": {
+          "experiments/model_screen/prompt.py": "bef58f26e2983f7740ec4f450c74685d27a54750ccb58a5ebb96027affa9c0ce"
+        },
+        "prompt_sources": [
+          "experiments/model_screen/prompt.py"
+        ],
+        "public": true,
+        "schema": "HypothesisResponse",
+        "schema_hash": "f2224a7d45a3c36db7990ef4095c4ba27da435a44a6b8a3fbbe1c5cd0bf54cdc",
+        "source": "experiments/model_screen/schemas.py",
+        "source_hash": "2fe126f30e20920743f035fd6ff149fbb4c5f338905cb8ae936382cac59ec945",
+        "template_placeholders": [
+          "REPLACE_WITH_"
+        ]
+      },
+      {
+        "boundary_stages": [
+          "JSON normalization",
+          "Pydantic schema validation",
+          "evidence namespace validation",
+          "state construction",
+          "raw output retained by service"
+        ],
+        "name": "InitialResponse",
+        "production_path": "InvestigationService.start_case -> environment.build_initial_state",
+        "prompt_builders": [
+          "Case1ControlledEnvironment.initial_prompt"
+        ],
+        "prompt_hashes": {
+          "src/investigator/environments/case_01_prompts.py": "d9ce0a5b96dc3fe05550c6266aa1bc2087ec004937f4171d293ff7c4df96e6df"
+        },
+        "prompt_sources": [
+          "src/investigator/environments/case_01_prompts.py"
+        ],
+        "public": true,
+        "schema": "InitialResponse",
+        "schema_hash": "0bf2d70051b0216d9f2cefa9432cf13b87ad214e2e0e13d710686fa4103978a2",
+        "source": "src/investigator/services/contracts.py",
+        "source_hash": "77f64e9b57b75be59239f60b8e1a2ae270c144d1af5310193ee760cc04c0288f",
+        "template_placeholders": [
+          "REPLACE_WITH_"
+        ]
+      },
+      {
+        "boundary_stages": [
+          "JSON normalization",
+          "Pydantic schema validation",
+          "relationship validation",
+          "evidence namespace validation",
+          "seeded state construction",
+          "raw output retained by service"
+        ],
+        "name": "InitialExpansionResponse",
+        "production_path": "InvestigationService.start_case(seed) -> environment.build_seeded_initial_state",
+        "prompt_builders": [
+          "Case1ControlledEnvironment.initial_expansion_prompt"
+        ],
+        "prompt_hashes": {
+          "src/investigator/environments/case_01_prompts.py": "d9ce0a5b96dc3fe05550c6266aa1bc2087ec004937f4171d293ff7c4df96e6df"
+        },
+        "prompt_sources": [
+          "src/investigator/environments/case_01_prompts.py"
+        ],
+        "public": true,
+        "schema": "InitialExpansionResponse",
+        "schema_hash": "3ab84fb21b95fbb73d063a580acd3f51ec5299a5657a7a6ea62d6b61e696b7c2",
+        "source": "src/investigator/services/contracts.py",
+        "source_hash": "77f64e9b57b75be59239f60b8e1a2ae270c144d1af5310193ee760cc04c0288f",
+        "template_placeholders": [
+          "REPLACE_WITH_"
+        ]
+      },
+      {
+        "boundary_stages": [
+          "JSON normalization",
+          "Pydantic schema validation",
+          "action namespace validation",
+          "environment availability validation",
+          "raw output retained by service"
+        ],
+        "name": "NextActionResponse",
+        "production_path": "InvestigationService.propose_next_action -> availability preflight",
+        "prompt_builders": [
+          "Case1ControlledEnvironment.next_action_prompt"
+        ],
+        "prompt_hashes": {
+          "src/investigator/environments/case_01_prompts.py": "d9ce0a5b96dc3fe05550c6266aa1bc2087ec004937f4171d293ff7c4df96e6df"
+        },
+        "prompt_sources": [
+          "src/investigator/environments/case_01_prompts.py"
+        ],
+        "public": true,
+        "schema": "NextActionResponse",
+        "schema_hash": "2ee01b9e0a44aa5ea0159022f89f32b407b9f1bdd33c88f8914b62244611a300",
+        "source": "src/investigator/services/contracts.py",
+        "source_hash": "77f64e9b57b75be59239f60b8e1a2ae270c144d1af5310193ee760cc04c0288f",
+        "template_placeholders": [
+          "REPLACE_WITH_"
+        ]
+      },
+      {
+        "boundary_stages": [
+          "JSON normalization",
+          "Pydantic schema validation",
+          "reference validation",
+          "cross-field validation",
+          "state operation preflight",
+          "raw output retained by service"
+        ],
+        "name": "RevisionResponse",
+        "production_path": "InvestigationService.propose_revision -> apply_revision",
+        "prompt_builders": [
+          "Case1ControlledEnvironment.revision_prompt"
+        ],
+        "prompt_hashes": {
+          "src/investigator/environments/case_01_prompts.py": "d9ce0a5b96dc3fe05550c6266aa1bc2087ec004937f4171d293ff7c4df96e6df"
+        },
+        "prompt_sources": [
+          "src/investigator/environments/case_01_prompts.py"
+        ],
+        "public": true,
+        "schema": "RevisionResponse",
+        "schema_hash": "56906e23079db421c3704a1465b15ff9c008cbde48b2b4d5776f4c4c1e59a455",
+        "source": "src/investigator/services/contracts.py",
+        "source_hash": "77f64e9b57b75be59239f60b8e1a2ae270c144d1af5310193ee760cc04c0288f",
+        "template_placeholders": [
+          "REPLACE_WITH_"
+        ]
+      },
+      {
+        "boundary_stages": [
+          "JSON normalization",
+          "Pydantic schema validation",
+          "union branch validation",
+          "raw output retained by adapter"
+        ],
+        "name": "NextStepResponse",
+        "production_path": "Defined LLM-facing union; no current production caller",
+        "prompt_builders": [],
+        "prompt_hashes": {},
+        "prompt_sources": [],
+        "public": true,
+        "schema": "NextStepResponse",
+        "schema_hash": "f0186ca2f50494c9a630a22fe3bdc890a942cb2607bbe1d15d23957dcf668f29",
+        "source": "src/investigator/services/contracts.py",
+        "source_hash": "77f64e9b57b75be59239f60b8e1a2ae270c144d1af5310193ee760cc04c0288f",
+        "template_placeholders": [
+          "REPLACE_WITH_"
+        ]
+      }
+    ],
+    "discovered_response_classes": [
+      {
+        "name": "HypothesisResponse",
+        "source": "experiments/model_screen/schemas.py"
+      },
+      {
+        "name": "SmokeResponse",
+        "source": "scripts/smoke_bedrock.py"
+      },
+      {
+        "name": "InitialResponse",
+        "source": "src/investigator/services/contracts.py"
+      },
+      {
+        "name": "InitialExpansionResponse",
+        "source": "src/investigator/services/contracts.py"
+      },
+      {
+        "name": "NextStepResponse",
+        "source": "src/investigator/services/contracts.py"
+      },
+      {
+        "name": "NextActionResponse",
+        "source": "src/investigator/services/contracts.py"
+      },
+      {
+        "name": "RevisionResponse",
+        "source": "src/investigator/services/contracts.py"
+      }
+    ],
+    "git_commit": "a595cee",
+    "unregistered_response_classes": []
+  },
+  "semantic_limitations": [
+    "S6 reasoning and semantic quality are not assessed by deterministic schema assurance.",
+    "SmokeResponse is schema-sampled offline; its live Bedrock path is excluded from this offline cycle."
+  ]
+}
