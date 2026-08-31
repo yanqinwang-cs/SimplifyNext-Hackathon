@@ -9,6 +9,17 @@ from .taxonomy import FailureCode
 from investigator.state.operations import apply_revision
 
 
+def _validation_code(exc: ValidationError) -> FailureCode:
+    errors = exc.errors()
+    messages = [str(error.get("msg", "")) for error in errors]
+    error_types = [str(error.get("type", "")) for error in errors]
+    if any("requires" in message or "must belong" in message or "only valid" in message for message in messages):
+        return FailureCode.S4
+    if any("literal_error" in kind or "pattern" in kind or "enum" in kind for kind in error_types):
+        return FailureCode.S2
+    return FailureCode.S1
+
+
 @dataclass
 class Evaluation:
     accepted: bool
@@ -26,7 +37,7 @@ def evaluate_raw(raw_output: Any, schema: type[Any]) -> Evaluation:
         try:
             parsed = schema.model_validate(raw_output)
         except ValidationError as exc:
-            return Evaluation(False, FailureCode.S1, "schema", str(exc), raw_output=raw_output)
+            return Evaluation(False, _validation_code(exc), "schema", str(exc), raw_output=raw_output)
         return Evaluation(True, stage="schema", parsed=parsed, raw_output=raw_output)
     if not raw_output.strip():
         return Evaluation(False, FailureCode.S0, "serialization", "empty model output", raw_output=raw_output)
@@ -37,13 +48,7 @@ def evaluate_raw(raw_output: Any, schema: type[Any]) -> Evaluation:
     try:
         parsed = schema.model_validate(value)
     except ValidationError as exc:
-        errors = exc.errors()
-        messages = [str(error.get("msg", "")) for error in errors]
-        error_types = [str(error.get("type", "")) for error in errors]
-        cross_field = any("requires" in message or "must belong" in message or "only valid" in message for message in messages)
-        vocabulary = any("literal_error" in kind or "pattern" in kind or "enum" in kind for kind in error_types)
-        code = FailureCode.S4 if cross_field else FailureCode.S2 if vocabulary else FailureCode.S1
-        return Evaluation(False, code, "schema", str(exc), raw_output=raw_output)
+        return Evaluation(False, _validation_code(exc), "schema", str(exc), raw_output=raw_output)
     return Evaluation(True, stage="schema", parsed=parsed, raw_output=raw_output)
 
 

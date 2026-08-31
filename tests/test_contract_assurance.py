@@ -36,6 +36,7 @@ def test_real_schema_boundary_classifies_serialization_and_shape():
 def test_outer_json_fence_is_the_only_normalization():
     assert evaluate_raw("```json\n" + json.dumps(valid_action()) + "\n```", NextActionResponse).accepted
     assert evaluate_raw("before\n" + json.dumps(valid_action()), NextActionResponse).code is FailureCode.S0
+    assert evaluate_raw({**valid_action(), "selected_action_id": "A9"}, NextActionResponse).code is FailureCode.S2
 
 
 def test_canonical_placeholders_are_rejected_by_real_contracts():
