@@ -103,7 +103,7 @@
     },
     {
       "intended_code": "S1",
-      "name": "wrong_shape_selected_action_id",
+      "name": "wrong_shape_selected_action_id_primitive",
       "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": 7, \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
     },
     {
@@ -113,7 +113,7 @@
     },
     {
       "intended_code": "S1",
-      "name": "wrong_shape_target_uncertainty",
+      "name": "wrong_shape_target_uncertainty_primitive",
       "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"A1\", \"step_type\": \"action\", \"target_uncertainty\": 7, \"why_this_action_now\": \"This enquiry is available now.\"}"
     },
     {
@@ -123,7 +123,7 @@
     },
     {
       "intended_code": "S1",
-      "name": "wrong_shape_expected_information_value",
+      "name": "wrong_shape_expected_information_value_primitive",
       "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": 7, \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"A1\", \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
     },
     {
@@ -133,7 +133,7 @@
     },
     {
       "intended_code": "S1",
-      "name": "wrong_shape_why_this_action_now",
+      "name": "wrong_shape_why_this_action_now_primitive",
       "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"A1\", \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": 7}"
     },
     {
@@ -143,8 +143,18 @@
     },
     {
       "intended_code": "S1",
-      "name": "wrong_shape_remaining_uncertainty_ids",
+      "name": "wrong_shape_remaining_uncertainty_ids_scalar",
       "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": \"not an array\", \"selected_action_id\": \"A1\", \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_remaining_uncertainty_ids_object",
+      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": {}, \"selected_action_id\": \"A1\", \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_remaining_uncertainty_ids_null",
+      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": null, \"selected_action_id\": \"A1\", \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
     },
     {
       "intended_code": "S1",

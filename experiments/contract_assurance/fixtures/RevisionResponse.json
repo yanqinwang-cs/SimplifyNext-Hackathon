@@ -100,8 +100,18 @@
     },
     {
       "intended_code": "S1",
-      "name": "wrong_shape_hypothesis_updates",
+      "name": "wrong_shape_hypothesis_updates_scalar",
       "raw_output": "{\"hypothesis_updates\": \"not an array\", \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_hypothesis_updates_object",
+      "raw_output": "{\"hypothesis_updates\": {}, \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_hypothesis_updates_null",
+      "raw_output": "{\"hypothesis_updates\": null, \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
     {
       "intended_code": "S1",
@@ -110,8 +120,18 @@
     },
     {
       "intended_code": "S1",
-      "name": "wrong_shape_new_hypotheses",
+      "name": "wrong_shape_new_hypotheses_scalar",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": \"not an array\", \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_new_hypotheses_object",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": {}, \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_new_hypotheses_null",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": null, \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
     {
       "intended_code": "S1",
@@ -120,8 +140,18 @@
     },
     {
       "intended_code": "S1",
-      "name": "wrong_shape_uncertainty_updates",
+      "name": "wrong_shape_uncertainty_updates_scalar",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": \"not an array\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_uncertainty_updates_object",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": {}}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_uncertainty_updates_null",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": null}"
     },
     {
       "intended_code": "S1",
@@ -130,8 +160,18 @@
     },
     {
       "intended_code": "S1",
-      "name": "wrong_shape_new_uncertainties",
+      "name": "wrong_shape_new_uncertainties_scalar",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": \"not an array\", \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_new_uncertainties_object",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": {}, \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_new_uncertainties_null",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": null, \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
     {
       "intended_code": "S1",

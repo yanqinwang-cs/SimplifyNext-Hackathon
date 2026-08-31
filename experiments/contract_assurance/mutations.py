@@ -63,18 +63,20 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
             continue
         if original is None:
             continue
-        wrong_shape = copy.deepcopy(value)
         if isinstance(original, list):
-            wrong_shape[field] = "not an array"
+            wrong_shapes = [("scalar", "not an array"), ("object", {}), ("null", None)]
         elif isinstance(original, dict):
-            wrong_shape[field] = []
+            wrong_shapes = [("array", []), ("scalar", "not an object"), ("null", None)]
         elif isinstance(original, str):
-            wrong_shape[field] = 7
+            wrong_shapes = [("primitive", 7)]
         elif isinstance(original, bool):
-            wrong_shape[field] = "not a boolean"
+            wrong_shapes = [("primitive", "not a boolean")]
         else:
-            wrong_shape[field] = "not the declared primitive"
-        result.append(Mutation(f"wrong_shape_{field}", "S1", json.dumps(wrong_shape, sort_keys=True)))
+            wrong_shapes = [("primitive", "not the declared primitive")]
+        for shape_name, replacement in wrong_shapes:
+            wrong_shape = copy.deepcopy(value)
+            wrong_shape[field] = replacement
+            result.append(Mutation(f"wrong_shape_{field}_{shape_name}", "S1", json.dumps(wrong_shape, sort_keys=True)))
         renamed = copy.deepcopy(value)
         del renamed[field]
         renamed[f"{field}_value"] = original
