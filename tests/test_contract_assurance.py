@@ -5,7 +5,7 @@ from experiments.contract_assurance.evaluate import evaluate_raw
 from experiments.contract_assurance.evaluate import evaluate_initial, evaluate_next_action, evaluate_revision
 from experiments.contract_assurance.inventory import assert_complete_inventory, discover_response_classes, render_inventory_markdown, unregistered_response_classes, write_inventory_markdown
 from experiments.contract_assurance.audit import BlindBatchAudit
-from experiments.contract_assurance.runner import run_deterministic
+from experiments.contract_assurance.runner import run_deterministic, verify_committed_packages
 from experiments.contract_assurance.mutations import write_fixture_manifest
 from experiments.contract_assurance.mutations import deduplicate, mutations
 from experiments.contract_assurance.lint import lint_contract
@@ -216,6 +216,7 @@ def test_all_committed_public_packages_match_registered_contracts():
         contract = payload["manifest"]["contract"]
         assert contract in registry
         assert verify_snapshot_against_contract(payload, registry[contract]) == [], path.name
+    assert verify_committed_packages(Path(__file__).resolve().parents[1]) == []
 
 
 def test_registered_experiment_contracts_forbid_unexpected_fields():

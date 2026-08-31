@@ -6,6 +6,7 @@ from typing import Any
 
 from .evaluate import evaluate_raw
 from .inventory import assert_complete_inventory, inventory
+from .snapshot import verify_snapshot_against_contract
 from .mutations import deduplicate, mutations
 from .registry import contract_registry
 from .report import coverage_ledger, summarize, summarize_by_contract, write_history
@@ -13,6 +14,9 @@ from .report import coverage_ledger, summarize, summarize_by_contract, write_his
 
 def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> dict[str, Any]:
     assert_complete_inventory(root)
+    package_issues = verify_committed_packages(root)
+    if package_issues:
+        raise ValueError("Frozen public package verification failed: " + "; ".join(package_issues))
     results = []
     for name, spec in contract_registry().items():
         sample = _sample_for(spec.schema)
@@ -30,6 +34,20 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
     write_history(output_dir, report)
     (output_dir / "inventory.json").write_text(json.dumps(report["inventory"], indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
     return report
+
+
+def verify_committed_packages(root: Path) -> list[str]:
+    package_dir = root / "experiments/contract_assurance/blind/packages"
+    registry = contract_registry()
+    issues: list[str] = []
+    for path in sorted(package_dir.glob("*.json")):
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        spec = registry.get(payload.get("manifest", {}).get("contract"))
+        if spec is None:
+            issues.append(f"{path.name}: unknown contract")
+            continue
+        issues.extend(f"{path.name}: {issue}" for issue in verify_snapshot_against_contract(payload, spec))
+    return issues
 
 
 def _sample_for(schema: type[Any]) -> dict[str, Any] | None:
