@@ -1,17 +1,19 @@
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from investigator.llm.base import ModelCallMetadata
 
 
 class Hypothesis(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     statement: str
     justification: str
     uncertainty: str
 
 
 class HypothesisResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     hypotheses: list[Hypothesis] = Field(min_length=2, max_length=4)
 
     @field_validator("hypotheses")
@@ -40,4 +42,3 @@ class RunSummary(BaseModel):
     case_ids: list[str]
     successful_cases: int
     failed_cases: int
-

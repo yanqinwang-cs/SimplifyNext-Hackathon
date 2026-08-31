@@ -167,6 +167,15 @@ def test_blind_role_instructions_exist_without_validator_details():
     assert "failure taxonomy" not in producer
 
 
+def test_registered_experiment_contracts_forbid_unexpected_fields():
+    from experiments.model_screen.schemas import HypothesisResponse
+    valid = {"hypotheses": [{"statement": "A", "justification": "Because", "uncertainty": "Unknown"}, {"statement": "B", "justification": "Because", "uncertainty": "Unknown"}]}
+    with __import__("pytest").raises(ValueError):
+        HypothesisResponse.model_validate({**valid, "unexpected": True})
+    with __import__("pytest").raises(ValueError):
+        HypothesisResponse.model_validate({"hypotheses": [{"statement": "A", "justification": "Because", "uncertainty": "Unknown", "unexpected": True}, valid["hypotheses"][1]]})
+
+
 def test_availability_is_checked_after_schema():
     result = evaluate_next_action(json.dumps(valid_action()), {"A2"})
     assert not result.accepted and result.code is FailureCode.S3

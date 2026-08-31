@@ -1,12 +1,13 @@
 """Make one minimal live Bedrock structured-call smoke test."""
 
 from dotenv import load_dotenv
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from investigator.llm.bedrock import BedrockModelClient
 
 
 class SmokeResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     answer: str
 
 
@@ -30,4 +31,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
