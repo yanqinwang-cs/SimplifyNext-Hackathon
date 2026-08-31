@@ -7,7 +7,7 @@ from experiments.contract_assurance.evaluate import evaluate_initial, evaluate_n
 from experiments.contract_assurance.inventory import assert_complete_inventory, assert_inventory_paths, discover_response_classes, render_inventory_markdown, unregistered_response_classes, write_inventory_markdown
 from experiments.contract_assurance.audit import BlindBatchAudit, audit_batch_package, record_batch
 from experiments.contract_assurance.evolution.records import validate_evolution_record
-from experiments.contract_assurance.runner import run_deterministic, verify_committed_packages
+from experiments.contract_assurance.runner import blind_compliance_summary, run_deterministic, verify_committed_packages
 from experiments.contract_assurance.mutations import write_fixture_manifest
 from experiments.contract_assurance.mutations import deduplicate, mutations
 from experiments.contract_assurance.lint import lint_contract
@@ -210,6 +210,23 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     assert report["blind_compliance"]["by_contract"]
     assert (tmp_path / "inventory.json").exists()
     assert (tmp_path / "latest.json").exists()
+
+
+def test_blind_compliance_scans_nested_batches_and_records_outcomes(tmp_path: Path):
+    batch = tmp_path / "experiments/contract_assurance/results/role/producer"
+    batch.mkdir(parents=True)
+    (batch / "batch_manifest.json").write_text(json.dumps({
+        "status": "NOT_BLIND",
+        "audits": [{"contract": "NextActionResponse", "qualifies_as_blind": False, "worker_id": "producer-1"}],
+    }), encoding="utf-8")
+    (batch / "evaluations.json").write_text(json.dumps([
+        {"accepted": True}, {"accepted": False},
+    ]), encoding="utf-8")
+    summary = blind_compliance_summary(tmp_path)
+    assert summary["batches"] == 1 and summary["excluded_not_blind"] == 1
+    assert summary["by_role"]["producer"]["evaluations"] == 2
+    assert summary["by_role"]["producer"]["accepted"] == 1
+    assert summary["by_role"]["producer"]["rejected"] == 1
 
 
 def test_assurance_module_cli_reports_summary(tmp_path: Path):
