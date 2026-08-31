@@ -52,6 +52,7 @@ def test_registry_has_current_service_contracts():
     registry = contract_registry()
     assert {"InitialResponse", "InitialExpansionResponse", "NextActionResponse", "RevisionResponse", "NextStepResponse"} <= set(registry)
     assert "ModelScreenHypothesisResponse" in registry
+    assert all(not lint_contract(spec) for spec in registry.values())
 
 
 def test_inventory_discovers_and_registers_all_response_contracts(tmp_path: Path):
@@ -70,6 +71,7 @@ def test_lint_detects_template_drift():
     spec = contract_registry()["NextActionResponse"]
     issues = lint_contract(spec, template={"selected_action_id": "A1", "stale_field": "x"})
     assert any("forbidden field" in issue.message for issue in issues)
+    assert not any("extra='forbid'" in issue.message for issue in lint_contract(spec))
 
 
 def test_snapshots_are_hashable_and_public(tmp_path: Path):

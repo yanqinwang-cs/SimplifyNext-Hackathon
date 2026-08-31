@@ -13,6 +13,8 @@ class LintIssue:
 def lint_contract(spec: ContractSpec, prompt: str = "", template: Any = None) -> list[LintIssue]:
     issues: list[LintIssue] = []
     fields = set(spec.schema.model_fields)
+    if getattr(spec.schema, "model_config", {}).get("extra") != "forbid":
+        issues.append(LintIssue(spec.name, "public response schema must set extra='forbid'"))
     if template is not None and isinstance(template, dict):
         unknown = set(template) - fields
         missing = {name for name, field in spec.schema.model_fields.items() if field.is_required()} - set(template)
