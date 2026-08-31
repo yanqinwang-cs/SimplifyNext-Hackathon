@@ -75,7 +75,7 @@
       "schema": "InitialResponse",
       "schema_hash": "0bf2d70051b0216d9f2cefa9432cf13b87ad214e2e0e13d710686fa4103978a2",
       "source": "src/investigator/services/contracts.py",
-      "source_hash": "418808944f7855c285d5557b80dc7afeb24b203a5fb62ae508cd99811a2198d0",
+      "source_hash": "438511cb6ff9b5d8ee9f276040ba4a8a1b39240cf9a6e49f554a066cf165ef98",
       "template_placeholders": [
         "REPLACE_WITH_"
       ]
@@ -104,7 +104,7 @@
       "schema": "InitialExpansionResponse",
       "schema_hash": "3ab84fb21b95fbb73d063a580acd3f51ec5299a5657a7a6ea62d6b61e696b7c2",
       "source": "src/investigator/services/contracts.py",
-      "source_hash": "418808944f7855c285d5557b80dc7afeb24b203a5fb62ae508cd99811a2198d0",
+      "source_hash": "438511cb6ff9b5d8ee9f276040ba4a8a1b39240cf9a6e49f554a066cf165ef98",
       "template_placeholders": [
         "REPLACE_WITH_"
       ]
@@ -132,7 +132,7 @@
       "schema": "NextActionResponse",
       "schema_hash": "2ee01b9e0a44aa5ea0159022f89f32b407b9f1bdd33c88f8914b62244611a300",
       "source": "src/investigator/services/contracts.py",
-      "source_hash": "418808944f7855c285d5557b80dc7afeb24b203a5fb62ae508cd99811a2198d0",
+      "source_hash": "438511cb6ff9b5d8ee9f276040ba4a8a1b39240cf9a6e49f554a066cf165ef98",
       "template_placeholders": [
         "REPLACE_WITH_"
       ]
@@ -161,7 +161,7 @@
       "schema": "RevisionResponse",
       "schema_hash": "56906e23079db421c3704a1465b15ff9c008cbde48b2b4d5776f4c4c1e59a455",
       "source": "src/investigator/services/contracts.py",
-      "source_hash": "418808944f7855c285d5557b80dc7afeb24b203a5fb62ae508cd99811a2198d0",
+      "source_hash": "438511cb6ff9b5d8ee9f276040ba4a8a1b39240cf9a6e49f554a066cf165ef98",
       "template_placeholders": [
         "REPLACE_WITH_"
       ]
@@ -182,7 +182,7 @@
       "schema": "NextStepResponse",
       "schema_hash": "f0186ca2f50494c9a630a22fe3bdc890a942cb2607bbe1d15d23957dcf668f29",
       "source": "src/investigator/services/contracts.py",
-      "source_hash": "418808944f7855c285d5557b80dc7afeb24b203a5fb62ae508cd99811a2198d0",
+      "source_hash": "438511cb6ff9b5d8ee9f276040ba4a8a1b39240cf9a6e49f554a066cf165ef98",
       "template_placeholders": [
         "REPLACE_WITH_"
       ]
@@ -218,6 +218,6 @@
       "source": "src/investigator/services/contracts.py"
     }
   ],
-  "git_commit": "6a67800",
+  "git_commit": "8247878",
   "unregistered_response_classes": []
 }

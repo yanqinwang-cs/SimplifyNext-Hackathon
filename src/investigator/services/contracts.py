@@ -123,7 +123,7 @@ class NextStepResponse(BaseModel):
             if self.selected_action_id is None or any(value is None for value in (self.target_uncertainty, self.expected_information_value, self.why_this_action_now)) or self.conclusion_hypothesis_id is not None or self.conclusion_reason is not None or self.remaining_uncertainty_ids:
                 raise ValueError("action step requires action fields and no conclusion fields")
         elif self.step_type == "conclusion":
-            if self.conclusion_hypothesis_id is None or not self.conclusion_reason or self.selected_action_id is not None:
+            if self.conclusion_hypothesis_id is None or not self.conclusion_reason or self.selected_action_id is not None or self.remaining_uncertainty_ids:
                 raise ValueError("conclusion step requires hypothesis and reason and no action")
         elif self.selected_action_id is not None or self.target_uncertainty is not None or self.expected_information_value is not None or self.why_this_action_now is not None or self.conclusion_hypothesis_id is not None:
             raise ValueError("stop_unresolved cannot contain action or conclusion-target fields")
