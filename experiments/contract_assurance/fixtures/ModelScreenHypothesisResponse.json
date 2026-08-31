@@ -74,6 +74,16 @@
       "intended_code": "S1",
       "name": "unexpected_nested_hypotheses",
       "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\", \"unexpected_nested_field\": true}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}"
+    },
+    {
+      "intended_code": "valid",
+      "name": "valid_four_hypotheses",
+      "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"A supplied observation supports considering this possibility.\", \"statement\": \"Explanation 3.\", \"uncertainty\": \"Its relative support remains uncertain.\"}, {\"justification\": \"A supplied observation supports considering this possibility.\", \"statement\": \"Explanation 4.\", \"uncertainty\": \"Its relative support remains uncertain.\"}]}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "five_hypotheses",
+      "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"A supplied observation supports considering this possibility.\", \"statement\": \"Explanation 3.\", \"uncertainty\": \"Its relative support remains uncertain.\"}, {\"justification\": \"A supplied observation supports considering this possibility.\", \"statement\": \"Explanation 4.\", \"uncertainty\": \"Its relative support remains uncertain.\"}, {\"justification\": \"A supplied observation supports considering this possibility.\", \"statement\": \"Explanation 5.\", \"uncertainty\": \"Its relative support remains uncertain.\"}]}"
     }
   ]
 }

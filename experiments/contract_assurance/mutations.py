@@ -124,6 +124,14 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         duplicate = copy.deepcopy(value)
         duplicate["competing_hypotheses"].append(copy.deepcopy(duplicate["competing_hypotheses"][0]))
         result.append(Mutation("duplicate_competing_hypothesis_id", "S4", json.dumps(duplicate, sort_keys=True)))
+    if contract == "ModelScreenHypothesisResponse" and "hypotheses" in value:
+        four = copy.deepcopy(value)
+        while len(four["hypotheses"]) < 4:
+            four["hypotheses"].append({"statement": f"Explanation {len(four['hypotheses']) + 1}.", "justification": "A supplied observation supports considering this possibility.", "uncertainty": "Its relative support remains uncertain."})
+        result.append(Mutation("valid_four_hypotheses", "valid", json.dumps(four, sort_keys=True)))
+        five = copy.deepcopy(four)
+        five["hypotheses"].append({"statement": "Explanation 5.", "justification": "A supplied observation supports considering this possibility.", "uncertainty": "Its relative support remains uncertain."})
+        result.append(Mutation("five_hypotheses", "S1", json.dumps(five, sort_keys=True)))
     if contract in {"InitialResponse", "InitialExpansionResponse"}:
         unknown = copy.deepcopy(value)
         target = unknown["hypotheses"][0] if "hypotheses" in unknown else unknown["competing_hypotheses"][0]
