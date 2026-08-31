@@ -39,6 +39,16 @@ def assert_complete_inventory(root: Path) -> None:
         raise AssertionError(f"Unregistered LLM-facing response schemas: {rendered}")
 
 
+def assert_inventory_paths(root: Path) -> None:
+    missing: list[str] = []
+    for spec in contract_registry().values():
+        for relative in (spec.source, *spec.prompt_sources):
+            if not (root / relative).is_file():
+                missing.append(f"{spec.name}: {relative}")
+    if missing:
+        raise AssertionError("Missing registered contract paths: " + ", ".join(missing))
+
+
 def inventory(root: Path, commit: str = "unknown") -> dict[str, Any]:
     specs = list(contract_registry().values())
     entries = []

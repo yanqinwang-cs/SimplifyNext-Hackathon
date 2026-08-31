@@ -3,7 +3,7 @@ from pathlib import Path
 
 from experiments.contract_assurance.evaluate import evaluate_raw
 from experiments.contract_assurance.evaluate import evaluate_initial, evaluate_next_action, evaluate_revision
-from experiments.contract_assurance.inventory import assert_complete_inventory, discover_response_classes, render_inventory_markdown, unregistered_response_classes, write_inventory_markdown
+from experiments.contract_assurance.inventory import assert_complete_inventory, assert_inventory_paths, discover_response_classes, render_inventory_markdown, unregistered_response_classes, write_inventory_markdown
 from experiments.contract_assurance.audit import BlindBatchAudit
 from experiments.contract_assurance.runner import run_deterministic, verify_committed_packages
 from experiments.contract_assurance.mutations import write_fixture_manifest
@@ -69,6 +69,7 @@ def test_inventory_discovers_and_registers_all_response_contracts(tmp_path: Path
     assert {"InitialResponse", "InitialExpansionResponse", "NextActionResponse", "RevisionResponse", "HypothesisResponse"} <= names
     assert unregistered_response_classes(root) == []
     assert_complete_inventory(root)
+    assert_inventory_paths(root)
     assert all(item["source_hash"] for item in __import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root)["contracts"])
     assert all(item["prompt_hashes"] or item["name"] == "NextStepResponse" for item in __import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root)["contracts"])
     markdown = render_inventory_markdown(__import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root))
