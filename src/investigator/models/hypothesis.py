@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class HypothesisOrigin(str, Enum):
@@ -67,6 +67,8 @@ class HypothesisTransitionType(str, Enum):
 
 
 class HypothesisTransition(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     hypothesis_id: str
     transition: HypothesisTransitionType
     reason: str

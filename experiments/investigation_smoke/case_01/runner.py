@@ -21,7 +21,7 @@ from experiments.investigation_smoke.case_01.schemas import (
     ReleaseRecord,
     RevisionResponse,
 )
-from investigator.llm.base import ModelClient
+from investigator.llm.base import ModelClient, ModelParseError
 from investigator.llm.bedrock import BedrockModelClient
 from investigator.models import (
     EvidenceItem,
@@ -144,24 +144,45 @@ def run(
     output_dir = Path(results_root) / f"{_safe_model_name(resolved_model_id)}_{timestamp}"
     output_dir.mkdir(parents=True, exist_ok=False)
     trace = ControlledRunTrace(model_id=resolved_model_id, initial_case_input=case_input, initial_prompt=first_prompt)
+    trace_path = output_dir / "trace.json"
+
+    def failed(current: ControlledRunTrace, stage: str, error: Exception, raw_output=... ) -> Path:
+        update = {"failure_stage": stage, "error_message": str(error), "parse_success": False}
+        if raw_output is not ...:
+            update["initial_raw_model_output" if stage.startswith("initial") else "revision_raw_model_output"] = raw_output
+        failed_trace = current.model_copy(update=update)
+        _write_trace(trace_path, failed_trace)
+        return trace_path
 
     try:
-        first_call = active_client.call(first_prompt, InitialResponse)
-        trace = trace.model_copy(update={
-            "initial_raw_model_output": first_call.raw_output,
-            "initial_metadata": first_call.metadata,
-        })
-        initial_response = InitialResponse.model_validate(first_call.parsed)
-        action = get_action(initial_response.selected_action_id)
-        state = initial_state(initial_response)
+        try:
+            first_call = active_client.call(first_prompt, InitialResponse)
+        except ModelParseError as exc:
+            return failed(trace, "initial_parse", exc, exc.raw_output)
+        except Exception as exc:
+            return failed(trace, "initial_call", exc)
+        trace = trace.model_copy(update={"initial_raw_model_output": first_call.raw_output, "initial_metadata": first_call.metadata})
+        try:
+            initial_response = InitialResponse.model_validate(first_call.parsed)
+            action = get_action(initial_response.selected_action_id)
+        except Exception as exc:
+            return failed(trace, "initial_parse", exc)
+        try:
+            state = initial_state(initial_response)
+        except Exception as exc:
+            return failed(trace, "state_apply", exc)
         post_release_state = state.model_copy(deep=True)
-        release = release_selected_artifact(post_release_state, action.action_id)
+        try:
+            release = release_selected_artifact(post_release_state, action.action_id)
+        except Exception as exc:
+            return failed(trace, "state_apply", exc)
         selected_action = {"action_id": action.action_id, "title": action.title, "definition": action.definition}
         second_prompt = revision_prompt(
             case_input,
             [hypothesis.model_dump(mode="json") for hypothesis in state.hypotheses.values()],
             [uncertainty.model_dump(mode="json") for uncertainty in state.uncertainties.values()],
             selected_action,
+            release.artifact_id,
             release.content,
         )
         trace = trace.model_copy(update={
@@ -174,21 +195,31 @@ def run(
             "release": release,
             "revision_prompt": second_prompt,
         })
-        second_call = active_client.call(second_prompt, RevisionResponse)
+        try:
+            second_call = active_client.call(second_prompt, RevisionResponse)
+        except ModelParseError as exc:
+            return failed(trace, "revision_parse", exc, exc.raw_output)
+        except Exception as exc:
+            return failed(trace, "revision_call", exc)
         trace = trace.model_copy(update={
             "revision_raw_model_output": second_call.raw_output,
             "revision_metadata": second_call.metadata,
         })
-        revision_response = RevisionResponse.model_validate(second_call.parsed)
-        final_state = apply_revision(post_release_state, revision_response)
+        try:
+            revision_response = RevisionResponse.model_validate(second_call.parsed)
+        except Exception as exc:
+            return failed(trace, "revision_parse", exc)
+        try:
+            final_state = apply_revision(post_release_state, revision_response)
+        except Exception as exc:
+            return failed(trace, "state_apply", exc)
         trace = trace.model_copy(update={
             "revision_response": revision_response,
             "final_hypothesis_state": final_state,
             "parse_success": True,
         })
     except Exception as exc:
-        trace = trace.model_copy(update={"error_message": str(exc), "parse_success": False})
-    trace_path = output_dir / "trace.json"
+        return failed(trace, "state_apply", exc)
     _write_trace(trace_path, trace)
     return trace_path
 

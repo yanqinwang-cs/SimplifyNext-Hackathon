@@ -20,7 +20,7 @@ from experiments.investigation_smoke.case_01.schemas import (
     RevisionResponse,
 )
 from experiments.model_screen.cases import get_case
-from investigator.llm.base import ModelCallMetadata, ModelCallResult
+from investigator.llm.base import ModelCallMetadata, ModelCallResult, ModelParseError
 from investigator.models import HypothesisStatus, HypothesisTransition, HypothesisTransitionType
 
 
@@ -47,11 +47,11 @@ def initial_response(selected_action_id="A3"):
         hypotheses=[
             HypothesisProposal(
                 id="H1", statement="Some explanation may account for the observed result.",
-                supported_by=["E1"], unresolved=["The explanation remains uncertain."],
+                supported_by=["E1"], conflicted_by=[], unresolved=["The explanation remains uncertain."], specificity_basis=[],
             ),
             HypothesisProposal(
                 id="H1.1", parent_id="H1", statement="A narrower explanation may account for the result.",
-                supported_by=["E3"], specificity_basis=["E3"],
+                supported_by=["E3"], conflicted_by=[], unresolved=["The narrower explanation remains uncertain."], specificity_basis=["E3"],
             ),
         ],
         selected_action_id=selected_action_id,
@@ -96,11 +96,44 @@ def test_initial_state_rejects_invalid_evidence_and_hypothesis_references() -> N
     with pytest.raises(ValueError, match="Unknown evidence"):
         initial_state(bad)
     bad = initial_response()
+    bad.hypotheses[0].supported_by = ["A1"]
+    with pytest.raises(ValueError, match="Unknown evidence"):
+        initial_state(bad)
+    bad = initial_response()
     bad.hypotheses[0].supported_by = ["H1"]
     with pytest.raises(ValueError, match="cannot be used as evidence"):
         initial_state(bad)
 
 
+def test_experiment_schema_rejects_wrong_or_missing_fields() -> None:
+    with pytest.raises(ValidationError):
+        HypothesisProposal(
+            id="H1", statement="x", supported_by=[], conflicted_by=[], unresolved=[], specificity_basis=[],
+            unresolved_uncertainty="wrong field",
+        )
+    with pytest.raises(ValidationError):
+        HypothesisProposal(id="H1", statement="x", supported_by=[], conflicted_by=[], specificity_basis=[])
+
+
+def test_initial_prompt_has_exact_json_contract() -> None:
+    from experiments.investigation_smoke.case_01.prompts import initial_prompt
+
+    prompt = initial_prompt()
+    assert '"unresolved"' in prompt
+    assert '"specificity_basis"' in prompt
+    assert '"selected_action_id"' in prompt
+    assert "do not rename unresolved" in prompt.lower()
+
+
+def test_revision_schema_requires_reason_and_accepts_valid_response() -> None:
+    with pytest.raises(ValidationError):
+        RevisionResponse.model_validate({
+            "hypothesis_updates": [{
+                "hypothesis_id": "H1", "transition": "keep",
+                "add_supporting_evidence_ids": [], "add_conflicting_evidence_ids": [], "add_specificity_basis": [],
+            }], "new_hypotheses": [], "remaining_uncertainties": [], "revision_rationale": "x",
+        })
+    assert revision_response().hypothesis_updates[0].reason
 def test_specificity_basis_and_prior_hypotheses_remain_separate_from_released_evidence() -> None:
     state = initial_state(initial_response())
     release_selected_artifact(state, "A3")
@@ -153,9 +186,48 @@ def test_revision_prompt_separates_hypotheses_from_evidence() -> None:
     prompt = revision_prompt(
         "original evidence", [h.model_dump(mode="json") for h in state.hypotheses.values()],
         [u.model_dump(mode="json") for u in state.uncertainties.values()],
-        {"action_id": "A3"}, "A3_RELEASE content",
+        {"action_id": "A3"}, "A3_RELEASE", "A3_RELEASE content",
     )
     assert "Prior hypotheses/tree (NOT evidence):" in prompt
     assert "Prior unresolved uncertainties:" in prompt
     assert "Newly released artefact content:" in prompt
     assert '"evidence":' not in prompt
+    assert "Selected enquiry/action ID: A3" in prompt
+    assert "Newly released evidence ID: A3_RELEASE" in prompt
+    assert "action ID" in prompt
+    assert "evidence-reference field" in prompt
+    assert '"reason"' in prompt
+    assert '"add_supporting_evidence_ids"' in prompt
+    assert '"add_conflicting_evidence_ids"' in prompt
+    assert '"add_specificity_basis"' in prompt
+
+
+def test_failed_call_raw_output_is_preserved_in_trace(tmp_path: Path) -> None:
+    from experiments.investigation_smoke.case_01.runner import run
+
+    raw_initial = "```json\nnot valid\n```"
+
+    class InitialFailure:
+        def call(self, prompt, schema):
+            raise ModelParseError("initial schema failure", raw_output=raw_initial)
+
+    first_trace = ControlledRunTrace.model_validate_json(run("model", tmp_path / "first", client=InitialFailure()).read_text())
+    assert first_trace.failure_stage == "initial_parse"
+    assert first_trace.initial_raw_model_output == raw_initial
+
+    raw_revision = "{malformed revision}"
+    class RevisionFailure:
+        def __init__(self):
+            self.calls = 0
+
+        def call(self, prompt, schema):
+            self.calls += 1
+            if self.calls == 1:
+                return call_result(initial_response("A1"))
+            raise ModelParseError("revision schema failure", raw_output=raw_revision)
+
+    second_trace = ControlledRunTrace.model_validate_json(run("model", tmp_path / "second", client=RevisionFailure()).read_text())
+    assert second_trace.failure_stage == "revision_parse"
+    assert second_trace.revision_raw_model_output == raw_revision
+    assert second_trace.initial_hypothesis_state is not None
+    assert second_trace.release.artifact_id == "A1_RELEASE"

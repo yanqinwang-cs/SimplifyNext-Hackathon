@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from investigator.llm.base import ModelCallMetadata
 from investigator.models.hypothesis import HypothesisStatus, HypothesisTransition
@@ -8,17 +8,21 @@ from investigator.state.case_state import CaseState
 
 
 class HypothesisProposal(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     id: str
     parent_id: str | None = None
     statement: str
     status: HypothesisStatus = HypothesisStatus.ACTIVE
-    supported_by: list[str] = Field(default_factory=list)
-    conflicted_by: list[str] = Field(default_factory=list)
-    unresolved: list[str] = Field(default_factory=list)
-    specificity_basis: list[str] = Field(default_factory=list)
+    supported_by: list[str]
+    conflicted_by: list[str]
+    unresolved: list[str] = Field(min_length=1)
+    specificity_basis: list[str]
 
 
 class InitialResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     hypotheses: list[HypothesisProposal] = Field(min_length=1)
     selected_action_id: str
     target_uncertainty: str
@@ -27,6 +31,8 @@ class InitialResponse(BaseModel):
 
 
 class RevisionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     hypothesis_updates: list[HypothesisTransition] = Field(default_factory=list)
     new_hypotheses: list[HypothesisProposal] = Field(default_factory=list)
     remaining_uncertainties: list[str] = Field(default_factory=list)
@@ -61,4 +67,5 @@ class ControlledRunTrace(BaseModel):
     revision_metadata: ModelCallMetadata | None = None
     final_hypothesis_state: CaseState | None = None
     parse_success: bool = False
+    failure_stage: str | None = None
     error_message: str | None = None
