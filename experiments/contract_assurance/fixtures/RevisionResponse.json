@@ -249,6 +249,11 @@
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"E1\"], \"description\": \"A newly identified uncertainty.\", \"hypothesis_id\": \"H1\", \"id\": \"H1:U2\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
     {
+      "intended_code": "S2",
+      "name": "wrong_namespace_new_uncertainty_evidence",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"H1\"], \"description\": \"A newly identified uncertainty.\", \"hypothesis_id\": \"H1\", \"id\": \"H1:U2\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
       "intended_code": "valid",
       "name": "valid_uncertainty_refinement",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"basis_evidence_ids\": [\"E1\"], \"new_description\": \"Which aspect of the claim remains unresolved?\", \"reason\": \"The new evidence narrows the open question.\", \"transition\": \"refine\", \"uncertainty_id\": \"H1:U1\"}]}"
@@ -262,6 +267,11 @@
       "intended_code": "valid",
       "name": "valid_new_hypothesis",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [{\"conflicted_by\": [], \"id\": \"H2\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [\"E1\"], \"statement\": \"A newly considered explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"Which observation would distinguish this explanation?\"]}], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S2",
+      "name": "wrong_namespace_new_hypothesis_evidence",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [{\"conflicted_by\": [], \"id\": \"H2\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [\"E1\"], \"statement\": \"A newly considered explanation.\", \"status\": \"active\", \"supported_by\": [\"H1\"], \"unresolved\": [\"Which observation would distinguish this explanation?\"]}], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
     {
       "intended_code": "S3",
