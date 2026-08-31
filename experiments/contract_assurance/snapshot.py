@@ -49,3 +49,9 @@ def write_public_snapshot(spec: ContractSpec, destination: Path, *, prompt: str,
     destination.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(package, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
     return path
+
+
+def verify_snapshot(package: dict[str, Any]) -> list[str]:
+    manifest = package.get("manifest", {})
+    values = {"schema_hash": fingerprint(package.get("output_schema")), "prompt_hash": fingerprint(package.get("prompt")), "case_input_hash": fingerprint(package.get("case_input")), "template_hash": fingerprint(package.get("template"))}
+    return [f"{key} drift" for key, value in values.items() if manifest.get(key) != value]
