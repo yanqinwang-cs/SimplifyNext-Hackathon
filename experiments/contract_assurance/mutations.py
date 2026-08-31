@@ -148,6 +148,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         target["supported_by"] = ["E999"]
         result.append(Mutation("unknown_evidence_reference", "S3", json.dumps(unknown, sort_keys=True)))
     if contract == "InitialResponse" and value.get("hypotheses"):
+        inactive = copy.deepcopy(value)
+        inactive["hypotheses"][0]["status"] = "weakened"
+        result.append(Mutation("non_active_status", "S2", json.dumps(inactive, sort_keys=True)))
         duplicate = copy.deepcopy(value)
         duplicate["hypotheses"].append(copy.deepcopy(duplicate["hypotheses"][0]))
         result.append(Mutation("duplicate_hypothesis_id", "S4", json.dumps(duplicate, sort_keys=True)))
