@@ -6,6 +6,7 @@ from typing import Any
 
 from .evaluate import evaluate_initial, evaluate_next_action, evaluate_raw, evaluate_revision
 from .inventory import assert_complete_inventory, assert_inventory_paths, inventory
+from .lint import lint_contract
 from .snapshot import verify_snapshot_against_contract
 from .mutations import deduplicate, mutations, write_fixture_manifest
 from .registry import contract_registry
@@ -80,6 +81,7 @@ def verify_committed_packages(root: Path) -> list[str]:
             issues.append(f"{path.name}: unknown contract")
             continue
         issues.extend(f"{path.name}: {issue}" for issue in verify_snapshot_against_contract(payload, spec))
+        issues.extend(f"{path.name}: {issue.message}" for issue in lint_contract(spec, prompt=payload.get("prompt", ""), template=payload.get("template")))
     return issues
 
 
