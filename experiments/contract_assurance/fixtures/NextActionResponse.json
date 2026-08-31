@@ -98,6 +98,11 @@
       "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"A1 because it is useful\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"It is available now.\"}"
     },
     {
+      "intended_code": "S3",
+      "name": "valid_but_unavailable_action",
+      "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"A2\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"It is available now.\"}"
+    },
+    {
       "intended_code": "S4",
       "name": "placeholder_text",
       "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"It is available now.\"}"

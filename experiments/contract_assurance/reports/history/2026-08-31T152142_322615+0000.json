@@ -41,7 +41,7 @@
     "RevisionResponse|S4|schema|1 validation error for RevisionResponse": 1
   },
   "deterministic": {
-    "accepted": 6,
+    "accepted": 9,
     "failure_codes": {
       "S0": 36,
       "S1": 45,
@@ -52,13 +52,13 @@
     "rejected": 103,
     "s5_candidates": 0,
     "s6_limitations": 0,
-    "total": 109,
-    "unexpected_accepts": 0,
+    "total": 112,
+    "unexpected_accepts": 3,
     "unexpected_rejects": 0
   },
   "deterministic_by_contract": {
     "InitialExpansionResponse": {
-      "accepted": 1,
+      "accepted": 2,
       "failure_codes": {
         "S0": 6,
         "S1": 14,
@@ -68,10 +68,10 @@
       "rejected": 25,
       "s5_candidates": 0,
       "s6_limitations": 0,
-      "total": 26
+      "total": 27
     },
     "InitialResponse": {
-      "accepted": 1,
+      "accepted": 2,
       "failure_codes": {
         "S0": 6,
         "S1": 12,
@@ -80,7 +80,7 @@
       "rejected": 22,
       "s5_candidates": 0,
       "s6_limitations": 0,
-      "total": 23
+      "total": 24
     },
     "ModelScreenHypothesisResponse": {
       "accepted": 1,
@@ -107,7 +107,7 @@
       "total": 20
     },
     "NextStepResponse": {
-      "accepted": 1,
+      "accepted": 2,
       "failure_codes": {
         "S0": 6,
         "S1": 2,
@@ -117,7 +117,7 @@
       "rejected": 15,
       "s5_candidates": 0,
       "s6_limitations": 0,
-      "total": 16
+      "total": 17
     },
     "RevisionResponse": {
       "accepted": 1,
@@ -132,7 +132,7 @@
       "total": 12
     }
   },
-  "generated_at": "2026-08-31T15:21:55.903822+00:00",
+  "generated_at": "2026-08-31T15:21:42.322615+00:00",
   "inventory": {
     "contracts": [
       {

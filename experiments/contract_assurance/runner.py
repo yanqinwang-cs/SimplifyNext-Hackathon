@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .evaluate import evaluate_raw
+from .evaluate import evaluate_next_action, evaluate_raw
 from .inventory import assert_complete_inventory, assert_inventory_paths, inventory
 from .snapshot import verify_snapshot_against_contract
 from .mutations import deduplicate, mutations, write_fixture_manifest
@@ -27,7 +27,10 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
         required = tuple(name for name, field in spec.schema.model_fields.items() if field.is_required())
         write_fixture_manifest(fixture_dir / f"{name}.json", name, sample, required)
         for mutation in deduplicate(mutations(sample, required_fields=required, contract=name)):
-            result = evaluate_raw(mutation.raw_output, spec.schema)
+            if name == "NextActionResponse":
+                result = evaluate_next_action(mutation.raw_output, {"A1"})
+            else:
+                result = evaluate_raw(mutation.raw_output, spec.schema)
             result.details.update({"contract": name, "mutation": mutation.name, "intended_code": mutation.intended_code})
             results.append(result)
     summary = summarize(results)
