@@ -1,0 +1,32 @@
+{
+  "case_input": {
+    "question": "What is 2 + 2?"
+  },
+  "manifest": {
+    "case_input_hash": "77e5f4e107a0467a5e96f842549a2005493df31ca08df2a90dc7b644ecc610d5",
+    "contract": "SmokeResponse",
+    "git_commit": "ecea513",
+    "prompt_hash": "f27831f09524ab679d1313df16972575fc6a83bd76225a4da64fe45baea05a23",
+    "schema_hash": "fc008e3ce54e1de048758174b829e39bd4c47b13edbd2574f60044ecce9e9f22",
+    "source": "scripts/smoke_bedrock.py",
+    "template_hash": "60da3c299954a5594f8b4c0ca103a3e22418017f1bed888f6adbe48738d23eaf"
+  },
+  "output_schema": {
+    "additionalProperties": false,
+    "properties": {
+      "answer": {
+        "title": "Answer",
+        "type": "string"
+      }
+    },
+    "required": [
+      "answer"
+    ],
+    "title": "SmokeResponse",
+    "type": "object"
+  },
+  "prompt": "Return only JSON matching the supplied schema. Answer the public arithmetic question.",
+  "template": {
+    "answer": "REPLACE_WITH_ANSWER"
+  }
+}
