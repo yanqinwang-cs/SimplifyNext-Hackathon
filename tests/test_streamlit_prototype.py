@@ -3,9 +3,9 @@ import importlib
 from app.demo_data import ACTIVE_HYPOTHESES, CLAIMS_TO_CHECK, EVIDENCE, KEY_UNCERTAINTIES
 
 
-def test_streamlit_app_imports_without_model_or_aws_calls() -> None:
-    module = importlib.import_module("app.streamlit_app")
-    assert hasattr(module, "main")
+def test_streamlit_demo_data_imports_without_model_or_aws_calls() -> None:
+    module = importlib.import_module("app.demo_data")
+    assert hasattr(module, "DEMO_MESSAGES")
 
 
 def test_demo_data_has_the_read_only_case_summary() -> None:

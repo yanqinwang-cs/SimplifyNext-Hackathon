@@ -1,6 +1,6 @@
 import streamlit as st
 
-from app.demo_data import (
+from demo_data import (
     ACTIVE_HYPOTHESES,
     CLAIMS_TO_CHECK,
     DEMO_MESSAGES,
