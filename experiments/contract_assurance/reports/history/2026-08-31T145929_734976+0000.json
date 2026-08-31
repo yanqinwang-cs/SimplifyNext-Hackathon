@@ -1,0 +1,14 @@
+{
+  "accepted": 6,
+  "failure_codes": {
+    "S0": 36,
+    "S1": 25,
+    "S2": 12,
+    "S4": 1
+  },
+  "generated_at": "2026-08-31T14:59:29.734976+00:00",
+  "rejected": 74,
+  "total": 80,
+  "unexpected_accepts": 0,
+  "unexpected_rejects": 0
+}

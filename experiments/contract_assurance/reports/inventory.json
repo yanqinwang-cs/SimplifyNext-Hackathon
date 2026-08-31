@@ -1,0 +1,127 @@
+{
+  "contracts": [
+    {
+      "name": "SmokeResponse",
+      "production_path": "BedrockModelClient.call (manual smoke script; excluded from offline runs)",
+      "prompt_builders": [
+        "scripts.smoke_bedrock.main"
+      ],
+      "public": true,
+      "schema": "SmokeResponse",
+      "schema_hash": "fc008e3ce54e1de048758174b829e39bd4c47b13edbd2574f60044ecce9e9f22",
+      "source": "scripts/smoke_bedrock.py",
+      "source_hash": "972295d0c8319c1bfed7254295a69e86e78adf86425a085daaf29ca3c2d76dc9",
+      "template_placeholders": []
+    },
+    {
+      "name": "ModelScreenHypothesisResponse",
+      "production_path": "ExperimentRunner.run -> ModelClient.call",
+      "prompt_builders": [
+        "experiments.model_screen.prompt"
+      ],
+      "public": true,
+      "schema": "HypothesisResponse",
+      "schema_hash": "f2224a7d45a3c36db7990ef4095c4ba27da435a44a6b8a3fbbe1c5cd0bf54cdc",
+      "source": "experiments/model_screen/schemas.py",
+      "source_hash": "2fe126f30e20920743f035fd6ff149fbb4c5f338905cb8ae936382cac59ec945",
+      "template_placeholders": []
+    },
+    {
+      "name": "InitialResponse",
+      "production_path": "InvestigationService.start_case -> environment.build_initial_state",
+      "prompt_builders": [
+        "Case1ControlledEnvironment.initial_prompt"
+      ],
+      "public": true,
+      "schema": "InitialResponse",
+      "schema_hash": "0bf2d70051b0216d9f2cefa9432cf13b87ad214e2e0e13d710686fa4103978a2",
+      "source": "src/investigator/services/contracts.py",
+      "source_hash": "1b8c480306c524e3956ae1cf867fafda69f29a0a893fa6991b893ad8146c9838",
+      "template_placeholders": []
+    },
+    {
+      "name": "InitialExpansionResponse",
+      "production_path": "InvestigationService.start_case(seed) -> environment.build_seeded_initial_state",
+      "prompt_builders": [
+        "Case1ControlledEnvironment.initial_expansion_prompt"
+      ],
+      "public": true,
+      "schema": "InitialExpansionResponse",
+      "schema_hash": "3ab84fb21b95fbb73d063a580acd3f51ec5299a5657a7a6ea62d6b61e696b7c2",
+      "source": "src/investigator/services/contracts.py",
+      "source_hash": "1b8c480306c524e3956ae1cf867fafda69f29a0a893fa6991b893ad8146c9838",
+      "template_placeholders": []
+    },
+    {
+      "name": "NextActionResponse",
+      "production_path": "InvestigationService.propose_next_action -> availability preflight",
+      "prompt_builders": [
+        "Case1ControlledEnvironment.next_action_prompt"
+      ],
+      "public": true,
+      "schema": "NextActionResponse",
+      "schema_hash": "2ee01b9e0a44aa5ea0159022f89f32b407b9f1bdd33c88f8914b62244611a300",
+      "source": "src/investigator/services/contracts.py",
+      "source_hash": "1b8c480306c524e3956ae1cf867fafda69f29a0a893fa6991b893ad8146c9838",
+      "template_placeholders": []
+    },
+    {
+      "name": "RevisionResponse",
+      "production_path": "InvestigationService.propose_revision -> apply_revision",
+      "prompt_builders": [
+        "Case1ControlledEnvironment.revision_prompt"
+      ],
+      "public": true,
+      "schema": "RevisionResponse",
+      "schema_hash": "56906e23079db421c3704a1465b15ff9c008cbde48b2b4d5776f4c4c1e59a455",
+      "source": "src/investigator/services/contracts.py",
+      "source_hash": "1b8c480306c524e3956ae1cf867fafda69f29a0a893fa6991b893ad8146c9838",
+      "template_placeholders": [
+        "REPLACE_WITH_"
+      ]
+    },
+    {
+      "name": "NextStepResponse",
+      "production_path": "Defined LLM-facing union; no current production caller",
+      "prompt_builders": [],
+      "public": true,
+      "schema": "NextStepResponse",
+      "schema_hash": "f0186ca2f50494c9a630a22fe3bdc890a942cb2607bbe1d15d23957dcf668f29",
+      "source": "src/investigator/services/contracts.py",
+      "source_hash": "1b8c480306c524e3956ae1cf867fafda69f29a0a893fa6991b893ad8146c9838",
+      "template_placeholders": []
+    }
+  ],
+  "discovered_response_classes": [
+    {
+      "name": "HypothesisResponse",
+      "source": "experiments/model_screen/schemas.py"
+    },
+    {
+      "name": "SmokeResponse",
+      "source": "scripts/smoke_bedrock.py"
+    },
+    {
+      "name": "InitialResponse",
+      "source": "src/investigator/services/contracts.py"
+    },
+    {
+      "name": "InitialExpansionResponse",
+      "source": "src/investigator/services/contracts.py"
+    },
+    {
+      "name": "NextStepResponse",
+      "source": "src/investigator/services/contracts.py"
+    },
+    {
+      "name": "NextActionResponse",
+      "source": "src/investigator/services/contracts.py"
+    },
+    {
+      "name": "RevisionResponse",
+      "source": "src/investigator/services/contracts.py"
+    }
+  ],
+  "git_commit": "6a87068",
+  "unregistered_response_classes": []
+}
