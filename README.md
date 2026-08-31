@@ -21,4 +21,6 @@ With AWS environment variables and `BEDROCK_MODEL_ID` configured, run one live s
 uv run python scripts/smoke_bedrock.py
 ```
 
+The UI-only Streamlit prototype can be launched with `uv run streamlit run app/streamlit_app.py`. Its chat and review controls use session-state placeholders only; reasoning integration will come later.
+
 The state kernel also contains a provisional hypothesis tree. Broad parent hypotheses and narrower evidence-based children are represented structurally; removing or weakening a child leaves its parent unchanged. Hypotheses are never evidence, and `specificity_basis` records evidence IDs that supposedly justify narrowing. This is deterministic state representation, not a graph or search algorithm; semantic adequacy of the basis is deferred to later experiments.

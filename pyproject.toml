@@ -3,7 +3,7 @@ name = "investigator"
 version = "0.1.0"
 description = "A deterministic case-state kernel for investigative assistants"
 requires-python = ">=3.12"
-dependencies = ["boto3>=1.35,<2", "pydantic>=2.7,<3", "python-dotenv>=1.0,<2"]
+dependencies = ["boto3>=1.35,<2", "pydantic>=2.7,<3", "python-dotenv>=1.0,<2", "streamlit>=1.40,<2"]
 
 [dependency-groups]
 dev = ["pytest>=8.0,<9"]
