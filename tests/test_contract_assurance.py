@@ -3,7 +3,7 @@ from pathlib import Path
 
 from experiments.contract_assurance.evaluate import evaluate_raw
 from experiments.contract_assurance.evaluate import evaluate_initial, evaluate_next_action, evaluate_revision
-from experiments.contract_assurance.inventory import discover_response_classes, render_inventory_markdown, unregistered_response_classes, write_inventory_markdown
+from experiments.contract_assurance.inventory import assert_complete_inventory, discover_response_classes, render_inventory_markdown, unregistered_response_classes, write_inventory_markdown
 from experiments.contract_assurance.audit import BlindBatchAudit
 from experiments.contract_assurance.runner import run_deterministic
 from experiments.contract_assurance.mutations import write_fixture_manifest
@@ -65,6 +65,7 @@ def test_inventory_discovers_and_registers_all_response_contracts(tmp_path: Path
     names = {item["name"] for item in discovered}
     assert {"InitialResponse", "InitialExpansionResponse", "NextActionResponse", "RevisionResponse", "HypothesisResponse"} <= names
     assert unregistered_response_classes(root) == []
+    assert_complete_inventory(root)
     assert all(item["source_hash"] for item in __import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root)["contracts"])
     markdown = render_inventory_markdown(__import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root))
     assert "LLM-facing contract inventory" in markdown and "InitialResponse" in markdown

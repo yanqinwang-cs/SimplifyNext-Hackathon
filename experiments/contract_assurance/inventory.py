@@ -32,6 +32,13 @@ def unregistered_response_classes(root: Path) -> list[dict[str, str]]:
     return [item for item in discover_response_classes(root) if item["name"] not in registered]
 
 
+def assert_complete_inventory(root: Path) -> None:
+    missing = unregistered_response_classes(root)
+    if missing:
+        rendered = ", ".join(f"{item['name']} ({item['source']})" for item in missing)
+        raise AssertionError(f"Unregistered LLM-facing response schemas: {rendered}")
+
+
 def inventory(root: Path, commit: str = "unknown") -> dict[str, Any]:
     specs = list(contract_registry().values())
     entries = []
