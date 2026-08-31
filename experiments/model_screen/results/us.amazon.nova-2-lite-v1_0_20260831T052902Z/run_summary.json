@@ -1,0 +1,13 @@
+{
+  "model_id": "us.amazon.nova-2-lite-v1:0",
+  "result_directory": "experiments/model_screen/results/us.amazon.nova-2-lite-v1_0_20260831T052902Z",
+  "case_ids": [
+    "case_01",
+    "case_02",
+    "case_03",
+    "case_04",
+    "case_05"
+  ],
+  "successful_cases": 5,
+  "failed_cases": 0
+}
