@@ -8,7 +8,9 @@ from investigator.models.identifiers import Case1ActionId, EvidenceId, Hypothesi
 from investigator.state.case_state import CaseState
 
 
-def _reject_placeholder(value: str) -> str:
+def _reject_placeholder(value: str | None) -> str | None:
+    if value is None:
+        return value
     if value.startswith("REPLACE_WITH_") or value in {
         "The uncertainty this enquiry addresses.",
         "How the result could change the explanation space.",

@@ -18,6 +18,8 @@ from experiments.contract_assurance.taxonomy import FailureCode
 from investigator.services.contracts import NextActionResponse
 from investigator.services.contracts import RevisionResponse
 from investigator.services.contracts import InitialResponse
+from investigator.services.contracts import NextStepResponse
+from investigator.services.contracts import InitialExpansionResponse, HypothesisTransition, UncertaintyTransition
 
 
 def valid_action():
@@ -55,6 +57,7 @@ def test_inventory_discovers_and_registers_all_response_contracts():
     names = {item["name"] for item in discovered}
     assert {"InitialResponse", "InitialExpansionResponse", "NextActionResponse", "RevisionResponse", "HypothesisResponse"} <= names
     assert unregistered_response_classes(root) == []
+    assert all(item["source_hash"] for item in __import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root)["contracts"])
 
 
 def test_lint_detects_template_drift():
@@ -109,6 +112,26 @@ def test_next_action_mutations_reach_the_expected_failure_stage():
             assert result.accepted, mutation.name
         else:
             assert not result.accepted, mutation.name
+
+
+def test_next_step_union_rejects_mixed_branch_fields():
+    valid = {"step_type": "action", "selected_action_id": "A1", "target_uncertainty": "An open question.", "expected_information_value": "It may distinguish explanations.", "why_this_action_now": "It is available now.", "conclusion_hypothesis_id": None, "conclusion_reason": None, "remaining_uncertainty_ids": []}
+    polluted = dict(valid, conclusion_hypothesis_id="H1")
+    result = evaluate_raw(json.dumps(polluted), NextStepResponse)
+    assert not result.accepted and result.code is FailureCode.S4
+
+
+def test_seeded_expansion_rejects_relationship_parent_mismatch():
+    payload = {"seed_analysis": {"supported_by": ["E1"], "conflicted_by": [], "unresolved": ["Question"], "specificity_basis_evidence_ids": []}, "competing_hypotheses": [{"id": "H2", "parent_id": "H1", "statement": "Different.", "status": "active", "supported_by": ["E2"], "conflicted_by": [], "unresolved": ["Question"], "specificity_basis_evidence_ids": [], "relationship": "competing_root", "contrasted_hypothesis_id": "H1", "material_difference": "Different cause."}], "selected_action_id": "A1", "target_uncertainty": "Question", "expected_information_value": "Value", "why_this_action_now": "Reason"}
+    result = evaluate_raw(json.dumps(payload), InitialExpansionResponse)
+    assert not result.accepted and result.code is FailureCode.S4
+
+
+def test_revision_other_transition_requires_explicit_operation_details():
+    with __import__("pytest").raises(ValueError):
+        HypothesisTransition(hypothesis_id="H1", transition="other", reason="Need more", requested_operation_name=None, requested_effect=None, why_existing_operations_do_not_fit=None)
+    with __import__("pytest").raises(ValueError):
+        UncertaintyTransition(uncertainty_id="H1:U1", transition="keep", reason="Keep", requested_operation_name="split")
 
 
 def test_fixture_manifest_is_reproducible_and_blind_audit_is_strict(tmp_path: Path):

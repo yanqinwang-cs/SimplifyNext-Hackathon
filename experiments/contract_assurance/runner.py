@@ -29,6 +29,8 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
 
 
 def _sample_for(schema: type[Any]) -> dict[str, Any] | None:
+    if schema.__name__ == "NextStepResponse":
+        return {"step_type": "action", "selected_action_id": "A1", "target_uncertainty": "An open question.", "expected_information_value": "The result can distinguish explanations.", "why_this_action_now": "This enquiry is available now.", "conclusion_hypothesis_id": None, "conclusion_reason": None, "remaining_uncertainty_ids": []}
     if schema.__name__ == "InitialResponse":
         return {"hypotheses": [{"id": "H1", "parent_id": None, "statement": "A broad explanation.", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["What evidence would distinguish alternatives?"], "specificity_basis_evidence_ids": []}], "selected_action_id": "A1", "target_uncertainty": "Whether the claimed event occurred.", "expected_information_value": "The result can distinguish explanations.", "why_this_action_now": "This enquiry is available and relevant."}
     if schema.__name__ == "InitialExpansionResponse":

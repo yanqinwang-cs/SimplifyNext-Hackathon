@@ -1,6 +1,7 @@
 """Repository inventory for model-facing Pydantic response contracts."""
 
 import ast
+import hashlib
 import json
 from dataclasses import asdict
 from pathlib import Path
@@ -33,7 +34,12 @@ def unregistered_response_classes(root: Path) -> list[dict[str, str]]:
 
 def inventory(root: Path, commit: str = "unknown") -> dict[str, Any]:
     specs = list(contract_registry().values())
-    return {"git_commit": commit, "contracts": [{**asdict(spec), "schema": spec.schema.__name__, "schema_hash": __import__("hashlib").sha256(json.dumps(spec.schema.model_json_schema(), sort_keys=True).encode()).hexdigest()} for spec in specs], "discovered_response_classes": discover_response_classes(root), "unregistered_response_classes": unregistered_response_classes(root)}
+    entries = []
+    for spec in specs:
+        source = root / spec.source
+        source_hash = hashlib.sha256(source.read_bytes()).hexdigest() if source.exists() else None
+        entries.append({**asdict(spec), "schema": spec.schema.__name__, "schema_hash": hashlib.sha256(json.dumps(spec.schema.model_json_schema(), sort_keys=True).encode()).hexdigest(), "source_hash": source_hash})
+    return {"git_commit": commit, "contracts": entries, "discovered_response_classes": discover_response_classes(root), "unregistered_response_classes": unregistered_response_classes(root)}
 
 
 def write_inventory(root: Path, destination: Path, commit: str = "unknown") -> Path:
