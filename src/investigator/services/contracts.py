@@ -173,6 +173,8 @@ class NewUncertainty(BaseModel):
     description: str
     basis_evidence_ids: list[EvidenceId] = Field(default_factory=list)
 
+    _valid_description = field_validator("description")(_reject_placeholder)
+
     @model_validator(mode="after")
     def validate_owner(self) -> "NewUncertainty":
         if self.id.split(":", 1)[0] != self.hypothesis_id:

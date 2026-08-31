@@ -22,6 +22,7 @@ from investigator.services.contracts import RevisionResponse
 from investigator.services.contracts import InitialResponse
 from investigator.services.contracts import NextStepResponse
 from investigator.services.contracts import InitialExpansionResponse, HypothesisTransition, UncertaintyTransition
+from investigator.services.contracts import NewUncertainty
 
 
 def valid_action():
@@ -227,6 +228,11 @@ def test_blind_compliance_scans_nested_batches_and_records_outcomes(tmp_path: Pa
     assert summary["by_role"]["producer"]["evaluations"] == 2
     assert summary["by_role"]["producer"]["accepted"] == 1
     assert summary["by_role"]["producer"]["rejected"] == 1
+
+
+def test_new_uncertainty_description_must_be_substantive():
+    result = evaluate_raw(json.dumps({"id": "H1:U2", "hypothesis_id": "H1", "description": ""}), NewUncertainty)
+    assert not result.accepted and result.code is FailureCode.S4
 
 
 def test_assurance_module_cli_reports_summary(tmp_path: Path):
