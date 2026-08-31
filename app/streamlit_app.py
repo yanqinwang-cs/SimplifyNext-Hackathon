@@ -5,7 +5,7 @@ from pathlib import Path
 from demo_data import DEMO_MESSAGES
 from investigator.environments.case_01 import Case1ControlledEnvironment
 from investigator.llm.bedrock import BedrockModelClient
-from investigator.services import InvestigationService, InvestigationSession, SessionStatus
+from investigator.services import InvestigationService, InvestigationSession, ModelStructuredOutputError, SessionStatus
 
 
 st.set_page_config(page_title="SimplifyNext — Case 01", page_icon="S", layout="wide")
@@ -18,6 +18,8 @@ def initialize_session() -> None:
     st.session_state.setdefault("investigation_service", None)
     st.session_state.setdefault("review_mode", None)
     st.session_state.setdefault("notice", None)
+    st.session_state.setdefault("structured_error", None)
+    st.session_state.setdefault("structured_raw_output", None)
 
 
 def render_hypotheses(session: InvestigationSession) -> None:
@@ -79,12 +81,19 @@ def start_investigation() -> None:
         environment = Case1ControlledEnvironment(Path(__file__).resolve().parents[1] / "experiments/investigation_smoke/case_01/artifacts")
         service = InvestigationService(BedrockModelClient(), environment)
         session = service.start_case()
+    except ModelStructuredOutputError as exc:
+        st.session_state.notice = "The model returned an invalid structured response."
+        st.session_state.structured_error = str(exc)
+        st.session_state.structured_raw_output = exc.raw_output
+        return
     except Exception as exc:
         st.session_state.notice = f"Could not start the investigation: {exc}"
         return
     st.session_state.investigation_service = service
     st.session_state.investigation = session
     st.session_state.notice = None
+    st.session_state.structured_error = None
+    st.session_state.structured_raw_output = None
 
 
 def render_action_review(session: InvestigationSession, service: InvestigationService) -> None:
@@ -101,7 +110,12 @@ def render_action_review(session: InvestigationSession, service: InvestigationSe
                 service.propose_revision(session)
                 st.session_state.notice = "Action executed. A revision is ready for review."
             except Exception as exc:
-                st.session_state.notice = f"Could not prepare the revision: {exc}"
+                if isinstance(exc, ModelStructuredOutputError):
+                    st.session_state.notice = "The model returned an invalid structured response."
+                    st.session_state.structured_error = str(exc)
+                    st.session_state.structured_raw_output = exc.raw_output
+                else:
+                    st.session_state.notice = f"Could not prepare the revision: {exc}"
             st.rerun()
         if columns[1].button("Redirect", use_container_width=True):
             st.session_state.review_mode = "redirect"
@@ -196,6 +210,11 @@ def main() -> None:
             st.info("Investigation paused. The current state remains available for inspection.")
     if st.session_state.notice:
         st.info(st.session_state.notice)
+    if st.session_state.structured_error:
+        with st.expander("Show raw model output"):
+            if st.session_state.structured_raw_output:
+                st.code(st.session_state.structured_raw_output, language="json")
+            st.caption(st.session_state.structured_error)
 
 
 if __name__ == "__main__":

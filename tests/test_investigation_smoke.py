@@ -124,6 +124,9 @@ def test_initial_prompt_has_exact_json_contract() -> None:
     assert '"specificity_basis_evidence_ids"' in prompt
     assert '"selected_action_id"' in prompt
     assert "do not rename unresolved" in prompt.lower()
+    assert 'status MUST be exactly "active"' in prompt
+    assert '"unresolved" must never be empty' in prompt
+    assert "raw JSON only" in prompt
 
 
 def test_canonical_prompt_templates_validate_against_response_models() -> None:

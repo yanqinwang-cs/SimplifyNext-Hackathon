@@ -2,8 +2,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from pydantic import ValidationError
+
 from investigator.environments.base import InvestigationEnvironment
-from investigator.llm.base import ModelClient
+from investigator.llm.base import ModelClient, ModelParseError
 from investigator.state import apply_revision
 
 
@@ -19,6 +21,14 @@ class SessionStatus(str, Enum):
 
 class InvalidSessionTransition(RuntimeError):
     pass
+
+
+class ModelStructuredOutputError(ModelParseError):
+    """A model response failed JSON/schema validation, retaining raw output."""
+
+    def __init__(self, message: str, *, stage: str, raw_output: Any = None) -> None:
+        super().__init__(message, raw_output=raw_output)
+        self.stage = stage
 
 
 @dataclass
@@ -51,8 +61,11 @@ class InvestigationService:
     def start_case(self) -> InvestigationSession:
         from investigator.services.contracts import InitialResponse
 
-        result = self.client.call(self.environment.initial_prompt(), InitialResponse)
-        response = InitialResponse.model_validate(result.parsed)
+        try:
+            result = self.client.call(self.environment.initial_prompt(), InitialResponse)
+            response = InitialResponse.model_validate(result.parsed)
+        except Exception as exc:
+            self._raise_structured_output_error(exc, "initial_parse", locals().get("result"))
         state = self.environment.build_initial_state(response)
         return InvestigationSession(
             case_state=state,
@@ -74,8 +87,11 @@ class InvestigationService:
             session.status = SessionStatus.PAUSED
             session.pending_action = None
             return session
-        result = self.client.call(self.environment.next_action_prompt(session, available), NextActionResponse)
-        response = NextActionResponse.model_validate(result.parsed)
+        try:
+            result = self.client.call(self.environment.next_action_prompt(session, available), NextActionResponse)
+            response = NextActionResponse.model_validate(result.parsed)
+        except Exception as exc:
+            self._raise_structured_output_error(exc, "next_action_parse", locals().get("result"))
         available_ids = {action.action_id for action in available}
         if response.selected_action_id not in available_ids:
             raise ValueError(f"Action is not currently available: {response.selected_action_id!r}")
@@ -114,8 +130,11 @@ class InvestigationService:
         from investigator.services.contracts import RevisionResponse
 
         prompt = self.environment.revision_prompt(session, session.pending_release)
-        result = self.client.call(prompt, RevisionResponse)
-        session.pending_revision = RevisionResponse.model_validate(result.parsed)
+        try:
+            result = self.client.call(prompt, RevisionResponse)
+            session.pending_revision = RevisionResponse.model_validate(result.parsed)
+        except Exception as exc:
+            self._raise_structured_output_error(exc, "revision_parse", locals().get("result"))
         session.revision_prompt = prompt
         session.revision_raw_model_output = result.raw_output
         session.revision_metadata = result.metadata
@@ -159,3 +178,15 @@ class InvestigationService:
             raise InvalidSessionTransition("Stopped sessions cannot silently continue")
         if session.status is not expected:
             raise InvalidSessionTransition(f"Expected session status {expected.value}, got {session.status.value}")
+
+    @staticmethod
+    def _raise_structured_output_error(exc: Exception, stage: str, result: Any) -> None:
+        if isinstance(exc, ModelParseError):
+            raise ModelStructuredOutputError(str(exc), stage=stage, raw_output=exc.raw_output) from exc
+        if isinstance(exc, ValidationError):
+            raise ModelStructuredOutputError(
+                f"Structured model output failed validation: {exc}",
+                stage=stage,
+                raw_output=getattr(result, "raw_output", None),
+            ) from exc
+        raise exc

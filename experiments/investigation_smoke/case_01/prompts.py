@@ -57,7 +57,7 @@ def revision_output_template(release_evidence_id: str) -> dict:
 
 def initial_prompt() -> str:
     task = """TASK-SPECIFIC INSTRUCTION
-Generate an initial hypothesis tree grounded in the case information below. Use exactly the schema field names; do not rename unresolved. Then choose exactly one available enquiry that most usefully changes the explanation space. Do not choose an action because it proves a preferred hypothesis. Use only released evidence; context resources are not evidence."""
+Generate an initial hypothesis tree grounded in the case information below. Emit only currently viable active hypotheses. Every hypothesis status MUST be exactly "active"; never emit "inactive", "proposed", "rejected", "removed", "archived", or any other status. If an explanation is not active enough to retain, omit it. Every emitted hypothesis MUST contain at least one substantive unresolved question; "unresolved" must never be empty. Use exactly the schema field names; do not rename unresolved. Then choose exactly one available enquiry that most usefully changes the explanation space. Do not choose an action because it proves a preferred hypothesis. Use only released evidence; context resources are not evidence. Return raw JSON only: no prose or markdown commentary before or after the JSON object."""
     return f"""{RULES}
 
 {render_assessment_layer(render_assessment_context())}
@@ -69,7 +69,7 @@ Generate an initial hypothesis tree grounded in the case information below. Use 
 CANONICAL JSON OUTPUT TEMPLATE
 Fill this one canonical JSON template:
 {json.dumps(initial_output_template(), indent=2)}
-Use bare canonical IDs only in ID fields. Use natural-language explanations only in text fields. Do not place explanations in fields ending with `_id`, `_ids`, or `_evidence_ids`.
+Use exactly these fields and no extras. Arrays remain arrays even when empty. Use bare canonical IDs only in ID fields. Use natural-language explanations only in text fields. Do not place explanations in fields ending with `_id`, `_ids`, or `_evidence_ids`.
 
 Available enquiries:
 {catalogue_text()}

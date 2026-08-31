@@ -5,7 +5,9 @@ from investigator.environments.case_01 import Case1ControlledEnvironment
 
 from experiments.investigation_smoke.case_01.schemas import NextActionResponse, RevisionResponse
 from tests.test_investigation_smoke import call_result, initial_response
-from investigator.services import InvestigationService, InvalidSessionTransition, SessionStatus
+from investigator.services import InvestigationService, InvalidSessionTransition, ModelStructuredOutputError, SessionStatus
+from investigator.services.contracts import InitialResponse
+from investigator.llm.base import ModelCallMetadata, ModelCallResult
 
 
 def make_service(responses):
@@ -125,3 +127,39 @@ def test_stopped_session_cannot_silently_continue() -> None:
     service.stop(session)
     with pytest.raises(InvalidSessionTransition):
         service.set_human_action(session, "A2")
+
+
+def test_initial_response_is_active_only_and_requires_unresolved() -> None:
+    valid = initial_response("A1").model_dump(mode="json")
+    assert InitialResponse.model_validate(valid).hypotheses[0].status.value == "active"
+    invalid_status = valid.copy()
+    invalid_status["hypotheses"] = [dict(valid["hypotheses"][0], status="inactive")]
+    with pytest.raises(ValueError):
+        InitialResponse.model_validate(invalid_status)
+    empty_unresolved = valid.copy()
+    empty_unresolved["hypotheses"] = [dict(valid["hypotheses"][0], unresolved=[])]
+    with pytest.raises(ValueError):
+        InitialResponse.model_validate(empty_unresolved)
+
+
+def test_initial_structured_failure_preserves_raw_output_and_does_not_retry() -> None:
+    class InvalidInitialClient:
+        calls = 0
+
+        def call(self, prompt, schema):
+            self.calls += 1
+            return ModelCallResult(
+                parsed={"hypotheses": [], "selected_action_id": "A1"},
+                metadata=ModelCallMetadata(provider="mock", model="fixture", latency_seconds=0, parse_success=True),
+                raw_output='{"hypotheses": [], "selected_action_id": "A1"}',
+            )
+
+    client = InvalidInitialClient()
+    service = InvestigationService(
+        client,
+        Case1ControlledEnvironment(Path(__file__).resolve().parents[1] / "experiments/investigation_smoke/case_01/artifacts"),
+    )
+    with pytest.raises(ModelStructuredOutputError) as error:
+        service.start_case()
+    assert client.calls == 1
+    assert error.value.raw_output == '{"hypotheses": [], "selected_action_id": "A1"}'

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -20,13 +20,30 @@ class HypothesisProposal(BaseModel):
     specificity_basis_evidence_ids: list[EvidenceId]
 
 
+class InitialHypothesisProposal(HypothesisProposal):
+    """LLM-facing initial hypothesis: only viable active hypotheses are emitted."""
+
+    status: Literal[HypothesisStatus.ACTIVE]
+
+
 class InitialResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    hypotheses: list[HypothesisProposal] = Field(min_length=1)
+    hypotheses: list[InitialHypothesisProposal] = Field(min_length=1)
     selected_action_id: Case1ActionId
     target_uncertainty: str
     expected_information_value: str
     why_this_action_now: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_active_proposals(cls, values: Any) -> Any:
+        if isinstance(values, dict) and "hypotheses" in values:
+            values = dict(values)
+            values["hypotheses"] = [
+                item.model_dump(mode="python") if isinstance(item, HypothesisProposal) else item
+                for item in values["hypotheses"]
+            ]
+        return values
 
 
 class NextActionResponse(BaseModel):
