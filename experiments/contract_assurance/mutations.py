@@ -38,6 +38,10 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
             else:
                 wrong[field] = "wrong primitive"
             result.append(Mutation(f"wrong_primitive_{field}", "S1", json.dumps(wrong, sort_keys=True)))
+            if original is not None:
+                null_value = copy.deepcopy(value)
+                null_value[field] = None
+                result.append(Mutation(f"null_required_{field}", "S1", json.dumps(null_value, sort_keys=True)))
             if isinstance(original, list) and original:
                 empty = copy.deepcopy(value)
                 empty[field] = []
