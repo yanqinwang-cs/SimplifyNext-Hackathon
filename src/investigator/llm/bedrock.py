@@ -53,7 +53,8 @@ class BedrockModelClient:
             parsed = parse_model_output(json.loads(raw_text), output_schema)
         except (json.JSONDecodeError, ModelParseError) as exc:
             raise ModelParseError(
-                f"Bedrock returned invalid structured output for {output_schema.__name__}: {exc}"
+                f"Bedrock returned invalid structured output for {output_schema.__name__}: {exc}",
+                raw_output=raw_text,
             ) from exc
         metadata = ModelCallMetadata(
             provider="bedrock",
@@ -64,11 +65,10 @@ class BedrockModelClient:
             parse_success=True,
             finish_reason=stop_reason,
         )
-        return ModelCallResult(parsed=parsed, metadata=metadata)
+        return ModelCallResult(parsed=parsed, metadata=metadata, raw_output=raw_text)
 
     @staticmethod
     def _messages(input_data: MessageInput) -> list[dict[str, Any]]:
         if isinstance(input_data, str):
             return [{"role": "user", "content": [{"text": input_data}]}]
         return [dict(message) for message in input_data]
-

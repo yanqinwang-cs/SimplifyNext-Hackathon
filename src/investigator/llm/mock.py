@@ -33,5 +33,4 @@ class MockModelClient:
             latency_seconds=perf_counter() - started,
             parse_success=True,
         )
-        return ModelCallResult(parsed=parsed, metadata=metadata)
-
+        return ModelCallResult(parsed=parsed, metadata=metadata, raw_output=self.response)

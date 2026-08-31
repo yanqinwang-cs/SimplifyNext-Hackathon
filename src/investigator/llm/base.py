@@ -10,6 +10,10 @@ MessageInput = str | Sequence[Mapping[str, Any]]
 class ModelParseError(ValueError):
     """Raised when a model response cannot be validated against its schema."""
 
+    def __init__(self, message: str, raw_output: Any = None) -> None:
+        super().__init__(message)
+        self.raw_output = raw_output
+
 
 class ModelCallMetadata(BaseModel):
     provider: str
@@ -26,6 +30,7 @@ class ModelCallResult(BaseModel):
 
     parsed: BaseModel
     metadata: ModelCallMetadata
+    raw_output: Any | None = None
 
 
 class ModelClient(Protocol):
@@ -42,4 +47,3 @@ def parse_model_output(raw_output: Any, output_schema: type[T]) -> T:
         raise ModelParseError(
             f"Could not parse model output as {output_schema.__name__}: {exc}"
         ) from exc
-
