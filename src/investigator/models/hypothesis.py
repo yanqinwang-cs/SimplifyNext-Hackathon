@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from investigator.models.identifiers import EvidenceId, HypothesisId, UncertaintyId
 
 
@@ -82,6 +82,13 @@ class HypothesisTransition(BaseModel):
     requested_effect: str | None = None
     why_existing_operations_do_not_fit: dict[str, str] | None = None
 
+    @field_validator("reason", "requested_operation_name", "requested_effect")
+    @classmethod
+    def substantive_text(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("Substantive text cannot be empty")
+        return value
+
     @model_validator(mode="after")
     def validate_other_fields(self) -> "HypothesisTransition":
         other_fields = (self.requested_operation_name, self.requested_effect, self.why_existing_operations_do_not_fit)
@@ -114,6 +121,13 @@ class UncertaintyTransition(BaseModel):
     requested_operation_name: str | None = None
     requested_effect: str | None = None
     why_existing_operations_do_not_fit: dict[str, str] | None = None
+
+    @field_validator("reason", "new_description", "requested_operation_name", "requested_effect")
+    @classmethod
+    def substantive_text(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("Substantive text cannot be empty")
+        return value
 
     @model_validator(mode="after")
     def validate_transition_fields(self) -> "UncertaintyTransition":

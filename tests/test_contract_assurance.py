@@ -235,6 +235,12 @@ def test_new_uncertainty_description_must_be_substantive():
     assert not result.accepted and result.code is FailureCode.S4
 
 
+def test_revision_transition_reasons_must_be_substantive():
+    hypothesis = evaluate_raw(json.dumps({"hypothesis_id": "H1", "transition": "keep", "reason": ""}), HypothesisTransition)
+    uncertainty = evaluate_raw(json.dumps({"uncertainty_id": "H1:U1", "transition": "keep", "reason": ""}), UncertaintyTransition)
+    assert hypothesis.code is FailureCode.S4 and uncertainty.code is FailureCode.S4
+
+
 def test_assurance_module_cli_reports_summary(tmp_path: Path):
     root = Path(__file__).resolve().parents[1]
     completed = subprocess.run(["uv", "run", "python", "-m", "experiments.contract_assurance", "--root", str(root), "--output", str(tmp_path), "--commit", "abc"], cwd=root, capture_output=True, text=True, check=True, env={**__import__("os").environ, "UV_CACHE_DIR": "/tmp/codex_uv_contract_assurance"})

@@ -244,6 +244,16 @@
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"The issue can be revisited later.\", \"transition\": \"defer\", \"uncertainty_id\": \"H1:U1\"}]}"
     },
     {
+      "intended_code": "S4",
+      "name": "empty_hypothesis_transition_reason",
+      "raw_output": "{\"hypothesis_updates\": [{\"hypothesis_id\": \"H1\", \"reason\": \"\", \"transition\": \"keep\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "empty_uncertainty_transition_reason",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"\", \"transition\": \"keep\", \"uncertainty_id\": \"H1:U1\"}]}"
+    },
+    {
       "intended_code": "valid",
       "name": "valid_state_update",
       "raw_output": "{\"hypothesis_updates\": [{\"hypothesis_id\": \"H1\", \"reason\": \"New evidence reduces support for this hypothesis.\", \"transition\": \"weaken\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
