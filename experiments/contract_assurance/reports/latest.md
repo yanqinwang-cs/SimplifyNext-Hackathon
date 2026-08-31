@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-08-31T23:55:54.020222+00:00
+- Generated: 2026-08-31T23:57:05.909233+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -13,6 +13,7 @@
 | S5 candidates | 0 |
 | S6 limitations | 0 |
 
+- Human review required for S5 candidates: `False`
 ## Failure codes
 
 - `S0`: 140
