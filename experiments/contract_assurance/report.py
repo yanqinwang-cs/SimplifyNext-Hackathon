@@ -1,4 +1,5 @@
 import json
+import math
 from datetime import datetime, UTC
 from collections import Counter
 from pathlib import Path
@@ -27,6 +28,17 @@ def summarize_blind(evaluations: Iterable[Evaluation], audits: Iterable[BlindBat
     summary = summarize(usable)
     summary["excluded_not_blind"] = sum(1 for item in evaluations if item not in usable)
     return summary
+
+
+def failure_rate_statistics(evaluations: Iterable[Evaluation], confidence: float = 0.95) -> dict[str, float | int]:
+    """Return compliance/failure statistics; these are not reasoning confidence scores."""
+    items = list(evaluations)
+    failures = sum(not item.accepted for item in items)
+    total = len(items)
+    rate = failures / total if total else 0.0
+    z = 1.96 if confidence == 0.95 else 1.645 if confidence == 0.90 else 2.576
+    upper = min(1.0, (failures + z * z / 2 + z * math.sqrt((failures * (total - failures) / total) + z * z / 4)) / (total + z * z)) if total else 1.0
+    return {"total": total, "failures": failures, "observed_failure_rate": rate, "upper_failure_rate": upper, "confidence": confidence}
 
 
 def write_report(destination: Path, report: dict) -> None:
