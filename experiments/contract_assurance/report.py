@@ -12,7 +12,7 @@ from .audit import BlindBatchAudit
 def summarize(evaluations: Iterable[Evaluation]) -> dict:
     items = list(evaluations)
     counts = Counter(item.code.value for item in items if item.code)
-    return {"total": len(items), "accepted": sum(item.accepted for item in items), "rejected": sum(not item.accepted for item in items), "failure_codes": dict(counts)}
+    return {"total": len(items), "accepted": sum(item.accepted for item in items), "rejected": sum(not item.accepted for item in items), "failure_codes": dict(counts), "s5_candidates": counts.get("S5", 0), "s6_limitations": counts.get("S6", 0)}
 
 
 def summarize_by_contract(evaluations: Iterable[Evaluation]) -> dict[str, dict]:
@@ -47,12 +47,13 @@ def write_report(destination: Path, report: dict) -> None:
 
 
 def render_markdown(report: dict) -> str:
-    lines = ["# Contract assurance report", "", f"- Generated: {report.get('generated_at', 'unknown')}", f"- Contracts: {report.get('contracts', report.get('total', 0))}", ""]
-    if "accepted" in report:
-        lines += ["| Metric | Count |", "| --- | ---: |", f"| Total evaluations | {report.get('total', 0)} |", f"| Accepted | {report.get('accepted', 0)} |", f"| Rejected | {report.get('rejected', 0)} |", ""]
-    if report.get("failure_codes"):
+    summary = report.get("deterministic", report)
+    lines = ["# Contract assurance report", "", f"- Generated: {report.get('generated_at', 'unknown')}", f"- Contracts: {len(report.get('inventory', {}).get('contracts', [])) or report.get('contracts', summary.get('total', 0))}", ""]
+    if "accepted" in summary:
+        lines += ["| Metric | Count |", "| --- | ---: |", f"| Total evaluations | {summary.get('total', 0)} |", f"| Accepted | {summary.get('accepted', 0)} |", f"| Rejected | {summary.get('rejected', 0)} |", f"| Unexpected accepts | {summary.get('unexpected_accepts', 0)} |", f"| Unexpected rejects | {summary.get('unexpected_rejects', 0)} |", f"| S5 candidates | {summary.get('s5_candidates', 0)} |", f"| S6 limitations | {summary.get('s6_limitations', 0)} |", ""]
+    if summary.get("failure_codes"):
         lines += ["## Failure codes", ""]
-        lines.extend(f"- `{code}`: {count}" for code, count in sorted(report["failure_codes"].items()))
+        lines.extend(f"- `{code}`: {count}" for code, count in sorted(summary["failure_codes"].items()))
     return "\n".join(lines) + "\n"
 
 

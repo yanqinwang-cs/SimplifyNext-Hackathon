@@ -91,7 +91,7 @@ def test_snapshots_are_hashable_and_public(tmp_path: Path):
 
 def test_report_summary_counts_failures():
     results = [evaluate_raw("", NextActionResponse), evaluate_raw(json.dumps(valid_action()), NextActionResponse)]
-    assert summarize(results) == {"total": 2, "accepted": 1, "rejected": 1, "failure_codes": {"S0": 1}}
+    assert summarize(results) == {"total": 2, "accepted": 1, "rejected": 1, "failure_codes": {"S0": 1}, "s5_candidates": 0, "s6_limitations": 0}
 
 
 def test_report_history_preserves_dated_json_and_markdown(tmp_path: Path):
