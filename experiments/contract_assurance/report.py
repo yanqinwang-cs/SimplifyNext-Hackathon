@@ -39,6 +39,17 @@ def summarize_blind(evaluations: Iterable[Evaluation], audits: Iterable[BlindBat
     return summary
 
 
+def summarize_blind_by_role(evaluations: Iterable[Evaluation], audits: Iterable[BlindBatchAudit]) -> dict[str, dict]:
+    """Report producer and adversary outcomes independently after blind filtering."""
+    items = list(evaluations)
+    qualified = {audit.worker_id for audit in audits if audit.qualifies_as_blind}
+    roles = {str(item.details.get("role", "unassigned")) for item in items}
+    return {
+        role: summarize(item for item in items if str(item.details.get("worker_id", "")) in qualified and item.details.get("role") == role)
+        for role in sorted(roles)
+    }
+
+
 def failure_rate_statistics(evaluations: Iterable[Evaluation], confidence: float = 0.95) -> dict[str, float | int]:
     """Return compliance/failure statistics; these are not reasoning confidence scores."""
     items = list(evaluations)
