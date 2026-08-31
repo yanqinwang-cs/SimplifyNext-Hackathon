@@ -80,6 +80,7 @@ def test_lint_detects_template_drift():
     issues = lint_contract(spec, template={"selected_action_id": "A1", "stale_field": "x"})
     assert any("forbidden field" in issue.message for issue in issues)
     assert not any("extra='forbid'" in issue.message for issue in lint_contract(spec))
+    assert any("canonical placeholder text" in issue.message for issue in lint_contract(spec, template={"selected_action_id": "A1", "target_uncertainty": "The uncertainty this enquiry addresses."}))
 
 
 def test_snapshots_are_hashable_and_public(tmp_path: Path):
