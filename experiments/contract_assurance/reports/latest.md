@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-08-31T21:01:23.455549+00:00
+- Generated: 2026-08-31T21:24:18.060929+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -27,6 +27,11 @@
 - Batches: 3
 - Qualified batches: 0
 - Excluded as NOT_BLIND: 3
+
+## Assurance limitations
+
+- S6 reasoning and semantic quality are not assessed by deterministic schema assurance.
+- SmokeResponse is schema-sampled offline; its live Bedrock path is excluded from this offline cycle.
 
 ## By contract
 

@@ -77,6 +77,10 @@ def render_markdown(report: dict) -> str:
     blind = report.get("blind_compliance")
     if blind:
         lines += ["", "## Blind compliance", "", f"- Status: `{blind.get('status', 'NOT_BLIND')}`", f"- Batches: {blind.get('batches', 0)}", f"- Qualified batches: {blind.get('qualified_batches', 0)}", f"- Excluded as NOT_BLIND: {blind.get('excluded_not_blind', 0)}"]
+    limitations = report.get("semantic_limitations", [])
+    if limitations:
+        lines += ["", "## Assurance limitations", ""]
+        lines.extend(f"- {item}" for item in limitations)
     by_contract = report.get("deterministic_by_contract", {})
     if by_contract:
         lines += ["", "## By contract", "", "| Contract | Total | Accepted | Rejected |", "| --- | ---: | ---: | ---: |"]

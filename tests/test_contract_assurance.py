@@ -206,6 +206,7 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     assert report["coverage_ledger"]
     assert report["blind_compliance"]["status"] == "NOT_BLIND"
     assert "producer" in report["blind_compliance"]["by_role"]
+    assert report["semantic_limitations"] and "S6" in report["semantic_limitations"][0]
     assert (tmp_path / "inventory.json").exists()
     assert (tmp_path / "latest.json").exists()
 
