@@ -48,6 +48,9 @@ class InvestigationSession:
     revision_raw_model_output: Any | None = None
     revision_metadata: Any | None = None
     revision_prompt: str | None = None
+    next_action_raw_model_output: Any | None = None
+    next_action_metadata: Any | None = None
+    next_action_prompt: str | None = None
     unsupported_operations: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -87,8 +90,9 @@ class InvestigationService:
             session.status = SessionStatus.PAUSED
             session.pending_action = None
             return session
+        prompt = self.environment.next_action_prompt(session, available)
         try:
-            result = self.client.call(self.environment.next_action_prompt(session, available), NextActionResponse)
+            result = self.client.call(prompt, NextActionResponse)
             response = NextActionResponse.model_validate(result.parsed)
         except Exception as exc:
             self._raise_structured_output_error(exc, "next_action_parse", locals().get("result"))
@@ -97,6 +101,9 @@ class InvestigationService:
             raise ValueError(f"Action is not currently available: {response.selected_action_id!r}")
         session.pending_action = self.environment.get_action(response.selected_action_id)
         session.action_reason = response.why_this_action_now
+        session.next_action_raw_model_output = result.raw_output
+        session.next_action_metadata = result.metadata
+        session.next_action_prompt = prompt
         session.status = SessionStatus.AWAITING_ACTION_REVIEW
         return session
 

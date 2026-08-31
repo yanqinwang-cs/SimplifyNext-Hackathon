@@ -26,3 +26,5 @@ The UI-only Streamlit prototype can be launched with `uv run streamlit run app/s
 The reusable `InvestigationSession` / `InvestigationService` cycle is: start → action review → execute → revision review → apply → next action → repeat. Streamlit provides the human review points; the controlled CLI runner auto-approves its first cycle. Free-form steering remains unconnected, and LangGraph is not required.
 
 The state kernel also contains a provisional hypothesis tree. Broad parent hypotheses and narrower evidence-based children are represented structurally; removing or weakening a child leaves its parent unchanged. Hypotheses are never evidence, and `specificity_basis` records evidence IDs that supposedly justify narrowing. This is deterministic state representation, not a graph or search algorithm; semantic adequacy of the basis is deferred to later experiments.
+
+Interactive runs are written incrementally to `runs/<session_id>/trace.json`, preserving raw model output, human decisions, and a current `CaseState` snapshot. These local runtime traces are gitignored; resume/recovery is not implemented yet.

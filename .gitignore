@@ -7,3 +7,4 @@ data/cases/*.tmp
 .env
 .env.*
 !.env.example
+runs/
