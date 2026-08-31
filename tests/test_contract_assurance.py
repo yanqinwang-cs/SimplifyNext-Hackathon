@@ -10,7 +10,7 @@ from experiments.contract_assurance.mutations import write_fixture_manifest
 from experiments.contract_assurance.mutations import deduplicate, mutations
 from experiments.contract_assurance.lint import lint_contract
 from experiments.contract_assurance.registry import contract_registry
-from experiments.contract_assurance.report import render_markdown, summarize, summarize_by_contract, write_history
+from experiments.contract_assurance.report import render_markdown, summarize, summarize_blind, summarize_by_contract, write_history
 from experiments.contract_assurance.snapshot import fingerprint, write_public_snapshot, write_snapshot
 from experiments.contract_assurance.snapshot import validate_public_package
 from experiments.contract_assurance.audit import audit_public_package
@@ -103,6 +103,16 @@ def test_report_aggregates_by_contract():
     second = evaluate_raw("", NextActionResponse)
     second.details["contract"] = "NextActionResponse"
     assert summarize_by_contract([first, second])["NextActionResponse"]["rejected"] == 1
+
+
+def test_not_blind_batches_are_excluded_from_statistics():
+    qualified = evaluate_raw(json.dumps(valid_action()), NextActionResponse)
+    qualified.details["worker_id"] = "blind"
+    contaminated = evaluate_raw("", NextActionResponse)
+    contaminated.details["worker_id"] = "contaminated"
+    audits = [BlindBatchAudit("blind", "NextActionResponse", "a", ("package",), True, False), BlindBatchAudit("contaminated", "NextActionResponse", "b", ("repo",), False, True)]
+    result = summarize_blind([qualified, contaminated], audits)
+    assert result["total"] == 1 and result["accepted"] == 1 and result["excluded_not_blind"] == 1
 
 
 def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):

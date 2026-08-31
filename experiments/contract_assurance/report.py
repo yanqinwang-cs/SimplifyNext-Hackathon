@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .evaluate import Evaluation
+from .audit import BlindBatchAudit
 
 
 def summarize(evaluations: Iterable[Evaluation]) -> dict:
@@ -18,6 +19,14 @@ def summarize_by_contract(evaluations: Iterable[Evaluation]) -> dict[str, dict]:
     for item in evaluations:
         grouped.setdefault(str(item.details.get("contract", "unassigned")), []).append(item)
     return {contract: summarize(items) for contract, items in sorted(grouped.items())}
+
+
+def summarize_blind(evaluations: Iterable[Evaluation], audits: Iterable[BlindBatchAudit]) -> dict:
+    qualified = {audit.worker_id for audit in audits if audit.qualifies_as_blind}
+    usable = [item for item in evaluations if str(item.details.get("worker_id", "")) in qualified]
+    summary = summarize(usable)
+    summary["excluded_not_blind"] = sum(1 for item in evaluations if item not in usable)
+    return summary
 
 
 def write_report(destination: Path, report: dict) -> None:
