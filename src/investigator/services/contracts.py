@@ -86,6 +86,8 @@ class InitialExpansionHypothesis(BaseModel):
 
     @model_validator(mode="after")
     def validate_relationship(self) -> "InitialExpansionHypothesis":
+        if self.parent_id == self.id:
+            raise ValueError("A hypothesis cannot be its own parent")
         if self.relationship == "competing_root":
             if self.parent_id is not None or self.contrasted_hypothesis_id is None or not self.material_difference:
                 raise ValueError("competing_root requires null parent, contrast target, and material_difference")
