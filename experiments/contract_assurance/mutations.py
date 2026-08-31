@@ -84,6 +84,10 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         polluted["conclusion_hypothesis_id"] = "H1"
         result.append(Mutation("mixed_union_branch", "S4", json.dumps(polluted, sort_keys=True)))
     if contract == "NextStepResponse":
+        conclusion = {"step_type": "conclusion", "selected_action_id": None, "target_uncertainty": None, "expected_information_value": None, "why_this_action_now": None, "conclusion_hypothesis_id": "H1", "conclusion_reason": "The current evidence supports this conclusion.", "remaining_uncertainty_ids": []}
+        result.append(Mutation("valid_conclusion_branch", "valid", json.dumps(conclusion, sort_keys=True)))
+        stop = {"step_type": "stop_unresolved", "selected_action_id": None, "target_uncertainty": None, "expected_information_value": None, "why_this_action_now": None, "conclusion_hypothesis_id": None, "conclusion_reason": "The remaining uncertainty cannot be resolved with available enquiries.", "remaining_uncertainty_ids": ["H1:U1"]}
+        result.append(Mutation("valid_stop_unresolved_branch", "valid", json.dumps(stop, sort_keys=True)))
         missing_stop_reason = {"step_type": "stop_unresolved", "remaining_uncertainty_ids": []}
         result.append(Mutation("stop_without_reason_or_ids", "S4", json.dumps(missing_stop_reason, sort_keys=True)))
         conclusion_with_action = {"step_type": "conclusion", "conclusion_hypothesis_id": "H1", "conclusion_reason": "A reason.", "selected_action_id": "A1"}
