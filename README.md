@@ -34,3 +34,5 @@ Interactive runs are written incrementally to `runs/<session_id>/trace.json`, pr
 Graph IDs use typed namespaces (`E...` or `A..._RELEASE` for evidence, `P...`, `H...`, and `U...` or `H...:U...` for uncertainties). `SPECIALIZES` permits one active parent and many children, rejects cycles, and ignores archived parent edges in active traversal. The persistent graph retains archived nodes/edges; active views exclude them.
 
 The investigator seeds H1 and may pause, stop, correct evidence, or correct interpretation at any UI boundary. Ordinary bounded enquiries and routine revisions proceed autonomously; new hypotheses are reported, while hypothesis removal, conclusions, and unresolved stopping remain human decisions. Initial alternatives declare `competing_root` or `specialization`; specializations require released evidence.
+
+The provisional Case Steward foundation adds typed investigator/steward authority boundaries, deterministic graph-health features, snapshots, and an offline sequential coordinator. It does not add a live steward model, agent loop, or new agent architecture.
