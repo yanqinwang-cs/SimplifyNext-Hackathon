@@ -51,6 +51,36 @@ def test_updates_remove_or_weaken_child_without_mutating_parent_or_input() -> No
     assert weakened.get_hypothesis("H1").status is HypothesisStatus.ACTIVE
 
 
+def test_updates_add_evidence_provenance_without_replacing_existing_references() -> None:
+    state = tree()
+    updated = apply_hypothesis_updates(state, [HypothesisTransition(
+        hypothesis_id="H1",
+        transition=HypothesisTransitionType.KEEP,
+        reason="New evidence is relevant.",
+        add_supporting_evidence_ids=["E2", "E2"],
+        add_conflicting_evidence_ids=["E2"],
+        add_specificity_basis=["E2"],
+    )])
+    hypothesis = updated.get_hypothesis("H1")
+    assert hypothesis.supporting_evidence_ids == ["E1", "E2"]
+    assert hypothesis.conflicting_evidence_ids == ["E2"]
+    assert hypothesis.specificity_basis == ["E2"]
+    assert state.get_hypothesis("H1").supporting_evidence_ids == ["E1"]
+
+
+def test_updates_reject_unknown_or_hypothesis_evidence_ids() -> None:
+    with pytest.raises(KeyError, match="Unknown evidence"):
+        apply_hypothesis_updates(tree(), [HypothesisTransition(
+            hypothesis_id="H1", transition="keep", reason="audit",
+            add_supporting_evidence_ids=["missing"],
+        )])
+    with pytest.raises(ValueError, match="cannot be used as evidence"):
+        apply_hypothesis_updates(tree(), [HypothesisTransition(
+            hypothesis_id="H1", transition="keep", reason="audit",
+            add_specificity_basis=["H1.1"],
+        )])
+
+
 def test_explicit_parent_activation_and_reason_is_not_evidence() -> None:
     state = tree()
     state.hypotheses["H1"].status = HypothesisStatus.WEAKENED

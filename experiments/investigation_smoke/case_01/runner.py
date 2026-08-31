@@ -154,9 +154,16 @@ def run(
         initial_response = InitialResponse.model_validate(first_call.parsed)
         action = get_action(initial_response.selected_action_id)
         state = initial_state(initial_response)
-        release = release_selected_artifact(state, action.action_id)
+        post_release_state = state.model_copy(deep=True)
+        release = release_selected_artifact(post_release_state, action.action_id)
         selected_action = {"action_id": action.action_id, "title": action.title, "definition": action.definition}
-        second_prompt = revision_prompt(case_input, state.model_dump(mode="json"), selected_action, release.content)
+        second_prompt = revision_prompt(
+            case_input,
+            [hypothesis.model_dump(mode="json") for hypothesis in state.hypotheses.values()],
+            [uncertainty.model_dump(mode="json") for uncertainty in state.uncertainties.values()],
+            selected_action,
+            release.content,
+        )
         trace = trace.model_copy(update={
             "initial_response": initial_response,
             "initial_hypothesis_state": state,
@@ -173,7 +180,7 @@ def run(
             "revision_metadata": second_call.metadata,
         })
         revision_response = RevisionResponse.model_validate(second_call.parsed)
-        final_state = apply_revision(state, revision_response)
+        final_state = apply_revision(post_release_state, revision_response)
         trace = trace.model_copy(update={
             "revision_response": revision_response,
             "final_hypothesis_state": final_state,

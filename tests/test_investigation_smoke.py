@@ -12,6 +12,7 @@ from experiments.investigation_smoke.case_01.runner import (
     release_selected_artifact,
     run,
 )
+from experiments.investigation_smoke.case_01.prompts import revision_prompt
 from experiments.investigation_smoke.case_01.schemas import (
     ControlledRunTrace,
     HypothesisProposal,
@@ -63,8 +64,8 @@ def initial_response(selected_action_id="A3"):
 def revision_response():
     return RevisionResponse(
         hypothesis_updates=[
-            HypothesisTransition(hypothesis_id="H1.1", transition=HypothesisTransitionType.REMOVE, reason="The artefact does not support this narrow child."),
-            HypothesisTransition(hypothesis_id="H1", transition=HypothesisTransitionType.ACTIVATE, reason="The broad explanation remains viable."),
+            HypothesisTransition(hypothesis_id="H1.1", transition=HypothesisTransitionType.REMOVE, reason="The artefact does not support this narrow child.", add_conflicting_evidence_ids=["A3_RELEASE"]),
+            HypothesisTransition(hypothesis_id="H1", transition=HypothesisTransitionType.ACTIVATE, reason="The broad explanation remains viable.", add_supporting_evidence_ids=["A3_RELEASE"]),
         ],
         remaining_uncertainties=["The cause of the movements remains unresolved."],
         revision_rationale="The released statements support a broader behavioural possibility without establishing a mechanism.",
@@ -126,12 +127,15 @@ def test_two_call_run_trace_applies_updates_and_round_trips(tmp_path: Path) -> N
     assert len(client.calls) == 2
     trace = ControlledRunTrace.model_validate_json(trace_path.read_text(encoding="utf-8"))
     assert trace.parse_success is True
+    assert set(trace.initial_hypothesis_state.evidence) == {"E1", "E2", "E3", "E4", "E5", "E6", "E7"}
     assert trace.selected_action_id == "A3"
     assert trace.release.artifact_id == "A3_RELEASE"
     assert trace.release.content == artifact_path("A3").read_text(encoding="utf-8")
     assert "A1_tutoring_verification_packet.md" not in trace.revision_prompt
     assert trace.final_hypothesis_state.get_hypothesis("H1.1").status is HypothesisStatus.REMOVED
     assert trace.final_hypothesis_state.get_hypothesis("H1").status is HypothesisStatus.ACTIVE
+    assert trace.final_hypothesis_state.get_hypothesis("H1").supporting_evidence_ids == ["E1", "A3_RELEASE"]
+    assert trace.final_hypothesis_state.get_hypothesis("H1.1").conflicting_evidence_ids == ["A3_RELEASE"]
     assert trace.final_hypothesis_state.get_evidence("A3_RELEASE").raw_content == trace.release.content
 
 
@@ -143,3 +147,15 @@ def test_revision_is_deterministic_and_preserves_parent() -> None:
     assert updated.get_hypothesis("H1.1").status is HypothesisStatus.REMOVED
     assert state.get_hypothesis("H1").status is HypothesisStatus.ACTIVE
 
+
+def test_revision_prompt_separates_hypotheses_from_evidence() -> None:
+    state = initial_state(initial_response())
+    prompt = revision_prompt(
+        "original evidence", [h.model_dump(mode="json") for h in state.hypotheses.values()],
+        [u.model_dump(mode="json") for u in state.uncertainties.values()],
+        {"action_id": "A3"}, "A3_RELEASE content",
+    )
+    assert "Prior hypotheses/tree (NOT evidence):" in prompt
+    assert "Prior unresolved uncertainties:" in prompt
+    assert "Newly released artefact content:" in prompt
+    assert '"evidence":' not in prompt

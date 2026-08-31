@@ -3,7 +3,7 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator
 
 from investigator.llm.base import ModelCallMetadata
-from investigator.models.hypothesis import HypothesisTransition, HypothesisTransitionType
+from investigator.models.hypothesis import HypothesisStatus, HypothesisTransition
 from investigator.state.case_state import CaseState
 
 
@@ -11,7 +11,7 @@ class HypothesisProposal(BaseModel):
     id: str
     parent_id: str | None = None
     statement: str
-    status: str = "active"
+    status: HypothesisStatus = HypothesisStatus.ACTIVE
     supported_by: list[str] = Field(default_factory=list)
     conflicted_by: list[str] = Field(default_factory=list)
     unresolved: list[str] = Field(default_factory=list)
@@ -62,9 +62,3 @@ class ControlledRunTrace(BaseModel):
     final_hypothesis_state: CaseState | None = None
     parse_success: bool = False
     error_message: str | None = None
-
-    @field_validator("selected_action_id")
-    @classmethod
-    def selected_action_is_single(cls, value: str | None) -> str | None:
-        return value
-

@@ -70,3 +70,6 @@ class HypothesisTransition(BaseModel):
     hypothesis_id: str
     transition: HypothesisTransitionType
     reason: str
+    add_supporting_evidence_ids: list[str] = Field(default_factory=list)
+    add_conflicting_evidence_ids: list[str] = Field(default_factory=list)
+    add_specificity_basis: list[str] = Field(default_factory=list)

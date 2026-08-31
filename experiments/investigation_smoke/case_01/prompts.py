@@ -34,22 +34,24 @@ Case information:
 {visible_case_input()}"""
 
 
-def revision_prompt(case_input: str, prior_state: dict, selected_action: dict, release_content: str) -> str:
+def revision_prompt(case_input: str, prior_hypotheses: list[dict], prior_uncertainties: list[dict], selected_action: dict, release_content: str) -> str:
     return f"""{RULES}
 
 Revise the existing hypothesis tree after one controlled evidence release. Only the original case evidence plus the newly released artefact may justify revision. Do not rewrite history. Preserve broad parent hypotheses unless the new evidence genuinely conflicts with them. Narrow only when the new evidence supports increased specificity. If a narrow child is contradicted while its parent remains viable, weaken or remove the child and preserve or reactivate the parent. Do not invent a replacement mechanism merely because one branch failed. Unresolved uncertainty is a valid endpoint.
 
-Return only JSON with keys hypothesis_updates, new_hypotheses, remaining_uncertainties, and revision_rationale. Use hypothesis_updates with hypothesis_id, transition (keep/weaken/conflict/remove/activate), and an audit reason. Do not select another enquiry.
+Return only JSON with keys hypothesis_updates, new_hypotheses, remaining_uncertainties, and revision_rationale. Use hypothesis_updates with hypothesis_id, transition (keep/weaken/conflict/remove/activate), an audit reason, and optional additive lists: add_supporting_evidence_ids, add_conflicting_evidence_ids, and add_specificity_basis. Attach the newly released artefact evidence ID only where it genuinely supports, conflicts with, or justifies narrowing a hypothesis; not every update needs it. Do not select another enquiry.
 
 Original visible case:
 {case_input}
 
-Prior structured hypothesis state (not evidence):
-{json.dumps(prior_state, indent=2)}
+Prior hypotheses/tree (NOT evidence):
+{json.dumps(prior_hypotheses, indent=2)}
+
+Prior unresolved uncertainties:
+{json.dumps(prior_uncertainties, indent=2)}
 
 Selected enquiry:
 {json.dumps(selected_action, indent=2)}
 
 Newly released artefact content:
 {release_content}"""
-
