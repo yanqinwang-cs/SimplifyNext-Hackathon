@@ -208,6 +208,16 @@ def test_blind_role_instructions_exist_without_validator_details():
     assert "failure taxonomy" not in producer
 
 
+def test_all_committed_public_packages_match_registered_contracts():
+    packages = Path(__file__).resolve().parents[1] / "experiments/contract_assurance/blind/packages"
+    registry = contract_registry()
+    for path in packages.glob("*.json"):
+        payload = json.loads(path.read_text())
+        contract = payload["manifest"]["contract"]
+        assert contract in registry
+        assert verify_snapshot_against_contract(payload, registry[contract]) == [], path.name
+
+
 def test_registered_experiment_contracts_forbid_unexpected_fields():
     from experiments.model_screen.schemas import HypothesisResponse
     valid = {"hypotheses": [{"statement": "A", "justification": "Because", "uncertainty": "Unknown"}, {"statement": "B", "justification": "Because", "uncertainty": "Unknown"}]}
