@@ -57,6 +57,11 @@
       "intended_code": "S4",
       "name": "placeholder_text",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "uncertainty_owner_mismatch",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"description\": \"A new uncertainty.\", \"hypothesis_id\": \"H2\", \"id\": \"H1:U1\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     }
   ]
 }

@@ -75,6 +75,16 @@
       "intended_code": "S4",
       "name": "mixed_union_branch",
       "raw_output": "{\"conclusion_hypothesis_id\": \"H1\", \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"A1\", \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "stop_without_reason_or_ids",
+      "raw_output": "{\"remaining_uncertainty_ids\": [], \"step_type\": \"stop_unresolved\"}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "conclusion_with_action_field",
+      "raw_output": "{\"conclusion_hypothesis_id\": \"H1\", \"conclusion_reason\": \"A reason.\", \"selected_action_id\": \"A1\", \"step_type\": \"conclusion\"}"
     }
   ]
 }

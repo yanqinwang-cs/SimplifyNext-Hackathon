@@ -13,7 +13,7 @@ class Mutation:
     raw_output: str
 
 
-def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = ()) -> list[Mutation]:
+def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), contract: str | None = None) -> list[Mutation]:
     result = [Mutation("empty", "S0", ""), Mutation("whitespace", "S0", "   "), Mutation("prose_only", "S0", "Here is the requested object.")]
     canonical = json.dumps(value, sort_keys=True)
     result.extend([
@@ -52,6 +52,27 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = ()) -
         polluted["step_type"] = "action"
         polluted["conclusion_hypothesis_id"] = "H1"
         result.append(Mutation("mixed_union_branch", "S4", json.dumps(polluted, sort_keys=True)))
+    if contract == "NextStepResponse":
+        missing_stop_reason = {"step_type": "stop_unresolved", "remaining_uncertainty_ids": []}
+        result.append(Mutation("stop_without_reason_or_ids", "S4", json.dumps(missing_stop_reason, sort_keys=True)))
+        conclusion_with_action = {"step_type": "conclusion", "conclusion_hypothesis_id": "H1", "conclusion_reason": "A reason.", "selected_action_id": "A1"}
+        result.append(Mutation("conclusion_with_action_field", "S4", json.dumps(conclusion_with_action, sort_keys=True)))
+    if contract == "InitialExpansionResponse" and "competing_hypotheses" in value:
+        mismatch = copy.deepcopy(value)
+        mismatch["competing_hypotheses"][0]["parent_id"] = "H1"
+        result.append(Mutation("competing_root_with_parent", "S4", json.dumps(mismatch, sort_keys=True)))
+    if contract == "RevisionResponse":
+        mismatch = copy.deepcopy(value)
+        mismatch["new_uncertainties"] = [{"id": "H1:U1", "hypothesis_id": "H2", "description": "A new uncertainty."}]
+        result.append(Mutation("uncertainty_owner_mismatch", "S4", json.dumps(mismatch, sort_keys=True)))
+    if contract in {"InitialResponse", "InitialExpansionResponse"} and "hypotheses" in value:
+        empty = copy.deepcopy(value)
+        empty["hypotheses"] = []
+        result.append(Mutation("empty_hypotheses", "S1", json.dumps(empty, sort_keys=True)))
+    if contract == "InitialExpansionResponse":
+        empty = copy.deepcopy(value)
+        empty["competing_hypotheses"] = []
+        result.append(Mutation("empty_competing_hypotheses", "S1", json.dumps(empty, sort_keys=True)))
     return result
 
 
@@ -72,6 +93,6 @@ def write_fixture_manifest(destination, contract: str, canonical: dict[str, Any]
 
     path = Path(destination)
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"contract": contract, "canonical": canonical, "mutations": [item.__dict__ for item in deduplicate(mutations(canonical, required_fields=required_fields))]}
+    payload = {"contract": contract, "canonical": canonical, "mutations": [item.__dict__ for item in deduplicate(mutations(canonical, required_fields=required_fields, contract=contract))]}
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path

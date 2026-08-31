@@ -26,7 +26,7 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
             continue
         required = tuple(name for name, field in spec.schema.model_fields.items() if field.is_required())
         write_fixture_manifest(fixture_dir / f"{name}.json", name, sample, required)
-        for mutation in deduplicate(mutations(sample, required_fields=required)):
+        for mutation in deduplicate(mutations(sample, required_fields=required, contract=name)):
             result = evaluate_raw(mutation.raw_output, spec.schema)
             result.details.update({"contract": name, "mutation": mutation.name, "intended_code": mutation.intended_code})
             results.append(result)
