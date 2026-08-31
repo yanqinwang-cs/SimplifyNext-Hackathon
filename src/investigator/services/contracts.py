@@ -15,6 +15,7 @@ def _reject_placeholder(value: str | None) -> str | None:
         "The uncertainty this enquiry addresses.",
         "How the result could change the explanation space.",
         "Why this enquiry is useful now.",
+        "How the evidence changed the state.",
     }:
         raise ValueError("Template placeholder is not valid model output")
     return value
@@ -161,6 +162,8 @@ class RevisionResponse(BaseModel):
     uncertainty_updates: list[UncertaintyTransition] = Field(default_factory=list)
     new_uncertainties: list[NewUncertainty] = Field(default_factory=list)
     revision_rationale: str
+
+    _valid_rationale = field_validator("revision_rationale")(_reject_placeholder)
 
 
 class ReleaseRecord(BaseModel):

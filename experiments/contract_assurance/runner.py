@@ -17,11 +17,14 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
         sample = _sample_for(spec.schema)
         if sample is None:
             continue
-        for mutation in deduplicate(mutations(sample, required_fields=tuple(spec.schema.model_fields))):
+        required = tuple(name for name, field in spec.schema.model_fields.items() if field.is_required())
+        for mutation in deduplicate(mutations(sample, required_fields=required)):
             result = evaluate_raw(mutation.raw_output, spec.schema)
             result.details.update({"contract": name, "mutation": mutation.name, "intended_code": mutation.intended_code})
             results.append(result)
     summary = summarize(results)
+    summary["unexpected_accepts"] = sum(item.accepted and item.details.get("intended_code") != "valid" for item in results)
+    summary["unexpected_rejects"] = sum((not item.accepted) and item.details.get("intended_code") == "valid" for item in results)
     report = {"inventory": inventory(root, commit), "deterministic": summary, "deterministic_by_contract": summarize_by_contract(results), "blind_results_included": False}
     write_history(output_dir, summary)
     (output_dir / "inventory.json").write_text(json.dumps(report["inventory"], indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")

@@ -44,6 +44,8 @@ def test_canonical_placeholders_are_rejected_by_real_contracts():
     assert evaluate_raw(json.dumps(initial), InitialResponse).code is FailureCode.S1
     placeholder_action = valid_action() | {"selected_action_id": "A9"}
     assert evaluate_raw(json.dumps(placeholder_action), NextActionResponse).code is FailureCode.S2
+    revision = {"hypothesis_updates": [], "new_hypotheses": [], "uncertainty_updates": [], "new_uncertainties": [], "revision_rationale": "How the evidence changed the state."}
+    assert not evaluate_raw(json.dumps(revision), RevisionResponse).accepted
 
 
 def test_registry_has_current_service_contracts():
@@ -127,6 +129,7 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     assert report["blind_results_included"] is False
     assert report["deterministic"]["total"] > 0
     assert report["deterministic"]["total"] >= 35
+    assert "unexpected_accepts" in report["deterministic"] and "unexpected_rejects" in report["deterministic"]
     assert (tmp_path / "inventory.json").exists()
     assert (tmp_path / "latest.json").exists()
 
