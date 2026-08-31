@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-08-31T15:12:54.966420+00:00
+- Generated: 2026-08-31T15:15:41.337367+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -19,3 +19,14 @@
 - `S1`: 25
 - `S2`: 12
 - `S4`: 1
+
+## By contract
+
+| Contract | Total | Accepted | Rejected |
+| --- | ---: | ---: | ---: |
+| `InitialExpansionResponse` | 17 | 1 | 16 |
+| `InitialResponse` | 16 | 1 | 15 |
+| `ModelScreenHypothesisResponse` | 9 | 1 | 8 |
+| `NextActionResponse` | 15 | 1 | 14 |
+| `NextStepResponse` | 13 | 1 | 12 |
+| `RevisionResponse` | 10 | 1 | 9 |
