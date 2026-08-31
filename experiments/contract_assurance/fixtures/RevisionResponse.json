@@ -374,6 +374,11 @@
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"E999\"], \"description\": \"A new uncertainty.\", \"hypothesis_id\": \"H1\", \"id\": \"H1:U2\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
     {
+      "intended_code": "S3",
+      "name": "unknown_new_uncertainty_owner",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"E1\"], \"description\": \"A new uncertainty.\", \"hypothesis_id\": \"H2\", \"id\": \"H2:U1\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
       "intended_code": "S2",
       "name": "wrong_namespace_hypothesis_update",
       "raw_output": "{\"hypothesis_updates\": [{\"hypothesis_id\": \"E1\", \"reason\": \"A reason.\", \"transition\": \"keep\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
