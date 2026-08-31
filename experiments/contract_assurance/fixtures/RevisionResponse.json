@@ -325,6 +325,11 @@
     },
     {
       "intended_code": "S3",
+      "name": "cross_environment_release_reference",
+      "raw_output": "{\"hypothesis_updates\": [{\"add_supporting_evidence_ids\": [\"A3_RELEASE\"], \"hypothesis_id\": \"H1\", \"reason\": \"A reason.\", \"transition\": \"keep\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S3",
       "name": "unknown_update_evidence_reference",
       "raw_output": "{\"hypothesis_updates\": [{\"add_supporting_evidence_ids\": [\"E999\"], \"hypothesis_id\": \"H1\", \"reason\": \"A reason.\", \"transition\": \"keep\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
