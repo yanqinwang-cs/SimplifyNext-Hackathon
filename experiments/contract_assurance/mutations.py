@@ -57,6 +57,13 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         malformed = copy.deepcopy(value)
         malformed["selected_action_id"] = "A1 because it is useful"
         result.append(Mutation("id_with_explanation", "S2", json.dumps(malformed, sort_keys=True)))
+        if isinstance(value["selected_action_id"], str):
+            spaced = copy.deepcopy(value)
+            spaced["selected_action_id"] = f" {value['selected_action_id']} "
+            result.append(Mutation("whitespace_wrapped_id", "S2", json.dumps(spaced, sort_keys=True)))
+            lower = copy.deepcopy(value)
+            lower["selected_action_id"] = value["selected_action_id"].lower()
+            result.append(Mutation("case_variant_id", "S2", json.dumps(lower, sort_keys=True)))
         if contract == "NextActionResponse" and value["selected_action_id"] == "A1":
             unavailable = copy.deepcopy(value)
             unavailable["selected_action_id"] = "A2"
