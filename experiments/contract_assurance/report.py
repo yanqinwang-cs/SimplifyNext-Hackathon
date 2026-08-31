@@ -74,6 +74,9 @@ def render_markdown(report: dict) -> str:
     if summary.get("failure_codes"):
         lines += ["## Failure codes", ""]
         lines.extend(f"- `{code}`: {count}" for code, count in sorted(summary["failure_codes"].items()))
+    blind = report.get("blind_compliance")
+    if blind:
+        lines += ["", "## Blind compliance", "", f"- Status: `{blind.get('status', 'NOT_BLIND')}`", f"- Batches: {blind.get('batches', 0)}", f"- Qualified batches: {blind.get('qualified_batches', 0)}", f"- Excluded as NOT_BLIND: {blind.get('excluded_not_blind', 0)}"]
     by_contract = report.get("deterministic_by_contract", {})
     if by_contract:
         lines += ["", "## By contract", "", "| Contract | Total | Accepted | Rejected |", "| --- | ---: | ---: | ---: |"]

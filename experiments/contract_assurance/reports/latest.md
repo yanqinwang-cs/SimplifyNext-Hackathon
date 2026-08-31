@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-08-31T20:28:59.829820+00:00
+- Generated: 2026-08-31T21:01:23.455549+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -20,6 +20,13 @@
 - `S2`: 43
 - `S3`: 16
 - `S4`: 23
+
+## Blind compliance
+
+- Status: `NOT_BLIND`
+- Batches: 3
+- Qualified batches: 0
+- Excluded as NOT_BLIND: 3
 
 ## By contract
 

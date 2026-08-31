@@ -50,10 +50,38 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
     summary = summarize(results)
     summary["unexpected_accepts"] = sum(item.accepted and item.details.get("intended_code") != "valid" for item in results)
     summary["unexpected_rejects"] = sum((not item.accepted) and item.details.get("intended_code") == "valid" for item in results)
-    report = {"inventory": inventory(root, commit), "deterministic": summary, "deterministic_by_contract": summarize_by_contract(results), "coverage_ledger": coverage_ledger(results), "blind_results_included": False}
+    report = {"inventory": inventory(root, commit), "deterministic": summary, "deterministic_by_contract": summarize_by_contract(results), "coverage_ledger": coverage_ledger(results), "blind_results_included": False, "blind_compliance": blind_compliance_summary(root)}
     write_history(output_dir, report)
     (output_dir / "inventory.json").write_text(json.dumps(report["inventory"], indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
     return report
+
+
+def blind_compliance_summary(root: Path) -> dict[str, Any]:
+    """Summarize recorded producer/adversary batches without admitting unqualified results."""
+    batches = 0
+    excluded = 0
+    qualified = 0
+    by_role = {"producer": {"batches": 0, "qualified": 0, "excluded_not_blind": 0}, "adversary": {"batches": 0, "qualified": 0, "excluded_not_blind": 0}}
+    for path in sorted((root / "experiments/contract_assurance/results").glob("*/batch_manifest.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        audits = payload.get("audits", [])
+        if not isinstance(audits, list):
+            continue
+        batches += 1
+        is_qualified = payload.get("status") == "BLIND" and all(bool(item.get("qualifies_as_blind")) for item in audits)
+        qualified += int(is_qualified)
+        excluded += int(not is_qualified)
+        for item in audits:
+            worker_id = str(item.get("worker_id", "")).lower()
+            role = "adversary" if "adversary" in worker_id else "producer" if "producer" in worker_id else None
+            if role:
+                by_role[role]["batches"] += 1
+                by_role[role]["qualified"] += int(is_qualified)
+                by_role[role]["excluded_not_blind"] += int(not is_qualified)
+    return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "by_role": by_role}
 
 
 def _revision_state(root: Path) -> Any:
