@@ -358,6 +358,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         specialization = copy.deepcopy(value)
         specialization["competing_hypotheses"][0].update({"parent_id": "H1", "relationship": "specialization", "contrasted_hypothesis_id": None, "material_difference": None, "specificity_basis_evidence_ids": ["E1"]})
         result.append(Mutation("valid_specialization_relationship", "valid", json.dumps(specialization, sort_keys=True)))
+        specialization_with_competitor_fields = copy.deepcopy(specialization)
+        specialization_with_competitor_fields["competing_hypotheses"][0].update({"contrasted_hypothesis_id": "H1", "material_difference": "It differs from the parent."})
+        result.append(Mutation("specialization_with_competing_root_fields", "S4", json.dumps(specialization_with_competitor_fields, sort_keys=True)))
         wrong_parent = copy.deepcopy(specialization)
         wrong_parent["competing_hypotheses"][0]["parent_id"] = "E1"
         result.append(Mutation("wrong_namespace_parent_hypothesis", "S2", json.dumps(wrong_parent, sort_keys=True)))

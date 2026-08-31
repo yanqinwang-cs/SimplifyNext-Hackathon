@@ -91,6 +91,8 @@ class InitialExpansionHypothesis(BaseModel):
                 raise ValueError("competing_root requires null parent, contrast target, and material_difference")
         elif self.parent_id is None or not self.specificity_basis_evidence_ids:
             raise ValueError("specialization requires a parent and specificity-basis evidence")
+        elif self.contrasted_hypothesis_id is not None or self.material_difference is not None:
+            raise ValueError("specialization cannot contain competing-root fields")
         return self
 
 
