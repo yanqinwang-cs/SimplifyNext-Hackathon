@@ -125,6 +125,16 @@
     },
     {
       "intended_code": "S4",
+      "name": "refine_without_description",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"A reason.\", \"transition\": \"refine\", \"uncertainty_id\": \"H1:U1\"}]}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "resolve_with_description",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"new_description\": \"Contradictory detail.\", \"reason\": \"A reason.\", \"transition\": \"resolve\", \"uncertainty_id\": \"H1:U1\"}]}"
+    },
+    {
+      "intended_code": "S4",
       "name": "duplicate_new_hypothesis_id",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [{\"conflicted_by\": [], \"id\": \"H2\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A new explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"A remaining question.\"]}, {\"conflicted_by\": [], \"id\": \"H2\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A new explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"A remaining question.\"]}], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
