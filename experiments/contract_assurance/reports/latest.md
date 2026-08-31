@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-08-31T15:00:01.267899+00:00
+- Generated: 2026-08-31T15:02:51.146517+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -10,6 +10,8 @@
 | Rejected | 74 |
 | Unexpected accepts | 0 |
 | Unexpected rejects | 0 |
+| S5 candidates | 0 |
+| S6 limitations | 0 |
 
 ## Failure codes
 
