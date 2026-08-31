@@ -12,6 +12,6 @@ Evolution records belong under `evolution/` and are never rewritten when a contr
 
 ## Offline cycle
 
-Run `uv run python -c 'from pathlib import Path; from experiments.contract_assurance.runner import run_deterministic; run_deterministic(Path.cwd(), Path("experiments/contract_assurance/reports"), "<git-commit>")'` to refresh deterministic inventory and reports. This makes no model or network calls. Blind producer/adversary statistics must be supplied separately with `BlindBatchAudit`; unqualified batches are reported as `NOT_BLIND` and excluded.
+Run `uv run python -m experiments.contract_assurance --commit <git-commit>` to refresh deterministic inventory, fixtures, and reports. This makes no model or network calls. Blind producer/adversary statistics must be supplied separately with `BlindBatchAudit`; unqualified batches are reported as `NOT_BLIND` and excluded.
 
 The same run refreshes `fixtures/` with one canonical sample and its provenance-labelled mutations for every sampled contract. These manifests are reproducible regression inputs derived from the registered schemas.
