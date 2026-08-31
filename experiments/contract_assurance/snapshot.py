@@ -36,3 +36,16 @@ def validate_public_package(package: dict[str, Any]) -> list[str]:
     if not manifest.get("contract") or not manifest.get("schema_hash"):
         issues.append("manifest is missing contract provenance")
     return issues
+
+
+def write_public_snapshot(spec: ContractSpec, destination: Path, *, prompt: str, case_input: Any, template: Any = None, commit: str = "unknown") -> Path:
+    """Write only a package that passes the public-boundary audit."""
+    path = destination / f"{spec.name}.json"
+    schema = spec.schema.model_json_schema()
+    package = {"manifest": {"contract": spec.name, "source": spec.source, "git_commit": commit, "schema_hash": fingerprint(schema), "prompt_hash": fingerprint(prompt), "case_input_hash": fingerprint(case_input), "template_hash": fingerprint(template)}, "prompt": prompt, "case_input": case_input, "output_schema": schema, "template": template}
+    issues = validate_public_package(package)
+    if issues:
+        raise ValueError("Public snapshot rejected: " + "; ".join(issues))
+    destination.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(package, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
+    return path
