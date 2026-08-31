@@ -23,6 +23,7 @@ from investigator.services.contracts import InitialResponse
 from investigator.services.contracts import NextStepResponse
 from investigator.services.contracts import InitialExpansionResponse, HypothesisTransition, UncertaintyTransition
 from investigator.services.contracts import NewUncertainty
+from experiments.model_screen.schemas import HypothesisResponse
 
 
 def valid_action():
@@ -244,6 +245,13 @@ def test_revision_transition_reasons_must_be_substantive():
 def test_other_transition_operation_reasons_must_be_substantive():
     value = {"hypothesis_id": "H1", "transition": "other", "reason": "A reason.", "requested_operation_name": "reframe", "requested_effect": "Change framing.", "why_existing_operations_do_not_fit": {"keep": ""}}
     result = evaluate_raw(json.dumps(value), HypothesisTransition)
+    assert result.code is FailureCode.S4
+
+
+def test_model_screen_hypothesis_text_must_be_substantive():
+    value = {"hypotheses": [{"statement": "A", "justification": "B", "uncertainty": "C"}, {"statement": "D", "justification": "E", "uncertainty": "F"}]}
+    value["hypotheses"][0]["statement"] = ""
+    result = evaluate_raw(json.dumps(value), HypothesisResponse)
     assert result.code is FailureCode.S4
 
 

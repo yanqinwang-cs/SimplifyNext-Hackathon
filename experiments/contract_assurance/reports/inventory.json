@@ -47,7 +47,7 @@
       "schema": "HypothesisResponse",
       "schema_hash": "f2224a7d45a3c36db7990ef4095c4ba27da435a44a6b8a3fbbe1c5cd0bf54cdc",
       "source": "experiments/model_screen/schemas.py",
-      "source_hash": "2fe126f30e20920743f035fd6ff149fbb4c5f338905cb8ae936382cac59ec945",
+      "source_hash": "d7a34132fe2bf94b7e266c0bace7f181d83ac6dcedfa67c21053be919d96fd21",
       "template_placeholders": [
         "REPLACE_WITH_"
       ]
@@ -218,6 +218,6 @@
       "source": "src/investigator/services/contracts.py"
     }
   ],
-  "git_commit": "ba2f7a9",
+  "git_commit": "48731e1",
   "unregistered_response_classes": []
 }

@@ -11,6 +11,13 @@ class Hypothesis(BaseModel):
     justification: str
     uncertainty: str
 
+    @field_validator("statement", "justification", "uncertainty")
+    @classmethod
+    def substantive_text(cls, value: str) -> str:
+        if not value.strip() or value.strip().startswith("REPLACE_WITH_"):
+            raise ValueError("Substantive text cannot be empty or a template placeholder")
+        return value
+
 
 class HypothesisResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")

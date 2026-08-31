@@ -174,6 +174,36 @@
       "intended_code": "S1",
       "name": "five_hypotheses",
       "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"A supplied observation supports considering this possibility.\", \"statement\": \"Explanation 3.\", \"uncertainty\": \"Its relative support remains uncertain.\"}, {\"justification\": \"A supplied observation supports considering this possibility.\", \"statement\": \"Explanation 4.\", \"uncertainty\": \"Its relative support remains uncertain.\"}, {\"justification\": \"A supplied observation supports considering this possibility.\", \"statement\": \"Explanation 5.\", \"uncertainty\": \"Its relative support remains uncertain.\"}]}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "empty_hypothesis_statement",
+      "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "placeholder_hypothesis_statement",
+      "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "empty_hypothesis_justification",
+      "raw_output": "{\"hypotheses\": [{\"justification\": \"\", \"statement\": \"A\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "placeholder_hypothesis_justification",
+      "raw_output": "{\"hypotheses\": [{\"justification\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\", \"statement\": \"A\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "empty_hypothesis_uncertainty",
+      "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "placeholder_hypothesis_uncertainty",
+      "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}"
     }
   ]
 }
