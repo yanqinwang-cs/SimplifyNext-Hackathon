@@ -132,6 +132,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         proposal = {"id": "H2", "parent_id": None, "statement": "A new explanation.", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["A remaining question."], "specificity_basis_evidence_ids": []}
         duplicate_hypotheses["new_hypotheses"] = [proposal, copy.deepcopy(proposal)]
         result.append(Mutation("duplicate_new_hypothesis_id", "S4", json.dumps(duplicate_hypotheses, sort_keys=True)))
+        duplicate_uncertainty = copy.deepcopy(value)
+        duplicate_uncertainty["new_uncertainties"] = [{"id": "H1:U1", "hypothesis_id": "H1", "description": "A duplicate uncertainty.", "basis_evidence_ids": ["E1"]}]
+        result.append(Mutation("duplicate_new_uncertainty_id", "S4", json.dumps(duplicate_uncertainty, sort_keys=True)))
     if contract in {"InitialResponse", "InitialExpansionResponse"} and "hypotheses" in value:
         empty = copy.deepcopy(value)
         empty["hypotheses"] = []

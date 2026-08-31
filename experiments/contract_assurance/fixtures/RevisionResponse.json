@@ -112,6 +112,11 @@
       "intended_code": "S4",
       "name": "duplicate_new_hypothesis_id",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [{\"conflicted_by\": [], \"id\": \"H2\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A new explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"A remaining question.\"]}, {\"conflicted_by\": [], \"id\": \"H2\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A new explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"A remaining question.\"]}], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "duplicate_new_uncertainty_id",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"E1\"], \"description\": \"A duplicate uncertainty.\", \"hypothesis_id\": \"H1\", \"id\": \"H1:U1\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     }
   ]
 }
