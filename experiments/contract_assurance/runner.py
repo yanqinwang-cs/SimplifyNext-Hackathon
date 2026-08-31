@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .evaluate import evaluate_next_action, evaluate_raw, evaluate_revision
+from .evaluate import evaluate_initial, evaluate_next_action, evaluate_raw, evaluate_revision
 from .inventory import assert_complete_inventory, assert_inventory_paths, inventory
 from .snapshot import verify_snapshot_against_contract
 from .mutations import deduplicate, mutations, write_fixture_manifest
@@ -21,6 +21,7 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
     results = []
     fixture_dir = root / "experiments/contract_assurance/fixtures"
     revision_state = _revision_state(root)
+    environment = _case1_environment(root)
     for name, spec in contract_registry().items():
         sample = _sample_for(spec.schema)
         if sample is None:
@@ -32,6 +33,14 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
                 result = evaluate_next_action(mutation.raw_output, {"A1"})
             elif name == "RevisionResponse":
                 result = evaluate_revision(mutation.raw_output, revision_state)
+            elif name == "InitialResponse":
+                result = evaluate_initial(mutation.raw_output, schema=spec.schema, build_state=environment.build_initial_state)
+            elif name == "InitialExpansionResponse":
+                result = evaluate_initial(
+                    mutation.raw_output,
+                    schema=spec.schema,
+                    build_state=lambda response: environment.build_seeded_initial_state("A human-seeded explanation.", response),
+                )
             else:
                 result = evaluate_raw(mutation.raw_output, spec.schema)
             result.details.update({"contract": name, "mutation": mutation.name, "intended_code": mutation.intended_code})
@@ -47,12 +56,17 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
 
 def _revision_state(root: Path) -> Any:
     """Build the smallest real case-01 state needed by revision preflight."""
-    from investigator.environments.case_01 import Case1ControlledEnvironment
     from investigator.services.contracts import InitialResponse
 
-    environment = Case1ControlledEnvironment(root / "experiments/investigation_smoke/case_01/artifacts")
+    environment = _case1_environment(root)
     initial = _sample_for(InitialResponse)
     return environment.build_initial_state(InitialResponse.model_validate(initial))
+
+
+def _case1_environment(root: Path) -> Any:
+    from investigator.environments.case_01 import Case1ControlledEnvironment
+
+    return Case1ControlledEnvironment(root / "experiments/investigation_smoke/case_01/artifacts")
 
 
 def verify_committed_packages(root: Path) -> list[str]:

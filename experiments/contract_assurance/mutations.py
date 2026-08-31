@@ -97,6 +97,11 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         empty = copy.deepcopy(value)
         empty["competing_hypotheses"] = []
         result.append(Mutation("empty_competing_hypotheses", "S1", json.dumps(empty, sort_keys=True)))
+    if contract in {"InitialResponse", "InitialExpansionResponse"}:
+        unknown = copy.deepcopy(value)
+        target = unknown["hypotheses"][0] if "hypotheses" in unknown else unknown["competing_hypotheses"][0]
+        target["supported_by"] = ["E999"]
+        result.append(Mutation("unknown_evidence_reference", "S3", json.dumps(unknown, sort_keys=True)))
     return result
 
 
