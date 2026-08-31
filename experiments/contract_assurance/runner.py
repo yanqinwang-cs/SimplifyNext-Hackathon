@@ -62,6 +62,7 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
     excluded = 0
     qualified = 0
     by_role = {"producer": {"batches": 0, "qualified": 0, "excluded_not_blind": 0}, "adversary": {"batches": 0, "qualified": 0, "excluded_not_blind": 0}}
+    by_contract: dict[str, dict[str, int]] = {}
     for path in sorted((root / "experiments/contract_assurance/results").glob("*/batch_manifest.json")):
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
@@ -74,6 +75,12 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
         is_qualified = payload.get("status") == "BLIND" and all(bool(item.get("qualifies_as_blind")) for item in audits)
         qualified += int(is_qualified)
         excluded += int(not is_qualified)
+        contracts = {str(item.get("contract", "unknown")) for item in audits}
+        for contract in contracts:
+            stats = by_contract.setdefault(contract, {"batches": 0, "qualified": 0, "excluded_not_blind": 0})
+            stats["batches"] += 1
+            stats["qualified"] += int(is_qualified)
+            stats["excluded_not_blind"] += int(not is_qualified)
         for item in audits:
             worker_id = str(item.get("worker_id", "")).lower()
             role = "adversary" if "adversary" in worker_id else "producer" if "producer" in worker_id else None
@@ -81,7 +88,7 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
                 by_role[role]["batches"] += 1
                 by_role[role]["qualified"] += int(is_qualified)
                 by_role[role]["excluded_not_blind"] += int(not is_qualified)
-    return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "by_role": by_role}
+    return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "by_role": by_role, "by_contract": dict(sorted(by_contract.items()))}
 
 
 def _revision_state(root: Path) -> Any:
