@@ -58,6 +58,10 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
             nested_name, nested_value = next(iter(nested_type[field][0].items()))
             nested_type[field][0][nested_name] = [] if isinstance(nested_value, str) else "wrong nested primitive"
             result.append(Mutation(f"wrong_nested_primitive_{field}_{nested_name}", "S1", json.dumps(nested_type, sort_keys=True)))
+            if nested_value is not None:
+                nested_null = copy.deepcopy(value)
+                nested_null[field][0][nested_name] = None
+                result.append(Mutation(f"null_nested_{field}_{nested_name}", "S1", json.dumps(nested_null, sort_keys=True)))
     if "selected_action_id" in value:
         invented = copy.deepcopy(value)
         invented["selected_action_id"] = "inactive"
