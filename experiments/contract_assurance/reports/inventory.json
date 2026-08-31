@@ -22,7 +22,9 @@
       "schema_hash": "fc008e3ce54e1de048758174b829e39bd4c47b13edbd2574f60044ecce9e9f22",
       "source": "scripts/smoke_bedrock.py",
       "source_hash": "10360c7ed7c44dbc63708cd0f34c56843248fb02a8cfb489856c413b7d00a0ca",
-      "template_placeholders": []
+      "template_placeholders": [
+        "REPLACE_WITH_"
+      ]
     },
     {
       "boundary_stages": [
@@ -46,7 +48,9 @@
       "schema_hash": "f2224a7d45a3c36db7990ef4095c4ba27da435a44a6b8a3fbbe1c5cd0bf54cdc",
       "source": "experiments/model_screen/schemas.py",
       "source_hash": "2fe126f30e20920743f035fd6ff149fbb4c5f338905cb8ae936382cac59ec945",
-      "template_placeholders": []
+      "template_placeholders": [
+        "REPLACE_WITH_"
+      ]
     },
     {
       "boundary_stages": [
@@ -72,7 +76,9 @@
       "schema_hash": "0bf2d70051b0216d9f2cefa9432cf13b87ad214e2e0e13d710686fa4103978a2",
       "source": "src/investigator/services/contracts.py",
       "source_hash": "11ec7092d1e42f8ffc0948917be2c891f5b179978b6263f09a005c651d159cd1",
-      "template_placeholders": []
+      "template_placeholders": [
+        "REPLACE_WITH_"
+      ]
     },
     {
       "boundary_stages": [
@@ -99,7 +105,9 @@
       "schema_hash": "3ab84fb21b95fbb73d063a580acd3f51ec5299a5657a7a6ea62d6b61e696b7c2",
       "source": "src/investigator/services/contracts.py",
       "source_hash": "11ec7092d1e42f8ffc0948917be2c891f5b179978b6263f09a005c651d159cd1",
-      "template_placeholders": []
+      "template_placeholders": [
+        "REPLACE_WITH_"
+      ]
     },
     {
       "boundary_stages": [
@@ -125,7 +133,9 @@
       "schema_hash": "2ee01b9e0a44aa5ea0159022f89f32b407b9f1bdd33c88f8914b62244611a300",
       "source": "src/investigator/services/contracts.py",
       "source_hash": "11ec7092d1e42f8ffc0948917be2c891f5b179978b6263f09a005c651d159cd1",
-      "template_placeholders": []
+      "template_placeholders": [
+        "REPLACE_WITH_"
+      ]
     },
     {
       "boundary_stages": [
@@ -173,7 +183,9 @@
       "schema_hash": "f0186ca2f50494c9a630a22fe3bdc890a942cb2607bbe1d15d23957dcf668f29",
       "source": "src/investigator/services/contracts.py",
       "source_hash": "11ec7092d1e42f8ffc0948917be2c891f5b179978b6263f09a005c651d159cd1",
-      "template_placeholders": []
+      "template_placeholders": [
+        "REPLACE_WITH_"
+      ]
     }
   ],
   "discovered_response_classes": [
@@ -206,6 +218,6 @@
       "source": "src/investigator/services/contracts.py"
     }
   ],
-  "git_commit": "24b9cf7",
+  "git_commit": "5a2cdef",
   "unregistered_response_classes": []
 }
