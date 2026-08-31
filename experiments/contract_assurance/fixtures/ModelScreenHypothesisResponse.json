@@ -57,8 +57,23 @@
     },
     {
       "intended_code": "S1",
+      "name": "wrong_primitive_hypotheses",
+      "raw_output": "{\"hypotheses\": {}}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "empty_required_hypotheses",
+      "raw_output": "{\"hypotheses\": []}"
+    },
+    {
+      "intended_code": "S1",
       "name": "unexpected_field",
       "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}], \"unexpected_field\": \"x\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "unexpected_nested_hypotheses",
+      "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\", \"unexpected_nested_field\": true}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}"
     }
   ]
 }

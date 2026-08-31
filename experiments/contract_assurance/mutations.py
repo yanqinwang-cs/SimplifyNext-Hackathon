@@ -27,9 +27,29 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
             mutated = copy.deepcopy(value)
             del mutated[field]
             result.append(Mutation(f"remove_{field}", "S1", json.dumps(mutated, sort_keys=True)))
+            original = value[field]
+            wrong = copy.deepcopy(value)
+            if isinstance(original, list):
+                wrong[field] = {}
+            elif isinstance(original, dict):
+                wrong[field] = []
+            elif isinstance(original, str):
+                wrong[field] = 7
+            else:
+                wrong[field] = "wrong primitive"
+            result.append(Mutation(f"wrong_primitive_{field}", "S1", json.dumps(wrong, sort_keys=True)))
+            if isinstance(original, list) and original:
+                empty = copy.deepcopy(value)
+                empty[field] = []
+                result.append(Mutation(f"empty_required_{field}", "S1", json.dumps(empty, sort_keys=True)))
     extra = copy.deepcopy(value)
     extra["unexpected_field"] = "x"
     result.append(Mutation("unexpected_field", "S1", json.dumps(extra, sort_keys=True)))
+    for field, field_value in value.items():
+        if isinstance(field_value, list) and field_value and isinstance(field_value[0], dict):
+            nested = copy.deepcopy(value)
+            nested[field][0]["unexpected_nested_field"] = True
+            result.append(Mutation(f"unexpected_nested_{field}", "S1", json.dumps(nested, sort_keys=True)))
     if "selected_action_id" in value:
         invented = copy.deepcopy(value)
         invented["selected_action_id"] = "inactive"

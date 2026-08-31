@@ -53,6 +53,11 @@
     },
     {
       "intended_code": "S1",
+      "name": "wrong_primitive_step_type",
+      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"A1\", \"step_type\": 7, \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
+    },
+    {
+      "intended_code": "S1",
       "name": "unexpected_field",
       "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"A1\", \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"unexpected_field\": \"x\", \"why_this_action_now\": \"This enquiry is available now.\"}"
     },

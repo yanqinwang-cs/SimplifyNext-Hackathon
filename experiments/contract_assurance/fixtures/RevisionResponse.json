@@ -50,6 +50,11 @@
     },
     {
       "intended_code": "S1",
+      "name": "wrong_primitive_revision_rationale",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": 7, \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S1",
       "name": "unexpected_field",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [], \"unexpected_field\": \"x\"}"
     },

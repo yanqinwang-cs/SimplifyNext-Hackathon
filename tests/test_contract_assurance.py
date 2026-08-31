@@ -173,8 +173,18 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
 def test_mutations_preserve_provenance_and_deduplicate():
     items = mutations(valid_action(), required_fields=("selected_action_id",))
     assert items[0].raw_output == "" and items[0].intended_code == "S0"
-    assert {item.name for item in items} >= {"invented_literal", "id_with_explanation", "placeholder_text"}
+    assert {item.name for item in items} >= {"invented_literal", "id_with_explanation", "placeholder_text", "wrong_primitive_selected_action_id"}
     assert len(deduplicate(items)) == len(items)
+
+
+def test_contract_mutations_cover_nested_shape_and_cross_field_rules():
+    expansion = {
+        "seed_analysis": {"supported_by": ["E1"], "conflicted_by": [], "unresolved": ["Question"], "specificity_basis_evidence_ids": []},
+        "competing_hypotheses": [{"id": "H2", "parent_id": None, "statement": "Different.", "status": "active", "supported_by": ["E2"], "conflicted_by": [], "unresolved": ["Question"], "specificity_basis_evidence_ids": [], "relationship": "competing_root", "contrasted_hypothesis_id": "H1", "material_difference": "Different cause."}],
+        "selected_action_id": "A1", "target_uncertainty": "Question", "expected_information_value": "Value", "why_this_action_now": "Reason",
+    }
+    names = {item.name for item in mutations(expansion, required_fields=("competing_hypotheses",), contract="InitialExpansionResponse")}
+    assert {"unexpected_nested_competing_hypotheses", "empty_required_competing_hypotheses", "competing_root_with_parent"} <= names
 
 
 def test_id_array_mutations_generate_wrong_namespace_challenges():
