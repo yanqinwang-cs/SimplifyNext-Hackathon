@@ -35,12 +35,13 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
             elif name == "RevisionResponse":
                 result = evaluate_revision(mutation.raw_output, revision_state)
             elif name == "InitialResponse":
-                result = evaluate_initial(mutation.raw_output, schema=spec.schema, build_state=environment.build_initial_state)
+                result = evaluate_initial(mutation.raw_output, schema=spec.schema, build_state=environment.build_initial_state, available_action_ids={"A1"})
             elif name == "InitialExpansionResponse":
                 result = evaluate_initial(
                     mutation.raw_output,
                     schema=spec.schema,
                     build_state=lambda response: environment.build_seeded_initial_state("A human-seeded explanation.", response),
+                    available_action_ids={"A1"},
                 )
             else:
                 result = evaluate_raw(mutation.raw_output, spec.schema)

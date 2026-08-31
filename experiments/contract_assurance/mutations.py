@@ -155,7 +155,7 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
             lower = copy.deepcopy(value)
             lower["selected_action_id"] = value["selected_action_id"].lower()
             result.append(Mutation("case_variant_id", "S2", json.dumps(lower, sort_keys=True)))
-        if contract == "NextActionResponse" and value["selected_action_id"] == "A1":
+        if contract in {"NextActionResponse", "InitialResponse", "InitialExpansionResponse"} and value["selected_action_id"] == "A1":
             unavailable = copy.deepcopy(value)
             unavailable["selected_action_id"] = "A2"
             result.append(Mutation("valid_but_unavailable_action", "S3", json.dumps(unavailable, sort_keys=True)))

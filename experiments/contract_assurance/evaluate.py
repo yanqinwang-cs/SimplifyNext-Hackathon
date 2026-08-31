@@ -86,10 +86,16 @@ def evaluate_revision(raw_output: Any, state: Any) -> Evaluation:
     return result
 
 
-def evaluate_initial(raw_output: Any, *, schema: type[Any], build_state: Any) -> Evaluation:
+def evaluate_initial(raw_output: Any, *, schema: type[Any], build_state: Any, available_action_ids: set[str] | None = None) -> Evaluation:
     """Evaluate an initial response through schema validation and state construction."""
     result = evaluate_raw(raw_output, schema)
     if not result.accepted:
+        return result
+    if available_action_ids is not None and result.parsed.selected_action_id not in available_action_ids:
+        result.accepted = False
+        result.code = FailureCode.S3
+        result.stage = "availability"
+        result.message = f"Action is not currently available: {result.parsed.selected_action_id!r}"
         return result
     try:
         state = build_state(result.parsed)

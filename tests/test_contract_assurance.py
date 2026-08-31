@@ -338,6 +338,11 @@ def test_availability_is_checked_after_schema():
     assert not result.accepted and result.code is FailureCode.S3
 
 
+def test_initial_availability_is_checked_before_state_construction():
+    result = evaluate_initial(json.dumps(valid_action() | {"hypotheses": [{"id": "H1", "statement": "A", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["U"], "specificity_basis_evidence_ids": []}]}), schema=InitialResponse, build_state=lambda response: (_ for _ in ()).throw(AssertionError("state construction should not run")), available_action_ids={"A2"})
+    assert not result.accepted and result.code is FailureCode.S3 and result.stage == "availability"
+
+
 def test_revision_operation_preflight_rejects_unknown_reference():
     from investigator.environments.case_01 import Case1ControlledEnvironment
     from investigator.services.contracts import InitialResponse
