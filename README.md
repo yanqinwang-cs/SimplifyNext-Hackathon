@@ -29,4 +29,6 @@ The state kernel also contains a provisional hypothesis tree. Broad parent hypot
 
 Interactive runs are written incrementally to `runs/<session_id>/trace.json`, preserving raw model output, human decisions, and a current `CaseState` snapshot. These local runtime traces are gitignored; resume/recovery is not implemented yet.
 
+`CaseGraph` in `src/investigator/graph/` is a parallel semantic representation of evidence, propositions, hypotheses, and uncertainties. It is not workflow chronology: the trace remains the audit/event record, and `CaseState` remains authoritative for runtime behavior. Graph edges use explicit directions for supports, conflicts, specializes (child to parent), depends-on, targets, and derived-from; qualitative strength is descriptive only, not probability.
+
 The investigator seeds H1 and may pause, stop, correct evidence, or correct interpretation at any UI boundary. Ordinary bounded enquiries and routine revisions proceed autonomously; new hypotheses are reported, while hypothesis removal, conclusions, and unresolved stopping remain human decisions. Initial alternatives declare `competing_root` or `specialization`; specializations require released evidence.
