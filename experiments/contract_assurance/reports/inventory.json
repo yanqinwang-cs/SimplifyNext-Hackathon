@@ -1,6 +1,11 @@
 {
   "contracts": [
     {
+      "boundary_stages": [
+        "JSON normalization",
+        "Pydantic schema validation",
+        "raw output retained by caller"
+      ],
       "name": "SmokeResponse",
       "production_path": "BedrockModelClient.call (manual smoke script; excluded from offline runs)",
       "prompt_builders": [
@@ -20,6 +25,11 @@
       "template_placeholders": []
     },
     {
+      "boundary_stages": [
+        "JSON normalization",
+        "Pydantic schema validation",
+        "experiment consumer"
+      ],
       "name": "ModelScreenHypothesisResponse",
       "production_path": "ExperimentRunner.run -> ModelClient.call",
       "prompt_builders": [
@@ -39,6 +49,13 @@
       "template_placeholders": []
     },
     {
+      "boundary_stages": [
+        "JSON normalization",
+        "Pydantic schema validation",
+        "evidence namespace validation",
+        "state construction",
+        "raw output retained by service"
+      ],
       "name": "InitialResponse",
       "production_path": "InvestigationService.start_case -> environment.build_initial_state",
       "prompt_builders": [
@@ -58,6 +75,14 @@
       "template_placeholders": []
     },
     {
+      "boundary_stages": [
+        "JSON normalization",
+        "Pydantic schema validation",
+        "relationship validation",
+        "evidence namespace validation",
+        "seeded state construction",
+        "raw output retained by service"
+      ],
       "name": "InitialExpansionResponse",
       "production_path": "InvestigationService.start_case(seed) -> environment.build_seeded_initial_state",
       "prompt_builders": [
@@ -77,6 +102,13 @@
       "template_placeholders": []
     },
     {
+      "boundary_stages": [
+        "JSON normalization",
+        "Pydantic schema validation",
+        "action namespace validation",
+        "environment availability validation",
+        "raw output retained by service"
+      ],
       "name": "NextActionResponse",
       "production_path": "InvestigationService.propose_next_action -> availability preflight",
       "prompt_builders": [
@@ -96,6 +128,14 @@
       "template_placeholders": []
     },
     {
+      "boundary_stages": [
+        "JSON normalization",
+        "Pydantic schema validation",
+        "reference validation",
+        "cross-field validation",
+        "state operation preflight",
+        "raw output retained by service"
+      ],
       "name": "RevisionResponse",
       "production_path": "InvestigationService.propose_revision -> apply_revision",
       "prompt_builders": [
@@ -117,6 +157,12 @@
       ]
     },
     {
+      "boundary_stages": [
+        "JSON normalization",
+        "Pydantic schema validation",
+        "union branch validation",
+        "raw output retained by adapter"
+      ],
       "name": "NextStepResponse",
       "production_path": "Defined LLM-facing union; no current production caller",
       "prompt_builders": [],
@@ -160,6 +206,6 @@
       "source": "src/investigator/services/contracts.py"
     }
   ],
-  "git_commit": "2a3f514",
+  "git_commit": "b50c66c",
   "unregistered_response_classes": []
 }
