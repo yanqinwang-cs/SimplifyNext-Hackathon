@@ -117,6 +117,16 @@
       "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"E1\", \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
     },
     {
+      "intended_code": "S2",
+      "name": "whitespace_wrapped_selected_action_id",
+      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \" A1 \", \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
+    },
+    {
+      "intended_code": "S2",
+      "name": "case_variant_selected_action_id",
+      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"a1\", \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
+    },
+    {
       "intended_code": "S1",
       "name": "wrong_shape_target_uncertainty_primitive",
       "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"A1\", \"step_type\": \"action\", \"target_uncertainty\": 7, \"why_this_action_now\": \"This enquiry is available now.\"}"
@@ -185,16 +195,6 @@
       "intended_code": "S2",
       "name": "id_with_explanation",
       "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"A1 because it is useful\", \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
-    },
-    {
-      "intended_code": "S2",
-      "name": "whitespace_wrapped_id",
-      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \" A1 \", \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
-    },
-    {
-      "intended_code": "S2",
-      "name": "case_variant_id",
-      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"a1\", \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
     },
     {
       "intended_code": "S4",
