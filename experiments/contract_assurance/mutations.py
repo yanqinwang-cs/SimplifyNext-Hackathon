@@ -13,6 +13,17 @@ class Mutation:
     raw_output: str
 
 
+def _wrong_namespace(field: str, value: str) -> str:
+    """Return a syntactically plausible ID from a different declared namespace."""
+    if "action" in field:
+        return "E1"
+    if "evidence" in field:
+        return "A1"
+    if "uncertainty" in field:
+        return "H1"
+    return "E1" if value.startswith("H") else "H1"
+
+
 def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), contract: str | None = None) -> list[Mutation]:
     result = [Mutation("empty", "S0", ""), Mutation("whitespace", "S0", "   "), Mutation("prose_only", "S0", "Here is the requested object.")]
     canonical = json.dumps(value, sort_keys=True)
@@ -81,6 +92,10 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         del renamed[field]
         renamed[f"{field}_value"] = original
         result.append(Mutation(f"renamed_field_{field}", "S1", json.dumps(renamed, sort_keys=True)))
+        if isinstance(original, str) and (field == "id" or field.endswith("_id")):
+            wrong_namespace = copy.deepcopy(value)
+            wrong_namespace[field] = _wrong_namespace(field, original)
+            result.append(Mutation(f"wrong_namespace_{field}", "S2", json.dumps(wrong_namespace, sort_keys=True)))
     extra = copy.deepcopy(value)
     extra["unexpected_field"] = "x"
     result.append(Mutation("unexpected_field", "S1", json.dumps(extra, sort_keys=True)))
@@ -98,6 +113,11 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
                 nested_null = copy.deepcopy(value)
                 nested_null[field][0][nested_name] = None
                 result.append(Mutation(f"null_nested_{field}_{nested_name}", "S1", json.dumps(nested_null, sort_keys=True)))
+            for nested_name, nested_value in nested_type[field][0].items():
+                if isinstance(nested_value, str) and (nested_name == "id" or nested_name.endswith("_id")):
+                    wrong_namespace = copy.deepcopy(value)
+                    wrong_namespace[field][0][nested_name] = _wrong_namespace(nested_name, nested_value)
+                    result.append(Mutation(f"wrong_namespace_{field}_{nested_name}", "S2", json.dumps(wrong_namespace, sort_keys=True)))
     if "selected_action_id" in value:
         invented = copy.deepcopy(value)
         invented["selected_action_id"] = "inactive"
