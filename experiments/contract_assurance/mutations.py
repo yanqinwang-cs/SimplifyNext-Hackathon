@@ -96,6 +96,12 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         mismatch = copy.deepcopy(value)
         mismatch["new_uncertainties"] = [{"id": "H1:U1", "hypothesis_id": "H2", "description": "A new uncertainty."}]
         result.append(Mutation("uncertainty_owner_mismatch", "S4", json.dumps(mismatch, sort_keys=True)))
+        unknown_hypothesis = copy.deepcopy(value)
+        unknown_hypothesis["hypothesis_updates"] = [{"hypothesis_id": "H999", "transition": "keep", "reason": "A reason."}]
+        result.append(Mutation("unknown_hypothesis_reference", "S3", json.dumps(unknown_hypothesis, sort_keys=True)))
+        unknown_uncertainty = copy.deepcopy(value)
+        unknown_uncertainty["uncertainty_updates"] = [{"uncertainty_id": "H999:U1", "transition": "keep", "reason": "A reason."}]
+        result.append(Mutation("unknown_uncertainty_reference", "S3", json.dumps(unknown_uncertainty, sort_keys=True)))
     if contract in {"InitialResponse", "InitialExpansionResponse"} and "hypotheses" in value:
         empty = copy.deepcopy(value)
         empty["hypotheses"] = []
