@@ -84,6 +84,8 @@ def verify_committed_packages(root: Path) -> list[str]:
 
 
 def _sample_for(schema: type[Any]) -> dict[str, Any] | None:
+    if schema.__name__ == "SmokeResponse":
+        return {"answer": "4"}
     if schema.__name__ == "NextStepResponse":
         return {"step_type": "action", "selected_action_id": "A1", "target_uncertainty": "An open question.", "expected_information_value": "The result can distinguish explanations.", "why_this_action_now": "This enquiry is available now.", "conclusion_hypothesis_id": None, "conclusion_reason": None, "remaining_uncertainty_ids": []}
     if schema.__name__ == "InitialResponse":
