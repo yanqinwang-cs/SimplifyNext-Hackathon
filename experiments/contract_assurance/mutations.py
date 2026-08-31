@@ -402,6 +402,10 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         duplicate = copy.deepcopy(value)
         duplicate["competing_hypotheses"].append(copy.deepcopy(duplicate["competing_hypotheses"][0]))
         result.append(Mutation("duplicate_competing_hypothesis_id", "S4", json.dumps(duplicate, sort_keys=True)))
+        reserved_id = copy.deepcopy(value)
+        reserved_id["competing_hypotheses"][0]["id"] = "H1"
+        reserved_id["competing_hypotheses"][0]["contrasted_hypothesis_id"] = "H1"
+        result.append(Mutation("duplicate_reserved_seed_hypothesis_id", "S4", json.dumps(reserved_id, sort_keys=True)))
     if contract == "ModelScreenHypothesisResponse" and "hypotheses" in value:
         four = copy.deepcopy(value)
         while len(four["hypotheses"]) < 4:
