@@ -211,6 +211,21 @@
       "intended_code": "S4",
       "name": "placeholder_text",
       "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"It is available now.\"}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "canonical_sentinel_target_uncertainty",
+      "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"A1\", \"target_uncertainty\": \"The uncertainty this enquiry addresses.\", \"why_this_action_now\": \"It is available now.\"}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "canonical_sentinel_expected_information_value",
+      "raw_output": "{\"expected_information_value\": \"How the result could change the explanation space.\", \"selected_action_id\": \"A1\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"It is available now.\"}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "canonical_sentinel_why_this_action_now",
+      "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"A1\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"Why this enquiry is useful now.\"}"
     }
   ]
 }
