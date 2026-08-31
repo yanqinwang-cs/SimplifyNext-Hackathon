@@ -50,6 +50,8 @@ def test_canonical_placeholders_are_rejected_by_real_contracts():
     assert evaluate_raw(json.dumps(placeholder_action), NextActionResponse).code is FailureCode.S2
     revision = {"hypothesis_updates": [], "new_hypotheses": [], "uncertainty_updates": [], "new_uncertainties": [], "revision_rationale": "How the evidence changed the state."}
     assert not evaluate_raw(json.dumps(revision), RevisionResponse).accepted
+    whitespace_placeholder = valid_action() | {"target_uncertainty": "  REPLACE_WITH_TARGET_UNCERTAINTY  "}
+    assert not evaluate_raw(json.dumps(whitespace_placeholder), NextActionResponse).accepted
 
 
 def test_registry_has_current_service_contracts():
