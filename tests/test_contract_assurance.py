@@ -3,7 +3,7 @@ from pathlib import Path
 
 from experiments.contract_assurance.evaluate import evaluate_raw
 from experiments.contract_assurance.evaluate import evaluate_initial, evaluate_next_action, evaluate_revision
-from experiments.contract_assurance.inventory import discover_response_classes, unregistered_response_classes
+from experiments.contract_assurance.inventory import discover_response_classes, render_inventory_markdown, unregistered_response_classes, write_inventory_markdown
 from experiments.contract_assurance.audit import BlindBatchAudit
 from experiments.contract_assurance.runner import run_deterministic
 from experiments.contract_assurance.mutations import write_fixture_manifest
@@ -52,13 +52,16 @@ def test_registry_has_current_service_contracts():
     assert "ModelScreenHypothesisResponse" in registry
 
 
-def test_inventory_discovers_and_registers_all_response_contracts():
+def test_inventory_discovers_and_registers_all_response_contracts(tmp_path: Path):
     root = Path(__file__).resolve().parents[1]
     discovered = discover_response_classes(root)
     names = {item["name"] for item in discovered}
     assert {"InitialResponse", "InitialExpansionResponse", "NextActionResponse", "RevisionResponse", "HypothesisResponse"} <= names
     assert unregistered_response_classes(root) == []
     assert all(item["source_hash"] for item in __import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root)["contracts"])
+    markdown = render_inventory_markdown(__import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root))
+    assert "LLM-facing contract inventory" in markdown and "InitialResponse" in markdown
+    assert write_inventory_markdown(root, tmp_path / "inventory").exists()
 
 
 def test_lint_detects_template_drift():

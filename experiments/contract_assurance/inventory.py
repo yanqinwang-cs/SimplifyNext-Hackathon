@@ -47,3 +47,21 @@ def write_inventory(root: Path, destination: Path, commit: str = "unknown") -> P
     path = destination.with_suffix(".json")
     path.write_text(json.dumps(inventory(root, commit), indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
     return path
+
+
+def render_inventory_markdown(data: dict[str, Any]) -> str:
+    lines = ["# LLM-facing contract inventory", "", f"- Git commit: `{data.get('git_commit', 'unknown')}`", "", "| Contract | Schema | Source | Production path | Schema hash |", "| --- | --- | --- | --- | --- |"]
+    for item in data.get("contracts", []):
+        lines.append(f"| `{item['name']}` | `{item['schema']}` | `{item['source']}` | {item['production_path']} | `{item['schema_hash'][:12]}` |")
+    unregistered = data.get("unregistered_response_classes", [])
+    lines += ["", f"Unregistered response classes: **{len(unregistered)}**"]
+    for item in unregistered:
+        lines.append(f"- `{item['name']}` in `{item['source']}`")
+    return "\n".join(lines) + "\n"
+
+
+def write_inventory_markdown(root: Path, destination: Path, commit: str = "unknown") -> Path:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    path = destination.with_suffix(".md")
+    path.write_text(render_inventory_markdown(inventory(root, commit)), encoding="utf-8")
+    return path
