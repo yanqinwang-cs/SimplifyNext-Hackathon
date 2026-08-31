@@ -1,13 +1,13 @@
 # Contract assurance report
 
-- Generated: 2026-08-31T22:43:02.482999+00:00
+- Generated: 2026-08-31T22:50:49.473271+00:00
 - Contracts: 7
 
 | Metric | Count |
 | --- | ---: |
-| Total evaluations | 375 |
+| Total evaluations | 376 |
 | Accepted | 21 |
-| Rejected | 354 |
+| Rejected | 355 |
 | Unexpected accepts | 0 |
 | Unexpected rejects | 0 |
 | S5 candidates | 0 |
@@ -18,7 +18,7 @@
 - `S0`: 140
 - `S1`: 126
 - `S2`: 43
-- `S3`: 20
+- `S3`: 21
 - `S4`: 25
 
 ## Blind compliance
@@ -43,7 +43,7 @@
 | Contract | Total | Accepted | Rejected |
 | --- | ---: | ---: | ---: |
 | `InitialExpansionResponse` | 71 | 2 | 69 |
-| `InitialResponse` | 56 | 1 | 55 |
+| `InitialResponse` | 57 | 1 | 56 |
 | `ModelScreenHypothesisResponse` | 32 | 2 | 30 |
 | `NextActionResponse` | 44 | 1 | 43 |
 | `NextStepResponse` | 57 | 3 | 54 |
