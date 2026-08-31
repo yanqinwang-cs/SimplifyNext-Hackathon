@@ -7,6 +7,8 @@ from investigator.models.hypothesis import (
     Hypothesis,
     HypothesisOrigin,
     HypothesisStatus,
+    HypothesisTransition,
+    HypothesisTransitionType,
     HypothesisTransformation,
     TransformationType,
 )
@@ -17,7 +19,6 @@ from investigator.models.uncertainty import Uncertainty, UncertaintyKind
 __all__ = [
     "ApproximateTime", "Case", "Claim", "ClaimStatus", "Conflict", "Entity",
     "EvidenceItem", "EvidenceKind", "ExactTime", "Hypothesis", "HypothesisOrigin",
-    "HypothesisStatus", "HypothesisTransformation", "RelativeTime", "Source",
+    "HypothesisStatus", "HypothesisTransformation", "HypothesisTransition", "HypothesisTransitionType", "RelativeTime", "Source",
     "SourceType", "TimeRange", "TransformationType", "Uncertainty", "UncertaintyKind",
 ]
-

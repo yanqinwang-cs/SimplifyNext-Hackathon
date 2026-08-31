@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class HypothesisOrigin(str, Enum):
@@ -14,6 +14,9 @@ class HypothesisStatus(str, Enum):
     DEPRIORITIZED = "deprioritized"
     REJECTED = "rejected"
     ARCHIVED = "archived"
+    WEAKENED = "weakened"
+    CONFLICTED = "conflicted"
+    REMOVED = "removed"
 
 
 class TransformationType(str, Enum):
@@ -26,7 +29,7 @@ class TransformationType(str, Enum):
 
 
 class Hypothesis(BaseModel):
-    id: str
+    id: str = Field(frozen=True)
     statement: str
     origin: HypothesisOrigin
     status: HypothesisStatus = HypothesisStatus.PROPOSED
@@ -34,6 +37,19 @@ class Hypothesis(BaseModel):
     supporting_evidence_ids: list[str] = Field(default_factory=list)
     conflicting_evidence_ids: list[str] = Field(default_factory=list)
     unresolved_issue_ids: list[str] = Field(default_factory=list)
+    specificity_basis: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def accept_tree_parent_name(cls, values):
+        if isinstance(values, dict) and "parent_id" in values and "parent_hypothesis_id" not in values:
+            values = dict(values)
+            values["parent_hypothesis_id"] = values.pop("parent_id")
+        return values
+
+    @property
+    def parent_id(self) -> str | None:
+        return self.parent_hypothesis_id
 
 
 class HypothesisTransformation(BaseModel):
@@ -41,3 +57,16 @@ class HypothesisTransformation(BaseModel):
     child_hypothesis_id: str
     transformation_type: TransformationType
 
+
+class HypothesisTransitionType(str, Enum):
+    KEEP = "keep"
+    WEAKEN = "weaken"
+    CONFLICT = "conflict"
+    REMOVE = "remove"
+    ACTIVATE = "activate"
+
+
+class HypothesisTransition(BaseModel):
+    hypothesis_id: str
+    transition: HypothesisTransitionType
+    reason: str

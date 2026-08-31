@@ -14,3 +14,5 @@ With AWS environment variables and `BEDROCK_MODEL_ID` configured, run one live s
 ```bash
 uv run python scripts/smoke_bedrock.py
 ```
+
+The state kernel also contains a provisional hypothesis tree. Broad parent hypotheses and narrower evidence-based children are represented structurally; removing or weakening a child leaves its parent unchanged. Hypotheses are never evidence, and `specificity_basis` records evidence IDs that supposedly justify narrowing. This is deterministic state representation, not a graph or search algorithm; semantic adequacy of the basis is deferred to later experiments.

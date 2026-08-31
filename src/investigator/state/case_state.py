@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from investigator.models.claim import Claim
 from investigator.models.conflict import Conflict
 from investigator.models.evidence import EvidenceItem
@@ -21,3 +21,54 @@ class CaseState(BaseModel):
     uncertainties: dict[str, Uncertainty] = Field(default_factory=dict)
     conflicts: dict[str, Conflict] = Field(default_factory=dict)
     revision: int = 0
+
+    @model_validator(mode="after")
+    def validate_structure(self) -> "CaseState":
+        if any(key != item.id for key, item in self.evidence.items()):
+            raise ValueError("Evidence dictionary keys must match evidence IDs")
+        if any(key != item.id for key, item in self.hypotheses.items()):
+            raise ValueError("Hypothesis dictionary keys must match hypothesis IDs")
+
+        hypothesis_ids = set(self.hypotheses)
+        evidence_ids = set(self.evidence)
+        for hypothesis in self.hypotheses.values():
+            parent_id = hypothesis.parent_hypothesis_id
+            if parent_id == hypothesis.id:
+                raise ValueError(f"Hypothesis {hypothesis.id!r} cannot be its own parent")
+            if parent_id is not None and parent_id not in hypothesis_ids:
+                raise ValueError(f"Unknown parent hypothesis ID: {parent_id!r}")
+            for field_name in ("supporting_evidence_ids", "conflicting_evidence_ids", "specificity_basis"):
+                for evidence_id in getattr(hypothesis, field_name):
+                    if evidence_id in hypothesis_ids:
+                        raise ValueError(f"Hypothesis ID {evidence_id!r} cannot be used as evidence")
+                    if evidence_id not in evidence_ids:
+                        raise ValueError(f"Unknown evidence ID: {evidence_id!r}")
+
+        for hypothesis in self.hypotheses.values():
+            seen: set[str] = set()
+            current = hypothesis
+            while current.parent_hypothesis_id is not None:
+                if current.id in seen:
+                    raise ValueError("Hypothesis parent cycle detected")
+                seen.add(current.id)
+                current = self.hypotheses[current.parent_hypothesis_id]
+        return self
+
+    def get_evidence(self, evidence_id: str) -> EvidenceItem:
+        try:
+            return self.evidence[evidence_id]
+        except KeyError as exc:
+            raise KeyError(f"Unknown evidence ID: {evidence_id!r}") from exc
+
+    def get_hypothesis(self, hypothesis_id: str) -> Hypothesis:
+        try:
+            return self.hypotheses[hypothesis_id]
+        except KeyError as exc:
+            raise KeyError(f"Unknown hypothesis ID: {hypothesis_id!r}") from exc
+
+    def children_of(self, hypothesis_id: str) -> list[Hypothesis]:
+        self.get_hypothesis(hypothesis_id)
+        return [h for h in self.hypotheses.values() if h.parent_hypothesis_id == hypothesis_id]
+
+    def root_hypotheses(self) -> list[Hypothesis]:
+        return [h for h in self.hypotheses.values() if h.parent_hypothesis_id is None]

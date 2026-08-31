@@ -13,10 +13,9 @@ class EvidenceKind(str, Enum):
 
 
 class EvidenceItem(BaseModel):
-    id: str
+    id: str = Field(frozen=True)
     source_id: str
     raw_content: str
     kind: EvidenceKind
     received_at: datetime | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
-

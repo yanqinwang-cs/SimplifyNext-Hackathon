@@ -69,7 +69,11 @@ class CaseService:
         def add(state: CaseState) -> Hypothesis:
             if hypothesis.parent_hypothesis_id:
                 self._require(state.hypotheses, hypothesis.parent_hypothesis_id, "hypothesis")
-            for evidence_id in hypothesis.supporting_evidence_ids + hypothesis.conflicting_evidence_ids:
+            for evidence_id in (
+                hypothesis.supporting_evidence_ids
+                + hypothesis.conflicting_evidence_ids
+                + hypothesis.specificity_basis
+            ):
                 self._require(state.evidence, evidence_id, "evidence")
             for issue_id in hypothesis.unresolved_issue_ids:
                 self._require(state.uncertainties, issue_id, "uncertainty")
