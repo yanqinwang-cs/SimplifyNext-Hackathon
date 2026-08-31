@@ -211,6 +211,17 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
             "remaining_uncertainty_ids": ["H1:U1"],
         }
         result.append(Mutation("stop_unresolved_with_conclusion_id", "S4", json.dumps(stop_with_conclusion_id, sort_keys=True)))
+        stop_with_action_fields = {
+            "step_type": "stop_unresolved",
+            "selected_action_id": "A1",
+            "target_uncertainty": "An open question.",
+            "expected_information_value": "It may distinguish explanations.",
+            "why_this_action_now": "It is available now.",
+            "conclusion_hypothesis_id": None,
+            "conclusion_reason": "The remaining uncertainty cannot be resolved with available enquiries.",
+            "remaining_uncertainty_ids": ["H1:U1"],
+        }
+        result.append(Mutation("stop_unresolved_with_action_fields", "S4", json.dumps(stop_with_action_fields, sort_keys=True)))
         conclusion = {"step_type": "conclusion", "selected_action_id": None, "target_uncertainty": None, "expected_information_value": None, "why_this_action_now": None, "conclusion_hypothesis_id": "H1", "conclusion_reason": "The current evidence supports this conclusion.", "remaining_uncertainty_ids": []}
         result.append(Mutation("valid_conclusion_branch", "valid", json.dumps(conclusion, sort_keys=True)))
         stop = {"step_type": "stop_unresolved", "selected_action_id": None, "target_uncertainty": None, "expected_information_value": None, "why_this_action_now": None, "conclusion_hypothesis_id": None, "conclusion_reason": "The remaining uncertainty cannot be resolved with available enquiries.", "remaining_uncertainty_ids": ["H1:U1"]}
