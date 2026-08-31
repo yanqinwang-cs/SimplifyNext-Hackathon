@@ -70,6 +70,7 @@ def test_inventory_discovers_and_registers_all_response_contracts(tmp_path: Path
     assert unregistered_response_classes(root) == []
     assert_complete_inventory(root)
     assert all(item["source_hash"] for item in __import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root)["contracts"])
+    assert all(item["prompt_hashes"] or item["name"] == "NextStepResponse" for item in __import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root)["contracts"])
     markdown = render_inventory_markdown(__import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root))
     assert "LLM-facing contract inventory" in markdown and "InitialResponse" in markdown
     assert write_inventory_markdown(root, tmp_path / "inventory").exists()

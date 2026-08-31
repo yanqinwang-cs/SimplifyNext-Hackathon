@@ -15,16 +15,17 @@ class ContractSpec:
     production_path: str
     template_placeholders: tuple[str, ...] = ()
     public: bool = True
+    prompt_sources: tuple[str, ...] = ()
 
 
 CONTRACTS = (
-    ContractSpec("SmokeResponse", SmokeResponse, "scripts/smoke_bedrock.py", ("scripts.smoke_bedrock.main",), "BedrockModelClient.call (manual smoke script; excluded from offline runs)"),
-    ContractSpec("ModelScreenHypothesisResponse", HypothesisResponse, "experiments/model_screen/schemas.py", ("experiments.model_screen.prompt",), "ExperimentRunner.run -> ModelClient.call"),
-    ContractSpec("InitialResponse", contracts.InitialResponse, "src/investigator/services/contracts.py", ("Case1ControlledEnvironment.initial_prompt",), "InvestigationService.start_case -> environment.build_initial_state"),
-    ContractSpec("InitialExpansionResponse", contracts.InitialExpansionResponse, "src/investigator/services/contracts.py", ("Case1ControlledEnvironment.initial_expansion_prompt",), "InvestigationService.start_case(seed) -> environment.build_seeded_initial_state"),
-    ContractSpec("NextActionResponse", contracts.NextActionResponse, "src/investigator/services/contracts.py", ("Case1ControlledEnvironment.next_action_prompt",), "InvestigationService.propose_next_action -> availability preflight"),
-    ContractSpec("RevisionResponse", contracts.RevisionResponse, "src/investigator/services/contracts.py", ("Case1ControlledEnvironment.revision_prompt",), "InvestigationService.propose_revision -> apply_revision", ("REPLACE_WITH_",)),
-    ContractSpec("NextStepResponse", contracts.NextStepResponse, "src/investigator/services/contracts.py", (), "Defined LLM-facing union; no current production caller"),
+    ContractSpec("SmokeResponse", SmokeResponse, "scripts/smoke_bedrock.py", ("scripts.smoke_bedrock.main",), "BedrockModelClient.call (manual smoke script; excluded from offline runs)", prompt_sources=("scripts/smoke_bedrock.py",)),
+    ContractSpec("ModelScreenHypothesisResponse", HypothesisResponse, "experiments/model_screen/schemas.py", ("experiments.model_screen.prompt",), "ExperimentRunner.run -> ModelClient.call", prompt_sources=("experiments/model_screen/prompt.py",)),
+    ContractSpec("InitialResponse", contracts.InitialResponse, "src/investigator/services/contracts.py", ("Case1ControlledEnvironment.initial_prompt",), "InvestigationService.start_case -> environment.build_initial_state", prompt_sources=("src/investigator/environments/case_01_prompts.py",)),
+    ContractSpec("InitialExpansionResponse", contracts.InitialExpansionResponse, "src/investigator/services/contracts.py", ("Case1ControlledEnvironment.initial_expansion_prompt",), "InvestigationService.start_case(seed) -> environment.build_seeded_initial_state", prompt_sources=("src/investigator/environments/case_01_prompts.py",)),
+    ContractSpec("NextActionResponse", contracts.NextActionResponse, "src/investigator/services/contracts.py", ("Case1ControlledEnvironment.next_action_prompt",), "InvestigationService.propose_next_action -> availability preflight", prompt_sources=("src/investigator/environments/case_01_prompts.py",)),
+    ContractSpec("RevisionResponse", contracts.RevisionResponse, "src/investigator/services/contracts.py", ("Case1ControlledEnvironment.revision_prompt",), "InvestigationService.propose_revision -> apply_revision", ("REPLACE_WITH_",), prompt_sources=("src/investigator/environments/case_01_prompts.py",)),
+    ContractSpec("NextStepResponse", contracts.NextStepResponse, "src/investigator/services/contracts.py", (), "Defined LLM-facing union; no current production caller", prompt_sources=()),
 )
 
 

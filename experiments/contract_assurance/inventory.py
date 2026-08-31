@@ -45,7 +45,8 @@ def inventory(root: Path, commit: str = "unknown") -> dict[str, Any]:
     for spec in specs:
         source = root / spec.source
         source_hash = hashlib.sha256(source.read_bytes()).hexdigest() if source.exists() else None
-        entries.append({**asdict(spec), "schema": spec.schema.__name__, "schema_hash": hashlib.sha256(json.dumps(spec.schema.model_json_schema(), sort_keys=True).encode()).hexdigest(), "source_hash": source_hash})
+        prompt_hashes = {prompt: hashlib.sha256((root / prompt).read_bytes()).hexdigest() for prompt in spec.prompt_sources if (root / prompt).exists()}
+        entries.append({**asdict(spec), "schema": spec.schema.__name__, "schema_hash": hashlib.sha256(json.dumps(spec.schema.model_json_schema(), sort_keys=True).encode()).hexdigest(), "source_hash": source_hash, "prompt_hashes": prompt_hashes})
     return {"git_commit": commit, "contracts": entries, "discovered_response_classes": discover_response_classes(root), "unregistered_response_classes": unregistered_response_classes(root)}
 
 
