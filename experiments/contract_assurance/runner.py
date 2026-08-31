@@ -61,9 +61,9 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
     batches = 0
     excluded = 0
     qualified = 0
-    by_role = {"producer": {"batches": 0, "qualified": 0, "excluded_not_blind": 0}, "adversary": {"batches": 0, "qualified": 0, "excluded_not_blind": 0}}
+    by_role = {"producer": {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "evaluations": 0, "accepted": 0, "rejected": 0}, "adversary": {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "evaluations": 0, "accepted": 0, "rejected": 0}}
     by_contract: dict[str, dict[str, int]] = {}
-    for path in sorted((root / "experiments/contract_assurance/results").glob("*/batch_manifest.json")):
+    for path in sorted((root / "experiments/contract_assurance/results").glob("**/batch_manifest.json")):
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
@@ -77,7 +77,7 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
         excluded += int(not is_qualified)
         contracts = {str(item.get("contract", "unknown")) for item in audits}
         for contract in contracts:
-            stats = by_contract.setdefault(contract, {"batches": 0, "qualified": 0, "excluded_not_blind": 0})
+            stats = by_contract.setdefault(contract, {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "evaluations": 0, "accepted": 0, "rejected": 0})
             stats["batches"] += 1
             stats["qualified"] += int(is_qualified)
             stats["excluded_not_blind"] += int(not is_qualified)
@@ -88,6 +88,19 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
                 by_role[role]["batches"] += 1
                 by_role[role]["qualified"] += int(is_qualified)
                 by_role[role]["excluded_not_blind"] += int(not is_qualified)
+                result_path = path.parent / "evaluations.json"
+                try:
+                    evaluations = json.loads(result_path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    evaluations = []
+                if isinstance(evaluations, list):
+                    by_role[role]["evaluations"] += len(evaluations)
+                    by_role[role]["accepted"] += sum(bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
+                    by_role[role]["rejected"] += sum(not bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
+                    for contract in contracts:
+                        by_contract[contract]["evaluations"] += len(evaluations)
+                        by_contract[contract]["accepted"] += sum(bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
+                        by_contract[contract]["rejected"] += sum(not bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
     return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "by_role": by_role, "by_contract": dict(sorted(by_contract.items()))}
 
 
