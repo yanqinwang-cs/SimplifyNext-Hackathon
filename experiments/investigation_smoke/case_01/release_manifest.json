@@ -1,0 +1,36 @@
+{
+  "case_id": "case_01",
+  "title": "Closed-book physical examination",
+  "synthetic": true,
+  "contains_hidden_builder_truth": false,
+  "releases": [
+    {
+      "action_id": "A1",
+      "title": "Verify tutoring claim",
+      "artifact": "A1_tutoring_verification_packet.md",
+      "format": "markdown",
+      "source_type": "record_and_source_statement"
+    },
+    {
+      "action_id": "A2",
+      "title": "Review behaviour and question timing",
+      "artifact": "A2_exam_event_log.xlsx",
+      "format": "xlsx",
+      "source_type": "event_log"
+    },
+    {
+      "action_id": "A3",
+      "title": "Compare with prior observed behaviour",
+      "artifact": "A3_prior_behaviour_statements.md",
+      "format": "markdown",
+      "source_type": "witness_statements"
+    },
+    {
+      "action_id": "A4",
+      "title": "Targeted oral explanation",
+      "artifact": "A4_student_interview_record.md",
+      "format": "markdown",
+      "source_type": "interview_record"
+    }
+  ]
+}
