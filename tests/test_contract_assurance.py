@@ -165,6 +165,11 @@ def test_mutations_preserve_provenance_and_deduplicate():
     assert len(deduplicate(items)) == len(items)
 
 
+def test_id_array_mutations_generate_wrong_namespace_challenges():
+    value = {"evidence_ids": ["E1"], "selected_action_id": "A1"}
+    assert any(item.name == "wrong_namespace_evidence_ids" and item.intended_code == "S2" for item in mutations(value))
+
+
 def test_next_action_mutations_reach_the_expected_failure_stage():
     for mutation in mutations(valid_action(), required_fields=("selected_action_id",)):
         result = evaluate_next_action(mutation.raw_output, {"A1"})

@@ -37,6 +37,11 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = ()) -
         malformed = copy.deepcopy(value)
         malformed["selected_action_id"] = "A1 because it is useful"
         result.append(Mutation("id_with_explanation", "S2", json.dumps(malformed, sort_keys=True)))
+    for field, field_value in value.items():
+        if isinstance(field_value, list) and field_value and (field.endswith("_ids") or field.endswith("_by")):
+            wrong_namespace = copy.deepcopy(value)
+            wrong_namespace[field][0] = "H1" if field_value[0].startswith("E") else "E1"
+            result.append(Mutation(f"wrong_namespace_{field}", "S2", json.dumps(wrong_namespace, sort_keys=True)))
     text_fields = [field for field, item in value.items() if isinstance(item, str)]
     if text_fields:
         placeholder = copy.deepcopy(value)
