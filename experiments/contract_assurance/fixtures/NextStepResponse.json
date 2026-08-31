@@ -233,6 +233,21 @@
     },
     {
       "intended_code": "S4",
+      "name": "canonical_sentinel_target_uncertainty",
+      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"A1\", \"step_type\": \"action\", \"target_uncertainty\": \"The uncertainty this enquiry addresses.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "canonical_sentinel_expected_information_value",
+      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"How the result could change the explanation space.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"A1\", \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "canonical_sentinel_why_this_action_now",
+      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"A1\", \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"Why this enquiry is useful now.\"}"
+    },
+    {
+      "intended_code": "S4",
       "name": "mixed_union_branch",
       "raw_output": "{\"conclusion_hypothesis_id\": \"H1\", \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"A1\", \"step_type\": \"action\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
     },

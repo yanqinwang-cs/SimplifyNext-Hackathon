@@ -169,6 +169,17 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         placeholder = copy.deepcopy(value)
         placeholder[text_fields[0]] = "REPLACE_WITH_SUBSTANTIVE_TEXT"
         result.append(Mutation("placeholder_text", "S4", json.dumps(placeholder, sort_keys=True)))
+    sentinel_by_field = {
+        "target_uncertainty": "The uncertainty this enquiry addresses.",
+        "expected_information_value": "How the result could change the explanation space.",
+        "why_this_action_now": "Why this enquiry is useful now.",
+        "revision_rationale": "How the evidence changed the state.",
+    }
+    for field, sentinel in sentinel_by_field.items():
+        if field in value:
+            sentinel_value = copy.deepcopy(value)
+            sentinel_value[field] = sentinel
+            result.append(Mutation(f"canonical_sentinel_{field}", "S4", json.dumps(sentinel_value, sort_keys=True)))
     if "step_type" in value:
         polluted = copy.deepcopy(value)
         polluted["step_type"] = "action"

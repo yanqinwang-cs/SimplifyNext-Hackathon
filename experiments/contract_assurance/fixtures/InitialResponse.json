@@ -259,6 +259,21 @@
       "raw_output": "{\"expected_information_value\": \"The result can distinguish explanations.\", \"hypotheses\": [{\"conflicted_by\": [], \"id\": \"H1\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A broad explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"What evidence would distinguish alternatives?\"]}], \"selected_action_id\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
     },
     {
+      "intended_code": "S4",
+      "name": "canonical_sentinel_target_uncertainty",
+      "raw_output": "{\"expected_information_value\": \"The result can distinguish explanations.\", \"hypotheses\": [{\"conflicted_by\": [], \"id\": \"H1\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A broad explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"What evidence would distinguish alternatives?\"]}], \"selected_action_id\": \"A1\", \"target_uncertainty\": \"The uncertainty this enquiry addresses.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "canonical_sentinel_expected_information_value",
+      "raw_output": "{\"expected_information_value\": \"How the result could change the explanation space.\", \"hypotheses\": [{\"conflicted_by\": [], \"id\": \"H1\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A broad explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"What evidence would distinguish alternatives?\"]}], \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "canonical_sentinel_why_this_action_now",
+      "raw_output": "{\"expected_information_value\": \"The result can distinguish explanations.\", \"hypotheses\": [{\"conflicted_by\": [], \"id\": \"H1\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A broad explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"What evidence would distinguish alternatives?\"]}], \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"Why this enquiry is useful now.\"}"
+    },
+    {
       "intended_code": "S3",
       "name": "unknown_evidence_reference",
       "raw_output": "{\"expected_information_value\": \"The result can distinguish explanations.\", \"hypotheses\": [{\"conflicted_by\": [], \"id\": \"H1\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A broad explanation.\", \"status\": \"active\", \"supported_by\": [\"E999\"], \"unresolved\": [\"What evidence would distinguish alternatives?\"]}], \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
