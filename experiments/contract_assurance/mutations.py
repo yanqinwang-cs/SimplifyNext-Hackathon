@@ -137,6 +137,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         inactive = copy.deepcopy(value)
         inactive["competing_hypotheses"][0]["status"] = "weakened"
         result.append(Mutation("non_active_status", "S2", json.dumps(inactive, sort_keys=True)))
+        scalar_namespace = copy.deepcopy(value)
+        scalar_namespace["competing_hypotheses"][0]["contrasted_hypothesis_id"] = "E1"
+        result.append(Mutation("wrong_namespace_contrasted_hypothesis", "S2", json.dumps(scalar_namespace, sort_keys=True)))
         specialization = copy.deepcopy(value)
         specialization["competing_hypotheses"][0].update({"parent_id": "H1", "relationship": "specialization", "contrasted_hypothesis_id": None, "material_difference": None, "specificity_basis_evidence_ids": ["E1"]})
         result.append(Mutation("valid_specialization_relationship", "valid", json.dumps(specialization, sort_keys=True)))
