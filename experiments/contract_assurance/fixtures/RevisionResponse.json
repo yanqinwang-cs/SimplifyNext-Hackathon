@@ -94,6 +94,16 @@
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [{\"conflicted_by\": [], \"id\": \"H2\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [\"E1\"], \"statement\": \"A newly considered explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"Which observation would distinguish this explanation?\"]}], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
     {
+      "intended_code": "valid",
+      "name": "valid_other_hypothesis_operation",
+      "raw_output": "{\"hypothesis_updates\": [{\"hypothesis_id\": \"H1\", \"reason\": \"The available operations do not represent this requested change.\", \"requested_effect\": \"Preserve the current hypothesis while changing its framing.\", \"requested_operation_name\": \"reframe\", \"transition\": \"other\", \"why_existing_operations_do_not_fit\": {\"keep\": \"It does not capture the requested framing change.\"}}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "other_without_operation_details",
+      "raw_output": "{\"hypothesis_updates\": [{\"hypothesis_id\": \"H1\", \"reason\": \"A reason.\", \"transition\": \"other\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
       "intended_code": "S4",
       "name": "uncertainty_owner_mismatch",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"description\": \"A new uncertainty.\", \"hypothesis_id\": \"H2\", \"id\": \"H1:U1\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
