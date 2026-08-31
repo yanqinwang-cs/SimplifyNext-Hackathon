@@ -65,6 +65,21 @@
     },
     {
       "intended_code": "S0",
+      "name": "json_null_top_level",
+      "raw_output": "null"
+    },
+    {
+      "intended_code": "S0",
+      "name": "json_string_top_level",
+      "raw_output": "\"response\""
+    },
+    {
+      "intended_code": "S0",
+      "name": "json_number_top_level",
+      "raw_output": "7"
+    },
+    {
+      "intended_code": "S0",
       "name": "empty_fence",
       "raw_output": "```json\n```"
     },
