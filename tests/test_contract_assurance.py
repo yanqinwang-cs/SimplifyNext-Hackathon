@@ -10,7 +10,7 @@ from experiments.contract_assurance.mutations import write_fixture_manifest
 from experiments.contract_assurance.mutations import deduplicate, mutations
 from experiments.contract_assurance.lint import lint_contract
 from experiments.contract_assurance.registry import contract_registry
-from experiments.contract_assurance.report import failure_rate_statistics, render_markdown, summarize, summarize_blind, summarize_by_contract, write_history
+from experiments.contract_assurance.report import coverage_ledger, failure_rate_statistics, render_markdown, summarize, summarize_blind, summarize_by_contract, write_history
 from experiments.contract_assurance.snapshot import fingerprint, write_public_snapshot, write_snapshot
 from experiments.contract_assurance.snapshot import validate_public_package
 from experiments.contract_assurance.audit import audit_public_package
@@ -124,6 +124,15 @@ def test_failure_rate_statistics_reports_observed_and_upper_bound():
     assert result["failures"] == 1 and result["total"] == 2
     assert result["observed_failure_rate"] == 0.5
     assert result["upper_failure_rate"] >= result["observed_failure_rate"]
+
+
+def test_coverage_ledger_deduplicates_failure_signatures_with_counts():
+    first = evaluate_raw("", NextActionResponse)
+    first.details["contract"] = "NextActionResponse"
+    second = evaluate_raw("", NextActionResponse)
+    second.details["contract"] = "NextActionResponse"
+    ledger = coverage_ledger([first, second])
+    assert len(ledger) == 1 and next(iter(ledger.values())) == 2
 
 
 def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):

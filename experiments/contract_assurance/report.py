@@ -9,6 +9,15 @@ from .evaluate import Evaluation
 from .audit import BlindBatchAudit
 
 
+def failure_signature(item: Evaluation) -> str:
+    return "|".join((str(item.details.get("contract", "unassigned")), item.code.value if item.code else "accepted", item.stage, item.message.splitlines()[0][:160]))
+
+
+def coverage_ledger(evaluations: Iterable[Evaluation]) -> dict[str, int]:
+    signatures: Counter[str] = Counter(failure_signature(item) for item in evaluations if not item.accepted)
+    return dict(sorted(signatures.items()))
+
+
 def summarize(evaluations: Iterable[Evaluation]) -> dict:
     items = list(evaluations)
     counts = Counter(item.code.value for item in items if item.code)
