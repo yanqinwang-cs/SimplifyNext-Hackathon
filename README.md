@@ -8,3 +8,9 @@ The prototype uses typed Pydantic models and local JSON files under `data/cases/
 uv sync
 uv run pytest
 ```
+
+With AWS environment variables and `BEDROCK_MODEL_ID` configured, run one live smoke call with:
+
+```bash
+uv run python scripts/smoke_bedrock.py
+```
