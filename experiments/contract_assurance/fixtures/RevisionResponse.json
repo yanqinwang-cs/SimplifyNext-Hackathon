@@ -104,6 +104,16 @@
       "raw_output": "{\"hypothesis_updates\": [{\"hypothesis_id\": \"H1\", \"reason\": \"A reason.\", \"transition\": \"other\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
     {
+      "intended_code": "valid",
+      "name": "valid_other_uncertainty_operation",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"The requested uncertainty operation is not represented by existing transitions.\", \"requested_effect\": \"Combine this uncertainty with a related unresolved issue.\", \"requested_operation_name\": \"merge\", \"transition\": \"other\", \"uncertainty_id\": \"H1:U1\", \"why_existing_operations_do_not_fit\": {\"refine\": \"Refinement would preserve separate uncertainty records.\"}}]}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "other_uncertainty_without_operation_details",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"A reason.\", \"transition\": \"other\", \"uncertainty_id\": \"H1:U1\"}]}"
+    },
+    {
       "intended_code": "S4",
       "name": "uncertainty_owner_mismatch",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"description\": \"A new uncertainty.\", \"hypothesis_id\": \"H2\", \"id\": \"H1:U1\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
