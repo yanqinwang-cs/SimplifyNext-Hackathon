@@ -45,3 +45,17 @@ def audit_batch_package(package_path: str | Path, audit: BlindBatchAudit) -> dic
     if not audit.qualifies_as_blind:
         issues.append("batch is NOT_BLIND")
     return {"accepted": not issues, "issues": issues}
+
+
+def record_batch(destination: str | Path, audit: BlindBatchAudit, evaluations: list[Any]) -> Path:
+    """Persist exact worker evaluations and an immutable audit manifest."""
+    from .evaluate import persist_evaluations
+
+    path = Path(destination)
+    path.mkdir(parents=True, exist_ok=True)
+    persist_evaluations(evaluations, path / "evaluations.json")
+    manifest = audit.manifest()
+    manifest["evaluation_count"] = len(evaluations)
+    manifest["blind_status"] = "BLIND" if audit.qualifies_as_blind else "NOT_BLIND"
+    (path / "batch_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path

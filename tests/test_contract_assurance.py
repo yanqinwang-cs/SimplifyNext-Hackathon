@@ -4,7 +4,7 @@ from pathlib import Path
 from experiments.contract_assurance.evaluate import evaluate_raw
 from experiments.contract_assurance.evaluate import evaluate_initial, evaluate_next_action, evaluate_revision, persist_evaluations
 from experiments.contract_assurance.inventory import assert_complete_inventory, assert_inventory_paths, discover_response_classes, render_inventory_markdown, unregistered_response_classes, write_inventory_markdown
-from experiments.contract_assurance.audit import BlindBatchAudit, audit_batch_package
+from experiments.contract_assurance.audit import BlindBatchAudit, audit_batch_package, record_batch
 from experiments.contract_assurance.evolution.records import validate_evolution_record
 from experiments.contract_assurance.runner import run_deterministic, verify_committed_packages
 from experiments.contract_assurance.mutations import write_fixture_manifest
@@ -112,6 +112,15 @@ def test_blind_batch_audit_verifies_exact_package_and_isolation(tmp_path: Path):
     audit = BlindBatchAudit("worker", spec.name, __import__("experiments.contract_assurance.snapshot", fromlist=["fingerprint"]).fingerprint(package), (path.name,), True, False)
     assert audit_batch_package(path, audit) == {"accepted": True, "issues": []}
     assert "batch package hash mismatch" in audit_batch_package(path, BlindBatchAudit("worker", spec.name, "stale", (path.name,), True, False))["issues"]
+
+
+def test_record_batch_persists_exact_outputs_and_status(tmp_path: Path):
+    audit = BlindBatchAudit("worker", "NextActionResponse", "package-hash", ("package.json",), False, True, ("shared filesystem",))
+    result = evaluate_raw("not-json", NextActionResponse)
+    destination = record_batch(tmp_path, audit, [result])
+    assert json.loads((destination / "evaluations.json").read_text())[0]["raw_output"] == "not-json"
+    manifest = json.loads((destination / "batch_manifest.json").read_text())
+    assert manifest["blind_status"] == "NOT_BLIND" and manifest["evaluation_count"] == 1
 
 
 def test_report_summary_counts_failures():
