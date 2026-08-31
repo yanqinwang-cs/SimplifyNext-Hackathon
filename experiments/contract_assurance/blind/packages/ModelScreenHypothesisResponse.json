@@ -1,0 +1,75 @@
+{
+  "case_input": {
+    "case_id": "public-case-01",
+    "question": "What are the plausible explanations?"
+  },
+  "manifest": {
+    "case_input_hash": "da231b48e0c82290d2da075d87818c05c3c52a673ef7a42c0ddf1b6c40755b55",
+    "contract": "ModelScreenHypothesisResponse",
+    "git_commit": "006dfa4",
+    "prompt_hash": "5eadf8b9752fcc5d4fb267f7f2c6f6c865446b541e887f355b3150c71df78240",
+    "schema_hash": "f2224a7d45a3c36db7990ef4095c4ba27da435a44a6b8a3fbbe1c5cd0bf54cdc",
+    "source": "experiments/model_screen/schemas.py",
+    "template_hash": "bd4fbdea6179d3526d10bbacf57d34617d47bf24522382d18586ebc0a60305dd"
+  },
+  "output_schema": {
+    "$defs": {
+      "Hypothesis": {
+        "additionalProperties": false,
+        "properties": {
+          "justification": {
+            "title": "Justification",
+            "type": "string"
+          },
+          "statement": {
+            "title": "Statement",
+            "type": "string"
+          },
+          "uncertainty": {
+            "title": "Uncertainty",
+            "type": "string"
+          }
+        },
+        "required": [
+          "statement",
+          "justification",
+          "uncertainty"
+        ],
+        "title": "Hypothesis",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "hypotheses": {
+        "items": {
+          "$ref": "#/$defs/Hypothesis"
+        },
+        "maxItems": 4,
+        "minItems": 2,
+        "title": "Hypotheses",
+        "type": "array"
+      }
+    },
+    "required": [
+      "hypotheses"
+    ],
+    "title": "HypothesisResponse",
+    "type": "object"
+  },
+  "prompt": "Return two to four JSON hypotheses for the public case.",
+  "template": {
+    "hypotheses": [
+      {
+        "justification": "REPLACE_WITH_JUSTIFICATION",
+        "statement": "REPLACE_WITH_STATEMENT",
+        "uncertainty": "REPLACE_WITH_UNCERTAINTY"
+      },
+      {
+        "justification": "REPLACE_WITH_JUSTIFICATION",
+        "statement": "REPLACE_WITH_STATEMENT",
+        "uncertainty": "REPLACE_WITH_UNCERTAINTY"
+      }
+    ]
+  }
+}

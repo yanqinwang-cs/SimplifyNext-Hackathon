@@ -1,0 +1,245 @@
+{
+  "case_input": {
+    "available_action_ids": [
+      "A1",
+      "A2"
+    ],
+    "case_id": "public-case-01",
+    "released_evidence_ids": [
+      "E1",
+      "E2"
+    ],
+    "seed_hypothesis": "A human-provided concern."
+  },
+  "manifest": {
+    "case_input_hash": "e42a747d3e812e2a5cf4ee7020a1b974c90cf144402500a8793cf0cf4cc9da17",
+    "contract": "InitialExpansionResponse",
+    "git_commit": "006dfa4",
+    "prompt_hash": "904107cbcd28880f9975a4505dc16a9584cda5c9183211c1056690b6b6f3661a",
+    "schema_hash": "3ab84fb21b95fbb73d063a580acd3f51ec5299a5657a7a6ea62d6b61e696b7c2",
+    "source": "src/investigator/services/contracts.py",
+    "template_hash": "3553edfc8961b4b497feadb9e983cc3ac61fd6eb4a3044b63a84f5482b9d2711"
+  },
+  "output_schema": {
+    "$defs": {
+      "InitialExpansionHypothesis": {
+        "additionalProperties": false,
+        "properties": {
+          "conflicted_by": {
+            "items": {
+              "pattern": "^(?:E[1-9][0-9]*|A[1-4]_RELEASE)$",
+              "type": "string"
+            },
+            "title": "Conflicted By",
+            "type": "array"
+          },
+          "contrasted_hypothesis_id": {
+            "anyOf": [
+              {
+                "pattern": "^H[1-9][0-9]*(?:\\.[1-9][0-9]*)*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Contrasted Hypothesis Id"
+          },
+          "id": {
+            "pattern": "^H[1-9][0-9]*(?:\\.[1-9][0-9]*)*$",
+            "title": "Id",
+            "type": "string"
+          },
+          "material_difference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Material Difference"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "pattern": "^H[1-9][0-9]*(?:\\.[1-9][0-9]*)*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parent Id"
+          },
+          "relationship": {
+            "enum": [
+              "competing_root",
+              "specialization"
+            ],
+            "title": "Relationship",
+            "type": "string"
+          },
+          "specificity_basis_evidence_ids": {
+            "items": {
+              "pattern": "^(?:E[1-9][0-9]*|A[1-4]_RELEASE)$",
+              "type": "string"
+            },
+            "title": "Specificity Basis Evidence Ids",
+            "type": "array"
+          },
+          "statement": {
+            "title": "Statement",
+            "type": "string"
+          },
+          "status": {
+            "const": "active",
+            "title": "Status",
+            "type": "string"
+          },
+          "supported_by": {
+            "items": {
+              "pattern": "^(?:E[1-9][0-9]*|A[1-4]_RELEASE)$",
+              "type": "string"
+            },
+            "title": "Supported By",
+            "type": "array"
+          },
+          "unresolved": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Unresolved",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "statement",
+          "status",
+          "supported_by",
+          "conflicted_by",
+          "unresolved",
+          "specificity_basis_evidence_ids",
+          "relationship"
+        ],
+        "title": "InitialExpansionHypothesis",
+        "type": "object"
+      },
+      "SeedHypothesisAnalysis": {
+        "additionalProperties": false,
+        "properties": {
+          "conflicted_by": {
+            "items": {
+              "pattern": "^(?:E[1-9][0-9]*|A[1-4]_RELEASE)$",
+              "type": "string"
+            },
+            "title": "Conflicted By",
+            "type": "array"
+          },
+          "specificity_basis_evidence_ids": {
+            "items": {
+              "pattern": "^(?:E[1-9][0-9]*|A[1-4]_RELEASE)$",
+              "type": "string"
+            },
+            "title": "Specificity Basis Evidence Ids",
+            "type": "array"
+          },
+          "supported_by": {
+            "items": {
+              "pattern": "^(?:E[1-9][0-9]*|A[1-4]_RELEASE)$",
+              "type": "string"
+            },
+            "title": "Supported By",
+            "type": "array"
+          },
+          "unresolved": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Unresolved",
+            "type": "array"
+          }
+        },
+        "required": [
+          "supported_by",
+          "conflicted_by",
+          "unresolved",
+          "specificity_basis_evidence_ids"
+        ],
+        "title": "SeedHypothesisAnalysis",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "competing_hypotheses": {
+        "items": {
+          "$ref": "#/$defs/InitialExpansionHypothesis"
+        },
+        "minItems": 1,
+        "title": "Competing Hypotheses",
+        "type": "array"
+      },
+      "expected_information_value": {
+        "title": "Expected Information Value",
+        "type": "string"
+      },
+      "seed_analysis": {
+        "$ref": "#/$defs/SeedHypothesisAnalysis"
+      },
+      "selected_action_id": {
+        "enum": [
+          "A1",
+          "A2",
+          "A3",
+          "A4"
+        ],
+        "title": "Selected Action Id",
+        "type": "string"
+      },
+      "target_uncertainty": {
+        "title": "Target Uncertainty",
+        "type": "string"
+      },
+      "why_this_action_now": {
+        "title": "Why This Action Now",
+        "type": "string"
+      }
+    },
+    "required": [
+      "seed_analysis",
+      "competing_hypotheses",
+      "selected_action_id",
+      "target_uncertainty",
+      "expected_information_value",
+      "why_this_action_now"
+    ],
+    "title": "InitialExpansionResponse",
+    "type": "object"
+  },
+  "prompt": "Return one JSON object matching the supplied schema for the public seeded case.",
+  "template": {
+    "competing_hypotheses": [],
+    "expected_information_value": "REPLACE_WITH_EXPECTED_INFORMATION_VALUE",
+    "seed_analysis": {
+      "conflicted_by": [],
+      "specificity_basis_evidence_ids": [],
+      "supported_by": [
+        "E1"
+      ],
+      "unresolved": [
+        "REPLACE_WITH_UNRESOLVED_QUESTION"
+      ]
+    },
+    "selected_action_id": "A1",
+    "target_uncertainty": "REPLACE_WITH_TARGET_UNCERTAINTY",
+    "why_this_action_now": "REPLACE_WITH_ACTION_REASON"
+  }
+}

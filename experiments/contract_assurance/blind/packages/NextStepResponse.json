@@ -1,0 +1,141 @@
+{
+  "case_input": {
+    "available_action_ids": [
+      "A1",
+      "A2"
+    ],
+    "case_id": "public-case-01",
+    "hypothesis_ids": [
+      "H1"
+    ],
+    "uncertainty_ids": [
+      "H1:U1"
+    ]
+  },
+  "manifest": {
+    "case_input_hash": "0fa59449318fb6fad13c5968e2e793456253841fdb35e85ab56a5770e0cf0cee",
+    "contract": "NextStepResponse",
+    "git_commit": "006dfa4",
+    "prompt_hash": "ca399721be50acb576b54bd6de54bb02d7c23ab28fa08240ac002cf0e69d7fb6",
+    "schema_hash": "f0186ca2f50494c9a630a22fe3bdc890a942cb2607bbe1d15d23957dcf668f29",
+    "source": "src/investigator/services/contracts.py",
+    "template_hash": "f6d5700e8cf2a1cf672b2437ba86721cba6699303e3f51ec3bfa8d9d969a5c0f"
+  },
+  "output_schema": {
+    "additionalProperties": false,
+    "properties": {
+      "conclusion_hypothesis_id": {
+        "anyOf": [
+          {
+            "pattern": "^H[1-9][0-9]*(?:\\.[1-9][0-9]*)*$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Conclusion Hypothesis Id"
+      },
+      "conclusion_reason": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Conclusion Reason"
+      },
+      "expected_information_value": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Expected Information Value"
+      },
+      "remaining_uncertainty_ids": {
+        "items": {
+          "pattern": "^H[1-9][0-9]*(?:\\.[1-9][0-9]*)*:U[1-9][0-9]*$",
+          "type": "string"
+        },
+        "title": "Remaining Uncertainty Ids",
+        "type": "array"
+      },
+      "selected_action_id": {
+        "anyOf": [
+          {
+            "enum": [
+              "A1",
+              "A2",
+              "A3",
+              "A4"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Selected Action Id"
+      },
+      "step_type": {
+        "enum": [
+          "action",
+          "conclusion",
+          "stop_unresolved"
+        ],
+        "title": "Step Type",
+        "type": "string"
+      },
+      "target_uncertainty": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Target Uncertainty"
+      },
+      "why_this_action_now": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Why This Action Now"
+      }
+    },
+    "required": [
+      "step_type"
+    ],
+    "title": "NextStepResponse",
+    "type": "object"
+  },
+  "prompt": "Return one JSON object matching the supplied next-step schema for the public case.",
+  "template": {
+    "conclusion_hypothesis_id": null,
+    "conclusion_reason": null,
+    "expected_information_value": "REPLACE_WITH_EXPECTED_INFORMATION_VALUE",
+    "remaining_uncertainty_ids": [],
+    "selected_action_id": "A1",
+    "step_type": "action",
+    "target_uncertainty": "REPLACE_WITH_TARGET_UNCERTAINTY",
+    "why_this_action_now": "REPLACE_WITH_ACTION_REASON"
+  }
+}
