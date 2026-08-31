@@ -10,7 +10,7 @@ from experiments.contract_assurance.mutations import write_fixture_manifest
 from experiments.contract_assurance.mutations import deduplicate, mutations
 from experiments.contract_assurance.lint import lint_contract
 from experiments.contract_assurance.registry import contract_registry
-from experiments.contract_assurance.report import render_markdown, summarize, write_history
+from experiments.contract_assurance.report import render_markdown, summarize, summarize_by_contract, write_history
 from experiments.contract_assurance.snapshot import fingerprint, write_snapshot
 from experiments.contract_assurance.snapshot import validate_public_package
 from experiments.contract_assurance.audit import audit_public_package
@@ -87,6 +87,14 @@ def test_report_history_preserves_dated_json_and_markdown(tmp_path: Path):
     assert latest.name == "latest.json" and dated.parent.name == "history"
     assert "Accepted" in (tmp_path / "latest.md").read_text()
     assert render_markdown({"failure_codes": {"S2": 3}}).count("S2") == 1
+
+
+def test_report_aggregates_by_contract():
+    first = evaluate_raw(json.dumps(valid_action()), NextActionResponse)
+    first.details["contract"] = "NextActionResponse"
+    second = evaluate_raw("", NextActionResponse)
+    second.details["contract"] = "NextActionResponse"
+    assert summarize_by_contract([first, second])["NextActionResponse"]["rejected"] == 1
 
 
 def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):

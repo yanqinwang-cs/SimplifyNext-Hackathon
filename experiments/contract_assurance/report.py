@@ -13,6 +13,13 @@ def summarize(evaluations: Iterable[Evaluation]) -> dict:
     return {"total": len(items), "accepted": sum(item.accepted for item in items), "rejected": sum(not item.accepted for item in items), "failure_codes": dict(counts)}
 
 
+def summarize_by_contract(evaluations: Iterable[Evaluation]) -> dict[str, dict]:
+    grouped: dict[str, list[Evaluation]] = {}
+    for item in evaluations:
+        grouped.setdefault(str(item.details.get("contract", "unassigned")), []).append(item)
+    return {contract: summarize(items) for contract, items in sorted(grouped.items())}
+
+
 def write_report(destination: Path, report: dict) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

@@ -8,7 +8,7 @@ from .evaluate import evaluate_raw
 from .inventory import inventory
 from .mutations import deduplicate, mutations
 from .registry import contract_registry
-from .report import summarize, write_history
+from .report import summarize, summarize_by_contract, write_history
 
 
 def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> dict[str, Any]:
@@ -22,7 +22,7 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
             result.details.update({"contract": name, "mutation": mutation.name, "intended_code": mutation.intended_code})
             results.append(result)
     summary = summarize(results)
-    report = {"inventory": inventory(root, commit), "deterministic": summary, "blind_results_included": False}
+    report = {"inventory": inventory(root, commit), "deterministic": summary, "deterministic_by_contract": summarize_by_contract(results), "blind_results_included": False}
     write_history(output_dir, summary)
     (output_dir / "inventory.json").write_text(json.dumps(report["inventory"], indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
     return report
