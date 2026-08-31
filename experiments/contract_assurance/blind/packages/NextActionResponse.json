@@ -1,0 +1,63 @@
+{
+  "case_input": {
+    "available_action_ids": [
+      "A1",
+      "A2"
+    ],
+    "case_id": "public-case-01",
+    "unresolved_questions": [
+      "Which public enquiry should happen next?"
+    ]
+  },
+  "manifest": {
+    "case_input_hash": "42ea4270f880c759d29d02b71766123c65673b2acc21a599eb085b1825839e56",
+    "contract": "NextActionResponse",
+    "git_commit": "006dfa4",
+    "prompt_hash": "8e60cfcab1a575995fae79dffa9611521557212fbbc245ed94f9b9606571b566",
+    "schema_hash": "2ee01b9e0a44aa5ea0159022f89f32b407b9f1bdd33c88f8914b62244611a300",
+    "source": "src/investigator/services/contracts.py",
+    "template_hash": "b6a010d204166ff9a7b27348c58c563c39dd19f1b9b5bde388ea2fef78695810"
+  },
+  "output_schema": {
+    "additionalProperties": false,
+    "properties": {
+      "expected_information_value": {
+        "title": "Expected Information Value",
+        "type": "string"
+      },
+      "selected_action_id": {
+        "enum": [
+          "A1",
+          "A2",
+          "A3",
+          "A4"
+        ],
+        "title": "Selected Action Id",
+        "type": "string"
+      },
+      "target_uncertainty": {
+        "title": "Target Uncertainty",
+        "type": "string"
+      },
+      "why_this_action_now": {
+        "title": "Why This Action Now",
+        "type": "string"
+      }
+    },
+    "required": [
+      "selected_action_id",
+      "target_uncertainty",
+      "expected_information_value",
+      "why_this_action_now"
+    ],
+    "title": "NextActionResponse",
+    "type": "object"
+  },
+  "prompt": "Return one JSON object matching the supplied schema. Select one currently available action for the public case.",
+  "template": {
+    "expected_information_value": "REPLACE_WITH_EXPECTED_INFORMATION_VALUE",
+    "selected_action_id": "A1",
+    "target_uncertainty": "REPLACE_WITH_TARGET_UNCERTAINTY",
+    "why_this_action_now": "REPLACE_WITH_ACTION_REASON"
+  }
+}
