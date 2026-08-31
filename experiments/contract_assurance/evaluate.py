@@ -101,3 +101,14 @@ def evaluate_initial(raw_output: Any, *, schema: type[Any], build_state: Any) ->
     result.details["would_mutate"] = True
     result.details["state_type"] = type(state).__name__
     return result
+
+
+def persist_evaluations(evaluations: list[Evaluation], destination: Any) -> Any:
+    """Persist exact raw outputs and classifications to a generated results file."""
+    from pathlib import Path
+
+    path = Path(destination)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = [{"accepted": item.accepted, "code": item.code.value if item.code else None, "stage": item.stage, "message": item.message, "raw_output": item.raw_output, "state_mutated": item.state_mutated, "details": item.details} for item in evaluations]
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
+    return path

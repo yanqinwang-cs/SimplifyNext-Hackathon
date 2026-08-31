@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from experiments.contract_assurance.evaluate import evaluate_raw
-from experiments.contract_assurance.evaluate import evaluate_initial, evaluate_next_action, evaluate_revision
+from experiments.contract_assurance.evaluate import evaluate_initial, evaluate_next_action, evaluate_revision, persist_evaluations
 from experiments.contract_assurance.inventory import assert_complete_inventory, assert_inventory_paths, discover_response_classes, render_inventory_markdown, unregistered_response_classes, write_inventory_markdown
 from experiments.contract_assurance.audit import BlindBatchAudit
 from experiments.contract_assurance.evolution.records import validate_evolution_record
@@ -123,6 +123,13 @@ def test_report_aggregates_by_contract():
     second = evaluate_raw("", NextActionResponse)
     second.details["contract"] = "NextActionResponse"
     assert summarize_by_contract([first, second])["NextActionResponse"]["rejected"] == 1
+
+
+def test_persisted_results_retain_raw_output_and_classification(tmp_path: Path):
+    result = evaluate_raw("not-json", NextActionResponse)
+    path = persist_evaluations([result], tmp_path / "results.json")
+    payload = json.loads(path.read_text())
+    assert payload[0]["raw_output"] == "not-json" and payload[0]["code"] == "S0"
 
 
 def test_not_blind_batches_are_excluded_from_statistics():
