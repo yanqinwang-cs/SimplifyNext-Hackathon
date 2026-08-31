@@ -8,10 +8,11 @@ from investigator.graph.models import (
     GraphNode,
     GraphNodeType,
     GraphStatus,
+    make_edge_id,
 )
 from investigator.graph.operations import propagate_epistemic_status
 
 __all__ = [
     "CaseGraph", "EdgeRelation", "EdgeStatus", "EdgeStrength", "EpistemicStatus",
-    "GraphEdge", "GraphNode", "GraphNodeType", "GraphStatus", "propagate_epistemic_status",
+    "GraphEdge", "GraphNode", "GraphNodeType", "GraphStatus", "make_edge_id", "propagate_epistemic_status",
 ]

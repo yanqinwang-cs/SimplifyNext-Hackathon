@@ -57,6 +57,45 @@ def test_archive_reactivate_active_subgraph_and_specialize() -> None:
     assert case.ancestors("H2.1")[0].id == "H2"
 
 
+def test_archived_edges_are_ignored_by_active_queries() -> None:
+    case = graph()
+    case.archive_edge("E1_SUPPORTS_P1")
+    assert "E1" not in {item.id for item in case.neighbors("P1")}
+    assert "E1" in {item.id for item in case.neighbors("P1", active_only=False)}
+    assert case.incoming("P1", EdgeRelation.SUPPORTS, active_only=True) == []
+    assert case.outgoing("E1", active_only=True) == []
+    assert "E1" not in case.neighborhood("P1").nodes
+    assert "E1_SUPPORTS_P1" not in case.active_subgraph().edges
+
+
+def test_single_active_specialization_parent_allows_archived_history() -> None:
+    case = graph()
+    case.archive_edge("H1.1_SPECIALIZES_H1")
+    case.specialize("H2", node("H1.1", GraphNodeType.HYPOTHESIS), [])
+    assert [item.id for item in case.ancestors("H1.1")] == ["H2"]
+    with pytest.raises(ValueError):
+        case.add_edge(GraphEdge(id="H1.1_SPECIALIZES_H1", source_id="H1.1", target_id="H1", relation=EdgeRelation.SPECIALIZES))
+
+
+def test_canonical_graph_node_and_edge_ids() -> None:
+    assert node("E1", GraphNodeType.EVIDENCE)
+    assert node("A1_RELEASE", GraphNodeType.EVIDENCE)
+    assert node("H1.2", GraphNodeType.HYPOTHESIS)
+    assert node("P3.1", GraphNodeType.PROPOSITION)
+    assert node("H1:U1", GraphNodeType.UNCERTAINTY)
+    for identifier, kind in [("E1", GraphNodeType.HYPOTHESIS), ("P1", GraphNodeType.EVIDENCE), ("hello world", GraphNodeType.HYPOTHESIS), ("H1..2", GraphNodeType.HYPOTHESIS), ("H:U", GraphNodeType.UNCERTAINTY), ("A_RELEASE", GraphNodeType.EVIDENCE)]:
+        with pytest.raises(ValueError):
+            node(identifier, kind)
+    with pytest.raises(ValueError):
+        GraphEdge(id="not-an-edge", source_id="E1", target_id="P1", relation=EdgeRelation.SUPPORTS)
+    assert case_edge_id("E1", EdgeRelation.SUPPORTS, "P1") == "E1_SUPPORTS_P1"
+
+
+def case_edge_id(source: str, relation: EdgeRelation, target: str) -> str:
+    from investigator.graph import make_edge_id
+    return make_edge_id(source, relation, target)
+
+
 def test_explicit_specialization_propagation_is_asymmetric() -> None:
     parents = {"H1.1": "H1", "H1.1.1": "H1.1", "H2.1": "H2"}
     statuses = {identifier: EpistemicStatus.UNRESOLVED for identifier in {"H1", "H1.1", "H1.1.1", "H2", "H2.1"}}
@@ -79,13 +118,14 @@ def test_case_state_bridge_preserves_ids_text_and_creates_semantic_edges() -> No
     source = Source(id="source", name="source", source_type=SourceType.OTHER)
     state = CaseState(
         case_id="case", title="title", sources={"source": source},
-        evidence={"E1": EvidenceItem(id="E1", source_id="source", raw_content="Original evidence", kind=EvidenceKind.OTHER)},
+        evidence={"E1": EvidenceItem(id="E1", source_id="source", raw_content="Original evidence", kind=EvidenceKind.OTHER), "A1_RELEASE": EvidenceItem(id="A1_RELEASE", source_id="source", raw_content="Released evidence", kind=EvidenceKind.OTHER)},
         hypotheses={"H1": Hypothesis(id="H1", statement="Parent", origin=HypothesisOrigin.HUMAN, supporting_evidence_ids=["E1"], unresolved_issue_ids=["U1"]), "H1.1": Hypothesis(id="H1.1", statement="Child", origin=HypothesisOrigin.AGENT_SUGGESTION, parent_hypothesis_id="H1")},
         uncertainties={"U1": Uncertainty(id="U1", kind=UncertaintyKind.UNKNOWN, description="Open question")},
     )
     bridged = CaseGraph.from_case_state(state)
     assert {node.node_type for node in bridged.nodes.values()} == {GraphNodeType.EVIDENCE, GraphNodeType.HYPOTHESIS, GraphNodeType.UNCERTAINTY}
     assert bridged.nodes["E1"].statement == "Original evidence"
+    assert bridged.nodes["A1_RELEASE"].node_type is GraphNodeType.EVIDENCE
     assert "E1_SUPPORTS_H1" in bridged.edges
     assert "H1.1_SPECIALIZES_H1" in bridged.edges
     assert "U1_TARGETS_H1" in bridged.edges
