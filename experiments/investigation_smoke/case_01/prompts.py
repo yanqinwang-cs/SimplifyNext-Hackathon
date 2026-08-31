@@ -26,9 +26,9 @@ def initial_output_template() -> dict:
             "specificity_basis_evidence_ids": [],
         }],
         "selected_action_id": "A1",
-        "target_uncertainty": "The uncertainty this enquiry addresses.",
-        "expected_information_value": "How the result could change the explanation space.",
-        "why_this_action_now": "Why this enquiry is useful now.",
+        "target_uncertainty": "REPLACE_WITH_TARGET_UNCERTAINTY",
+        "expected_information_value": "REPLACE_WITH_EXPECTED_INFORMATION_VALUE",
+        "why_this_action_now": "REPLACE_WITH_ACTION_REASON",
     }
 
 
@@ -80,9 +80,9 @@ Available enquiries:
 def next_action_output_template() -> dict:
     return {
         "selected_action_id": "A2",
-        "target_uncertainty": "The uncertainty this enquiry addresses.",
-        "expected_information_value": "How the result could change the explanation space.",
-        "why_this_action_now": "Why this enquiry is useful now.",
+        "target_uncertainty": "REPLACE_WITH_TARGET_UNCERTAINTY",
+        "expected_information_value": "REPLACE_WITH_EXPECTED_INFORMATION_VALUE",
+        "why_this_action_now": "REPLACE_WITH_ACTION_REASON",
     }
 
 

@@ -1,0 +1,16 @@
+{
+  "contract": "NextActionResponse",
+  "canonical": {
+    "expected_information_value": "The released result can distinguish the remaining explanations.",
+    "selected_action_id": "A1",
+    "target_uncertainty": "Whether the claimed tutoring occurred.",
+    "why_this_action_now": "This is currently available and addresses an unresolved question."
+  },
+  "invalid_cases": [
+    {"name": "missing_selected_action_id", "failure_code": "S1"},
+    {"name": "invented_action_id", "failure_code": "S2"},
+    {"name": "unavailable_existing_action", "failure_code": "S3"},
+    {"name": "placeholder_text", "failure_code": "S1"},
+    {"name": "prose_before_json", "failure_code": "S0"}
+  ]
+}

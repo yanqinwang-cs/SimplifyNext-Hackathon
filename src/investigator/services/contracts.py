@@ -44,6 +44,8 @@ class InitialResponse(BaseModel):
     expected_information_value: str
     why_this_action_now: str
 
+    _valid_text = field_validator("target_uncertainty", "expected_information_value", "why_this_action_now")(_reject_placeholder)
+
     @model_validator(mode="before")
     @classmethod
     def coerce_active_proposals(cls, values: Any) -> Any:
@@ -132,6 +134,8 @@ class NextActionResponse(BaseModel):
     target_uncertainty: str
     expected_information_value: str
     why_this_action_now: str
+
+    _valid_text = field_validator("target_uncertainty", "expected_information_value", "why_this_action_now")(_reject_placeholder)
 
 
 class NewUncertainty(BaseModel):

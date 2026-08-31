@@ -130,7 +130,8 @@ def test_initial_prompt_has_exact_json_contract() -> None:
 
 
 def test_canonical_prompt_templates_validate_against_response_models() -> None:
-    assert InitialResponse.model_validate(initial_output_template())
+    with pytest.raises(ValidationError):
+        InitialResponse.model_validate(initial_output_template())
     assert RevisionResponse.model_validate(revision_output_template("A1_RELEASE"))
 
 

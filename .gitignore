@@ -8,3 +8,5 @@ data/cases/*.tmp
 .env.*
 !.env.example
 runs/
+experiments/contract_assurance/results/
+experiments/**/results/**
