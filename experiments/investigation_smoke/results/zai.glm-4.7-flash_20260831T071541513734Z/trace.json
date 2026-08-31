@@ -1,0 +1,301 @@
+{
+  "model_id": "zai.glm-4.7-flash",
+  "case_id": "case_01",
+  "initial_case_input": "CASE 01 \u2014 Closed-book physical examination\n\nAssessment context:\n90-minute closed-book quantitative methods examination. 40 multiple-choice questions. Phones and smartwatches had to be surrendered before entry. Ordinary stationery and opaque pencil cases were permitted. The student scored between 52% and 64% on four earlier timed quizzes. Homework median: 66%.\n\nEvidence:\nE1. The student scored 40/40 and submitted after 57 minutes.\nE2. Examination-room footage shows no visible phone, no communication with another candidate, and no repeated looking toward another desk.\nE3. On 11 occasions, the student touched the right side of their jaw or ear and repositioned the pencil case with the other hand. Most of these movements occurred after the student had spent at least 20 seconds reading a question.\nE4. The student answered several computational questions without writing visible calculations. Mental calculation was possible, although these were among the more difficult questions.\nE5. A pre-entry bag check found no prohibited object. The student was not searched after the examination.\nE6. An invigilator who supervised an earlier quiz recalls that the student frequently tapped the desk and adjusted their glasses when nervous, but does not remember the jaw-touching pattern.\nE7. The student says they had received intensive private tutoring during the previous week and that the movements were ordinary anxiety-related fidgeting. No information about the tutor has yet been obtained.",
+  "initial_prompt": "Use only released evidence. Previous hypotheses are not evidence and must not be cited as support.\nKeep hypotheses at the broadest level that is still decision-useful. Do not specify a mechanism, actor, direction, device, tool, location, source, communication channel, or sequence unless released evidence supports that specificity.\nUse conditional language for unestablished mechanisms. Do not decide whether misconduct occurred, assign numerical confidence, or propose a final verdict.\nDistinguish observations from possible explanations. Prefer a small number of broad competing explanations.\n\nGenerate an initial hypothesis tree grounded in the case information below. For each hypothesis provide id, optional parent_id, statement, status, supported_by evidence IDs, conflicted_by evidence IDs, unresolved uncertainty, and specificity_basis evidence IDs. Do not use hypothesis IDs in evidence-reference fields.\n\nThen choose exactly one available enquiry. Choose the enquiry that would most usefully change the current explanation space by discriminating between active explanations or reducing consequential uncertainty. Do not choose an action because it proves a preferred hypothesis.\n\nReturn only JSON with keys hypotheses, selected_action_id, target_uncertainty, expected_information_value, and why_this_action_now.\n\nAvailable enquiries:\nA1 \u2014 Verify tutoring claim: Independently verify whether the claimed intensive tutoring during the previous week occurred and what was covered.\nA2 \u2014 Review behaviour and question timing: Analyse the examination event record to determine whether the unusual jaw/ear-touching and pencil-case movements correlate with question difficulty, long pauses, or answer timing.\nA3 \u2014 Compare with prior observed behaviour: Review prior-observation statements to assess whether the current movement pattern resembles previously observed nervous or habitual behaviour.\nA4 \u2014 Targeted oral explanation: Review a targeted assessor-student interview about difficult questions that were answered correctly with little or no visible written working.\n\nCase information:\nCASE 01 \u2014 Closed-book physical examination\n\nAssessment context:\n90-minute closed-book quantitative methods examination. 40 multiple-choice questions. Phones and smartwatches had to be surrendered before entry. Ordinary stationery and opaque pencil cases were permitted. The student scored between 52% and 64% on four earlier timed quizzes. Homework median: 66%.\n\nEvidence:\nE1. The student scored 40/40 and submitted after 57 minutes.\nE2. Examination-room footage shows no visible phone, no communication with another candidate, and no repeated looking toward another desk.\nE3. On 11 occasions, the student touched the right side of their jaw or ear and repositioned the pencil case with the other hand. Most of these movements occurred after the student had spent at least 20 seconds reading a question.\nE4. The student answered several computational questions without writing visible calculations. Mental calculation was possible, although these were among the more difficult questions.\nE5. A pre-entry bag check found no prohibited object. The student was not searched after the examination.\nE6. An invigilator who supervised an earlier quiz recalls that the student frequently tapped the desk and adjusted their glasses when nervous, but does not remember the jaw-touching pattern.\nE7. The student says they had received intensive private tutoring during the previous week and that the movements were ordinary anxiety-related fidgeting. No information about the tutor has yet been obtained.",
+  "initial_raw_model_output": "```json\n{\n  \"hypotheses\": [\n    {\n      \"id\": \"H1\",\n      \"parent_id\": null,\n      \"statement\": \"The student's performance was the result of prior knowledge and preparation.\",\n      \"status\": \"active\",\n      \"supported_by\": [\n        \"E1\",\n        \"E2\",\n        \"E4\",\n        \"E5\"\n      ],\n      \"conflicted_by\": [],\n      \"unresolved_uncertainty\": \"The source of the prior knowledge (e.g., tutoring vs. independent study) is not established.\",\n      \"specificity_basis\": [\n        \"E1\",\n        \"E2\",\n        \"E4\",\n        \"E5\"\n      ]\n    },\n    {\n      \"id\": \"H2\",\n      \"parent_id\": null,\n      \"statement\": \"The student's performance was the result of prior knowledge and preparation, facilitated by recent intensive tutoring.\",\n      \"status\": \"active\",\n      \"supported_by\": [\n        \"E1\",\n        \"E2\",\n        \"E4\",\n        \"E5\",\n        \"E7\"\n      ],\n      \"conflicted_by\": [],\n      \"unresolved_uncertainty\": \"The existence and content of the tutoring are not verified.\",\n      \"specificity_basis\": [\n        \"E1\",\n        \"E2\",\n        \"E4\",\n        \"E5\",\n        \"E7\"\n      ]\n    },\n    {\n      \"id\": \"H3\",\n      \"parent_id\": null,\n      \"statement\": \"The student's performance was the result of prior knowledge and preparation, facilitated by prior study and homework.\",\n      \"status\": \"active\",\n      \"supported_by\": [\n        \"E1\",\n        \"E2\",\n        \"E4\",\n        \"E5\",\n        \"E6\"\n      ],\n      \"conflicted_by\": [],\n      \"unresolved_uncertainty\": \"The extent to which prior study contributed to the high score is not quantified.\",\n      \"specificity_basis\": [\n        \"E1\",\n        \"E2\",\n        \"E4\",\n        \"E5\",\n        \"E6\"\n      ]\n    },\n    {\n      \"id\": \"H4\",\n      \"parent_id\": null,\n      \"statement\": \"The student's performance was the result of prior knowledge and preparation, facilitated by prior study and homework, and the movements were ordinary anxiety-related fidgeting.\",\n      \"status\": \"active\",\n      \"supported_by\": [\n        \"E1\",\n        \"E2\",\n        \"E4\",\n        \"E5\",\n        \"E6\",\n        \"E7\"\n      ],\n      \"conflicted_by\": [],\n      \"unresolved_uncertainty\": \"The correlation between the movements and the student's cognitive state is not established.\",\n      \"specificity_basis\": [\n        \"E1\",\n        \"E2\",\n        \"E4\",\n        \"E5\",\n        \"E6\",\n        \"E7\"\n      ]\n    }\n  ],\n  \"selected_action_id\": \"A1\",\n  \"target_uncertainty\": \"The existence and content of the claimed intensive tutoring.\",\n  \"expected_information_value\": \"High. Verifying the tutoring claim would directly discriminate between H2 (tutoring) and H3 (homework/prior study) by establishing a new, specific source of the student's prior knowledge. It would also allow for a more precise assessment of the student's preparation level.\",\n  \"why_this_action_now\": \"The current explanation space is dominated by the student's high performance (E1, E4) and the presence of a plausible alternative explanation for the movements (E7). The most consequential uncertainty is the source of the student's prior knowledge. If the tutoring claim is true, it provides a specific mechanism for the high score that is distinct from the student's general study habits. If false, the explanation space shifts toward H3. This action is the most direct way to resolve this uncertainty.\"\n}\n```",
+  "initial_response": {
+    "hypotheses": [
+      {
+        "id": "H1",
+        "parent_id": null,
+        "statement": "The student's performance was the result of prior knowledge and preparation.",
+        "status": "active",
+        "supported_by": [
+          "E1",
+          "E2",
+          "E4",
+          "E5"
+        ],
+        "conflicted_by": [],
+        "unresolved": [],
+        "specificity_basis": [
+          "E1",
+          "E2",
+          "E4",
+          "E5"
+        ]
+      },
+      {
+        "id": "H2",
+        "parent_id": null,
+        "statement": "The student's performance was the result of prior knowledge and preparation, facilitated by recent intensive tutoring.",
+        "status": "active",
+        "supported_by": [
+          "E1",
+          "E2",
+          "E4",
+          "E5",
+          "E7"
+        ],
+        "conflicted_by": [],
+        "unresolved": [],
+        "specificity_basis": [
+          "E1",
+          "E2",
+          "E4",
+          "E5",
+          "E7"
+        ]
+      },
+      {
+        "id": "H3",
+        "parent_id": null,
+        "statement": "The student's performance was the result of prior knowledge and preparation, facilitated by prior study and homework.",
+        "status": "active",
+        "supported_by": [
+          "E1",
+          "E2",
+          "E4",
+          "E5",
+          "E6"
+        ],
+        "conflicted_by": [],
+        "unresolved": [],
+        "specificity_basis": [
+          "E1",
+          "E2",
+          "E4",
+          "E5",
+          "E6"
+        ]
+      },
+      {
+        "id": "H4",
+        "parent_id": null,
+        "statement": "The student's performance was the result of prior knowledge and preparation, facilitated by prior study and homework, and the movements were ordinary anxiety-related fidgeting.",
+        "status": "active",
+        "supported_by": [
+          "E1",
+          "E2",
+          "E4",
+          "E5",
+          "E6",
+          "E7"
+        ],
+        "conflicted_by": [],
+        "unresolved": [],
+        "specificity_basis": [
+          "E1",
+          "E2",
+          "E4",
+          "E5",
+          "E6",
+          "E7"
+        ]
+      }
+    ],
+    "selected_action_id": "A1",
+    "target_uncertainty": "The existence and content of the claimed intensive tutoring.",
+    "expected_information_value": "High. Verifying the tutoring claim would directly discriminate between H2 (tutoring) and H3 (homework/prior study) by establishing a new, specific source of the student's prior knowledge. It would also allow for a more precise assessment of the student's preparation level.",
+    "why_this_action_now": "The current explanation space is dominated by the student's high performance (E1, E4) and the presence of a plausible alternative explanation for the movements (E7). The most consequential uncertainty is the source of the student's prior knowledge. If the tutoring claim is true, it provides a specific mechanism for the high score that is distinct from the student's general study habits. If false, the explanation space shifts toward H3. This action is the most direct way to resolve this uncertainty."
+  },
+  "initial_hypothesis_state": {
+    "case_id": "case_01",
+    "title": "Closed-book physical examination",
+    "description": null,
+    "sources": {
+      "case_01_visible": {
+        "id": "case_01_visible",
+        "name": "Case 01 visible evidence",
+        "source_type": "other",
+        "metadata": {}
+      }
+    },
+    "evidence": {
+      "E1": {
+        "id": "E1",
+        "source_id": "case_01_visible",
+        "raw_content": "E1. The student scored 40/40 and submitted after 57 minutes.",
+        "kind": "other",
+        "received_at": null,
+        "metadata": {}
+      },
+      "E2": {
+        "id": "E2",
+        "source_id": "case_01_visible",
+        "raw_content": "E2. Examination-room footage shows no visible phone, no communication with another candidate, and no repeated looking toward another desk.",
+        "kind": "other",
+        "received_at": null,
+        "metadata": {}
+      },
+      "E3": {
+        "id": "E3",
+        "source_id": "case_01_visible",
+        "raw_content": "E3. On 11 occasions, the student touched the right side of their jaw or ear and repositioned the pencil case with the other hand. Most of these movements occurred after the student had spent at least 20 seconds reading a question.",
+        "kind": "other",
+        "received_at": null,
+        "metadata": {}
+      },
+      "E4": {
+        "id": "E4",
+        "source_id": "case_01_visible",
+        "raw_content": "E4. The student answered several computational questions without writing visible calculations. Mental calculation was possible, although these were among the more difficult questions.",
+        "kind": "other",
+        "received_at": null,
+        "metadata": {}
+      },
+      "E5": {
+        "id": "E5",
+        "source_id": "case_01_visible",
+        "raw_content": "E5. A pre-entry bag check found no prohibited object. The student was not searched after the examination.",
+        "kind": "other",
+        "received_at": null,
+        "metadata": {}
+      },
+      "E6": {
+        "id": "E6",
+        "source_id": "case_01_visible",
+        "raw_content": "E6. An invigilator who supervised an earlier quiz recalls that the student frequently tapped the desk and adjusted their glasses when nervous, but does not remember the jaw-touching pattern.",
+        "kind": "other",
+        "received_at": null,
+        "metadata": {}
+      },
+      "E7": {
+        "id": "E7",
+        "source_id": "case_01_visible",
+        "raw_content": "E7. The student says they had received intensive private tutoring during the previous week and that the movements were ordinary anxiety-related fidgeting. No information about the tutor has yet been obtained.",
+        "kind": "other",
+        "received_at": null,
+        "metadata": {}
+      }
+    },
+    "entities": {},
+    "claims": {},
+    "hypotheses": {
+      "H1": {
+        "id": "H1",
+        "statement": "The student's performance was the result of prior knowledge and preparation.",
+        "origin": "agent_suggestion",
+        "status": "active",
+        "parent_hypothesis_id": null,
+        "supporting_evidence_ids": [
+          "E1",
+          "E2",
+          "E4",
+          "E5"
+        ],
+        "conflicting_evidence_ids": [],
+        "unresolved_issue_ids": [],
+        "specificity_basis": [
+          "E1",
+          "E2",
+          "E4",
+          "E5"
+        ]
+      },
+      "H2": {
+        "id": "H2",
+        "statement": "The student's performance was the result of prior knowledge and preparation, facilitated by recent intensive tutoring.",
+        "origin": "agent_suggestion",
+        "status": "active",
+        "parent_hypothesis_id": null,
+        "supporting_evidence_ids": [
+          "E1",
+          "E2",
+          "E4",
+          "E5",
+          "E7"
+        ],
+        "conflicting_evidence_ids": [],
+        "unresolved_issue_ids": [],
+        "specificity_basis": [
+          "E1",
+          "E2",
+          "E4",
+          "E5",
+          "E7"
+        ]
+      },
+      "H3": {
+        "id": "H3",
+        "statement": "The student's performance was the result of prior knowledge and preparation, facilitated by prior study and homework.",
+        "origin": "agent_suggestion",
+        "status": "active",
+        "parent_hypothesis_id": null,
+        "supporting_evidence_ids": [
+          "E1",
+          "E2",
+          "E4",
+          "E5",
+          "E6"
+        ],
+        "conflicting_evidence_ids": [],
+        "unresolved_issue_ids": [],
+        "specificity_basis": [
+          "E1",
+          "E2",
+          "E4",
+          "E5",
+          "E6"
+        ]
+      },
+      "H4": {
+        "id": "H4",
+        "statement": "The student's performance was the result of prior knowledge and preparation, facilitated by prior study and homework, and the movements were ordinary anxiety-related fidgeting.",
+        "origin": "agent_suggestion",
+        "status": "active",
+        "parent_hypothesis_id": null,
+        "supporting_evidence_ids": [
+          "E1",
+          "E2",
+          "E4",
+          "E5",
+          "E6",
+          "E7"
+        ],
+        "conflicting_evidence_ids": [],
+        "unresolved_issue_ids": [],
+        "specificity_basis": [
+          "E1",
+          "E2",
+          "E4",
+          "E5",
+          "E6",
+          "E7"
+        ]
+      }
+    },
+    "transformations": [],
+    "uncertainties": {},
+    "conflicts": {},
+    "revision": 0
+  },
+  "initial_metadata": {
+    "provider": "bedrock",
+    "model": "zai.glm-4.7-flash",
+    "input_tokens": 656,
+    "output_tokens": 811,
+    "latency_seconds": 7.202756875019986,
+    "parse_success": true,
+    "finish_reason": "end_turn"
+  },
+  "selected_action_id": "A1",
+  "target_uncertainty": "The existence and content of the claimed intensive tutoring.",
+  "expected_information_value": "High. Verifying the tutoring claim would directly discriminate between H2 (tutoring) and H3 (homework/prior study) by establishing a new, specific source of the student's prior knowledge. It would also allow for a more precise assessment of the student's preparation level.",
+  "why_this_action_now": "The current explanation space is dominated by the student's high performance (E1, E4) and the presence of a plausible alternative explanation for the movements (E7). The most consequential uncertainty is the source of the student's prior knowledge. If the tutoring claim is true, it provides a specific mechanism for the high score that is distinct from the student's general study habits. If false, the explanation space shifts toward H3. This action is the most direct way to resolve this uncertainty.",
+  "release": {
+    "action_id": "A1",
+    "artifact_id": "A1_RELEASE",
+    "artifact_path": "/Users/yanqinwang/Documents/simplifynext-investigator/experiments/investigation_smoke/case_01/artifacts/A1_tutoring_verification_packet.md",
+    "source_type": "record_and_source_statement",
+    "content": "# Case 01 \u2014 A1 Tutoring Verification Packet\n\n**Student identifier:** S-184  \n**Assessment:** Quantitative Methods closed-book examination  \n**Verification compiled:** 17 May 2026  \n**Purpose:** Check the student\u2019s claim that they received intensive private tutoring during the week before the examination.\n\n> This packet is synthetic. It records what could reasonably be obtained from a tutor and routine scheduling/payment records. It does not establish what happened during the examination.\n\n## 1. Identity and scheduling checks\n\nThe student named **Lena Vos** as the private tutor. Vos confirmed that she provides independent quantitative-methods tutoring through an online booking platform. The name, email address and payment reference supplied by the student matched the tutor\u2019s account.\n\nFour appointments were found:\n\n| Date | Scheduled time | Connection record | Subject recorded by tutor |\n|---|---:|---:|---|\n| 6 May | 19:00\u201320:30 | 88 minutes | Conditional probability and Bayes\u2019 rule |\n| 8 May | 18:30\u201320:00 | 94 minutes | Matrices and simultaneous linear equations |\n| 11 May | 19:15\u201320:45 | 87 minutes | Ordinary linear regression and residual interpretation |\n| 13 May | 18:00\u201319:30 | 96 minutes | Mixed multiple-choice practice |\n\nThe 6 May session started eleven minutes late because the tutor\u2019s video connection failed. A payment receipt initially misspelled the student\u2019s surname but used the same booking reference; the platform later corrected it. No other sessions were found during the preceding month.\n\n## 2. Tutor\u2019s session notes\n\nVos supplied brief notes written after each session.\n\n### 6 May \u2014 Probability\n\nThe student followed worked examples and could identify the relevant events in straightforward conditional-probability questions. They needed prompts on two multi-stage problems because they treated dependent events as independent. By the end of the session, they completed a similar two-stage example after one correction.\n\n### 8 May \u2014 Matrices\n\nThe student solved five of seven routine systems without help. On three more difficult items, they completed one independently, needed a hint on the second, and did not finish the third. Vos noted that the student\u2019s arithmetic was usually quick but occasionally careless.\n\n### 11 May \u2014 Regression\n\nThe session covered ordinary linear regression, interpreting coefficients and reading residual plots. The tutor did **not** use logarithmic transformations or transformed-variable questions. Vos recorded that the student understood the direction of relationships but confused a slope coefficient with a correlation coefficient once.\n\n### 13 May \u2014 Mixed practice\n\nThe student completed 25 multiple-choice questions assembled from a commercially available textbook and the tutor\u2019s own notes. There was no full mock examination and no access to the university\u2019s question bank. The student selected 19 correct answers on the first attempt, corrected three after prompts, and left three unresolved when the session ended. The practice was not conducted under closed-book examination conditions. Vos said the mixed set did not include logarithmically transformed regression questions and she does not recall teaching that topic in any of the four sessions.\n\n## 3. Tutor statement\n\nVos stated:\n\n> \u201cThe student was attentive and had clearly revised between sessions. They improved on question types we had already practised. I would describe the week as intensive compared with our usual schedule. I cannot say that the student had mastered every topic independently, and I did not observe them under formal examination conditions. I also cannot estimate what mark they should have received.\u201d\n\nVos denied receiving the actual assessment, an answer key or screenshots of assessment questions. She said the student did not ask for help during the examination period. The booking platform retains connection durations but not session recordings.\n\n## 4. What this packet verifies\n\nThe available records corroborate that:\n\n- the named tutor exists;\n- four substantial sessions took place during the week before the examination;\n- the sessions covered several examinable topics;\n- the student showed some improvement during those sessions.\n\nThe records do **not** establish:\n\n- that the student independently mastered every examinable topic;\n- that the tutoring alone explains a perfect examination score;\n- what assistance, if any, was available during the examination;\n- the student\u2019s exact level of knowledge on examination day.\n"
+  },
+  "revision_prompt": "Use only released evidence. Previous hypotheses are not evidence and must not be cited as support.\nKeep hypotheses at the broadest level that is still decision-useful. Do not specify a mechanism, actor, direction, device, tool, location, source, communication channel, or sequence unless released evidence supports that specificity.\nUse conditional language for unestablished mechanisms. Do not decide whether misconduct occurred, assign numerical confidence, or propose a final verdict.\nDistinguish observations from possible explanations. Prefer a small number of broad competing explanations.\n\nRevise the existing hypothesis tree after one controlled evidence release. Only the original case evidence plus the newly released artefact may justify revision. Do not rewrite history. Preserve broad parent hypotheses unless the new evidence genuinely conflicts with them. Narrow only when the new evidence supports increased specificity. If a narrow child is contradicted while its parent remains viable, weaken or remove the child and preserve or reactivate the parent. Do not invent a replacement mechanism merely because one branch failed. Unresolved uncertainty is a valid endpoint.\n\nReturn only JSON with keys hypothesis_updates, new_hypotheses, remaining_uncertainties, and revision_rationale. Use hypothesis_updates with hypothesis_id, transition (keep/weaken/conflict/remove/activate), an audit reason, and optional additive lists: add_supporting_evidence_ids, add_conflicting_evidence_ids, and add_specificity_basis. Attach the newly released artefact evidence ID only where it genuinely supports, conflicts with, or justifies narrowing a hypothesis; not every update needs it. Do not select another enquiry.\n\nOriginal visible case:\nCASE 01 \u2014 Closed-book physical examination\n\nAssessment context:\n90-minute closed-book quantitative methods examination. 40 multiple-choice questions. Phones and smartwatches had to be surrendered before entry. Ordinary stationery and opaque pencil cases were permitted. The student scored between 52% and 64% on four earlier timed quizzes. Homework median: 66%.\n\nEvidence:\nE1. The student scored 40/40 and submitted after 57 minutes.\nE2. Examination-room footage shows no visible phone, no communication with another candidate, and no repeated looking toward another desk.\nE3. On 11 occasions, the student touched the right side of their jaw or ear and repositioned the pencil case with the other hand. Most of these movements occurred after the student had spent at least 20 seconds reading a question.\nE4. The student answered several computational questions without writing visible calculations. Mental calculation was possible, although these were among the more difficult questions.\nE5. A pre-entry bag check found no prohibited object. The student was not searched after the examination.\nE6. An invigilator who supervised an earlier quiz recalls that the student frequently tapped the desk and adjusted their glasses when nervous, but does not remember the jaw-touching pattern.\nE7. The student says they had received intensive private tutoring during the previous week and that the movements were ordinary anxiety-related fidgeting. No information about the tutor has yet been obtained.\n\nPrior hypotheses/tree (NOT evidence):\n[\n  {\n    \"id\": \"H1\",\n    \"statement\": \"The student's performance was the result of prior knowledge and preparation.\",\n    \"origin\": \"agent_suggestion\",\n    \"status\": \"active\",\n    \"parent_hypothesis_id\": null,\n    \"supporting_evidence_ids\": [\n      \"E1\",\n      \"E2\",\n      \"E4\",\n      \"E5\"\n    ],\n    \"conflicting_evidence_ids\": [],\n    \"unresolved_issue_ids\": [],\n    \"specificity_basis\": [\n      \"E1\",\n      \"E2\",\n      \"E4\",\n      \"E5\"\n    ]\n  },\n  {\n    \"id\": \"H2\",\n    \"statement\": \"The student's performance was the result of prior knowledge and preparation, facilitated by recent intensive tutoring.\",\n    \"origin\": \"agent_suggestion\",\n    \"status\": \"active\",\n    \"parent_hypothesis_id\": null,\n    \"supporting_evidence_ids\": [\n      \"E1\",\n      \"E2\",\n      \"E4\",\n      \"E5\",\n      \"E7\"\n    ],\n    \"conflicting_evidence_ids\": [],\n    \"unresolved_issue_ids\": [],\n    \"specificity_basis\": [\n      \"E1\",\n      \"E2\",\n      \"E4\",\n      \"E5\",\n      \"E7\"\n    ]\n  },\n  {\n    \"id\": \"H3\",\n    \"statement\": \"The student's performance was the result of prior knowledge and preparation, facilitated by prior study and homework.\",\n    \"origin\": \"agent_suggestion\",\n    \"status\": \"active\",\n    \"parent_hypothesis_id\": null,\n    \"supporting_evidence_ids\": [\n      \"E1\",\n      \"E2\",\n      \"E4\",\n      \"E5\",\n      \"E6\"\n    ],\n    \"conflicting_evidence_ids\": [],\n    \"unresolved_issue_ids\": [],\n    \"specificity_basis\": [\n      \"E1\",\n      \"E2\",\n      \"E4\",\n      \"E5\",\n      \"E6\"\n    ]\n  },\n  {\n    \"id\": \"H4\",\n    \"statement\": \"The student's performance was the result of prior knowledge and preparation, facilitated by prior study and homework, and the movements were ordinary anxiety-related fidgeting.\",\n    \"origin\": \"agent_suggestion\",\n    \"status\": \"active\",\n    \"parent_hypothesis_id\": null,\n    \"supporting_evidence_ids\": [\n      \"E1\",\n      \"E2\",\n      \"E4\",\n      \"E5\",\n      \"E6\",\n      \"E7\"\n    ],\n    \"conflicting_evidence_ids\": [],\n    \"unresolved_issue_ids\": [],\n    \"specificity_basis\": [\n      \"E1\",\n      \"E2\",\n      \"E4\",\n      \"E5\",\n      \"E6\",\n      \"E7\"\n    ]\n  }\n]\n\nPrior unresolved uncertainties:\n[]\n\nSelected enquiry:\n{\n  \"action_id\": \"A1\",\n  \"title\": \"Verify tutoring claim\",\n  \"definition\": \"Independently verify whether the claimed intensive tutoring during the previous week occurred and what was covered.\"\n}\n\nNewly released artefact content:\n# Case 01 \u2014 A1 Tutoring Verification Packet\n\n**Student identifier:** S-184  \n**Assessment:** Quantitative Methods closed-book examination  \n**Verification compiled:** 17 May 2026  \n**Purpose:** Check the student\u2019s claim that they received intensive private tutoring during the week before the examination.\n\n> This packet is synthetic. It records what could reasonably be obtained from a tutor and routine scheduling/payment records. It does not establish what happened during the examination.\n\n## 1. Identity and scheduling checks\n\nThe student named **Lena Vos** as the private tutor. Vos confirmed that she provides independent quantitative-methods tutoring through an online booking platform. The name, email address and payment reference supplied by the student matched the tutor\u2019s account.\n\nFour appointments were found:\n\n| Date | Scheduled time | Connection record | Subject recorded by tutor |\n|---|---:|---:|---|\n| 6 May | 19:00\u201320:30 | 88 minutes | Conditional probability and Bayes\u2019 rule |\n| 8 May | 18:30\u201320:00 | 94 minutes | Matrices and simultaneous linear equations |\n| 11 May | 19:15\u201320:45 | 87 minutes | Ordinary linear regression and residual interpretation |\n| 13 May | 18:00\u201319:30 | 96 minutes | Mixed multiple-choice practice |\n\nThe 6 May session started eleven minutes late because the tutor\u2019s video connection failed. A payment receipt initially misspelled the student\u2019s surname but used the same booking reference; the platform later corrected it. No other sessions were found during the preceding month.\n\n## 2. Tutor\u2019s session notes\n\nVos supplied brief notes written after each session.\n\n### 6 May \u2014 Probability\n\nThe student followed worked examples and could identify the relevant events in straightforward conditional-probability questions. They needed prompts on two multi-stage problems because they treated dependent events as independent. By the end of the session, they completed a similar two-stage example after one correction.\n\n### 8 May \u2014 Matrices\n\nThe student solved five of seven routine systems without help. On three more difficult items, they completed one independently, needed a hint on the second, and did not finish the third. Vos noted that the student\u2019s arithmetic was usually quick but occasionally careless.\n\n### 11 May \u2014 Regression\n\nThe session covered ordinary linear regression, interpreting coefficients and reading residual plots. The tutor did **not** use logarithmic transformations or transformed-variable questions. Vos recorded that the student understood the direction of relationships but confused a slope coefficient with a correlation coefficient once.\n\n### 13 May \u2014 Mixed practice\n\nThe student completed 25 multiple-choice questions assembled from a commercially available textbook and the tutor\u2019s own notes. There was no full mock examination and no access to the university\u2019s question bank. The student selected 19 correct answers on the first attempt, corrected three after prompts, and left three unresolved when the session ended. The practice was not conducted under closed-book examination conditions. Vos said the mixed set did not include logarithmically transformed regression questions and she does not recall teaching that topic in any of the four sessions.\n\n## 3. Tutor statement\n\nVos stated:\n\n> \u201cThe student was attentive and had clearly revised between sessions. They improved on question types we had already practised. I would describe the week as intensive compared with our usual schedule. I cannot say that the student had mastered every topic independently, and I did not observe them under formal examination conditions. I also cannot estimate what mark they should have received.\u201d\n\nVos denied receiving the actual assessment, an answer key or screenshots of assessment questions. She said the student did not ask for help during the examination period. The booking platform retains connection durations but not session recordings.\n\n## 4. What this packet verifies\n\nThe available records corroborate that:\n\n- the named tutor exists;\n- four substantial sessions took place during the week before the examination;\n- the sessions covered several examinable topics;\n- the student showed some improvement during those sessions.\n\nThe records do **not** establish:\n\n- that the student independently mastered every examinable topic;\n- that the tutoring alone explains a perfect examination score;\n- what assistance, if any, was available during the examination;\n- the student\u2019s exact level of knowledge on examination day.\n",
+  "revision_raw_model_output": null,
+  "revision_response": null,
+  "revision_metadata": null,
+  "final_hypothesis_state": null,
+  "parse_success": false,
+  "error_message": "Bedrock returned invalid structured output for RevisionResponse: Could not parse model output as RevisionResponse: 2 validation errors for RevisionResponse\nhypothesis_updates.0.reason\n  Field required [type=missing, input_value={'hypothesis_id': 'H2', '...cificity_basis': ['A1']}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nhypothesis_updates.1.reason\n  Field required [type=missing, input_value={'hypothesis_id': 'H4', '...cificity_basis': ['A1']}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing"
+}
