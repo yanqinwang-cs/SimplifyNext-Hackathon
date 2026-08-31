@@ -58,6 +58,21 @@
     },
     {
       "intended_code": "S0",
+      "name": "truncated_json_midpoint",
+      "raw_output": "{\"competing_hypotheses\": [{\"conflicted_by\": [], \"contrasted_hypothesis_id\": \"H1\", \"id\": \"H2\", \"material_difference\": \"It proposes a different cause.\", \"parent_id\": null, \"relationship\": \"competing_root\", \"specificity_basis_evidence_ids\": [], \"statement\": \"A materially different explanation.\", \"status\": \"active\", \"supported_by\": [\"E2\"], \"unresolved\": [\"Which account is better suppo"
+    },
+    {
+      "intended_code": "S0",
+      "name": "trailing_comma",
+      "raw_output": "{\"competing_hypotheses\": [{\"conflicted_by\": [], \"contrasted_hypothesis_id\": \"H1\", \"id\": \"H2\", \"material_difference\": \"It proposes a different cause.\", \"parent_id\": null, \"relationship\": \"competing_root\", \"specificity_basis_evidence_ids\": [], \"statement\": \"A materially different explanation.\", \"status\": \"active\", \"supported_by\": [\"E2\"], \"unresolved\": [\"Which account is better supported?\"]}], \"expected_information_value\": \"The result can distinguish explanations.\", \"seed_analysis\": {\"conflicted_by\": [], \"specificity_basis_evidence_ids\": [], \"supported_by\": [\"E1\"], \"unresolved\": [\"What remains uncertain?\"]}, \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\",}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "duplicate_braces",
+      "raw_output": "{{\"competing_hypotheses\": [{\"conflicted_by\": [], \"contrasted_hypothesis_id\": \"H1\", \"id\": \"H2\", \"material_difference\": \"It proposes a different cause.\", \"parent_id\": null, \"relationship\": \"competing_root\", \"specificity_basis_evidence_ids\": [], \"statement\": \"A materially different explanation.\", \"status\": \"active\", \"supported_by\": [\"E2\"], \"unresolved\": [\"Which account is better supported?\"]}], \"expected_information_value\": \"The result can distinguish explanations.\", \"seed_analysis\": {\"conflicted_by\": [], \"specificity_basis_evidence_ids\": [], \"supported_by\": [\"E1\"], \"unresolved\": [\"What remains uncertain?\"]}, \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}}"
+    },
+    {
+      "intended_code": "S0",
       "name": "prose_before_json",
       "raw_output": "Here is the object:\n{\"competing_hypotheses\": [{\"conflicted_by\": [], \"contrasted_hypothesis_id\": \"H1\", \"id\": \"H2\", \"material_difference\": \"It proposes a different cause.\", \"parent_id\": null, \"relationship\": \"competing_root\", \"specificity_basis_evidence_ids\": [], \"statement\": \"A materially different explanation.\", \"status\": \"active\", \"supported_by\": [\"E2\"], \"unresolved\": [\"Which account is better supported?\"]}], \"expected_information_value\": \"The result can distinguish explanations.\", \"seed_analysis\": {\"conflicted_by\": [], \"specificity_basis_evidence_ids\": [], \"supported_by\": [\"E1\"], \"unresolved\": [\"What remains uncertain?\"]}, \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
     },
@@ -65,6 +80,31 @@
       "intended_code": "S0",
       "name": "trailing_material",
       "raw_output": "{\"competing_hypotheses\": [{\"conflicted_by\": [], \"contrasted_hypothesis_id\": \"H1\", \"id\": \"H2\", \"material_difference\": \"It proposes a different cause.\", \"parent_id\": null, \"relationship\": \"competing_root\", \"specificity_basis_evidence_ids\": [], \"statement\": \"A materially different explanation.\", \"status\": \"active\", \"supported_by\": [\"E2\"], \"unresolved\": [\"Which account is better supported?\"]}], \"expected_information_value\": \"The result can distinguish explanations.\", \"seed_analysis\": {\"conflicted_by\": [], \"specificity_basis_evidence_ids\": [], \"supported_by\": [\"E1\"], \"unresolved\": [\"What remains uncertain?\"]}, \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}\nDone."
+    },
+    {
+      "intended_code": "S0",
+      "name": "multiple_json_objects",
+      "raw_output": "{\"competing_hypotheses\": [{\"conflicted_by\": [], \"contrasted_hypothesis_id\": \"H1\", \"id\": \"H2\", \"material_difference\": \"It proposes a different cause.\", \"parent_id\": null, \"relationship\": \"competing_root\", \"specificity_basis_evidence_ids\": [], \"statement\": \"A materially different explanation.\", \"status\": \"active\", \"supported_by\": [\"E2\"], \"unresolved\": [\"Which account is better supported?\"]}], \"expected_information_value\": \"The result can distinguish explanations.\", \"seed_analysis\": {\"conflicted_by\": [], \"specificity_basis_evidence_ids\": [], \"supported_by\": [\"E1\"], \"unresolved\": [\"What remains uncertain?\"]}, \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}\n{\"competing_hypotheses\": [{\"conflicted_by\": [], \"contrasted_hypothesis_id\": \"H1\", \"id\": \"H2\", \"material_difference\": \"It proposes a different cause.\", \"parent_id\": null, \"relationship\": \"competing_root\", \"specificity_basis_evidence_ids\": [], \"statement\": \"A materially different explanation.\", \"status\": \"active\", \"supported_by\": [\"E2\"], \"unresolved\": [\"Which account is better supported?\"]}], \"expected_information_value\": \"The result can distinguish explanations.\", \"seed_analysis\": {\"conflicted_by\": [], \"specificity_basis_evidence_ids\": [], \"supported_by\": [\"E1\"], \"unresolved\": [\"What remains uncertain?\"]}, \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "json_array_top_level",
+      "raw_output": "[{\"competing_hypotheses\": [{\"conflicted_by\": [], \"contrasted_hypothesis_id\": \"H1\", \"id\": \"H2\", \"material_difference\": \"It proposes a different cause.\", \"parent_id\": null, \"relationship\": \"competing_root\", \"specificity_basis_evidence_ids\": [], \"statement\": \"A materially different explanation.\", \"status\": \"active\", \"supported_by\": [\"E2\"], \"unresolved\": [\"Which account is better supported?\"]}], \"expected_information_value\": \"The result can distinguish explanations.\", \"seed_analysis\": {\"conflicted_by\": [], \"specificity_basis_evidence_ids\": [], \"supported_by\": [\"E1\"], \"unresolved\": [\"What remains uncertain?\"]}, \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}]"
+    },
+    {
+      "intended_code": "S0",
+      "name": "empty_fence",
+      "raw_output": "```json\n```"
+    },
+    {
+      "intended_code": "S0",
+      "name": "broken_opening_fence",
+      "raw_output": "```json\n{\"competing_hypotheses\": [{\"conflicted_by\": [], \"contrasted_hypothesis_id\": \"H1\", \"id\": \"H2\", \"material_difference\": \"It proposes a different cause.\", \"parent_id\": null, \"relationship\": \"competing_root\", \"specificity_basis_evidence_ids\": [], \"statement\": \"A materially different explanation.\", \"status\": \"active\", \"supported_by\": [\"E2\"], \"unresolved\": [\"Which account is better supported?\"]}], \"expected_information_value\": \"The result can distinguish explanations.\", \"seed_analysis\": {\"conflicted_by\": [], \"specificity_basis_evidence_ids\": [], \"supported_by\": [\"E1\"], \"unresolved\": [\"What remains uncertain?\"]}, \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}\n"
+    },
+    {
+      "intended_code": "S0",
+      "name": "broken_closing_fence",
+      "raw_output": "{\"competing_hypotheses\": [{\"conflicted_by\": [], \"contrasted_hypothesis_id\": \"H1\", \"id\": \"H2\", \"material_difference\": \"It proposes a different cause.\", \"parent_id\": null, \"relationship\": \"competing_root\", \"specificity_basis_evidence_ids\": [], \"statement\": \"A materially different explanation.\", \"status\": \"active\", \"supported_by\": [\"E2\"], \"unresolved\": [\"Which account is better supported?\"]}], \"expected_information_value\": \"The result can distinguish explanations.\", \"seed_analysis\": {\"conflicted_by\": [], \"specificity_basis_evidence_ids\": [], \"supported_by\": [\"E1\"], \"unresolved\": [\"What remains uncertain?\"]}, \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}\n```"
     },
     {
       "intended_code": "valid",

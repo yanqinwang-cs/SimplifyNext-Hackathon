@@ -16,10 +16,19 @@ class Mutation:
 def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), contract: str | None = None) -> list[Mutation]:
     result = [Mutation("empty", "S0", ""), Mutation("whitespace", "S0", "   "), Mutation("prose_only", "S0", "Here is the requested object.")]
     canonical = json.dumps(value, sort_keys=True)
+    midpoint = max(1, len(canonical) // 2)
     result.extend([
         Mutation("malformed_json", "S0", canonical[:-1]),
+        Mutation("truncated_json_midpoint", "S0", canonical[:midpoint]),
+        Mutation("trailing_comma", "S0", canonical[:-1] + ",}"),
+        Mutation("duplicate_braces", "S0", "{" + canonical + "}"),
         Mutation("prose_before_json", "S0", "Here is the object:\n" + canonical),
         Mutation("trailing_material", "S0", canonical + "\nDone."),
+        Mutation("multiple_json_objects", "S0", canonical + "\n" + canonical),
+        Mutation("json_array_top_level", "S0", "[" + canonical + "]"),
+        Mutation("empty_fence", "S0", "```json\n```"),
+        Mutation("broken_opening_fence", "S0", "```json\n" + canonical + "\n"),
+        Mutation("broken_closing_fence", "S0", canonical + "\n```"),
         Mutation("fenced_json", "valid", "```json\n" + canonical + "\n```"),
     ])
     for field in required_fields:

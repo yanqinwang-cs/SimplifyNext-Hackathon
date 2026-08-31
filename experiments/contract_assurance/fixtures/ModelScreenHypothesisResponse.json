@@ -37,6 +37,21 @@
     },
     {
       "intended_code": "S0",
+      "name": "truncated_json_midpoint",
+      "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unk"
+    },
+    {
+      "intended_code": "S0",
+      "name": "trailing_comma",
+      "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}],}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "duplicate_braces",
+      "raw_output": "{{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}}"
+    },
+    {
+      "intended_code": "S0",
       "name": "prose_before_json",
       "raw_output": "Here is the object:\n{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}"
     },
@@ -44,6 +59,31 @@
       "intended_code": "S0",
       "name": "trailing_material",
       "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}\nDone."
+    },
+    {
+      "intended_code": "S0",
+      "name": "multiple_json_objects",
+      "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}\n{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "json_array_top_level",
+      "raw_output": "[{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}]"
+    },
+    {
+      "intended_code": "S0",
+      "name": "empty_fence",
+      "raw_output": "```json\n```"
+    },
+    {
+      "intended_code": "S0",
+      "name": "broken_opening_fence",
+      "raw_output": "```json\n{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}\n"
+    },
+    {
+      "intended_code": "S0",
+      "name": "broken_closing_fence",
+      "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}\n```"
     },
     {
       "intended_code": "valid",
