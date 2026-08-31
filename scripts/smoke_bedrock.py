@@ -1,7 +1,7 @@
 """Make one minimal live Bedrock structured-call smoke test."""
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from investigator.llm.bedrock import BedrockModelClient
 
@@ -9,6 +9,13 @@ from investigator.llm.bedrock import BedrockModelClient
 class SmokeResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     answer: str
+
+    @field_validator("answer")
+    @classmethod
+    def reject_template_sentinel(cls, value: str) -> str:
+        if value.strip().startswith("REPLACE_WITH_"):
+            raise ValueError("Template placeholder is not valid model output")
+        return value
 
 
 def main() -> None:

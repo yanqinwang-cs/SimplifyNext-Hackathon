@@ -1,0 +1,63 @@
+{
+  "canonical": {
+    "answer": "4"
+  },
+  "contract": "SmokeResponse",
+  "mutations": [
+    {
+      "intended_code": "S0",
+      "name": "empty",
+      "raw_output": ""
+    },
+    {
+      "intended_code": "S0",
+      "name": "whitespace",
+      "raw_output": "   "
+    },
+    {
+      "intended_code": "S0",
+      "name": "prose_only",
+      "raw_output": "Here is the requested object."
+    },
+    {
+      "intended_code": "S0",
+      "name": "malformed_json",
+      "raw_output": "{\"answer\": \"4\""
+    },
+    {
+      "intended_code": "S0",
+      "name": "prose_before_json",
+      "raw_output": "Here is the object:\n{\"answer\": \"4\"}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "trailing_material",
+      "raw_output": "{\"answer\": \"4\"}\nDone."
+    },
+    {
+      "intended_code": "valid",
+      "name": "fenced_json",
+      "raw_output": "```json\n{\"answer\": \"4\"}\n```"
+    },
+    {
+      "intended_code": "S1",
+      "name": "remove_answer",
+      "raw_output": "{}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_primitive_answer",
+      "raw_output": "{\"answer\": 7}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "unexpected_field",
+      "raw_output": "{\"answer\": \"4\", \"unexpected_field\": \"x\"}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "placeholder_text",
+      "raw_output": "{\"answer\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\"}"
+    }
+  ]
+}

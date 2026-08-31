@@ -49,22 +49,22 @@
     "SmokeResponse|S0|serialization|Expecting value: line 1 column 1 (char 0)": 2,
     "SmokeResponse|S0|serialization|Extra data: line 2 column 1 (char 16)": 1,
     "SmokeResponse|S0|serialization|empty model output": 2,
-    "SmokeResponse|S1|schema|1 validation error for SmokeResponse": 4
+    "SmokeResponse|S1|schema|1 validation error for SmokeResponse": 3
   },
   "deterministic": {
-    "accepted": 9,
+    "accepted": 10,
     "failure_codes": {
       "S0": 42,
-      "S1": 49,
+      "S1": 48,
       "S2": 24,
       "S3": 5,
       "S4": 7
     },
-    "rejected": 127,
+    "rejected": 126,
     "s5_candidates": 0,
     "s6_limitations": 0,
     "total": 136,
-    "unexpected_accepts": 0,
+    "unexpected_accepts": 1,
     "unexpected_rejects": 0
   },
   "deterministic_by_contract": {
@@ -147,18 +147,18 @@
       "total": 14
     },
     "SmokeResponse": {
-      "accepted": 1,
+      "accepted": 2,
       "failure_codes": {
         "S0": 6,
-        "S1": 4
+        "S1": 3
       },
-      "rejected": 10,
+      "rejected": 9,
       "s5_candidates": 0,
       "s6_limitations": 0,
       "total": 11
     }
   },
-  "generated_at": "2026-08-31T15:33:25.196638+00:00",
+  "generated_at": "2026-08-31T15:33:03.287570+00:00",
   "inventory": {
     "contracts": [
       {
@@ -173,7 +173,7 @@
           "scripts.smoke_bedrock.main"
         ],
         "prompt_hashes": {
-          "scripts/smoke_bedrock.py": "10360c7ed7c44dbc63708cd0f34c56843248fb02a8cfb489856c413b7d00a0ca"
+          "scripts/smoke_bedrock.py": "972295d0c8319c1bfed7254295a69e86e78adf86425a085daaf29ca3c2d76dc9"
         },
         "prompt_sources": [
           "scripts/smoke_bedrock.py"
@@ -182,7 +182,7 @@
         "schema": "SmokeResponse",
         "schema_hash": "fc008e3ce54e1de048758174b829e39bd4c47b13edbd2574f60044ecce9e9f22",
         "source": "scripts/smoke_bedrock.py",
-        "source_hash": "10360c7ed7c44dbc63708cd0f34c56843248fb02a8cfb489856c413b7d00a0ca",
+        "source_hash": "972295d0c8319c1bfed7254295a69e86e78adf86425a085daaf29ca3c2d76dc9",
         "template_placeholders": []
       },
       {

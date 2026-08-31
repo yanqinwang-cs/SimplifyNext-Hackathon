@@ -12,7 +12,7 @@
         "scripts.smoke_bedrock.main"
       ],
       "prompt_hashes": {
-        "scripts/smoke_bedrock.py": "972295d0c8319c1bfed7254295a69e86e78adf86425a085daaf29ca3c2d76dc9"
+        "scripts/smoke_bedrock.py": "10360c7ed7c44dbc63708cd0f34c56843248fb02a8cfb489856c413b7d00a0ca"
       },
       "prompt_sources": [
         "scripts/smoke_bedrock.py"
@@ -21,7 +21,7 @@
       "schema": "SmokeResponse",
       "schema_hash": "fc008e3ce54e1de048758174b829e39bd4c47b13edbd2574f60044ecce9e9f22",
       "source": "scripts/smoke_bedrock.py",
-      "source_hash": "972295d0c8319c1bfed7254295a69e86e78adf86425a085daaf29ca3c2d76dc9",
+      "source_hash": "10360c7ed7c44dbc63708cd0f34c56843248fb02a8cfb489856c413b7d00a0ca",
       "template_placeholders": []
     },
     {
@@ -206,6 +206,6 @@
       "source": "src/investigator/services/contracts.py"
     }
   ],
-  "git_commit": "22ddaf2",
+  "git_commit": "c2f9ec2",
   "unregistered_response_classes": []
 }
