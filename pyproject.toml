@@ -3,7 +3,7 @@ name = "investigator"
 version = "0.1.0"
 description = "A deterministic case-state kernel for investigative assistants"
 requires-python = ">=3.12"
-dependencies = ["pydantic>=2.7,<3"]
+dependencies = ["boto3>=1.35,<2", "pydantic>=2.7,<3"]
 
 [dependency-groups]
 dev = ["pytest>=8.0,<9"]
@@ -17,4 +17,4 @@ packages = ["src/investigator"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-
+pythonpath = ["."]
