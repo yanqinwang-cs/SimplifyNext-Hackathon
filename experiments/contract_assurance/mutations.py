@@ -101,6 +101,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         mismatch["competing_hypotheses"][0]["parent_id"] = "H1"
         result.append(Mutation("competing_root_with_parent", "S4", json.dumps(mismatch, sort_keys=True)))
     if contract == "RevisionResponse":
+        valid_update = copy.deepcopy(value)
+        valid_update["hypothesis_updates"] = [{"hypothesis_id": "H1", "transition": "weaken", "reason": "New evidence reduces support for this hypothesis."}]
+        result.append(Mutation("valid_state_update", "valid", json.dumps(valid_update, sort_keys=True)))
         mismatch = copy.deepcopy(value)
         mismatch["new_uncertainties"] = [{"id": "H1:U1", "hypothesis_id": "H2", "description": "A new uncertainty."}]
         result.append(Mutation("uncertainty_owner_mismatch", "S4", json.dumps(mismatch, sort_keys=True)))
