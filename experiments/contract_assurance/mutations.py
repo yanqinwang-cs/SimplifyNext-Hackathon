@@ -378,6 +378,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         self_contrast = copy.deepcopy(value)
         self_contrast["competing_hypotheses"][0]["contrasted_hypothesis_id"] = self_contrast["competing_hypotheses"][0]["id"]
         result.append(Mutation("competing_root_self_contrast", "S4", json.dumps(self_contrast, sort_keys=True)))
+        missing_difference = copy.deepcopy(value)
+        missing_difference["competing_hypotheses"][0]["material_difference"] = None
+        result.append(Mutation("competing_root_without_material_difference", "S4", json.dumps(missing_difference, sort_keys=True)))
         specialization = copy.deepcopy(value)
         specialization["competing_hypotheses"][0].update({"parent_id": "H1", "relationship": "specialization", "contrasted_hypothesis_id": None, "material_difference": None, "specificity_basis_evidence_ids": ["E1"]})
         result.append(Mutation("valid_specialization_relationship", "valid", json.dumps(specialization, sort_keys=True)))
