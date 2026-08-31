@@ -5,6 +5,7 @@ from experiments.contract_assurance.evaluate import evaluate_raw
 from experiments.contract_assurance.evaluate import evaluate_initial, evaluate_next_action, evaluate_revision
 from experiments.contract_assurance.inventory import assert_complete_inventory, assert_inventory_paths, discover_response_classes, render_inventory_markdown, unregistered_response_classes, write_inventory_markdown
 from experiments.contract_assurance.audit import BlindBatchAudit
+from experiments.contract_assurance.evolution.records import validate_evolution_record
 from experiments.contract_assurance.runner import run_deterministic, verify_committed_packages
 from experiments.contract_assurance.mutations import write_fixture_manifest
 from experiments.contract_assurance.mutations import deduplicate, mutations
@@ -231,6 +232,12 @@ def test_all_committed_public_packages_match_registered_contracts():
         assert contract in registry
         assert verify_snapshot_against_contract(payload, registry[contract]) == [], path.name
     assert verify_committed_packages(Path(__file__).resolve().parents[1]) == []
+
+
+def test_evolution_records_require_semantic_and_regression_evidence():
+    assert "legitimate_semantic_need" in validate_evolution_record({"change_id": "C1"})
+    record = {field: "present" for field in ("change_id", "contract", "discovery_source", "baseline_failure", "classification", "legitimate_semantic_need", "why_existing_contract_insufficient", "implementation_change", "tests_added", "expected_reclassifications", "unexpected_regressions", "before_after_compliance", "commit")}
+    assert validate_evolution_record(record) == []
 
 
 def test_registered_experiment_contracts_forbid_unexpected_fields():
