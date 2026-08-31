@@ -4,7 +4,7 @@ from pathlib import Path
 from experiments.contract_assurance.evaluate import evaluate_raw
 from experiments.contract_assurance.evaluate import evaluate_initial, evaluate_next_action, evaluate_revision, persist_evaluations
 from experiments.contract_assurance.inventory import assert_complete_inventory, assert_inventory_paths, discover_response_classes, render_inventory_markdown, unregistered_response_classes, write_inventory_markdown
-from experiments.contract_assurance.audit import BlindBatchAudit
+from experiments.contract_assurance.audit import BlindBatchAudit, audit_batch_package
 from experiments.contract_assurance.evolution.records import validate_evolution_record
 from experiments.contract_assurance.runner import run_deterministic, verify_committed_packages
 from experiments.contract_assurance.mutations import write_fixture_manifest
@@ -103,6 +103,15 @@ def test_snapshots_are_hashable_and_public(tmp_path: Path):
     assert safe_path.exists()
     with __import__("pytest").raises(ValueError, match="Public snapshot rejected"):
         write_public_snapshot(spec, tmp_path / "unsafe", prompt="Return JSON; validator implementation is hidden", case_input={"case": "public"}, template=valid_action(), commit="abc")
+
+
+def test_blind_batch_audit_verifies_exact_package_and_isolation(tmp_path: Path):
+    spec = contract_registry()["NextActionResponse"]
+    path = write_public_snapshot(spec, tmp_path, prompt="Return JSON", case_input={"case": "public"}, template=valid_action(), commit="abc")
+    package = json.loads(path.read_text())
+    audit = BlindBatchAudit("worker", spec.name, __import__("experiments.contract_assurance.snapshot", fromlist=["fingerprint"]).fingerprint(package), (path.name,), True, False)
+    assert audit_batch_package(path, audit) == {"accepted": True, "issues": []}
+    assert "batch package hash mismatch" in audit_batch_package(path, BlindBatchAudit("worker", spec.name, "stale", (path.name,), True, False))["issues"]
 
 
 def test_report_summary_counts_failures():
