@@ -174,6 +174,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         polluted["step_type"] = "action"
         polluted["conclusion_hypothesis_id"] = "H1"
         result.append(Mutation("mixed_union_branch", "S4", json.dumps(polluted, sort_keys=True)))
+        unsupported_step = copy.deepcopy(value)
+        unsupported_step["step_type"] = "pause"
+        result.append(Mutation("unsupported_step_type", "S2", json.dumps(unsupported_step, sort_keys=True)))
     if contract == "NextStepResponse":
         conclusion = {"step_type": "conclusion", "selected_action_id": None, "target_uncertainty": None, "expected_information_value": None, "why_this_action_now": None, "conclusion_hypothesis_id": "H1", "conclusion_reason": "The current evidence supports this conclusion.", "remaining_uncertainty_ids": []}
         result.append(Mutation("valid_conclusion_branch", "valid", json.dumps(conclusion, sort_keys=True)))
@@ -188,6 +191,12 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         mismatch["competing_hypotheses"][0]["parent_id"] = "H1"
         result.append(Mutation("competing_root_with_parent", "S4", json.dumps(mismatch, sort_keys=True)))
     if contract == "RevisionResponse":
+        unsupported_hypothesis_transition = copy.deepcopy(value)
+        unsupported_hypothesis_transition["hypothesis_updates"] = [{"hypothesis_id": "H1", "transition": "deprioritize", "reason": "The current evidence lowers priority."}]
+        result.append(Mutation("unsupported_hypothesis_transition", "S2", json.dumps(unsupported_hypothesis_transition, sort_keys=True)))
+        unsupported_uncertainty_transition = copy.deepcopy(value)
+        unsupported_uncertainty_transition["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "defer", "reason": "The issue can be revisited later."}]
+        result.append(Mutation("unsupported_uncertainty_transition", "S2", json.dumps(unsupported_uncertainty_transition, sort_keys=True)))
         valid_update = copy.deepcopy(value)
         valid_update["hypothesis_updates"] = [{"hypothesis_id": "H1", "transition": "weaken", "reason": "New evidence reduces support for this hypothesis."}]
         result.append(Mutation("valid_state_update", "valid", json.dumps(valid_update, sort_keys=True)))
