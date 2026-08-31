@@ -54,6 +54,11 @@
     },
     {
       "intended_code": "S1",
+      "name": "null_required_selected_action_id",
+      "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": null, \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"It is available now.\"}"
+    },
+    {
+      "intended_code": "S1",
       "name": "remove_target_uncertainty",
       "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"A1\", \"why_this_action_now\": \"It is available now.\"}"
     },
@@ -61,6 +66,11 @@
       "intended_code": "S1",
       "name": "wrong_primitive_target_uncertainty",
       "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"A1\", \"target_uncertainty\": 7, \"why_this_action_now\": \"It is available now.\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "null_required_target_uncertainty",
+      "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"A1\", \"target_uncertainty\": null, \"why_this_action_now\": \"It is available now.\"}"
     },
     {
       "intended_code": "S1",
@@ -74,6 +84,11 @@
     },
     {
       "intended_code": "S1",
+      "name": "null_required_expected_information_value",
+      "raw_output": "{\"expected_information_value\": null, \"selected_action_id\": \"A1\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"It is available now.\"}"
+    },
+    {
+      "intended_code": "S1",
       "name": "remove_why_this_action_now",
       "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"A1\", \"target_uncertainty\": \"An open question.\"}"
     },
@@ -81,6 +96,11 @@
       "intended_code": "S1",
       "name": "wrong_primitive_why_this_action_now",
       "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"A1\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": 7}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "null_required_why_this_action_now",
+      "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"A1\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": null}"
     },
     {
       "intended_code": "S1",

@@ -70,6 +70,11 @@
     },
     {
       "intended_code": "S1",
+      "name": "null_required_hypotheses",
+      "raw_output": "{\"expected_information_value\": \"The result can distinguish explanations.\", \"hypotheses\": null, \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
+    },
+    {
+      "intended_code": "S1",
       "name": "empty_required_hypotheses",
       "raw_output": "{\"expected_information_value\": \"The result can distinguish explanations.\", \"hypotheses\": [], \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
     },
@@ -85,6 +90,11 @@
     },
     {
       "intended_code": "S1",
+      "name": "null_required_selected_action_id",
+      "raw_output": "{\"expected_information_value\": \"The result can distinguish explanations.\", \"hypotheses\": [{\"conflicted_by\": [], \"id\": \"H1\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A broad explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"What evidence would distinguish alternatives?\"]}], \"selected_action_id\": null, \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
+    },
+    {
+      "intended_code": "S1",
       "name": "remove_target_uncertainty",
       "raw_output": "{\"expected_information_value\": \"The result can distinguish explanations.\", \"hypotheses\": [{\"conflicted_by\": [], \"id\": \"H1\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A broad explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"What evidence would distinguish alternatives?\"]}], \"selected_action_id\": \"A1\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
     },
@@ -92,6 +102,11 @@
       "intended_code": "S1",
       "name": "wrong_primitive_target_uncertainty",
       "raw_output": "{\"expected_information_value\": \"The result can distinguish explanations.\", \"hypotheses\": [{\"conflicted_by\": [], \"id\": \"H1\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A broad explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"What evidence would distinguish alternatives?\"]}], \"selected_action_id\": \"A1\", \"target_uncertainty\": 7, \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "null_required_target_uncertainty",
+      "raw_output": "{\"expected_information_value\": \"The result can distinguish explanations.\", \"hypotheses\": [{\"conflicted_by\": [], \"id\": \"H1\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A broad explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"What evidence would distinguish alternatives?\"]}], \"selected_action_id\": \"A1\", \"target_uncertainty\": null, \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
     },
     {
       "intended_code": "S1",
@@ -105,6 +120,11 @@
     },
     {
       "intended_code": "S1",
+      "name": "null_required_expected_information_value",
+      "raw_output": "{\"expected_information_value\": null, \"hypotheses\": [{\"conflicted_by\": [], \"id\": \"H1\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A broad explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"What evidence would distinguish alternatives?\"]}], \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
+    },
+    {
+      "intended_code": "S1",
       "name": "remove_why_this_action_now",
       "raw_output": "{\"expected_information_value\": \"The result can distinguish explanations.\", \"hypotheses\": [{\"conflicted_by\": [], \"id\": \"H1\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A broad explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"What evidence would distinguish alternatives?\"]}], \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\"}"
     },
@@ -112,6 +132,11 @@
       "intended_code": "S1",
       "name": "wrong_primitive_why_this_action_now",
       "raw_output": "{\"expected_information_value\": \"The result can distinguish explanations.\", \"hypotheses\": [{\"conflicted_by\": [], \"id\": \"H1\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A broad explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"What evidence would distinguish alternatives?\"]}], \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": 7}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "null_required_why_this_action_now",
+      "raw_output": "{\"expected_information_value\": \"The result can distinguish explanations.\", \"hypotheses\": [{\"conflicted_by\": [], \"id\": \"H1\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A broad explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"What evidence would distinguish alternatives?\"]}], \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": null}"
     },
     {
       "intended_code": "S1",

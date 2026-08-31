@@ -53,7 +53,7 @@ class InitialResponse(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def coerce_active_proposals(cls, values: Any) -> Any:
-        if isinstance(values, dict) and "hypotheses" in values:
+        if isinstance(values, dict) and isinstance(values.get("hypotheses"), list):
             values = dict(values)
             values["hypotheses"] = [
                 item.model_dump(mode="python") if isinstance(item, HypothesisProposal) else item

@@ -51,6 +51,11 @@
     },
     {
       "intended_code": "S1",
+      "name": "null_required_answer",
+      "raw_output": "{\"answer\": null}"
+    },
+    {
+      "intended_code": "S1",
       "name": "unexpected_field",
       "raw_output": "{\"answer\": \"4\", \"unexpected_field\": \"x\"}"
     },

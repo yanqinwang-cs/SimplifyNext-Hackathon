@@ -62,6 +62,11 @@
     },
     {
       "intended_code": "S1",
+      "name": "null_required_hypotheses",
+      "raw_output": "{\"hypotheses\": null}"
+    },
+    {
+      "intended_code": "S1",
       "name": "empty_required_hypotheses",
       "raw_output": "{\"hypotheses\": []}"
     },

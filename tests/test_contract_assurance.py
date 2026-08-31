@@ -56,6 +56,12 @@ def test_canonical_placeholders_are_rejected_by_real_contracts():
     assert not evaluate_raw(json.dumps(whitespace_placeholder), NextActionResponse).accepted
 
 
+def test_null_initial_hypotheses_reaches_schema_validation():
+    payload = {"hypotheses": None, **valid_action()}
+    result = evaluate_raw(json.dumps(payload), InitialResponse)
+    assert not result.accepted and result.code is FailureCode.S1
+
+
 def test_registry_has_current_service_contracts():
     registry = contract_registry()
     assert {"InitialResponse", "InitialExpansionResponse", "NextActionResponse", "RevisionResponse", "NextStepResponse"} <= set(registry)

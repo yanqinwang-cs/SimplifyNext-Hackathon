@@ -1,13 +1,13 @@
 # Contract assurance report
 
-- Generated: 2026-08-31T15:48:46.265524+00:00
+- Generated: 2026-08-31T15:51:44.872749+00:00
 - Contracts: 7
 
 | Metric | Count |
 | --- | ---: |
-| Total evaluations | 157 |
+| Total evaluations | 176 |
 | Accepted | 16 |
-| Rejected | 141 |
+| Rejected | 160 |
 | Unexpected accepts | 0 |
 | Unexpected rejects | 0 |
 | S5 candidates | 0 |
@@ -16,8 +16,8 @@
 ## Failure codes
 
 - `S0`: 42
-- `S1`: 53
-- `S2`: 31
+- `S1`: 68
+- `S2`: 35
 - `S3`: 5
 - `S4`: 10
 
@@ -25,10 +25,10 @@
 
 | Contract | Total | Accepted | Rejected |
 | --- | ---: | ---: | ---: |
-| `InitialExpansionResponse` | 36 | 2 | 34 |
-| `InitialResponse` | 30 | 1 | 29 |
-| `ModelScreenHypothesisResponse` | 15 | 2 | 13 |
-| `NextActionResponse` | 22 | 1 | 21 |
-| `NextStepResponse` | 20 | 3 | 17 |
-| `RevisionResponse` | 23 | 6 | 17 |
-| `SmokeResponse` | 11 | 1 | 10 |
+| `InitialExpansionResponse` | 42 | 2 | 40 |
+| `InitialResponse` | 35 | 1 | 34 |
+| `ModelScreenHypothesisResponse` | 16 | 2 | 14 |
+| `NextActionResponse` | 26 | 1 | 25 |
+| `NextStepResponse` | 21 | 3 | 18 |
+| `RevisionResponse` | 24 | 6 | 18 |
+| `SmokeResponse` | 12 | 1 | 11 |
