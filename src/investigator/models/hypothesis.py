@@ -88,6 +88,8 @@ class HypothesisTransition(BaseModel):
         if self.transition is HypothesisTransitionType.OTHER:
             if any(value is None for value in other_fields):
                 raise ValueError("Hypothesis transition 'other' requires requested operation details")
+            if self.add_supporting_evidence_ids or self.add_conflicting_evidence_ids or self.add_specificity_basis_evidence_ids:
+                raise ValueError("Hypothesis transition 'other' cannot carry evidence-update fields")
         elif any(value is not None for value in other_fields):
             raise ValueError("OTHER-only hypothesis fields require transition='other'")
         return self
@@ -123,6 +125,8 @@ class UncertaintyTransition(BaseModel):
         if self.transition is UncertaintyTransitionType.OTHER:
             if any(value is None for value in other_fields):
                 raise ValueError("Uncertainty transition 'other' requires requested operation details")
+            if self.basis_evidence_ids:
+                raise ValueError("Uncertainty transition 'other' cannot carry evidence-update fields")
         elif any(value is not None for value in other_fields):
             raise ValueError("OTHER-only uncertainty fields require transition='other'")
         return self
