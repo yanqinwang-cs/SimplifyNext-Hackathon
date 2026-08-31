@@ -453,6 +453,10 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         target["supported_by"] = ["E999"]
         result.append(Mutation("unknown_evidence_reference", "S3", json.dumps(unknown, sort_keys=True)))
     if contract == "InitialResponse" and value.get("hypotheses"):
+        for field in ("supported_by", "conflicted_by", "specificity_basis_evidence_ids"):
+            wrong_namespace = copy.deepcopy(value)
+            wrong_namespace["hypotheses"][0][field] = ["H1"]
+            result.append(Mutation(f"wrong_namespace_initial_{field}", "S2", json.dumps(wrong_namespace, sort_keys=True)))
         unknown_parent = copy.deepcopy(value)
         unknown_parent["hypotheses"][0]["parent_id"] = "H999"
         result.append(Mutation("unknown_initial_parent_hypothesis", "S3", json.dumps(unknown_parent, sort_keys=True)))
