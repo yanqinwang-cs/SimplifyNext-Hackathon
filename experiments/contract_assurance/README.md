@@ -9,3 +9,7 @@ The stable taxonomy is documented in `docs/schema-contracts.md`. Generated outpu
 Worker instructions live under `blind/`. The harness does not claim blindness merely because a prompt says so; `BlindBatchAudit.qualifies_as_blind` requires recorded isolation evidence.
 
 Evolution records belong under `evolution/` and are never rewritten when a contract changes.
+
+## Offline cycle
+
+Run `uv run python -c 'from pathlib import Path; from experiments.contract_assurance.runner import run_deterministic; run_deterministic(Path.cwd(), Path("experiments/contract_assurance/reports"), "<git-commit>")'` to refresh deterministic inventory and reports. This makes no model or network calls. Blind producer/adversary statistics must be supplied separately with `BlindBatchAudit`; unqualified batches are reported as `NOT_BLIND` and excluded.
