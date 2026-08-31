@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-08-31T17:06:46.728553+00:00
+- Generated: 2026-08-31T17:16:40.464947+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -15,8 +15,8 @@
 
 ## Failure codes
 
-- `S0`: 91
-- `S1`: 115
+- `S0`: 98
+- `S1`: 108
 - `S2`: 39
 - `S3`: 12
 - `S4`: 14

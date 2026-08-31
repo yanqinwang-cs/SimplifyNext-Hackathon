@@ -40,7 +40,7 @@ def test_outer_json_fence_is_the_only_normalization():
     assert evaluate_raw("before\n" + json.dumps(valid_action()), NextActionResponse).code is FailureCode.S0
     assert evaluate_raw({**valid_action(), "selected_action_id": "A9"}, NextActionResponse).code is FailureCode.S2
     assert evaluate_raw("```json\n" + json.dumps(valid_action()), NextActionResponse).code is FailureCode.S0
-    assert evaluate_raw("[" + json.dumps(valid_action()) + "]", NextActionResponse).code is FailureCode.S1
+    assert evaluate_raw("[" + json.dumps(valid_action()) + "]", NextActionResponse).code is FailureCode.S0
     assert evaluate_raw(json.dumps(valid_action()) + "\n" + json.dumps(valid_action()), NextActionResponse).code is FailureCode.S0
     assert evaluate_raw(b'{"selected_action_id":"A1"}', NextActionResponse).code is FailureCode.S0
 
@@ -216,6 +216,25 @@ def test_mutations_preserve_provenance_and_deduplicate():
     assert items[0].raw_output == "" and items[0].intended_code == "S0"
     assert {item.name for item in items} >= {"invented_literal", "id_with_explanation", "placeholder_text", "wrong_primitive_selected_action_id"}
     assert len(deduplicate(items)) == len(items)
+
+
+def test_expanded_serialization_and_shape_mutations_keep_boundary_codes():
+    items = deduplicate(mutations(valid_action(), required_fields=("selected_action_id",)))
+    by_name = {item.name: item for item in items}
+    for name in {
+        "truncated_json_midpoint",
+        "trailing_comma",
+        "duplicate_braces",
+        "multiple_json_objects",
+        "json_array_top_level",
+        "empty_fence",
+        "broken_opening_fence",
+        "broken_closing_fence",
+    }:
+        assert by_name[name].intended_code == "S0"
+        assert evaluate_raw(by_name[name].raw_output, NextActionResponse).code is FailureCode.S0
+    assert by_name["extra_wrapper"].intended_code == "S1"
+    assert evaluate_raw(by_name["extra_wrapper"].raw_output, NextActionResponse).code is FailureCode.S1
 
 
 def test_contract_mutations_cover_nested_shape_and_cross_field_rules():

@@ -47,6 +47,8 @@ def evaluate_raw(raw_output: Any, schema: type[Any]) -> Evaluation:
         value = json.loads(normalize_json_text(raw_output))
     except json.JSONDecodeError as exc:
         return Evaluation(False, FailureCode.S0, "serialization", str(exc), raw_output=raw_output)
+    if not isinstance(value, dict):
+        return Evaluation(False, FailureCode.S0, "serialization", "top-level JSON value must be an object", raw_output=raw_output)
     try:
         parsed = schema.model_validate(value)
     except ValidationError as exc:
