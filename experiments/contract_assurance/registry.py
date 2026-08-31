@@ -29,4 +29,14 @@ CONTRACTS = (
 
 
 def contract_registry() -> dict[str, ContractSpec]:
+    names = [item.name for item in CONTRACTS]
+    if len(names) != len(set(names)):
+        raise ValueError("Duplicate contract names in assurance registry")
     return {item.name: item for item in CONTRACTS}
+
+
+def validate_registry() -> None:
+    specs = list(contract_registry().values())
+    schema_names = [item.schema.__name__ for item in specs]
+    if len(schema_names) != len(set(schema_names)):
+        raise ValueError("Duplicate schemas in assurance registry")

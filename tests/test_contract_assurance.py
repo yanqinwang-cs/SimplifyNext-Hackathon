@@ -9,7 +9,7 @@ from experiments.contract_assurance.runner import run_deterministic
 from experiments.contract_assurance.mutations import write_fixture_manifest
 from experiments.contract_assurance.mutations import deduplicate, mutations
 from experiments.contract_assurance.lint import lint_contract
-from experiments.contract_assurance.registry import contract_registry
+from experiments.contract_assurance.registry import contract_registry, validate_registry
 from experiments.contract_assurance.report import coverage_ledger, failure_rate_statistics, render_markdown, summarize, summarize_blind, summarize_by_contract, write_history
 from experiments.contract_assurance.snapshot import fingerprint, write_public_snapshot, write_snapshot
 from experiments.contract_assurance.snapshot import validate_public_package
@@ -56,6 +56,7 @@ def test_registry_has_current_service_contracts():
     assert {"InitialResponse", "InitialExpansionResponse", "NextActionResponse", "RevisionResponse", "NextStepResponse"} <= set(registry)
     assert "ModelScreenHypothesisResponse" in registry
     assert all(not lint_contract(spec) for spec in registry.values())
+    validate_registry()
 
 
 def test_inventory_discovers_and_registers_all_response_contracts(tmp_path: Path):
