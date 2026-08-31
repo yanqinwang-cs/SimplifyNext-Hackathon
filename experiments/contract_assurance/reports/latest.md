@@ -1,12 +1,12 @@
 # Contract assurance report
 
-- Generated: 2026-08-31T15:56:56.101820+00:00
+- Generated: 2026-08-31T15:57:32.284257+00:00
 - Contracts: 7
 
 | Metric | Count |
 | --- | ---: |
-| Total evaluations | 189 |
-| Accepted | 19 |
+| Total evaluations | 191 |
+| Accepted | 21 |
 | Rejected | 170 |
 | Unexpected accepts | 0 |
 | Unexpected rejects | 0 |
@@ -30,5 +30,5 @@
 | `ModelScreenHypothesisResponse` | 17 | 2 | 15 |
 | `NextActionResponse` | 26 | 1 | 25 |
 | `NextStepResponse` | 21 | 3 | 18 |
-| `RevisionResponse` | 32 | 9 | 23 |
+| `RevisionResponse` | 34 | 11 | 23 |
 | `SmokeResponse` | 12 | 1 | 11 |
