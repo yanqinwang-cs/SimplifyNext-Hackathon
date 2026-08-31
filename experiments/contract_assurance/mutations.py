@@ -27,10 +27,14 @@ def _wrong_namespace(field: str, value: str) -> str:
 def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), contract: str | None = None) -> list[Mutation]:
     result = [Mutation("empty", "S0", ""), Mutation("whitespace", "S0", "   "), Mutation("prose_only", "S0", "Here is the requested object.")]
     canonical = json.dumps(value, sort_keys=True)
-    midpoint = max(1, len(canonical) // 2)
+    cut_positions = {
+        "open": 1,
+        "quarter": max(1, len(canonical) // 4),
+        "midpoint": max(1, len(canonical) // 2),
+        "before_close": max(1, len(canonical) - 2),
+    }
     result.extend([
         Mutation("malformed_json", "S0", canonical[:-1]),
-        Mutation("truncated_json_midpoint", "S0", canonical[:midpoint]),
         Mutation("trailing_comma", "S0", canonical[:-1] + ",}"),
         Mutation("duplicate_braces", "S0", "{" + canonical + "}"),
         Mutation("prose_before_json", "S0", "Here is the object:\n" + canonical),
@@ -45,6 +49,10 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         Mutation("broken_closing_fence", "S0", canonical + "\n```"),
         Mutation("fenced_json", "valid", "```json\n" + canonical + "\n```"),
     ])
+    result.extend(
+        Mutation(f"truncated_json_{name}", "S0", canonical[:position])
+        for name, position in cut_positions.items()
+    )
     for field in required_fields:
         if field in value:
             mutated = copy.deepcopy(value)

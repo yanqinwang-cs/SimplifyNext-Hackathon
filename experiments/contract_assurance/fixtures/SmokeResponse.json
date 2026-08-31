@@ -26,11 +26,6 @@
     },
     {
       "intended_code": "S0",
-      "name": "truncated_json_midpoint",
-      "raw_output": "{\"answe"
-    },
-    {
-      "intended_code": "S0",
       "name": "trailing_comma",
       "raw_output": "{\"answer\": \"4\",}"
     },
@@ -93,6 +88,26 @@
       "intended_code": "valid",
       "name": "fenced_json",
       "raw_output": "```json\n{\"answer\": \"4\"}\n```"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_open",
+      "raw_output": "{"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_quarter",
+      "raw_output": "{\"a"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_midpoint",
+      "raw_output": "{\"answe"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_before_close",
+      "raw_output": "{\"answer\": \"4"
     },
     {
       "intended_code": "S1",

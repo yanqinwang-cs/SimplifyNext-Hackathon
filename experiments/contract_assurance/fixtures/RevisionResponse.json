@@ -30,11 +30,6 @@
     },
     {
       "intended_code": "S0",
-      "name": "truncated_json_midpoint",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_r"
-    },
-    {
-      "intended_code": "S0",
       "name": "trailing_comma",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [],}"
     },
@@ -97,6 +92,26 @@
       "intended_code": "valid",
       "name": "fenced_json",
       "raw_output": "```json\n{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}\n```"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_open",
+      "raw_output": "{"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_quarter",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_midpoint",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_r"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_before_close",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": ["
     },
     {
       "intended_code": "S1",
