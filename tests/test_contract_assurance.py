@@ -1,4 +1,5 @@
 import json
+import subprocess
 from pathlib import Path
 
 from experiments.contract_assurance.evaluate import evaluate_raw
@@ -196,6 +197,12 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     assert report["coverage_ledger"]
     assert (tmp_path / "inventory.json").exists()
     assert (tmp_path / "latest.json").exists()
+
+
+def test_assurance_module_cli_reports_summary(tmp_path: Path):
+    root = Path(__file__).resolve().parents[1]
+    completed = subprocess.run(["uv", "run", "python", "-m", "experiments.contract_assurance", "--root", str(root), "--output", str(tmp_path), "--commit", "abc"], cwd=root, capture_output=True, text=True, check=True, env={**__import__("os").environ, "UV_CACHE_DIR": "/tmp/codex_uv_contract_assurance"})
+    assert "contracts=7" in completed.stdout and "unexpected_accepts=0" in completed.stdout
 
 
 def test_mutations_preserve_provenance_and_deduplicate():
