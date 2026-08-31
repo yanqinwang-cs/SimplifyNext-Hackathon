@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-001",
+  "contract": "RevisionResponse",
+  "discovery_source": "deterministic empty_new_uncertainty_description fixture",
+  "baseline_failure": {"raw_output": "NewUncertainty(description='')", "observed_code": "accepted", "intended_code": "S4"},
+  "classification": "S4",
+  "legitimate_semantic_need": "A newly created uncertainty must carry substantive text for downstream review.",
+  "why_existing_contract_insufficient": "NewUncertainty.description was typed as str but accepted blank output.",
+  "implementation_change": "Added substantive-text validation to NewUncertainty.description.",
+  "tests_added": ["test_new_uncertainty_description_must_be_substantive", "empty_new_uncertainty_description fixture"],
+  "expected_reclassifications": ["blank new uncertainty descriptions: accepted -> S4"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [391, 392], "unexpected_outcomes": [0, 0]},
+  "commit": "aa967b0"
+}

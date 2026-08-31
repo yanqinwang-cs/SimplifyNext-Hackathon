@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-004",
+  "contract": "ModelScreenHypothesisResponse",
+  "discovery_source": "nested hypothesis text audit",
+  "baseline_failure": {"raw_output": "Hypothesis(statement='', justification='B', uncertainty='C')", "observed_code": "accepted", "intended_code": "S4"},
+  "classification": "S4",
+  "legitimate_semantic_need": "Model-screen hypotheses require substantive statement, justification, and uncertainty text.",
+  "why_existing_contract_insufficient": "Nested hypothesis strings had no substantive-text validators and generic mutations did not reach them.",
+  "implementation_change": "Added nested text validation and explicit blank/placeholder mutations.",
+  "tests_added": ["test_model_screen_hypothesis_text_must_be_substantive", "six model-screen nested text fixtures"],
+  "expected_reclassifications": ["blank or placeholder nested text: accepted -> S4"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [392, 398], "unexpected_outcomes": [0, 0]},
+  "commit": "cbf4569"
+}

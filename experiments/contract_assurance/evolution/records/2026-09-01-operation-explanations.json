@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-003",
+  "contract": "RevisionResponse",
+  "discovery_source": "deterministic empty_other_operation_reason fixture",
+  "baseline_failure": {"raw_output": "why_existing_operations_do_not_fit={'keep': ''}", "observed_code": "accepted", "intended_code": "S4"},
+  "classification": "S4",
+  "legitimate_semantic_need": "OTHER operations must explain why supported operations do not fit.",
+  "why_existing_contract_insufficient": "The map shape was enforced but blank keys or values were accepted.",
+  "implementation_change": "Added substantive-text validation for operation-explanation map keys and values.",
+  "tests_added": ["test_other_transition_operation_reasons_must_be_substantive", "empty_other_operation_reason fixture"],
+  "expected_reclassifications": ["blank OTHER explanations: accepted -> S4"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [391, 392], "unexpected_outcomes": [0, 0]},
+  "commit": "48731e1"
+}

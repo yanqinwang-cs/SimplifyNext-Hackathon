@@ -378,6 +378,13 @@ def test_evolution_records_require_semantic_and_regression_evidence():
     assert validate_evolution_record(record) == []
 
 
+def test_committed_evolution_records_are_complete():
+    root = Path(__file__).resolve().parents[1] / "experiments/contract_assurance/evolution/records"
+    records = list(root.glob("*.json"))
+    assert records
+    assert all(validate_evolution_record(json.loads(path.read_text(encoding="utf-8"))) == [] for path in records)
+
+
 def test_registered_experiment_contracts_forbid_unexpected_fields():
     from experiments.model_screen.schemas import HypothesisResponse
     valid = {"hypotheses": [{"statement": "A", "justification": "Because", "uncertainty": "Unknown"}, {"statement": "B", "justification": "Because", "uncertainty": "Unknown"}]}

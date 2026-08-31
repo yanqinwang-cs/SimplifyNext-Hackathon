@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-005",
+  "contract": "SmokeResponse",
+  "discovery_source": "offline schema audit of scripts/smoke_bedrock.py",
+  "baseline_failure": {"raw_output": "SmokeResponse(answer='')", "observed_code": "accepted", "intended_code": "S4"},
+  "classification": "S4",
+  "legitimate_semantic_need": "The smoke response must contain a substantive answer when the live boundary is exercised.",
+  "why_existing_contract_insufficient": "The answer validator rejected sentinels but accepted blank text.",
+  "implementation_change": "Added blank-answer validation and an offline deterministic mutation.",
+  "tests_added": ["test_smoke_response_answer_must_be_substantive", "empty_answer fixture"],
+  "expected_reclassifications": ["blank smoke answers: accepted -> S4"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [398, 399], "unexpected_outcomes": [0, 0]},
+  "commit": "e8f49c2"
+}

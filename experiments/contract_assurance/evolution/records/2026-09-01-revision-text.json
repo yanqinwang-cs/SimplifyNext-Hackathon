@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-002",
+  "contract": "RevisionResponse",
+  "discovery_source": "deterministic empty transition reason fixtures",
+  "baseline_failure": {"raw_output": "HypothesisTransition(reason='') and UncertaintyTransition(reason='')", "observed_code": "accepted", "intended_code": "S4"},
+  "classification": "S4",
+  "legitimate_semantic_need": "Revision operations require an interpretable reason and refinement description.",
+  "why_existing_contract_insufficient": "Transition reason and new_description were required by type but not by substantive content.",
+  "implementation_change": "Added non-empty validation to revision transition text fields.",
+  "tests_added": ["test_revision_transition_reasons_must_be_substantive", "empty_hypothesis_transition_reason fixture", "empty_uncertainty_transition_reason fixture"],
+  "expected_reclassifications": ["blank transition reasons: accepted -> S4"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [389, 391], "unexpected_outcomes": [0, 0]},
+  "commit": "ba2f7a9"
+}
