@@ -6,6 +6,12 @@
       "prompt_builders": [
         "scripts.smoke_bedrock.main"
       ],
+      "prompt_hashes": {
+        "scripts/smoke_bedrock.py": "972295d0c8319c1bfed7254295a69e86e78adf86425a085daaf29ca3c2d76dc9"
+      },
+      "prompt_sources": [
+        "scripts/smoke_bedrock.py"
+      ],
       "public": true,
       "schema": "SmokeResponse",
       "schema_hash": "fc008e3ce54e1de048758174b829e39bd4c47b13edbd2574f60044ecce9e9f22",
@@ -18,6 +24,12 @@
       "production_path": "ExperimentRunner.run -> ModelClient.call",
       "prompt_builders": [
         "experiments.model_screen.prompt"
+      ],
+      "prompt_hashes": {
+        "experiments/model_screen/prompt.py": "bef58f26e2983f7740ec4f450c74685d27a54750ccb58a5ebb96027affa9c0ce"
+      },
+      "prompt_sources": [
+        "experiments/model_screen/prompt.py"
       ],
       "public": true,
       "schema": "HypothesisResponse",
@@ -32,11 +44,17 @@
       "prompt_builders": [
         "Case1ControlledEnvironment.initial_prompt"
       ],
+      "prompt_hashes": {
+        "src/investigator/environments/case_01_prompts.py": "d9ce0a5b96dc3fe05550c6266aa1bc2087ec004937f4171d293ff7c4df96e6df"
+      },
+      "prompt_sources": [
+        "src/investigator/environments/case_01_prompts.py"
+      ],
       "public": true,
       "schema": "InitialResponse",
       "schema_hash": "0bf2d70051b0216d9f2cefa9432cf13b87ad214e2e0e13d710686fa4103978a2",
       "source": "src/investigator/services/contracts.py",
-      "source_hash": "1b8c480306c524e3956ae1cf867fafda69f29a0a893fa6991b893ad8146c9838",
+      "source_hash": "11ec7092d1e42f8ffc0948917be2c891f5b179978b6263f09a005c651d159cd1",
       "template_placeholders": []
     },
     {
@@ -45,11 +63,17 @@
       "prompt_builders": [
         "Case1ControlledEnvironment.initial_expansion_prompt"
       ],
+      "prompt_hashes": {
+        "src/investigator/environments/case_01_prompts.py": "d9ce0a5b96dc3fe05550c6266aa1bc2087ec004937f4171d293ff7c4df96e6df"
+      },
+      "prompt_sources": [
+        "src/investigator/environments/case_01_prompts.py"
+      ],
       "public": true,
       "schema": "InitialExpansionResponse",
       "schema_hash": "3ab84fb21b95fbb73d063a580acd3f51ec5299a5657a7a6ea62d6b61e696b7c2",
       "source": "src/investigator/services/contracts.py",
-      "source_hash": "1b8c480306c524e3956ae1cf867fafda69f29a0a893fa6991b893ad8146c9838",
+      "source_hash": "11ec7092d1e42f8ffc0948917be2c891f5b179978b6263f09a005c651d159cd1",
       "template_placeholders": []
     },
     {
@@ -58,11 +82,17 @@
       "prompt_builders": [
         "Case1ControlledEnvironment.next_action_prompt"
       ],
+      "prompt_hashes": {
+        "src/investigator/environments/case_01_prompts.py": "d9ce0a5b96dc3fe05550c6266aa1bc2087ec004937f4171d293ff7c4df96e6df"
+      },
+      "prompt_sources": [
+        "src/investigator/environments/case_01_prompts.py"
+      ],
       "public": true,
       "schema": "NextActionResponse",
       "schema_hash": "2ee01b9e0a44aa5ea0159022f89f32b407b9f1bdd33c88f8914b62244611a300",
       "source": "src/investigator/services/contracts.py",
-      "source_hash": "1b8c480306c524e3956ae1cf867fafda69f29a0a893fa6991b893ad8146c9838",
+      "source_hash": "11ec7092d1e42f8ffc0948917be2c891f5b179978b6263f09a005c651d159cd1",
       "template_placeholders": []
     },
     {
@@ -71,11 +101,17 @@
       "prompt_builders": [
         "Case1ControlledEnvironment.revision_prompt"
       ],
+      "prompt_hashes": {
+        "src/investigator/environments/case_01_prompts.py": "d9ce0a5b96dc3fe05550c6266aa1bc2087ec004937f4171d293ff7c4df96e6df"
+      },
+      "prompt_sources": [
+        "src/investigator/environments/case_01_prompts.py"
+      ],
       "public": true,
       "schema": "RevisionResponse",
       "schema_hash": "56906e23079db421c3704a1465b15ff9c008cbde48b2b4d5776f4c4c1e59a455",
       "source": "src/investigator/services/contracts.py",
-      "source_hash": "1b8c480306c524e3956ae1cf867fafda69f29a0a893fa6991b893ad8146c9838",
+      "source_hash": "11ec7092d1e42f8ffc0948917be2c891f5b179978b6263f09a005c651d159cd1",
       "template_placeholders": [
         "REPLACE_WITH_"
       ]
@@ -84,11 +120,13 @@
       "name": "NextStepResponse",
       "production_path": "Defined LLM-facing union; no current production caller",
       "prompt_builders": [],
+      "prompt_hashes": {},
+      "prompt_sources": [],
       "public": true,
       "schema": "NextStepResponse",
       "schema_hash": "f0186ca2f50494c9a630a22fe3bdc890a942cb2607bbe1d15d23957dcf668f29",
       "source": "src/investigator/services/contracts.py",
-      "source_hash": "1b8c480306c524e3956ae1cf867fafda69f29a0a893fa6991b893ad8146c9838",
+      "source_hash": "11ec7092d1e42f8ffc0948917be2c891f5b179978b6263f09a005c651d159cd1",
       "template_placeholders": []
     }
   ],
@@ -122,6 +160,6 @@
       "source": "src/investigator/services/contracts.py"
     }
   ],
-  "git_commit": "a8fc8c3",
+  "git_commit": "29143ce",
   "unregistered_response_classes": []
 }
