@@ -5,3 +5,5 @@ This is an offline harness for the repository's LLM-facing contracts. It imports
 Blind packages are public-input snapshots only. A worker may be called blind only when its filesystem access is independently restricted and recorded; otherwise the batch is `NOT_BLIND` and is excluded from compliance statistics.
 
 The stable taxonomy is documented in `docs/schema-contracts.md`. Generated outputs belong in `experiments/contract_assurance/results/` and are ignored by git.
+
+Worker instructions live under `blind/`. The harness does not claim blindness merely because a prompt says so; `BlindBatchAudit.qualifies_as_blind` requires recorded isolation evidence.

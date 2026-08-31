@@ -151,6 +151,15 @@ def test_fixture_manifest_is_reproducible_and_blind_audit_is_strict(tmp_path: Pa
     assert not BlindBatchAudit("w2", "NextActionResponse", "abc", ("repo",), False, True).qualifies_as_blind
 
 
+def test_blind_role_instructions_exist_without_validator_details():
+    root = Path(__file__).resolve().parents[1] / "experiments/contract_assurance/blind"
+    producer = (root / "producer.md").read_text()
+    adversary = (root / "adversary.md").read_text()
+    assert "supplied frozen public package" in producer
+    assert "subtle outputs" in adversary
+    assert "failure taxonomy" not in producer
+
+
 def test_availability_is_checked_after_schema():
     result = evaluate_next_action(json.dumps(valid_action()), {"A2"})
     assert not result.accepted and result.code is FailureCode.S3
