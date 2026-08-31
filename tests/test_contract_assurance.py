@@ -179,6 +179,9 @@ def test_next_step_union_rejects_mixed_branch_fields():
     polluted = dict(valid, conclusion_hypothesis_id="H1")
     result = evaluate_raw(json.dumps(polluted), NextStepResponse)
     assert not result.accepted and result.code is FailureCode.S4
+    polluted_stop = {"step_type": "stop_unresolved", "selected_action_id": "A1", "target_uncertainty": "x", "expected_information_value": None, "why_this_action_now": None, "conclusion_hypothesis_id": None, "conclusion_reason": "Cannot continue.", "remaining_uncertainty_ids": []}
+    stop_result = evaluate_raw(json.dumps(polluted_stop), NextStepResponse)
+    assert not stop_result.accepted and stop_result.code is FailureCode.S4
 
 
 def test_seeded_expansion_rejects_relationship_parent_mismatch():
