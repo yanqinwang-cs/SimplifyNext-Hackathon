@@ -89,6 +89,13 @@ class HypothesisTransition(BaseModel):
             raise ValueError("Substantive text cannot be empty")
         return value
 
+    @field_validator("why_existing_operations_do_not_fit")
+    @classmethod
+    def substantive_operation_reasons(cls, value: dict[str, str] | None) -> dict[str, str] | None:
+        if value is not None and any(not key.strip() or not text.strip() for key, text in value.items()):
+            raise ValueError("Substantive text cannot be empty")
+        return value
+
     @model_validator(mode="after")
     def validate_other_fields(self) -> "HypothesisTransition":
         other_fields = (self.requested_operation_name, self.requested_effect, self.why_existing_operations_do_not_fit)
@@ -126,6 +133,13 @@ class UncertaintyTransition(BaseModel):
     @classmethod
     def substantive_text(cls, value: str | None) -> str | None:
         if value is not None and not value.strip():
+            raise ValueError("Substantive text cannot be empty")
+        return value
+
+    @field_validator("why_existing_operations_do_not_fit")
+    @classmethod
+    def substantive_operation_reasons(cls, value: dict[str, str] | None) -> dict[str, str] | None:
+        if value is not None and any(not key.strip() or not text.strip() for key, text in value.items()):
             raise ValueError("Substantive text cannot be empty")
         return value
 
