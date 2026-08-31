@@ -20,6 +20,7 @@ class CaseState(BaseModel):
     transformations: list[HypothesisTransformation] = Field(default_factory=list)
     uncertainties: dict[str, Uncertainty] = Field(default_factory=dict)
     conflicts: dict[str, Conflict] = Field(default_factory=dict)
+    evidence_correction_history: list[dict[str, str | None]] = Field(default_factory=list)
     revision: int = 0
 
     @model_validator(mode="after")

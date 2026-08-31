@@ -5,6 +5,7 @@ from investigator.models.identifiers import EvidenceId, HypothesisId, Uncertaint
 
 class HypothesisOrigin(str, Enum):
     HUMAN = "human"
+    HUMAN_INPUT = "human_input"
     AGENT_VARIANT = "agent_variant"
     AGENT_SUGGESTION = "agent_suggestion"
 

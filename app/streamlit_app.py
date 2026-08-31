@@ -22,6 +22,7 @@ def initialize_session() -> None:
     st.session_state.setdefault("structured_error", None)
     st.session_state.setdefault("structured_raw_output", None)
     st.session_state.setdefault("trace_writer", None)
+    st.session_state.setdefault("seed_hypothesis", "")
 
 
 def _jsonable(value):
@@ -77,13 +78,29 @@ def render_uncertainties(session: InvestigationSession) -> None:
             st.markdown(f"- **{identifier}** — {uncertainty.description}")
 
 
-def render_evidence(session: InvestigationSession) -> None:
+def render_evidence(session: InvestigationSession, service: InvestigationService) -> None:
     if not session.case_state.evidence:
         return
     with st.expander("Evidence"):
         for identifier, evidence in session.case_state.evidence.items():
             with st.expander(identifier):
                 st.caption(evidence.raw_content[:500])
+        with st.expander("Correct evidence"):
+            evidence_id = st.selectbox("Evidence item", list(session.case_state.evidence), key="correction_evidence_id")
+            current = session.case_state.get_evidence(evidence_id)
+            st.caption(current.raw_content[:500])
+            corrected = st.text_area("Corrected authoritative content", key="corrected_evidence_content")
+            reason = st.text_input("Reason (optional)", key="evidence_correction_reason")
+            if st.button("Save evidence correction", type="primary"):
+                try:
+                    previous = current.raw_content
+                    service.correct_evidence(session, evidence_id, corrected, reason or None)
+                    _persist("evidence_correction", {"evidence_id": evidence_id, "previous_content": previous, "corrected_content": corrected, "reason": reason or None})
+                    st.session_state.notice = "Evidence corrected. Investigation is paused for reassessment."
+                except Exception as exc:
+                    st.session_state.notice = str(exc)
+                    _persist("state_error", {"error": str(exc)}, exc)
+                st.rerun()
 
 
 def render_sidebar(session: InvestigationSession | None) -> None:
@@ -93,7 +110,7 @@ def render_sidebar(session: InvestigationSession | None) -> None:
             return
         render_hypotheses(session)
         render_uncertainties(session)
-        render_evidence(session)
+        render_evidence(session, st.session_state.investigation_service)
 
 
 def render_chat() -> None:
@@ -111,25 +128,25 @@ def render_chat() -> None:
         st.rerun()
 
 
-def start_investigation() -> None:
+def start_investigation(seed_hypothesis: str) -> None:
     load_dotenv()
     environment = Case1ControlledEnvironment(Path(__file__).resolve().parents[1] / "experiments/investigation_smoke/case_01/artifacts")
     try:
         client = BedrockModelClient()
         model_id = client.model_id
     except Exception as exc:
-        trace = InteractiveTrace(session_id=new_session_id(), case_id=environment.case_id, environment_id=environment.environment_id, model_id="unknown-model", started_at=utc_now(), updated_at=utc_now(), status="error", initial_prompt=environment.initial_prompt())
+        trace = InteractiveTrace(session_id=new_session_id(), case_id=environment.case_id, environment_id=environment.environment_id, model_id="unknown-model", started_at=utc_now(), updated_at=utc_now(), status="error", initial_prompt=environment.initial_prompt(), investigator_seed_hypothesis=seed_hypothesis)
         st.session_state.trace_writer = InteractiveTraceWriter(Path(__file__).resolve().parents[1] / "runs", trace)
         _persist("investigation_started", {})
         _record_model_error(exc)
         st.session_state.notice = f"Could not start the investigation: {exc}"
         return
-    trace = InteractiveTrace(session_id=new_session_id(), case_id=environment.case_id, environment_id=environment.environment_id, model_id=model_id, started_at=utc_now(), updated_at=utc_now(), status="starting", initial_prompt=environment.initial_prompt())
+    trace = InteractiveTrace(session_id=new_session_id(), case_id=environment.case_id, environment_id=environment.environment_id, model_id=model_id, started_at=utc_now(), updated_at=utc_now(), status="starting", initial_prompt=environment.initial_prompt(), investigator_seed_hypothesis=seed_hypothesis)
     st.session_state.trace_writer = InteractiveTraceWriter(Path(__file__).resolve().parents[1] / "runs", trace)
     _persist("investigation_started", {})
     try:
         service = InvestigationService(client, environment)
-        session = service.start_case()
+        session = service.start_case(seed_hypothesis)
     except ModelStructuredOutputError as exc:
         st.session_state.notice = "The model returned an invalid structured response."
         st.session_state.structured_error = str(exc)
@@ -147,6 +164,13 @@ def start_investigation() -> None:
     st.session_state.structured_raw_output = None
     _persist("initial_model_response", {"raw_model_output": session.initial_raw_model_output, "parsed_response": _jsonable(session.initial_response), "metadata": _jsonable(session.initial_metadata)})
     _persist("action_proposed", {"action_id": session.pending_action.action_id})
+    _persist("investigator_seed_hypothesis", {"statement": seed_hypothesis, "hypothesis_id": "H1"})
+    try:
+        service.advance_until_interrupt(session, on_event=lambda event, payload: _persist(event, payload))
+        _persist("autonomous_investigation_advanced", {})
+    except Exception as exc:
+        st.session_state.notice = f"Investigation paused: {exc}"
+        _persist("state_error", {"error": str(exc)}, exc)
 
 
 def render_action_review(session: InvestigationSession, service: InvestigationService) -> None:
@@ -156,17 +180,12 @@ def render_action_review(session: InvestigationSession, service: InvestigationSe
     with st.expander("Review next action", expanded=True):
         st.markdown(f"**Recommended next step**  \n{action.action_id} — {action.title}")
         st.write(session.action_reason or "This step may help distinguish between the current explanations.")
-        columns = st.columns(4)
-        if columns[0].button("Approve", use_container_width=True):
+        columns = st.columns(5)
+        if columns[0].button("Continue investigation", use_container_width=True):
             try:
-                _persist("human_action_approved", {"action_id": action.action_id})
-                service.execute_action(session)
-                _persist("action_executed", {"action_id": action.action_id})
-                _persist("evidence_released", {"artifact_id": session.pending_release.artifact_id})
-                service.propose_revision(session)
-                _persist("revision_model_response", {"raw_model_output": session.revision_raw_model_output, "parsed_response": _jsonable(session.pending_revision), "metadata": _jsonable(session.revision_metadata)})
-                _persist("revision_proposed", {"action_id": action.action_id})
-                st.session_state.notice = "Action executed. A revision is ready for review."
+                service.advance_until_interrupt(session, on_event=lambda event, payload: _persist(event, payload))
+                _persist("autonomous_investigation_advanced", {})
+                st.session_state.notice = "Investigation advanced."
             except Exception as exc:
                 if isinstance(exc, ModelStructuredOutputError):
                     st.session_state.notice = "The model returned an invalid structured response."
@@ -183,7 +202,12 @@ def render_action_review(session: InvestigationSession, service: InvestigationSe
         if columns[2].button("Correct", use_container_width=True):
             st.session_state.review_mode = "correct"
             st.rerun()
-        if columns[3].button("Stop", use_container_width=True):
+        if columns[3].button("Pause", use_container_width=True):
+            service.pause(session)
+            _persist("investigation_paused", {})
+            st.session_state.notice = "Investigation paused. The current state has been preserved."
+            st.rerun()
+        if columns[4].button("Stop", use_container_width=True):
             service.stop(session)
             _persist("investigation_stopped", {})
             st.session_state.notice = "Investigation stopped. The current state has been preserved."
@@ -225,19 +249,38 @@ def render_revision_review(session: InvestigationSession, service: Investigation
                 st.caption(f"{update.hypothesis_id}: {update.reason}")
             for update in revision.uncertainty_updates:
                 st.caption(f"{update.uncertainty_id}: {update.reason}")
-        columns = st.columns(3)
-        if columns[0].button("Approve revision", type="primary", use_container_width=True):
+        removals = [update for update in revision.hypothesis_updates if update.transition.value == "remove"]
+        if removals:
+            st.warning("Review proposed hypothesis removal")
+            for removal in removals:
+                hypothesis = session.case_state.get_hypothesis(removal.hypothesis_id)
+                st.write(f"**{hypothesis.id}** — {hypothesis.statement}")
+                st.caption(f"Reason: {removal.reason}")
+                st.caption(f"Evidence basis: {', '.join(removal.add_conflicting_evidence_ids) or 'none'}")
+                review_columns = st.columns(2)
+                if review_columns[0].button("Confirm removal", key=f"remove-{hypothesis.id}"):
+                    try:
+                        _persist("human_removal_decision", {"hypothesis_id": hypothesis.id, "decision": "confirm"})
+                        service.resolve_hypothesis_removal(session, hypothesis.id, True)
+                        st.session_state.notice = "Hypothesis removal applied."
+                    except Exception as exc:
+                        st.session_state.notice = f"Could not apply removal: {exc}"
+                        _persist("state_error", {"error": str(exc)}, exc)
+                    st.rerun()
+                if review_columns[1].button("Keep hypothesis", key=f"keep-{hypothesis.id}"):
+                    try:
+                        _persist("human_removal_decision", {"hypothesis_id": hypothesis.id, "decision": "keep"})
+                        service.resolve_hypothesis_removal(session, hypothesis.id, False)
+                        st.session_state.notice = "Hypothesis retained. Routine updates were applied."
+                    except Exception as exc:
+                        st.session_state.notice = f"Could not retain hypothesis: {exc}"
+                        _persist("state_error", {"error": str(exc)}, exc)
+                    st.rerun()
+        columns = st.columns(4)
+        if not removals and columns[0].button("Continue investigation", type="primary", use_container_width=True):
             try:
-                _persist("human_revision_approved", {})
-                service.apply_revision(session)
-                _persist("revision_applied", {})
-                service.propose_next_action(session)
-                if session.pending_action:
-                    _persist("next_action_proposed", {"action_id": session.pending_action.action_id, "raw_model_output": session.next_action_raw_model_output, "metadata": _jsonable(session.next_action_metadata)})
-                    st.session_state.notice = "Revision applied. I have prepared the next recommended enquiry."
-                else:
-                    _persist("next_action_proposed", {"action_id": None})
-                    st.session_state.notice = "Investigation cycle complete. No further controlled enquiries are currently available."
+                service.advance_until_interrupt(session, on_event=lambda event, payload: _persist(event, payload))
+                st.session_state.notice = "Investigation advanced."
             except Exception as exc:
                 if isinstance(exc, ModelStructuredOutputError):
                     st.session_state.notice = "The model returned an invalid structured response."
@@ -251,7 +294,12 @@ def render_revision_review(session: InvestigationSession, service: Investigation
         if columns[1].button("Correct", use_container_width=True):
             st.session_state.review_mode = "revision_correct"
             st.rerun()
-        if columns[2].button("Stop", use_container_width=True):
+        if columns[2].button("Pause", use_container_width=True):
+            service.pause(session)
+            _persist("investigation_paused", {})
+            st.session_state.notice = "Investigation paused. The current state has been preserved."
+            st.rerun()
+        if columns[3].button("Stop", use_container_width=True):
             service.stop(session)
             _persist("investigation_stopped", {})
             st.session_state.notice = "Investigation stopped. The current state has been preserved."
@@ -275,9 +323,13 @@ def main() -> None:
     render_chat()
     if session is None:
         st.write("Review the case with a controlled investigation assistant.")
+        seed = st.text_area("Starting hypothesis / concern", help="Enter one broad explanation worth investigating. Avoid assuming a specific mechanism unless already established.", key="seed_hypothesis")
         if st.button("Start investigation", type="primary"):
-            with st.spinner("Starting investigation…"):
-                start_investigation()
+            if not seed.strip():
+                st.warning("Enter a starting hypothesis or concern before starting.")
+            else:
+                with st.spinner("Investigating…"):
+                    start_investigation(seed)
             st.rerun()
     else:
         if session.status is SessionStatus.AWAITING_ACTION_REVIEW:
@@ -288,6 +340,16 @@ def main() -> None:
             st.info("Investigation stopped. The current state remains available for inspection.")
         elif session.status is SessionStatus.PAUSED:
             st.info("Investigation paused. The current state remains available for inspection.")
+            if st.button("Continue investigation", type="primary"):
+                with st.spinner("Investigating…"):
+                    try:
+                        session.status = SessionStatus.READY
+                        service.advance_until_interrupt(session, on_event=lambda event, payload: _persist(event, payload))
+                        _persist("autonomous_investigation_advanced", {})
+                    except Exception as exc:
+                        st.session_state.notice = f"Investigation paused: {exc}"
+                        _persist("state_error", {"error": str(exc)}, exc)
+                st.rerun()
     if st.session_state.notice:
         st.info(st.session_state.notice)
     if st.session_state.structured_error:

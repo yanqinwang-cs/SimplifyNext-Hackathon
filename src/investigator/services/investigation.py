@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Callable
 
 from pydantic import ValidationError
 
@@ -51,6 +51,7 @@ class InvestigationSession:
     next_action_raw_model_output: Any | None = None
     next_action_metadata: Any | None = None
     next_action_prompt: str | None = None
+    seed_hypothesis: str | None = None
     unsupported_operations: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -61,15 +62,17 @@ class InvestigationService:
         self.client = client
         self.environment = environment
 
-    def start_case(self) -> InvestigationSession:
-        from investigator.services.contracts import InitialResponse
+    def start_case(self, seed_hypothesis: str | None = None) -> InvestigationSession:
+        from investigator.services.contracts import InitialExpansionResponse, InitialResponse
 
         try:
-            result = self.client.call(self.environment.initial_prompt(), InitialResponse)
-            response = InitialResponse.model_validate(result.parsed)
+            prompt = self.environment.initial_expansion_prompt(seed_hypothesis) if seed_hypothesis is not None else self.environment.initial_prompt()
+            schema = InitialExpansionResponse if seed_hypothesis is not None else InitialResponse
+            result = self.client.call(prompt, schema)
+            response = schema.model_validate(result.parsed)
         except Exception as exc:
             self._raise_structured_output_error(exc, "initial_parse", locals().get("result"))
-        state = self.environment.build_initial_state(response)
+        state = self.environment.build_seeded_initial_state(seed_hypothesis, response) if seed_hypothesis is not None else self.environment.build_initial_state(response)
         return InvestigationSession(
             case_state=state,
             initial_case_state=state.model_copy(deep=True),
@@ -79,6 +82,7 @@ class InvestigationService:
             pending_action=self.environment.get_action(response.selected_action_id),
             status=SessionStatus.AWAITING_ACTION_REVIEW,
             environment_id=self.environment.environment_id,
+            seed_hypothesis=seed_hypothesis,
         )
 
     def propose_next_action(self, session: InvestigationSession) -> InvestigationSession:
@@ -167,9 +171,59 @@ class InvestigationService:
         session.status = SessionStatus.READY
         return session
 
+    def advance_until_interrupt(self, session: InvestigationSession, max_steps: int = 4, on_event: Callable[[str, dict[str, Any]], None] | None = None) -> InvestigationSession:
+        """Run ordinary controlled cycles until an epistemic review or safety cap."""
+        emit = on_event or (lambda _event, _payload: None)
+        for _ in range(max_steps):
+            if session.status is SessionStatus.AWAITING_ACTION_REVIEW:
+                self.execute_action(session)
+                emit("action_executed", {"action_id": session.pending_action.action_id})
+                emit("evidence_released", {"artifact_id": session.pending_release.artifact_id})
+                self.propose_revision(session)
+                emit("revision_model_response", {"raw_model_output": session.revision_raw_model_output, "parsed_response": session.pending_revision.model_dump(mode="json"), "metadata": session.revision_metadata.model_dump(mode="json")})
+                emit("revision_proposed", {})
+            if session.status is SessionStatus.AWAITING_REVISION_REVIEW:
+                if session.pending_revision and any(update.transition.value == "remove" for update in session.pending_revision.hypothesis_updates):
+                    emit("hypothesis_removal_proposed", {})
+                    return session
+                self.apply_revision(session)
+                emit("routine_revision_auto_applied", {})
+            if session.status is SessionStatus.READY:
+                self.propose_next_action(session)
+                emit("next_action_proposed", {"action_id": session.pending_action.action_id, "raw_model_output": session.next_action_raw_model_output, "metadata": session.next_action_metadata.model_dump(mode="json")})
+            if session.status is SessionStatus.PAUSED:
+                return session
+        session.status = SessionStatus.PAUSED
+        emit("safety_cap_pause", {"max_steps": max_steps})
+        return session
+
+    def resolve_hypothesis_removal(self, session: InvestigationSession, hypothesis_id: str, confirm: bool) -> InvestigationSession:
+        self._require_status(session, SessionStatus.AWAITING_REVISION_REVIEW)
+        if session.pending_revision is None:
+            raise InvalidSessionTransition("No pending revision requires review")
+        removal = [u for u in session.pending_revision.hypothesis_updates if u.hypothesis_id == hypothesis_id and u.transition.value == "remove"]
+        if not removal:
+            raise ValueError(f"No pending removal for hypothesis {hypothesis_id!r}")
+        if not confirm:
+            session.pending_revision = session.pending_revision.model_copy(update={"hypothesis_updates": [u for u in session.pending_revision.hypothesis_updates if u not in removal]})
+        return self.apply_revision(session)
+
     def pause(self, session: InvestigationSession) -> InvestigationSession:
         if session.status is SessionStatus.STOPPED:
             raise InvalidSessionTransition("Stopped sessions cannot be paused")
+        session.status = SessionStatus.PAUSED
+        return session
+
+    def correct_evidence(self, session: InvestigationSession, evidence_id: str, corrected_content: str, reason: str | None = None) -> InvestigationSession:
+        self._require_not_stopped(session)
+        if not corrected_content.strip():
+            raise ValueError("Corrected evidence content cannot be empty")
+        evidence = session.case_state.get_evidence(evidence_id)
+        session.case_state.evidence_correction_history.append({
+            "evidence_id": evidence_id, "previous_content": evidence.raw_content,
+            "corrected_content": corrected_content, "reason": reason,
+        })
+        evidence.raw_content = corrected_content
         session.status = SessionStatus.PAUSED
         return session
 
@@ -185,6 +239,11 @@ class InvestigationService:
             raise InvalidSessionTransition("Stopped sessions cannot silently continue")
         if session.status is not expected:
             raise InvalidSessionTransition(f"Expected session status {expected.value}, got {session.status.value}")
+
+    @staticmethod
+    def _require_not_stopped(session: InvestigationSession) -> None:
+        if session.status is SessionStatus.STOPPED:
+            raise InvalidSessionTransition("Stopped sessions cannot be changed")
 
     @staticmethod
     def _raise_structured_output_error(exc: Exception, stage: str, result: Any) -> None:

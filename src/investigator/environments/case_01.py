@@ -6,7 +6,7 @@ from typing import Any
 from investigator.environments.base import InvestigationEnvironment
 from investigator.models import EvidenceItem, EvidenceKind, Source, SourceType
 from investigator.services.contracts import InitialResponse, NextActionResponse, RevisionResponse
-from investigator.state import CaseState, build_initial_state
+from investigator.state import CaseState, build_initial_state, build_seeded_initial_state
 
 
 @dataclass(frozen=True)
@@ -52,6 +52,10 @@ class Case1ControlledEnvironment(InvestigationEnvironment):
         from investigator.environments.case_01_prompts import initial_prompt
         return initial_prompt(self)
 
+    def initial_expansion_prompt(self, seed_statement: str) -> str:
+        from investigator.environments.case_01_prompts import initial_expansion_prompt
+        return initial_expansion_prompt(self, seed_statement)
+
     def assessment_context(self) -> str:
         from investigator.prompts import render_assessment_context
         return render_assessment_context()
@@ -63,6 +67,11 @@ class Case1ControlledEnvironment(InvestigationEnvironment):
             for index, content in enumerate(CASE_01_EVIDENCE, start=1)
         }
         return build_initial_state(self.case_id, "Closed-book physical examination", {source.id: source}, evidence, response)
+
+    def build_seeded_initial_state(self, seed_statement: str, response) -> CaseState:
+        source = Source(id="case_01_visible", name="Case 01 visible evidence", source_type=SourceType.OTHER)
+        evidence = {f"E{index}": EvidenceItem(id=f"E{index}", source_id=source.id, raw_content=content, kind=EvidenceKind.OTHER) for index, content in enumerate(CASE_01_EVIDENCE, start=1)}
+        return build_seeded_initial_state(self.case_id, "Closed-book physical examination", {source.id: source}, evidence, seed_statement, response.seed_analysis, response.competing_hypotheses)
 
     def available_actions(self, completed_action_ids: set[str]) -> list[ControlledAction]:
         return [action for action in CASE_01_ACTIONS if action.action_id not in completed_action_ids]

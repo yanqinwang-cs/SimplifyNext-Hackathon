@@ -3,6 +3,9 @@
 from investigator.services.contracts import (
     ControlledRunTrace,
     HypothesisProposal,
+    InitialExpansionHypothesis,
+    InitialExpansionResponse,
+    NextStepResponse,
     InitialHypothesisProposal,
     InitialResponse,
     NewUncertainty,
@@ -12,6 +15,6 @@ from investigator.services.contracts import (
 )
 
 __all__ = [
-    "ControlledRunTrace", "HypothesisProposal", "InitialHypothesisProposal", "InitialResponse", "NewUncertainty",
+    "ControlledRunTrace", "HypothesisProposal", "InitialHypothesisProposal", "InitialExpansionHypothesis", "InitialExpansionResponse", "InitialResponse", "NextStepResponse", "NewUncertainty",
     "NextActionResponse", "ReleaseRecord", "RevisionResponse",
 ]

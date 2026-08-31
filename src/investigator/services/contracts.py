@@ -1,11 +1,21 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from investigator.llm.base import ModelCallMetadata
 from investigator.models.hypothesis import HypothesisStatus, HypothesisTransition, UncertaintyTransition
 from investigator.models.identifiers import Case1ActionId, EvidenceId, HypothesisId, UncertaintyId
 from investigator.state.case_state import CaseState
+
+
+def _reject_placeholder(value: str) -> str:
+    if value.startswith("REPLACE_WITH_") or value in {
+        "The uncertainty this enquiry addresses.",
+        "How the result could change the explanation space.",
+        "Why this enquiry is useful now.",
+    }:
+        raise ValueError("Template placeholder is not valid model output")
+    return value
 
 
 class HypothesisProposal(BaseModel):
@@ -44,6 +54,76 @@ class InitialResponse(BaseModel):
                 for item in values["hypotheses"]
             ]
         return values
+
+
+class SeedHypothesisAnalysis(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    supported_by: list[EvidenceId]
+    conflicted_by: list[EvidenceId]
+    unresolved: list[str] = Field(min_length=1)
+    specificity_basis_evidence_ids: list[EvidenceId]
+
+
+class InitialExpansionHypothesis(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: HypothesisId
+    parent_id: HypothesisId | None = None
+    statement: str
+    status: Literal[HypothesisStatus.ACTIVE]
+    supported_by: list[EvidenceId]
+    conflicted_by: list[EvidenceId]
+    unresolved: list[str] = Field(min_length=1)
+    specificity_basis_evidence_ids: list[EvidenceId]
+    relationship: Literal["competing_root", "specialization"]
+    contrasted_hypothesis_id: HypothesisId | None = None
+    material_difference: str | None = None
+
+    @model_validator(mode="after")
+    def validate_relationship(self) -> "InitialExpansionHypothesis":
+        if self.relationship == "competing_root":
+            if self.parent_id is not None or self.contrasted_hypothesis_id is None or not self.material_difference:
+                raise ValueError("competing_root requires null parent, contrast target, and material_difference")
+        elif self.parent_id is None or not self.specificity_basis_evidence_ids:
+            raise ValueError("specialization requires a parent and specificity-basis evidence")
+        return self
+
+
+class InitialExpansionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    seed_analysis: SeedHypothesisAnalysis
+    competing_hypotheses: list[InitialExpansionHypothesis] = Field(min_length=1)
+    selected_action_id: Case1ActionId
+    target_uncertainty: str
+    expected_information_value: str
+    why_this_action_now: str
+
+    _valid_target = field_validator("target_uncertainty", "expected_information_value", "why_this_action_now")(_reject_placeholder)
+
+
+class NextStepResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    step_type: Literal["action", "conclusion", "stop_unresolved"]
+    selected_action_id: Case1ActionId | None = None
+    target_uncertainty: str | None = None
+    expected_information_value: str | None = None
+    why_this_action_now: str | None = None
+    conclusion_hypothesis_id: HypothesisId | None = None
+    conclusion_reason: str | None = None
+    remaining_uncertainty_ids: list[UncertaintyId] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_step(self) -> "NextStepResponse":
+        if self.step_type == "action":
+            if self.selected_action_id is None or any(value is None for value in (self.target_uncertainty, self.expected_information_value, self.why_this_action_now)) or self.conclusion_hypothesis_id is not None or self.conclusion_reason is not None:
+                raise ValueError("action step requires action fields and no conclusion fields")
+        elif self.step_type == "conclusion":
+            if self.conclusion_hypothesis_id is None or not self.conclusion_reason or self.selected_action_id is not None:
+                raise ValueError("conclusion step requires hypothesis and reason and no action")
+        elif not self.conclusion_reason and not self.remaining_uncertainty_ids:
+            raise ValueError("stop_unresolved requires a reason or unresolved IDs")
+        return self
+
+    _valid_text = field_validator("target_uncertainty", "expected_information_value", "why_this_action_now", "conclusion_reason")(_reject_placeholder)
 
 
 class NextActionResponse(BaseModel):

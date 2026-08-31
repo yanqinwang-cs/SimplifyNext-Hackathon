@@ -67,6 +67,36 @@ def build_initial_state(case_id: str, title: str, sources: dict[str, Source], ev
     return CaseState(case_id=case_id, title=title, sources=sources, evidence=evidence, hypotheses=hypotheses, uncertainties=uncertainties)
 
 
+def build_seeded_initial_state(case_id: str, title: str, sources: dict[str, Source], evidence: dict[str, EvidenceItem], seed_statement: str, analysis: Any, alternatives: list[Any]) -> CaseState:
+    hypotheses: dict[str, Hypothesis] = {}
+    uncertainties: dict[str, Uncertainty] = {}
+    proposals = [("H1", None, seed_statement, analysis, HypothesisOrigin.HUMAN_INPUT)] + [
+        (proposal.id, proposal.parent_id, proposal.statement, proposal, HypothesisOrigin.AGENT_SUGGESTION)
+        for proposal in alternatives
+    ]
+    for identifier, parent_id, statement, proposal, origin in proposals:
+        if identifier in hypotheses:
+            raise ValueError(f"Duplicate hypothesis ID in initial expansion: {identifier!r}")
+        if origin is HypothesisOrigin.AGENT_SUGGESTION:
+            if proposal.relationship == "competing_root" and proposal.contrasted_hypothesis_id not in hypotheses and proposal.contrasted_hypothesis_id != "H1":
+                raise ValueError(f"Unknown competing hypothesis ID: {proposal.contrasted_hypothesis_id!r}")
+            if proposal.relationship == "specialization" and proposal.parent_id not in hypotheses and proposal.parent_id != "H1":
+                raise ValueError(f"Unknown parent hypothesis ID: {proposal.parent_id!r}")
+        for evidence_id in proposal.supported_by + proposal.conflicted_by + proposal.specificity_basis_evidence_ids:
+            if evidence_id not in evidence:
+                raise ValueError(f"Unknown evidence ID: {evidence_id!r}")
+        hypotheses[identifier] = Hypothesis(
+            id=identifier, parent_id=parent_id, statement=statement, origin=origin, status=HypothesisStatus.ACTIVE,
+            supporting_evidence_ids=proposal.supported_by, conflicting_evidence_ids=proposal.conflicted_by,
+            unresolved_issue_ids=[f"{identifier}:U{i}" for i in range(1, len(proposal.unresolved) + 1)],
+            specificity_basis=proposal.specificity_basis_evidence_ids,
+        )
+        for index, description in enumerate(proposal.unresolved, start=1):
+            uncertainty_id = f"{identifier}:U{index}"
+            uncertainties[uncertainty_id] = Uncertainty(id=uncertainty_id, kind=UncertaintyKind.UNKNOWN, description=description)
+    return CaseState(case_id=case_id, title=title, sources=sources, evidence=evidence, hypotheses=hypotheses, uncertainties=uncertainties)
+
+
 def apply_revision(state: CaseState, response: Any) -> CaseState:
     updated = apply_hypothesis_updates(state, response.hypothesis_updates)
     for update in response.uncertainty_updates:

@@ -6,7 +6,7 @@ from investigator.environments.case_01 import Case1ControlledEnvironment
 from experiments.investigation_smoke.case_01.schemas import NextActionResponse, RevisionResponse
 from tests.test_investigation_smoke import call_result, initial_response
 from investigator.services import InvestigationService, InvalidSessionTransition, ModelStructuredOutputError, SessionStatus
-from investigator.services.contracts import InitialResponse
+from investigator.services.contracts import InitialExpansionHypothesis, InitialExpansionResponse, InitialResponse, SeedHypothesisAnalysis
 from investigator.llm.base import ModelCallMetadata, ModelCallResult
 
 
@@ -163,3 +163,37 @@ def test_initial_structured_failure_preserves_raw_output_and_does_not_retry() ->
         service.start_case()
     assert client.calls == 1
     assert error.value.raw_output == '{"hypotheses": [], "selected_action_id": "A1"}'
+
+
+def test_human_seed_becomes_exact_h1_and_model_must_add_competing_root() -> None:
+    expansion = InitialExpansionResponse(
+        seed_analysis=SeedHypothesisAnalysis(supported_by=["E1"], conflicted_by=[], unresolved=["What remains uncertain?"], specificity_basis_evidence_ids=[]),
+        competing_hypotheses=[InitialExpansionHypothesis(
+            id="H2", statement="A materially different broad explanation.", status="active", supported_by=["E2"], conflicted_by=[], unresolved=["What else remains uncertain?"], specificity_basis_evidence_ids=[], relationship="competing_root", contrasted_hypothesis_id="H1", material_difference="It differs on the main causal explanation.",
+        )], selected_action_id="A1", target_uncertainty="Target", expected_information_value="Value", why_this_action_now="Reason",
+    )
+    client = FakeClient([call_result(expansion)])
+    service = InvestigationService(client, Case1ControlledEnvironment(Path(__file__).resolve().parents[1] / "experiments/investigation_smoke/case_01/artifacts"))
+    seed = "The investigator's exact concern."
+    session = service.start_case(seed)
+    assert session.case_state.hypotheses["H1"].statement == seed
+    assert session.case_state.hypotheses["H1"].origin.value == "human_input"
+    assert session.case_state.hypotheses["H2"].parent_id is None
+    assert client.calls[0][1] is InitialExpansionResponse
+
+
+def test_competing_root_and_specialization_relationships_are_structurally_strict() -> None:
+    with pytest.raises(ValueError):
+        InitialExpansionHypothesis(id="H2", parent_id="H1", statement="x", status="active", supported_by=[], conflicted_by=[], unresolved=["u"], specificity_basis_evidence_ids=[], relationship="competing_root", contrasted_hypothesis_id="H1", material_difference="different")
+    with pytest.raises(ValueError):
+        InitialExpansionHypothesis(id="H2", statement="x", status="active", supported_by=[], conflicted_by=[], unresolved=["u"], specificity_basis_evidence_ids=[], relationship="specialization")
+
+
+def test_evidence_correction_preserves_history_and_pauses() -> None:
+    session = make_service([call_result(initial_response("A1"))]).start_case()
+    original = session.case_state.evidence["E1"].raw_content
+    service = make_service([])
+    service.correct_evidence(session, "E1", "Corrected content", "Investigator correction")
+    assert session.case_state.evidence["E1"].raw_content == "Corrected content"
+    assert session.case_state.evidence_correction_history[0]["previous_content"] == original
+    assert session.status is SessionStatus.PAUSED

@@ -34,6 +34,7 @@ class InteractiveTrace(BaseModel):
     updated_at: str
     status: str
     initial_prompt: str
+    investigator_seed_hypothesis: str | None = None
     initial_raw_model_output: Any | None = None
     initial_response: Any | None = None
     initial_metadata: Any | None = None
