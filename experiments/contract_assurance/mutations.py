@@ -384,6 +384,14 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         self_parent = copy.deepcopy(value)
         self_parent["hypotheses"][0]["parent_id"] = self_parent["hypotheses"][0]["id"]
         result.append(Mutation("self_parent_hypothesis", "S4", json.dumps(self_parent, sort_keys=True)))
+        cycle = copy.deepcopy(value)
+        first = cycle["hypotheses"][0]
+        second = copy.deepcopy(first)
+        second["id"] = "H2"
+        second["parent_id"] = "H1"
+        first["parent_id"] = "H2"
+        cycle["hypotheses"] = [first, second]
+        result.append(Mutation("cycle_introducing_hypotheses", "S4", json.dumps(cycle, sort_keys=True)))
     return result
 
 
