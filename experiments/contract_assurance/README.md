@@ -7,3 +7,5 @@ Blind packages are public-input snapshots only. A worker may be called blind onl
 The stable taxonomy is documented in `docs/schema-contracts.md`. Generated outputs belong in `experiments/contract_assurance/results/` and are ignored by git.
 
 Worker instructions live under `blind/`. The harness does not claim blindness merely because a prompt says so; `BlindBatchAudit.qualifies_as_blind` requires recorded isolation evidence.
+
+Evolution records belong under `evolution/` and are never rewritten when a contract changes.
