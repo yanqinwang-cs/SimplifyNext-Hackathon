@@ -35,6 +35,15 @@ class InitialResponse(BaseModel):
     why_this_action_now: str
 
 
+class NextActionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    selected_action_id: Case1ActionId
+    target_uncertainty: str
+    expected_information_value: str
+    why_this_action_now: str
+
+
 class RevisionResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

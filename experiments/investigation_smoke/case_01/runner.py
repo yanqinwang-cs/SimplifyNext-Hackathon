@@ -36,6 +36,7 @@ from investigator.models import (
     UncertaintyTransitionType,
 )
 from investigator.state import CaseState, apply_hypothesis_updates
+from investigator.services import InvestigationService
 from experiments.model_screen.cases import get_case
 
 
@@ -196,77 +197,49 @@ def run(
         return trace_path
 
     try:
+        service = InvestigationService(active_client)
         try:
-            first_call = active_client.call(first_prompt, InitialResponse)
+            session = service.start_case()
         except ModelParseError as exc:
             return failed(trace, "initial_parse", exc, exc.raw_output)
         except Exception as exc:
             return failed(trace, "initial_call", exc)
-        trace = trace.model_copy(update={"initial_raw_model_output": first_call.raw_output, "initial_metadata": first_call.metadata})
-        try:
-            initial_response = InitialResponse.model_validate(first_call.parsed)
-            action = get_action(initial_response.selected_action_id)
-        except Exception as exc:
-            return failed(trace, "initial_parse", exc)
-        try:
-            state = initial_state(initial_response)
-        except Exception as exc:
-            return failed(trace, "state_apply", exc)
-        post_release_state = state.model_copy(deep=True)
-        try:
-            release = release_selected_artifact(post_release_state, action.action_id)
-        except Exception as exc:
-            return failed(trace, "state_apply", exc)
-        selected_action = {"action_id": action.action_id, "title": action.title, "definition": action.definition}
-        second_prompt = revision_prompt(
-            case_input,
-            [hypothesis.model_dump(mode="json") for hypothesis in state.hypotheses.values()],
-            [uncertainty.model_dump(mode="json") for uncertainty in state.uncertainties.values()],
-            selected_action,
-            release.artifact_id,
-            release.content,
-        )
+        initial_response = session.initial_response
+        action = session.pending_action
         trace = trace.model_copy(update={
+            "initial_raw_model_output": session.initial_raw_model_output,
+            "initial_metadata": session.initial_metadata,
             "initial_response": initial_response,
-            "initial_hypothesis_state": state,
+            "initial_hypothesis_state": session.initial_case_state,
             "selected_action_id": action.action_id,
             "target_uncertainty": initial_response.target_uncertainty,
             "expected_information_value": initial_response.expected_information_value,
             "why_this_action_now": initial_response.why_this_action_now,
-            "release": release,
-            "revision_prompt": second_prompt,
         })
         try:
-            second_call = active_client.call(second_prompt, RevisionResponse)
+            service.set_human_action(session, action.action_id)
+            service.execute_action(session)
+            service.propose_revision(session)
         except ModelParseError as exc:
-            return failed(trace, "revision_parse", exc, exc.raw_output)
+            return failed(trace.model_copy(update={"release": session.pending_release}), "revision_parse", exc, exc.raw_output)
         except Exception as exc:
-            return failed(trace, "revision_call", exc)
+            return failed(trace.model_copy(update={"release": session.pending_release}), "revision_call", exc)
+        revision_response = session.pending_revision
         trace = trace.model_copy(update={
-            "revision_raw_model_output": second_call.raw_output,
-            "revision_metadata": second_call.metadata,
+            "release": session.pending_release,
+            "revision_prompt": session.revision_prompt,
+            "revision_raw_model_output": session.revision_raw_model_output,
+            "revision_metadata": session.revision_metadata,
+            "revision_response": revision_response,
         })
         try:
-            revision_response = RevisionResponse.model_validate(second_call.parsed)
-        except Exception as exc:
-            return failed(trace, "revision_parse", exc)
-        try:
-            final_state = apply_revision(post_release_state, revision_response)
+            service.apply_revision(session)
         except Exception as exc:
             return failed(trace, "state_apply", exc)
         trace = trace.model_copy(update={
-            "revision_response": revision_response,
-            "final_hypothesis_state": final_state,
+            "final_hypothesis_state": session.case_state,
             "parse_success": True,
-            "unsupported_operations": [
-                {"kind": "hypothesis", **update.model_dump(mode="json")}
-                for update in revision_response.hypothesis_updates
-                if update.transition.value == "other"
-            ] + [
-                {"kind": "uncertainty", **update.model_dump(mode="json")}
-                for update in revision_response.uncertainty_updates
-                if update.transition.value == "other"
-            ],
+            "unsupported_operations": session.unsupported_operations,
         })
     except Exception as exc:
         return failed(trace, "state_apply", exc)

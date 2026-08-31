@@ -77,7 +77,38 @@ Available enquiries:
 """
 
 
-def revision_prompt(case_input: str, prior_hypotheses: list[dict], prior_uncertainties: list[dict], selected_action: dict, release_evidence_id: str, release_content: str) -> str:
+def next_action_output_template() -> dict:
+    return {
+        "selected_action_id": "A2",
+        "target_uncertainty": "The uncertainty this enquiry addresses.",
+        "expected_information_value": "How the result could change the explanation space.",
+        "why_this_action_now": "Why this enquiry is useful now.",
+    }
+
+
+def next_action_prompt(case_input: str, case_state: dict, available_actions: list[dict]) -> str:
+    return f"""{RULES}
+
+ASSESSMENT ONTOLOGY / POLICY
+{render_assessment_context()}
+
+CURRENT CASE EVIDENCE / PRIOR STATE
+{render_current_case(case_input, case_state.get('hypotheses', []), case_state.get('uncertainties', []))}
+Current state evidence inventory (actual evidence only; context resources are not evidence):
+{json.dumps(case_state.get('evidence', []), indent=2)}
+
+TASK-SPECIFIC INSTRUCTION
+Select exactly one currently available enquiry. Explain the uncertainty it targets and how it may change the explanation space. Do not revise state, execute an enquiry, invent an action, or cite assessment-context resource IDs as evidence.
+
+CANONICAL JSON OUTPUT TEMPLATE
+{json.dumps(next_action_output_template(), indent=2)}
+Use bare canonical IDs only in ID fields and natural language only in text fields. Return JSON only with exactly these fields.
+
+Available enquiries:
+{json.dumps(available_actions, indent=2)}"""
+
+
+def revision_prompt(case_input: str, prior_hypotheses: list[dict], prior_uncertainties: list[dict], selected_action: dict, release_evidence_id: str, release_content: str, current_evidence: list[dict] | None = None) -> str:
     task = """TASK-SPECIFIC INSTRUCTION
 Revise the existing hypothesis tree after one controlled evidence release. Only original case evidence plus the newly released artefact may justify revision. Preserve viable broad parents and narrow only when justified. Do not select another enquiry. Use uncertainty updates for unresolved questions; do not invent mechanisms."""
     return f"""{RULES}
@@ -85,6 +116,9 @@ Revise the existing hypothesis tree after one controlled evidence release. Only 
 {render_assessment_layer(render_assessment_context())}
 
 {render_current_case(case_input, prior_hypotheses, prior_uncertainties)}
+
+Current released evidence/state inventory:
+{json.dumps(current_evidence or [], indent=2)}
 
 {task}
 

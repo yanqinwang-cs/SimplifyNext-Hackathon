@@ -1,114 +1,198 @@
 import streamlit as st
+from dotenv import load_dotenv
 
-from demo_data import (
-    ACTIVE_HYPOTHESES,
-    CLAIMS_TO_CHECK,
-    DEMO_MESSAGES,
-    EVIDENCE,
-    KEY_UNCERTAINTIES,
-    RELEASED_EVIDENCE,
-    RECOMMENDED_ACTION,
-)
+from demo_data import DEMO_MESSAGES
+from investigator.llm.bedrock import BedrockModelClient
+from investigator.services import InvestigationService, InvestigationSession, SessionStatus
 
 
 st.set_page_config(page_title="SimplifyNext — Case 01", page_icon="S", layout="wide")
-
-st.markdown(
-    """
-    <style>
-    .block-container { max-width: 1180px; padding-top: 2rem; }
-    .app-subtitle { color: #536070; font-size: 1.05rem; margin-top: -0.7rem; }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
 
 
 def initialize_session() -> None:
     if "messages" not in st.session_state:
         st.session_state.messages = [message.copy() for message in DEMO_MESSAGES]
-    if "review_status" not in st.session_state:
-        st.session_state.review_status = None
-    if "review_action" not in st.session_state:
-        st.session_state.review_action = RECOMMENDED_ACTION["id"]
-    if "review_note" not in st.session_state:
-        st.session_state.review_note = ""
+    st.session_state.setdefault("investigation", None)
+    st.session_state.setdefault("investigation_service", None)
+    st.session_state.setdefault("review_mode", None)
+    st.session_state.setdefault("notice", None)
 
 
-def render_sidebar() -> None:
-    with st.sidebar:
+def render_hypotheses(session: InvestigationSession) -> None:
+    active = [h for h in session.case_state.hypotheses.values() if h.status.value not in {"removed", "rejected", "archived"}]
+    if active:
         st.subheader("Active hypotheses")
-        for identifier, label in ACTIVE_HYPOTHESES:
-            st.markdown(f"- **{identifier}** — {label}")
+        for hypothesis in active:
+            st.markdown(f"- **{hypothesis.id}** — {hypothesis.statement}")
 
+
+def render_uncertainties(session: InvestigationSession) -> None:
+    unresolved = [
+        (identifier, uncertainty)
+        for identifier, uncertainty in session.case_state.uncertainties.items()
+        if any(identifier in hypothesis.unresolved_issue_ids for hypothesis in session.case_state.hypotheses.values())
+    ]
+    if unresolved:
         st.subheader("Key uncertainties")
-        for identifier, label in KEY_UNCERTAINTIES:
-            st.markdown(f"- **{identifier}** — {label}")
-
-        st.subheader("Claims to check")
-        for identifier, label, status in CLAIMS_TO_CHECK:
-            st.markdown(f"**{identifier}** — {label}  \n<small>{status}</small>", unsafe_allow_html=True)
-
-        with st.expander("Evidence"):
-            for identifier, label in EVIDENCE:
-                with st.expander(f"{identifier} — {label}"):
-                    st.caption(label)
-            if RELEASED_EVIDENCE:
-                st.markdown("**Released evidence**")
-                for identifier, label in RELEASED_EVIDENCE:
-                    st.markdown(f"- {identifier} — {label}")
+        for identifier, uncertainty in unresolved:
+            st.markdown(f"- **{identifier}** — {uncertainty.description}")
 
 
-def render_review_controls() -> None:
-    with st.expander("Review next action", expanded=st.session_state.review_status is None):
-        st.markdown(f"**Recommended next step**  \n{RECOMMENDED_ACTION['id']} — {RECOMMENDED_ACTION['label']}")
-        st.write(RECOMMENDED_ACTION["explanation"])
-        st.caption("Review controls are temporary UI placeholders and do not modify case state.")
+def render_evidence(session: InvestigationSession) -> None:
+    if not session.case_state.evidence:
+        return
+    with st.expander("Evidence"):
+        for identifier, evidence in session.case_state.evidence.items():
+            with st.expander(identifier):
+                st.caption(evidence.raw_content[:500])
 
-        actions = st.columns(4)
-        if actions[0].button("Approve", use_container_width=True):
-            st.session_state.review_status = "Action approved."
-        if actions[1].button("Redirect", use_container_width=True):
-            st.session_state.review_status = "redirect"
-        if actions[2].button("Correct", use_container_width=True):
-            st.session_state.review_status = "correct"
-        if actions[3].button("Stop", use_container_width=True):
-            st.session_state.review_status = "Investigation paused."
 
-        if st.session_state.review_status == "redirect":
-            st.session_state.review_action = st.selectbox("Redirect to", ["A1", "A2", "A3", "A4"])
-            st.session_state.review_note = st.text_input("Why redirect?", value=st.session_state.review_note)
-            if st.button("Save redirect", type="primary"):
-                st.session_state.review_status = f"Redirect recorded to {st.session_state.review_action}."
-        elif st.session_state.review_status == "correct":
-            st.session_state.review_note = st.text_area("What should be corrected?", value=st.session_state.review_note)
-            if st.button("Save correction", type="primary"):
-                st.session_state.review_status = "Correction recorded."
-
-        if st.session_state.review_status and st.session_state.review_status not in {"redirect", "correct"}:
-            st.success(st.session_state.review_status)
+def render_sidebar(session: InvestigationSession | None) -> None:
+    with st.sidebar:
+        if session is None:
+            st.caption("Start an investigation to inspect its case state.")
+            return
+        render_hypotheses(session)
+        render_uncertainties(session)
+        render_evidence(session)
 
 
 def render_chat() -> None:
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.write(message["content"])
-
     prompt = st.chat_input("Type a message…")
     if prompt:
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.session_state.messages.append({"role": "assistant", "content": "Message recorded for review."})
+        st.session_state.messages.extend([
+            {"role": "user", "content": prompt},
+            {"role": "assistant", "content": "Message recorded for review. Automated steering is not connected yet."},
+        ])
+        st.session_state.notice = "Correction or chat input was recorded. Automated reassessment is not connected yet."
         st.rerun()
+
+
+def start_investigation() -> None:
+    load_dotenv()
+    try:
+        service = InvestigationService(BedrockModelClient())
+        session = service.start_case()
+    except Exception as exc:
+        st.session_state.notice = f"Could not start the investigation: {exc}"
+        return
+    st.session_state.investigation_service = service
+    st.session_state.investigation = session
+    st.session_state.notice = None
+
+
+def render_action_review(session: InvestigationSession, service: InvestigationService) -> None:
+    action = session.pending_action
+    if action is None:
+        return
+    with st.expander("Review next action", expanded=True):
+        st.markdown(f"**Recommended next step**  \n{action.action_id} — {action.title}")
+        st.write(session.action_reason or "This step may help distinguish between the current explanations.")
+        columns = st.columns(4)
+        if columns[0].button("Approve", use_container_width=True):
+            try:
+                service.execute_action(session)
+                service.propose_revision(session)
+                st.session_state.notice = "Action executed. A revision is ready for review."
+            except Exception as exc:
+                st.session_state.notice = f"Could not prepare the revision: {exc}"
+            st.rerun()
+        if columns[1].button("Redirect", use_container_width=True):
+            st.session_state.review_mode = "redirect"
+            st.rerun()
+        if columns[2].button("Correct", use_container_width=True):
+            st.session_state.review_mode = "correct"
+            st.rerun()
+        if columns[3].button("Stop", use_container_width=True):
+            service.stop(session)
+            st.session_state.notice = "Investigation paused."
+            st.rerun()
+        if st.session_state.review_mode == "redirect":
+            replacement = st.selectbox("Redirect to", ["A1", "A2", "A3", "A4"])
+            reason = st.text_input("Why redirect?", key="redirect_reason")
+            if st.button("Save redirect", type="primary"):
+                try:
+                    service.set_human_action(session, replacement, reason or None)
+                    st.session_state.review_mode = None
+                    st.session_state.notice = f"Action redirected to {replacement}."
+                except Exception as exc:
+                    st.session_state.notice = str(exc)
+                st.rerun()
+        elif st.session_state.review_mode == "correct":
+            st.text_area("What should be corrected?", key="correction_text")
+            if st.button("Save correction", type="primary"):
+                st.session_state.review_mode = None
+                st.session_state.notice = "Correction recorded. Automated reassessment from investigator steering is not connected yet."
+                st.rerun()
+
+
+def render_revision_review(session: InvestigationSession, service: InvestigationService) -> None:
+    revision = session.pending_revision
+    if revision is None:
+        return
+    with st.expander("Review proposed changes", expanded=True):
+        st.markdown("**Proposed changes**")
+        for update in revision.hypothesis_updates:
+            st.markdown(f"- {update.hypothesis_id} — {update.transition.value}")
+        for update in revision.uncertainty_updates:
+            st.markdown(f"- {update.uncertainty_id} — {update.transition.value}")
+        with st.expander("Reasons"):
+            for update in revision.hypothesis_updates:
+                st.caption(f"{update.hypothesis_id}: {update.reason}")
+            for update in revision.uncertainty_updates:
+                st.caption(f"{update.uncertainty_id}: {update.reason}")
+        columns = st.columns(3)
+        if columns[0].button("Approve revision", type="primary", use_container_width=True):
+            try:
+                service.apply_revision(session)
+                service.propose_next_action(session)
+                st.session_state.notice = "Revision applied. The next action is ready for review." if session.pending_action else "All available actions are complete."
+            except Exception as exc:
+                st.session_state.notice = f"Could not apply the revision: {exc}"
+            st.rerun()
+        if columns[1].button("Correct", use_container_width=True):
+            st.session_state.review_mode = "revision_correct"
+            st.rerun()
+        if columns[2].button("Stop", use_container_width=True):
+            service.stop(session)
+            st.session_state.notice = "Investigation paused."
+            st.rerun()
+        if st.session_state.review_mode == "revision_correct":
+            st.text_area("What should be corrected?", key="revision_correction")
+            if st.button("Record correction"):
+                st.session_state.notice = "Correction recorded. Automated reassessment is not connected yet."
+                st.rerun()
 
 
 def main() -> None:
     initialize_session()
+    session = st.session_state.investigation
+    service = st.session_state.investigation_service
     st.title("SimplifyNext")
-    st.markdown("Academic integrity review — Case 01", unsafe_allow_html=False)
-    render_sidebar()
+    st.caption("Academic integrity review — Case 01")
+    render_sidebar(session)
     st.subheader("Investigator chat")
     render_chat()
-    render_review_controls()
+    if session is None:
+        st.write("Review the case with a controlled investigation assistant.")
+        if st.button("Start investigation", type="primary"):
+            with st.spinner("Starting investigation…"):
+                start_investigation()
+            st.rerun()
+    else:
+        if session.status is SessionStatus.AWAITING_ACTION_REVIEW:
+            render_action_review(session, service)
+        elif session.status is SessionStatus.AWAITING_REVISION_REVIEW:
+            render_revision_review(session, service)
+        elif session.status is SessionStatus.STOPPED:
+            st.info("Investigation stopped. The current state remains available for inspection.")
+        elif session.status is SessionStatus.PAUSED:
+            st.info("Investigation paused. The current state remains available for inspection.")
+    if st.session_state.notice:
+        st.info(st.session_state.notice)
 
 
 if __name__ == "__main__":
