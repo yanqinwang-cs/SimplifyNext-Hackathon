@@ -1,0 +1,390 @@
+{
+  "case_input": {
+    "case_id": "public-case-01",
+    "hypothesis_ids": [
+      "H1"
+    ],
+    "released_evidence_ids": [
+      "E1",
+      "A1_RELEASE"
+    ],
+    "uncertainty_ids": [
+      "H1:U1"
+    ]
+  },
+  "manifest": {
+    "case_input_hash": "88fca2df924c5bfc2af9e35b6e1fe3ceda3bbbad2d6c28bc0b2be2f0e1655bf1",
+    "contract": "RevisionResponse",
+    "git_commit": "006dfa4",
+    "prompt_hash": "a3d02bae5354707fa7221c943f77605a05360eec9ca8cc9d06c6ff94c146cd02",
+    "schema_hash": "56906e23079db421c3704a1465b15ff9c008cbde48b2b4d5776f4c4c1e59a455",
+    "source": "src/investigator/services/contracts.py",
+    "template_hash": "ed211757c76ad6456dec7c22175c7becad076e9de93d00afc641dce97a70d5ad"
+  },
+  "output_schema": {
+    "$defs": {
+      "HypothesisProposal": {
+        "additionalProperties": false,
+        "properties": {
+          "conflicted_by": {
+            "items": {
+              "pattern": "^(?:E[1-9][0-9]*|A[1-4]_RELEASE)$",
+              "type": "string"
+            },
+            "title": "Conflicted By",
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^H[1-9][0-9]*(?:\\.[1-9][0-9]*)*$",
+            "title": "Id",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "pattern": "^H[1-9][0-9]*(?:\\.[1-9][0-9]*)*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parent Id"
+          },
+          "specificity_basis_evidence_ids": {
+            "items": {
+              "pattern": "^(?:E[1-9][0-9]*|A[1-4]_RELEASE)$",
+              "type": "string"
+            },
+            "title": "Specificity Basis Evidence Ids",
+            "type": "array"
+          },
+          "statement": {
+            "title": "Statement",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/$defs/HypothesisStatus",
+            "default": "active"
+          },
+          "supported_by": {
+            "items": {
+              "pattern": "^(?:E[1-9][0-9]*|A[1-4]_RELEASE)$",
+              "type": "string"
+            },
+            "title": "Supported By",
+            "type": "array"
+          },
+          "unresolved": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Unresolved",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "statement",
+          "supported_by",
+          "conflicted_by",
+          "unresolved",
+          "specificity_basis_evidence_ids"
+        ],
+        "title": "HypothesisProposal",
+        "type": "object"
+      },
+      "HypothesisStatus": {
+        "enum": [
+          "proposed",
+          "active",
+          "deprioritized",
+          "rejected",
+          "archived",
+          "weakened",
+          "conflicted",
+          "removed"
+        ],
+        "title": "HypothesisStatus",
+        "type": "string"
+      },
+      "HypothesisTransition": {
+        "additionalProperties": false,
+        "properties": {
+          "add_conflicting_evidence_ids": {
+            "items": {
+              "pattern": "^(?:E[1-9][0-9]*|A[1-4]_RELEASE)$",
+              "type": "string"
+            },
+            "title": "Add Conflicting Evidence Ids",
+            "type": "array"
+          },
+          "add_specificity_basis_evidence_ids": {
+            "items": {
+              "pattern": "^(?:E[1-9][0-9]*|A[1-4]_RELEASE)$",
+              "type": "string"
+            },
+            "title": "Add Specificity Basis Evidence Ids",
+            "type": "array"
+          },
+          "add_supporting_evidence_ids": {
+            "items": {
+              "pattern": "^(?:E[1-9][0-9]*|A[1-4]_RELEASE)$",
+              "type": "string"
+            },
+            "title": "Add Supporting Evidence Ids",
+            "type": "array"
+          },
+          "hypothesis_id": {
+            "pattern": "^H[1-9][0-9]*(?:\\.[1-9][0-9]*)*$",
+            "title": "Hypothesis Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_effect": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Requested Effect"
+          },
+          "requested_operation_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Requested Operation Name"
+          },
+          "transition": {
+            "$ref": "#/$defs/HypothesisTransitionType"
+          },
+          "why_existing_operations_do_not_fit": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Why Existing Operations Do Not Fit"
+          }
+        },
+        "required": [
+          "hypothesis_id",
+          "transition",
+          "reason"
+        ],
+        "title": "HypothesisTransition",
+        "type": "object"
+      },
+      "HypothesisTransitionType": {
+        "enum": [
+          "keep",
+          "weaken",
+          "conflict",
+          "remove",
+          "activate",
+          "other"
+        ],
+        "title": "HypothesisTransitionType",
+        "type": "string"
+      },
+      "NewUncertainty": {
+        "additionalProperties": false,
+        "properties": {
+          "basis_evidence_ids": {
+            "items": {
+              "pattern": "^(?:E[1-9][0-9]*|A[1-4]_RELEASE)$",
+              "type": "string"
+            },
+            "title": "Basis Evidence Ids",
+            "type": "array"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "hypothesis_id": {
+            "pattern": "^H[1-9][0-9]*(?:\\.[1-9][0-9]*)*$",
+            "title": "Hypothesis Id",
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^H[1-9][0-9]*(?:\\.[1-9][0-9]*)*:U[1-9][0-9]*$",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "hypothesis_id",
+          "description"
+        ],
+        "title": "NewUncertainty",
+        "type": "object"
+      },
+      "UncertaintyTransition": {
+        "additionalProperties": false,
+        "properties": {
+          "basis_evidence_ids": {
+            "items": {
+              "pattern": "^(?:E[1-9][0-9]*|A[1-4]_RELEASE)$",
+              "type": "string"
+            },
+            "title": "Basis Evidence Ids",
+            "type": "array"
+          },
+          "new_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "New Description"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_effect": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Requested Effect"
+          },
+          "requested_operation_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Requested Operation Name"
+          },
+          "transition": {
+            "$ref": "#/$defs/UncertaintyTransitionType"
+          },
+          "uncertainty_id": {
+            "pattern": "^H[1-9][0-9]*(?:\\.[1-9][0-9]*)*:U[1-9][0-9]*$",
+            "title": "Uncertainty Id",
+            "type": "string"
+          },
+          "why_existing_operations_do_not_fit": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Why Existing Operations Do Not Fit"
+          }
+        },
+        "required": [
+          "uncertainty_id",
+          "transition",
+          "reason"
+        ],
+        "title": "UncertaintyTransition",
+        "type": "object"
+      },
+      "UncertaintyTransitionType": {
+        "enum": [
+          "keep",
+          "refine",
+          "resolve",
+          "remove",
+          "other"
+        ],
+        "title": "UncertaintyTransitionType",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "hypothesis_updates": {
+        "items": {
+          "$ref": "#/$defs/HypothesisTransition"
+        },
+        "title": "Hypothesis Updates",
+        "type": "array"
+      },
+      "new_hypotheses": {
+        "items": {
+          "$ref": "#/$defs/HypothesisProposal"
+        },
+        "title": "New Hypotheses",
+        "type": "array"
+      },
+      "new_uncertainties": {
+        "items": {
+          "$ref": "#/$defs/NewUncertainty"
+        },
+        "title": "New Uncertainties",
+        "type": "array"
+      },
+      "revision_rationale": {
+        "title": "Revision Rationale",
+        "type": "string"
+      },
+      "uncertainty_updates": {
+        "items": {
+          "$ref": "#/$defs/UncertaintyTransition"
+        },
+        "title": "Uncertainty Updates",
+        "type": "array"
+      }
+    },
+    "required": [
+      "revision_rationale"
+    ],
+    "title": "RevisionResponse",
+    "type": "object"
+  },
+  "prompt": "Return one JSON object matching the supplied schema after the public evidence release.",
+  "template": {
+    "hypothesis_updates": [],
+    "new_hypotheses": [],
+    "new_uncertainties": [],
+    "revision_rationale": "REPLACE_WITH_REVISION_RATIONALE",
+    "uncertainty_updates": []
+  }
+}
