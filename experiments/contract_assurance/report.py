@@ -63,6 +63,10 @@ def render_markdown(report: dict) -> str:
     if summary.get("failure_codes"):
         lines += ["## Failure codes", ""]
         lines.extend(f"- `{code}`: {count}" for code, count in sorted(summary["failure_codes"].items()))
+    by_contract = report.get("deterministic_by_contract", {})
+    if by_contract:
+        lines += ["", "## By contract", "", "| Contract | Total | Accepted | Rejected |", "| --- | ---: | ---: | ---: |"]
+        lines.extend(f"| `{contract}` | {data.get('total', 0)} | {data.get('accepted', 0)} | {data.get('rejected', 0)} |" for contract, data in sorted(by_contract.items()))
     return "\n".join(lines) + "\n"
 
 

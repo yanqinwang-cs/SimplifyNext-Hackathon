@@ -114,6 +114,7 @@ def test_report_history_preserves_dated_json_and_markdown(tmp_path: Path):
     latest, dated = write_history(tmp_path, {"accepted": 1, "rejected": 0}, timestamp="2026-08-31T12:00:00+00:00")
     assert latest.name == "latest.json" and dated.parent.name == "history"
     assert "Accepted" in (tmp_path / "latest.md").read_text()
+    assert "By contract" in render_markdown({"deterministic_by_contract": {"NextActionResponse": {"total": 1, "accepted": 1, "rejected": 0}}})
     assert render_markdown({"failure_codes": {"S2": 3}}).count("S2") == 1
 
 
