@@ -46,3 +46,4 @@ def test_multi_operation_fixture_reassesses_after_each_transition() -> None:
     assert len(result.steps) >= 2
     assert not result.failures
     assert result.termination == "quiescent"
+    assert len(trajectory_scenarios()) == 3

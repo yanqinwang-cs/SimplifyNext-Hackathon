@@ -81,4 +81,10 @@ def trajectory_scenarios() -> list[StewardScenario]:
     n, s = GraphNodeType, GraphStatus
     scenario = _scenario("SEQ_A", "The current explanation remains active and depends on a proposition; a separate branch has no graph relation, while an archived explanation is linked to a new active proposition.", {"H1": _node("H1", n.HYPOTHESIS, "Current explanation."), "H2": _node("H2", n.HYPOTHESIS, "Stale branch."), "H3": _node("H3", n.HYPOTHESIS, "Previously archived explanation.", s.ARCHIVED), "P3": _node("P3", n.PROPOSITION, "New relevant proposition.")}, [_edge("P3", EdgeRelation.SUPPORTS, "H3"), _edge("H1", EdgeRelation.DEPENDS_ON, "P3")], "H1", "keep_focus")
     scenario.description = "The current explanation remains active; a separate branch has no graph relation, while an archived explanation is linked to a new active proposition."
-    return [scenario]
+    deep = deepcopy(all_scenarios()[5])
+    deep.scenario_id = "SEQ_B"
+    deep.description = "A deep active hypothesis has a narrower local explanation, while a separate active root remains available for later review."
+    retiring = deepcopy(all_scenarios()[7])
+    retiring.scenario_id = "SEQ_C"
+    retiring.description = "The current proposition is no longer useful; another active proposition remains available and an archived explanation is linked to current material."
+    return [scenario, deep, retiring]

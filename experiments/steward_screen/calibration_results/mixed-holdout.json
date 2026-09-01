@@ -1,5 +1,5 @@
 {
-  "scenarios": 1,
+  "scenarios": 3,
   "step_cap": 4,
   "terminated_stopped": 0,
   "terminated_clear_failure": 0,
@@ -8,13 +8,34 @@
   "no_progress_loop": 0,
   "oscillation": 0,
   "steps": [
-    3
+    3,
+    3,
+    2
   ],
   "details": [
     {
       "scenario_id": "SEQ_A",
       "operations": [
         "reactivate",
+        "archive",
+        "keep_focus"
+      ],
+      "failures": [],
+      "termination": "quiescent"
+    },
+    {
+      "scenario_id": "SEQ_B",
+      "operations": [
+        "generalize",
+        "generalize",
+        "keep_focus"
+      ],
+      "failures": [],
+      "termination": "quiescent"
+    },
+    {
+      "scenario_id": "SEQ_C",
+      "operations": [
         "archive",
         "keep_focus"
       ],
