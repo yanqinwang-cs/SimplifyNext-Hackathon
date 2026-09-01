@@ -379,6 +379,72 @@
       "total": 28
     }
   },
+  "deterministic_correctness": {
+    "invalid_fixtures": 395,
+    "invalid_rejected": 395,
+    "invalid_rejection_rate": 1.0,
+    "valid_accepted": 21,
+    "valid_fixtures": 21,
+    "valid_pass_rate": 1.0
+  },
+  "deterministic_correctness_by_contract": {
+    "InitialExpansionResponse": {
+      "invalid_fixtures": 80,
+      "invalid_rejected": 80,
+      "invalid_rejection_rate": 1.0,
+      "valid_accepted": 2,
+      "valid_fixtures": 2,
+      "valid_pass_rate": 1.0
+    },
+    "InitialResponse": {
+      "invalid_fixtures": 61,
+      "invalid_rejected": 61,
+      "invalid_rejection_rate": 1.0,
+      "valid_accepted": 1,
+      "valid_fixtures": 1,
+      "valid_pass_rate": 1.0
+    },
+    "ModelScreenHypothesisResponse": {
+      "invalid_fixtures": 36,
+      "invalid_rejected": 36,
+      "invalid_rejection_rate": 1.0,
+      "valid_accepted": 2,
+      "valid_fixtures": 2,
+      "valid_pass_rate": 1.0
+    },
+    "NextActionResponse": {
+      "invalid_fixtures": 43,
+      "invalid_rejected": 43,
+      "invalid_rejection_rate": 1.0,
+      "valid_accepted": 1,
+      "valid_fixtures": 1,
+      "valid_pass_rate": 1.0
+    },
+    "NextStepResponse": {
+      "invalid_fixtures": 55,
+      "invalid_rejected": 55,
+      "invalid_rejection_rate": 1.0,
+      "valid_accepted": 3,
+      "valid_fixtures": 3,
+      "valid_pass_rate": 1.0
+    },
+    "RevisionResponse": {
+      "invalid_fixtures": 93,
+      "invalid_rejected": 93,
+      "invalid_rejection_rate": 1.0,
+      "valid_accepted": 11,
+      "valid_fixtures": 11,
+      "valid_pass_rate": 1.0
+    },
+    "SmokeResponse": {
+      "invalid_fixtures": 27,
+      "invalid_rejected": 27,
+      "invalid_rejection_rate": 1.0,
+      "valid_accepted": 1,
+      "valid_fixtures": 1,
+      "valid_pass_rate": 1.0
+    }
+  },
   "deterministic_failure_rate": {
     "confidence": 0.95,
     "failures": 395,
@@ -386,7 +452,7 @@
     "total": 416,
     "upper_failure_rate": 0.9667486562144427
   },
-  "generated_at": "2026-09-01T00:41:25.181858+00:00",
+  "generated_at": "2026-09-01T00:42:51.428463+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -608,7 +674,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "dd11e68",
+    "git_commit": "db2ae2b",
     "unregistered_response_classes": []
   },
   "semantic_limitations": [
