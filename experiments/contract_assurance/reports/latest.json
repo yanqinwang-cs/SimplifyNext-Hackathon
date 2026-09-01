@@ -723,7 +723,7 @@
     "total": 477,
     "upper_failure_rate": 0.9485470142820811
   },
-  "generated_at": "2026-09-01T02:27:20.232029+00:00",
+  "generated_at": "2026-09-01T02:30:30.667029+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -1067,7 +1067,14 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "c120a6c",
+    "dynamic_structured_boundaries": [
+      {
+        "path": "experiments/gate1/runner.py",
+        "reason": "output_schema is supplied by the caller; the concrete schema must be registered at its call site",
+        "symbol": "ExperimentRunner.run"
+      }
+    ],
+    "git_commit": "413500b",
     "unregistered_response_classes": []
   },
   "prompt_lint": {

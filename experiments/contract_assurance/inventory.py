@@ -10,6 +10,15 @@ from typing import Any
 from .registry import ContractSpec, contract_registry
 
 
+DYNAMIC_STRUCTURED_BOUNDARIES = (
+    {
+        "path": "experiments/gate1/runner.py",
+        "symbol": "ExperimentRunner.run",
+        "reason": "output_schema is supplied by the caller; the concrete schema must be registered at its call site",
+    },
+)
+
+
 def discover_response_classes(root: Path) -> list[dict[str, str]]:
     found: list[dict[str, str]] = []
     for path in sorted(root.rglob("*.py")):
@@ -65,7 +74,7 @@ def inventory(root: Path, commit: str = "unknown") -> dict[str, Any]:
             except (OSError, json.JSONDecodeError):
                 template_hash = None
         entries.append({**asdict(spec), "schema": spec.schema.__name__, "schema_hash": hashlib.sha256(json.dumps(spec.schema.model_json_schema(), sort_keys=True).encode()).hexdigest(), "source_hash": source_hash, "prompt_hashes": prompt_hashes, "template_source": str(template_path.relative_to(root)), "template_hash": template_hash})
-    return {"git_commit": commit, "contracts": entries, "discovered_response_classes": discover_response_classes(root), "unregistered_response_classes": unregistered_response_classes(root)}
+    return {"git_commit": commit, "contracts": entries, "dynamic_structured_boundaries": list(DYNAMIC_STRUCTURED_BOUNDARIES), "discovered_response_classes": discover_response_classes(root), "unregistered_response_classes": unregistered_response_classes(root)}
 
 
 def write_inventory(root: Path, destination: Path, commit: str = "unknown") -> Path:
@@ -83,6 +92,10 @@ def render_inventory_markdown(data: dict[str, Any]) -> str:
     lines += ["", f"Unregistered response classes: **{len(unregistered)}**"]
     for item in unregistered:
         lines.append(f"- `{item['name']}` in `{item['source']}`")
+    dynamic = data.get("dynamic_structured_boundaries", [])
+    lines += ["", f"Dynamic structured-call boundaries: **{len(dynamic)}**"]
+    for item in dynamic:
+        lines.append(f"- `{item['symbol']}` in `{item['path']}`: {item['reason']}")
     return "\n".join(lines) + "\n"
 
 

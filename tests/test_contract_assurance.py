@@ -84,6 +84,7 @@ def test_inventory_discovers_and_registers_all_response_contracts(tmp_path: Path
     names = {item["name"] for item in discovered}
     assert {"InitialResponse", "InitialExpansionResponse", "NextActionResponse", "RevisionResponse", "HypothesisResponse"} <= names
     assert unregistered_response_classes(root) == []
+    assert __import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root)["dynamic_structured_boundaries"] == [{"path": "experiments/gate1/runner.py", "symbol": "ExperimentRunner.run", "reason": "output_schema is supplied by the caller; the concrete schema must be registered at its call site"}]
     assert_complete_inventory(root)
     assert_inventory_paths(root)
     assert all(item["source_hash"] for item in __import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root)["contracts"])

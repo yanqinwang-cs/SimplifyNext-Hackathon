@@ -340,6 +340,13 @@
       "source": "src/investigator/services/contracts.py"
     }
   ],
-  "git_commit": "c120a6c",
+  "dynamic_structured_boundaries": [
+    {
+      "path": "experiments/gate1/runner.py",
+      "reason": "output_schema is supplied by the caller; the concrete schema must be registered at its call site",
+      "symbol": "ExperimentRunner.run"
+    }
+  ],
+  "git_commit": "413500b",
   "unregistered_response_classes": []
 }
