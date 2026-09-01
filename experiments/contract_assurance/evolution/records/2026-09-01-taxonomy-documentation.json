@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-021",
+  "contract": "Failure taxonomy documentation",
+  "discovery_source": "initial-deliverables documentation audit",
+  "baseline_failure": {"raw_output": "docs/schema-contracts.md described taxonomy without enumerating S0-S6", "observed_code": "incomplete documentation", "intended_code": "documented taxonomy"},
+  "classification": "S4",
+  "legitimate_semantic_need": "Reviewers need an explicit stable mapping from each failure code to its assurance boundary.",
+  "why_existing_contract_insufficient": "The documentation had principles but no code-by-code table or deterministic versus semantic boundary statement.",
+  "implementation_change": "Add the complete S0-S6 taxonomy table and documentation drift regression test.",
+  "tests_added": ["all S0-S6 codes are documented"],
+  "expected_reclassifications": ["incomplete documentation -> complete taxonomy documentation"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [428, 428], "unexpected_outcomes": [0, 0]},
+  "commit": "aa20527"
+}

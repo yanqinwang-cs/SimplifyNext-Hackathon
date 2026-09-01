@@ -8,4 +8,4 @@
 - Pending human decisions: none
 - Latest worker evidence: fourteen qualified isolated producer/adversary batches cover all seven registered contracts, including fresh InitialExpansionResponse producer and adversary batches with current package hashes; all carry Seatbelt launcher and denied-read probe evidence under ignored `experiments/contract_assurance/results/2026-09-01-isolated-*/`.
 - Next queued work: extend referential and cross-field mutation combinations; live SmokeResponse Bedrock execution remains intentionally excluded by the no-AWS constraint
-- Last checkpoint: `f24aa14` (`Record evolution provenance audit`); current cycle revalidates status provenance and assurance-only execution.
+- Last checkpoint: `aa20527` (`Document complete failure taxonomy`); current cycle revalidates status provenance and assurance-only execution.
