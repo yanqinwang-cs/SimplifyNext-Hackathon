@@ -74,6 +74,8 @@ def test_registry_has_current_service_contracts():
     assert "ModelScreenHypothesisResponse" in registry
     assert all(not lint_contract(spec) for spec in registry.values())
     validate_registry()
+    documentation = (Path(__file__).resolve().parents[1] / "docs/schema-contracts.md").read_text(encoding="utf-8")
+    assert all(f"| {code} |" in documentation for code in ("S0", "S1", "S2", "S3", "S4", "S5", "S6"))
 
 
 def test_inventory_discovers_and_registers_all_response_contracts(tmp_path: Path):
