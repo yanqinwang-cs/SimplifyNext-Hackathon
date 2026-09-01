@@ -111,6 +111,30 @@ def evaluate_initial(raw_output: Any, *, schema: type[Any], build_state: Any, av
     return result
 
 
+def evaluate_steward(raw_output: Any, *, scenario: Any) -> Evaluation:
+    """Exercise the steward screen's real union parser and coordinator consumer."""
+    from experiments.steward_screen.evaluate import evaluate_result
+    from experiments.steward_screen.prompt import build_prompt
+    from experiments.steward_screen.runner import JsonObject
+    from investigator.llm.base import ModelCallMetadata, ModelCallResult
+
+    prompt = build_prompt(scenario)
+    try:
+        value = json.loads(normalize_json_text(raw_output)) if isinstance(raw_output, str) else raw_output
+        parsed = JsonObject.model_validate(value)
+    except (json.JSONDecodeError, ValueError, TypeError) as exc:
+        code = FailureCode.S0 if isinstance(exc, json.JSONDecodeError) else FailureCode.S1
+        stage = "serialization" if code is FailureCode.S0 else "schema"
+        return Evaluation(False, code, stage, str(exc), raw_output=raw_output)
+    call_result = ModelCallResult(parsed=parsed, raw_output=raw_output, metadata=ModelCallMetadata(provider="offline", model="contract-assurance", latency_seconds=0.0, parse_success=True))
+    screen = evaluate_result("contract-assurance", "offline", scenario, 1, prompt, call_result)
+    if not screen.schema_valid:
+        return Evaluation(False, FailureCode.S1, "schema", screen.error_message or "StewardDecision schema validation failed", raw_output=raw_output)
+    if not screen.coordinator_accepted or not screen.post_state_correct:
+        return Evaluation(False, FailureCode.S4, "coordinator_preflight", screen.error_message or "StewardDecision was not accepted by the coordinator", raw_output=raw_output)
+    return Evaluation(True, stage="coordinator", parsed=screen.parsed_decision, raw_output=raw_output, details={"operation_correct": screen.operation_correct, "identifier_correct": screen.identifier_correct})
+
+
 def persist_evaluations(evaluations: list[Evaluation], destination: Any) -> Any:
     """Persist exact raw outputs and classifications to a generated results file."""
     from pathlib import Path

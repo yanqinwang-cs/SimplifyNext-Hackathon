@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .evaluate import evaluate_initial, evaluate_next_action, evaluate_raw, evaluate_revision
+from .evaluate import evaluate_initial, evaluate_next_action, evaluate_raw, evaluate_revision, evaluate_steward
 from .inventory import assert_complete_inventory, assert_inventory_paths, inventory
 from .lint import lint_contract
 from .snapshot import fingerprint, verify_snapshot_against_contract
@@ -26,6 +26,10 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
     fixture_dir = root / "experiments/contract_assurance/fixtures"
     revision_state = _revision_state(root)
     environment = _case1_environment(root)
+    steward_scenario = None
+    if "StewardDecisionResponse" in contract_registry():
+        from experiments.steward_screen.scenarios import all_scenarios
+        steward_scenario = all_scenarios()[0]
     for name, spec in contract_registry().items():
         sample = _sample_for(spec.schema)
         if sample is None:
@@ -46,10 +50,17 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
                     build_state=lambda response: environment.build_seeded_initial_state("A human-seeded explanation.", response),
                     available_action_ids={"A1"},
                 )
+            elif name == "StewardDecisionResponse":
+                result = evaluate_steward(mutation.raw_output, scenario=steward_scenario)
             else:
                 result = evaluate_raw(mutation.raw_output, spec.schema)
             result.details.update({"contract": name, "mutation": mutation.name, "intended_code": mutation.intended_code})
             results.append(result)
+        if name == "StewardDecisionResponse":
+            for scenario in _steward_scenarios():
+                result = evaluate_steward(json.dumps(_steward_decision_payload(scenario), sort_keys=True), scenario=scenario)
+                result.details.update({"contract": name, "mutation": f"canonical_scenario_{scenario.scenario_id}", "intended_code": "valid"})
+                results.append(result)
     summary = summarize(results)
     summary["unexpected_accepts"] = sum(item.accepted and item.details.get("intended_code") != "valid" for item in results)
     summary["unexpected_rejects"] = sum((not item.accepted) and item.details.get("intended_code") == "valid" for item in results)
@@ -173,9 +184,9 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
                         by_contract[contract]["recorded_accepted"] += recorded_accepted
                         by_contract[contract]["recorded_rejected"] += recorded_rejected
                         if is_qualified:
-                            by_contract[item_contract]["evaluations"] += len(evaluations)
-                            by_contract[item_contract]["accepted"] += recorded_accepted
-                            by_contract[item_contract]["rejected"] += recorded_rejected
+                            by_contract[contract]["evaluations"] += len(evaluations)
+                            by_contract[contract]["accepted"] += recorded_accepted
+                            by_contract[contract]["rejected"] += recorded_rejected
                             contract_role["evaluations"] += len(evaluations)
                             contract_role["accepted"] += recorded_accepted
                             contract_role["rejected"] += recorded_rejected
@@ -198,6 +209,23 @@ def _case1_environment(root: Path) -> Any:
     from investigator.environments.case_01 import Case1ControlledEnvironment
 
     return Case1ControlledEnvironment(root / "experiments/investigation_smoke/case_01/artifacts")
+
+
+def _steward_scenarios() -> list[Any]:
+    from experiments.steward_screen.scenarios import all_scenarios
+
+    return all_scenarios()
+
+
+def _steward_decision_payload(scenario: Any) -> dict[str, Any]:
+    payload: dict[str, Any] = {"assessment": "The state supports this case-management decision.", "reason": "The structural view supports it.", "operation": scenario.expected_operation}
+    if scenario.expected_target_node_id:
+        payload["target_node_id"] = scenario.expected_target_node_id
+    if scenario.expected_destination_node_id:
+        payload["destination_node_id"] = scenario.expected_destination_node_id
+    if scenario.expected_operation == "stop_unresolved":
+        payload.update({"important_unresolved_ids": ["U1"], "reopening_conditions": "New relevant evidence."})
+    return payload
 
 
 def verify_committed_packages(root: Path) -> list[str]:
@@ -226,6 +254,8 @@ def _sample_for(schema: type[Any]) -> dict[str, Any] | None:
         return {"answer": "4"}
     if schema.__name__ == "NextStepResponse":
         return {"step_type": "action", "selected_action_id": "A1", "target_uncertainty": "An open question.", "expected_information_value": "The result can distinguish explanations.", "why_this_action_now": "This enquiry is available now.", "conclusion_hypothesis_id": None, "conclusion_reason": None, "remaining_uncertainty_ids": []}
+    if schema.__name__ == "StewardDecisionResponse":
+        return {"operation": "keep_focus", "assessment": "The current focus remains useful.", "reason": "The supplied frontier evidence supports retaining focus."}
     if schema.__name__ == "InitialResponse":
         return {"hypotheses": [{"id": "H1", "parent_id": None, "statement": "A broad explanation.", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["What evidence would distinguish alternatives?"], "specificity_basis_evidence_ids": []}], "selected_action_id": "A1", "target_uncertainty": "Whether the claimed event occurred.", "expected_information_value": "The result can distinguish explanations.", "why_this_action_now": "This enquiry is available and relevant."}
     if schema.__name__ == "InitialExpansionResponse":

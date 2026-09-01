@@ -1,9 +1,27 @@
 from dataclasses import dataclass
 from typing import Any
+from pydantic import TypeAdapter
 
 from investigator.services import contracts
 from experiments.model_screen.schemas import HypothesisResponse
 from scripts.smoke_bedrock import SmokeResponse
+from investigator.roles import StewardDecision
+
+
+class StewardDecisionResponse:
+    """Assurance facade backed by the production StewardDecision TypeAdapter."""
+
+    model_fields: dict[str, Any] = {}
+    model_config = {"extra": "forbid"}
+    _adapter = TypeAdapter(StewardDecision)
+
+    @classmethod
+    def model_json_schema(cls) -> dict[str, Any]:
+        return cls._adapter.json_schema()
+
+    @classmethod
+    def model_validate(cls, value: Any) -> Any:
+        return cls._adapter.validate_python(value)
 
 
 @dataclass(frozen=True)
@@ -37,6 +55,7 @@ CONTRACTS = (
     ContractSpec("NextActionResponse", contracts.NextActionResponse, "src/investigator/services/contracts.py", ("Case1ControlledEnvironment.next_action_prompt",), "InvestigationService.propose_next_action -> availability preflight", template_placeholders=("REPLACE_WITH_",), prompt_sources=("src/investigator/environments/case_01_prompts.py",), boundary_stages=("JSON normalization", "Pydantic schema validation", "action namespace validation", "environment availability validation", "raw output retained by service")),
     ContractSpec("RevisionResponse", contracts.RevisionResponse, "src/investigator/services/contracts.py", ("Case1ControlledEnvironment.revision_prompt",), "InvestigationService.propose_revision -> apply_revision", ("REPLACE_WITH_",), prompt_sources=("src/investigator/environments/case_01_prompts.py",), boundary_stages=("JSON normalization", "Pydantic schema validation", "reference validation", "cross-field validation", "state operation preflight", "raw output retained by service")),
     ContractSpec("NextStepResponse", contracts.NextStepResponse, "src/investigator/services/contracts.py", (), "Defined LLM-facing union; no current production caller", template_placeholders=("REPLACE_WITH_",), prompt_sources=(), boundary_stages=("JSON normalization", "Pydantic schema validation", "union branch validation", "raw output retained by adapter")),
+    ContractSpec("StewardDecisionResponse", StewardDecisionResponse, "experiments/steward_screen/runner.py", ("experiments.steward_screen.prompt.build_prompt",), "steward_screen.runner.run_live -> GraphInvestigationCoordinator.review_with_steward", prompt_sources=("experiments/steward_screen/prompt.py",), boundary_stages=("JSON normalization", "provider JSON envelope", "StewardDecision union validation", "coordinator operation preflight", "raw output retained by screen result")),
 )
 
 

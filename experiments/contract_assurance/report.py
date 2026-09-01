@@ -29,7 +29,13 @@ def summarize_by_contract(evaluations: Iterable[Evaluation]) -> dict[str, dict]:
     grouped: dict[str, list[Evaluation]] = {}
     for item in evaluations:
         grouped.setdefault(str(item.details.get("contract", "unassigned")), []).append(item)
-    return {contract: summarize(items) for contract, items in sorted(grouped.items())}
+    summaries = {}
+    for contract, items in sorted(grouped.items()):
+        summary = summarize(items)
+        summary["unexpected_accepts"] = sum(item.accepted and item.details.get("intended_code") != "valid" for item in items)
+        summary["unexpected_rejects"] = sum((not item.accepted) and item.details.get("intended_code") == "valid" for item in items)
+        summaries[contract] = summary
+    return summaries
 
 
 def deterministic_correctness(evaluations: Iterable[Evaluation]) -> dict[str, float | int]:
@@ -147,11 +153,12 @@ def render_markdown(report: dict) -> str:
     by_contract = report.get("deterministic_by_contract", {})
     if by_contract:
         correctness_by_contract = report.get("deterministic_correctness_by_contract", {})
-        lines += ["", "## By contract", "", "| Contract | Total | Accepted | Rejected | Valid pass | Invalid reject | S0 | S1 | S2 | S3 | S4 |", "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"]
+        lines += ["", "## By contract", "", "| Contract | Total | Accepted | Rejected | Valid pass | Invalid reject | S0 | S1 | S2 | S3 | S4 | S5 | S6 | Unexpected accepts | Unexpected rejects |", "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"]
         for contract, data in sorted(by_contract.items()):
             correctness = correctness_by_contract.get(contract, {})
             codes = data.get("failure_codes", {})
-            lines.append(f"| `{contract}` | {data.get('total', 0)} | {data.get('accepted', 0)} | {data.get('rejected', 0)} | {correctness.get('valid_pass_rate', 0):.4f} | {correctness.get('invalid_rejection_rate', 0):.4f} | " + " | ".join(str(codes.get(code, 0)) for code in ("S0", "S1", "S2", "S3", "S4")) + " |")
+            code_counts = " | ".join(str(codes.get(code, 0)) for code in ("S0", "S1", "S2", "S3", "S4", "S5", "S6"))
+            lines.append(f"| `{contract}` | {data.get('total', 0)} | {data.get('accepted', 0)} | {data.get('rejected', 0)} | {correctness.get('valid_pass_rate', 0):.4f} | {correctness.get('invalid_rejection_rate', 0):.4f} | {code_counts} | {data.get('unexpected_accepts', 0)} | {data.get('unexpected_rejects', 0)} |")
     inventory_contracts = report.get("inventory", {}).get("contracts", [])
     if inventory_contracts:
         lines += ["", "## Contract provenance", "", "| Contract | Production path | Schema hash | Prompt hash(es) | Template hash |", "| --- | --- | --- | --- | --- |"]

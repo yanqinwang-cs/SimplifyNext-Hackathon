@@ -1,0 +1,248 @@
+{
+  "case_input": {
+    "description": "The active H1 focus has direct E1 support and one active unresolved question; its local frontier remains useful.",
+    "scenario_id": "K1"
+  },
+  "manifest": {
+    "case_input_hash": "10f905c72694fd998cc1a33cbccf8c9a71d26f2d190ba6f276caaf6b63c91770",
+    "contract": "StewardDecisionResponse",
+    "git_commit": "6c483d1",
+    "prompt_hash": "6f8c20db1af87b630034a0f494ea0241577dc178f89acf5c9fdc139256fc200e",
+    "schema_hash": "c1d034291a6ea54ed9e0805c81e02ec4d6c81044e24d58acfa80d0fb6492e705",
+    "source": "experiments/steward_screen/runner.py",
+    "template_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+  },
+  "output_schema": {
+    "$defs": {
+      "ArchiveDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment": {
+            "title": "Assessment",
+            "type": "string"
+          },
+          "destination_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Destination Node Id"
+          },
+          "operation": {
+            "const": "archive",
+            "default": "archive",
+            "title": "Operation",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "target_node_id": {
+            "title": "Target Node Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessment",
+          "reason",
+          "target_node_id"
+        ],
+        "title": "ArchiveDecision",
+        "type": "object"
+      },
+      "GeneralizeDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment": {
+            "title": "Assessment",
+            "type": "string"
+          },
+          "operation": {
+            "const": "generalize",
+            "default": "generalize",
+            "title": "Operation",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "target_node_id": {
+            "title": "Target Node Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessment",
+          "reason",
+          "target_node_id"
+        ],
+        "title": "GeneralizeDecision",
+        "type": "object"
+      },
+      "KeepFocusDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment": {
+            "title": "Assessment",
+            "type": "string"
+          },
+          "operation": {
+            "const": "keep_focus",
+            "default": "keep_focus",
+            "title": "Operation",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessment",
+          "reason"
+        ],
+        "title": "KeepFocusDecision",
+        "type": "object"
+      },
+      "ReactivateDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment": {
+            "title": "Assessment",
+            "type": "string"
+          },
+          "operation": {
+            "const": "reactivate",
+            "default": "reactivate",
+            "title": "Operation",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "target_node_id": {
+            "title": "Target Node Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessment",
+          "reason",
+          "target_node_id"
+        ],
+        "title": "ReactivateDecision",
+        "type": "object"
+      },
+      "ShiftFocusDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment": {
+            "title": "Assessment",
+            "type": "string"
+          },
+          "destination_node_id": {
+            "title": "Destination Node Id",
+            "type": "string"
+          },
+          "operation": {
+            "const": "shift_focus",
+            "default": "shift_focus",
+            "title": "Operation",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessment",
+          "reason",
+          "destination_node_id"
+        ],
+        "title": "ShiftFocusDecision",
+        "type": "object"
+      },
+      "StopUnresolvedDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment": {
+            "title": "Assessment",
+            "type": "string"
+          },
+          "important_unresolved_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Important Unresolved Ids",
+            "type": "array"
+          },
+          "operation": {
+            "const": "stop_unresolved",
+            "default": "stop_unresolved",
+            "title": "Operation",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "reopening_conditions": {
+            "title": "Reopening Conditions",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessment",
+          "reason",
+          "important_unresolved_ids",
+          "reopening_conditions"
+        ],
+        "title": "StopUnresolvedDecision",
+        "type": "object"
+      }
+    },
+    "discriminator": {
+      "mapping": {
+        "archive": "#/$defs/ArchiveDecision",
+        "generalize": "#/$defs/GeneralizeDecision",
+        "keep_focus": "#/$defs/KeepFocusDecision",
+        "reactivate": "#/$defs/ReactivateDecision",
+        "shift_focus": "#/$defs/ShiftFocusDecision",
+        "stop_unresolved": "#/$defs/StopUnresolvedDecision"
+      },
+      "propertyName": "operation"
+    },
+    "oneOf": [
+      {
+        "$ref": "#/$defs/KeepFocusDecision"
+      },
+      {
+        "$ref": "#/$defs/ShiftFocusDecision"
+      },
+      {
+        "$ref": "#/$defs/GeneralizeDecision"
+      },
+      {
+        "$ref": "#/$defs/ArchiveDecision"
+      },
+      {
+        "$ref": "#/$defs/ReactivateDecision"
+      },
+      {
+        "$ref": "#/$defs/StopUnresolvedDecision"
+      }
+    ]
+  },
+  "prompt": "You are the Case Steward. Manage global graph focus and relevance. Do not investigate, choose an exact enquiry or tool, create nodes, or decide institutional guilt. Evidence is not automatically truth; support is not proof; conflict is not automatic refutation. Archived material remains historical. A failed child does not automatically defeat its parent. Return exactly one legal StewardDecision as JSON, with no markdown or explanation outside JSON. STOP_UNRESOLVED is valid only when the supplied trusted frontier context shows no materially useful frontier remains. The final disciplinary judgement remains human.\n\nScenario:\nThe active H1 focus has direct E1 support and one active unresolved question; its local frontier remains useful.\n\nState:\n{\"features\": {\"region_health\": {\"active\": true, \"conflict_profile\": {\"corroborative_count\": 0, \"direct_count\": 0, \"indirect_count\": 0, \"unique_evidence_ids\": [], \"unique_source_ids\": [], \"weak_count\": 0}, \"current_specialization_depth\": 0, \"descendant_count\": 0, \"direct_evidence_profile\": {\"corroborative_count\": 0, \"direct_count\": 1, \"indirect_count\": 0, \"unique_evidence_ids\": [\"E1\"], \"unique_source_ids\": [], \"weak_count\": 0}, \"focus_node_id\": \"H1\", \"node_ids\": [\"E1\", \"H1\", \"U1\"], \"recent_new_conflict_count\": 0, \"recent_new_support_count\": 0, \"recent_visit_count\": 0, \"shared_dependency_count\": 0, \"unresolved_ids\": [\"U1\"]}, \"tunnel_vision\": {\"current_specialization_depth\": 0, \"neglected_candidate_ids\": [\"H1\", \"U1\"], \"new_conflict_edges_recent\": 0, \"new_nodes_recent\": 0, \"new_support_edges_recent\": 0, \"same_root_steps\": 0}}, \"focus\": {\"node_id\": \"H1\", \"reason\": \"\", \"recent_node_ids\": [], \"recent_region_node_ids\": [], \"step_index\": 0}, \"graph\": {\"edges\": [{\"explanation\": null, \"id\": \"E1_SUPPORTS_H1\", \"metadata\": {}, \"relation\": \"supports\", \"source_id\": \"E1\", \"status\": \"active\", \"strength\": \"direct\", \"target_id\": \"H1\"}, {\"explanation\": null, \"id\": \"U1_TARGETS_H1\", \"metadata\": {}, \"relation\": \"targets\", \"source_id\": \"U1\", \"status\": \"active\", \"strength\": null, \"target_id\": \"H1\"}], \"nodes\": [{\"id\": \"E1\", \"metadata\": {}, \"node_type\": \"evidence\", \"statement\": \"Observed record\", \"status\": \"active\"}, {\"id\": \"H1\", \"metadata\": {}, \"node_type\": \"hypothesis\", \"statement\": \"Some assistance may have contributed.\", \"status\": \"active\"}, {\"id\": \"U1\", \"metadata\": {}, \"node_type\": \"uncertainty\", \"statement\": \"Whether the record is complete.\", \"status\": \"active\"}]}, \"trusted_review_context\": null}\n\nReturn one StewardDecision JSON object using only the allowed current operations.",
+  "template": null
+}

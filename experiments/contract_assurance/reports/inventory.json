@@ -270,6 +270,44 @@
       ],
       "template_source": "experiments/contract_assurance/fixtures/NextStepResponse.json",
       "usage": "Registered LLM-facing contract"
+    },
+    {
+      "availability_validation": "Production environment boundary when applicable",
+      "boundary_stages": [
+        "JSON normalization",
+        "provider JSON envelope",
+        "StewardDecision union validation",
+        "coordinator operation preflight",
+        "raw output retained by screen result"
+      ],
+      "cross_field_validation": "Pydantic model validators and production consumer",
+      "deterministic_consumer": "Registered production-path adapter",
+      "field_namespace_validation": "Pydantic field, literal, and identifier validation",
+      "name": "StewardDecisionResponse",
+      "normalization_behavior": "normalize_json_text; one outer JSON fence only",
+      "parser_entry_point": "investigator.llm.base.parse_model_output",
+      "production_path": "steward_screen.runner.run_live -> GraphInvestigationCoordinator.review_with_steward",
+      "prompt_builders": [
+        "experiments.steward_screen.prompt.build_prompt"
+      ],
+      "prompt_hashes": {
+        "experiments/steward_screen/prompt.py": "0b29e5c739a512ba0641d96050c363250c0d3da700940f22d59aaa62f72a0cd6"
+      },
+      "prompt_sources": [
+        "experiments/steward_screen/prompt.py"
+      ],
+      "public": true,
+      "raw_output_preserved_on_failure": true,
+      "referential_validation": "Production adapter/state boundary when applicable",
+      "schema": "StewardDecisionResponse",
+      "schema_hash": "c1d034291a6ea54ed9e0805c81e02ec4d6c81044e24d58acfa80d0fb6492e705",
+      "schema_validation": "Pydantic model validation",
+      "source": "experiments/steward_screen/runner.py",
+      "source_hash": "a949467a8262fb07d4c0124071c61dc1b0f7b920cf89c1091ebc5e452551f648",
+      "template_hash": "c90166b5084d9b7c6d64eaf3522e79f3ae8101fd93a5aa17636d45e8d7d54cd7",
+      "template_placeholders": [],
+      "template_source": "experiments/contract_assurance/fixtures/StewardDecisionResponse.json",
+      "usage": "Registered LLM-facing contract"
     }
   ],
   "discovered_response_classes": [
@@ -302,6 +340,6 @@
       "source": "src/investigator/services/contracts.py"
     }
   ],
-  "git_commit": "809147d",
+  "git_commit": "66b61eb",
   "unregistered_response_classes": []
 }

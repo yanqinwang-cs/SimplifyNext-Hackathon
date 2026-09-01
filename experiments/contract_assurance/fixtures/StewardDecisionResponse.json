@@ -1,0 +1,160 @@
+{
+  "canonical": {
+    "assessment": "The current focus remains useful.",
+    "operation": "keep_focus",
+    "reason": "The supplied frontier evidence supports retaining focus."
+  },
+  "contract": "StewardDecisionResponse",
+  "mutations": [
+    {
+      "intended_code": "S0",
+      "name": "empty",
+      "raw_output": ""
+    },
+    {
+      "intended_code": "S0",
+      "name": "whitespace",
+      "raw_output": "   "
+    },
+    {
+      "intended_code": "S0",
+      "name": "prose_only",
+      "raw_output": "Here is the requested object."
+    },
+    {
+      "intended_code": "S0",
+      "name": "malformed_json",
+      "raw_output": "{\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus.\""
+    },
+    {
+      "intended_code": "S0",
+      "name": "trailing_comma",
+      "raw_output": "{\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus.\",}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "duplicate_braces",
+      "raw_output": "{{\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus.\"}}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "prose_before_json",
+      "raw_output": "Here is the object:\n{\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus.\"}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "trailing_material",
+      "raw_output": "{\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus.\"}\nDone."
+    },
+    {
+      "intended_code": "S0",
+      "name": "multiple_json_objects",
+      "raw_output": "{\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus.\"}\n{\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus.\"}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "json_array_top_level",
+      "raw_output": "[{\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus.\"}]"
+    },
+    {
+      "intended_code": "S0",
+      "name": "json_null_top_level",
+      "raw_output": "null"
+    },
+    {
+      "intended_code": "S0",
+      "name": "json_string_top_level",
+      "raw_output": "\"response\""
+    },
+    {
+      "intended_code": "S0",
+      "name": "json_number_top_level",
+      "raw_output": "7"
+    },
+    {
+      "intended_code": "S0",
+      "name": "empty_fence",
+      "raw_output": "```json\n```"
+    },
+    {
+      "intended_code": "S0",
+      "name": "broken_opening_fence",
+      "raw_output": "```json\n{\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus.\"}\n"
+    },
+    {
+      "intended_code": "S0",
+      "name": "broken_closing_fence",
+      "raw_output": "{\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus.\"}\n```"
+    },
+    {
+      "intended_code": "valid",
+      "name": "fenced_json",
+      "raw_output": "```json\n{\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus.\"}\n```"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_open",
+      "raw_output": "{"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_quarter",
+      "raw_output": "{\"assessment\": \"The current focus rem"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_midpoint",
+      "raw_output": "{\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_foc"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_before_close",
+      "raw_output": "{\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus."
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_operation_primitive",
+      "raw_output": "{\"assessment\": \"The current focus remains useful.\", \"operation\": 7, \"reason\": \"The supplied frontier evidence supports retaining focus.\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "renamed_field_operation",
+      "raw_output": "{\"assessment\": \"The current focus remains useful.\", \"operation_value\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus.\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_assessment_primitive",
+      "raw_output": "{\"assessment\": 7, \"operation\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus.\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "renamed_field_assessment",
+      "raw_output": "{\"assessment_value\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus.\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_reason_primitive",
+      "raw_output": "{\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason\": 7}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "renamed_field_reason",
+      "raw_output": "{\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason_value\": \"The supplied frontier evidence supports retaining focus.\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "unexpected_field",
+      "raw_output": "{\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus.\", \"unexpected_field\": \"x\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "extra_wrapper",
+      "raw_output": "{\"response\": {\"assessment\": \"The current focus remains useful.\", \"operation\": \"keep_focus\", \"reason\": \"The supplied frontier evidence supports retaining focus.\"}}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "placeholder_text",
+      "raw_output": "{\"assessment\": \"The current focus remains useful.\", \"operation\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\", \"reason\": \"The supplied frontier evidence supports retaining focus.\"}"
+    }
+  ]
+}

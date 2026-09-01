@@ -1,6 +1,6 @@
 {
   "blind_compliance": {
-    "batches": 21,
+    "batches": 25,
     "by_contract": {
       "InitialExpansionResponse": {
         "accepted": 1,
@@ -45,18 +45,19 @@
         "rejected": 1
       },
       "NextActionResponse": {
-        "accepted": 1,
-        "batches": 2,
-        "evaluations": 2,
+        "accepted": 2,
+        "batches": 4,
+        "evaluations": 4,
         "excluded_not_blind": 0,
         "failure_codes": {
-          "S0": 1
+          "S0": 1,
+          "S3": 1
         },
-        "qualified": 2,
-        "recorded_accepted": 1,
-        "recorded_evaluations": 2,
-        "recorded_rejected": 1,
-        "rejected": 1
+        "qualified": 4,
+        "recorded_accepted": 2,
+        "recorded_evaluations": 4,
+        "recorded_rejected": 2,
+        "rejected": 2
       },
       "NextStepResponse": {
         "accepted": 1,
@@ -97,6 +98,20 @@
         "qualified": 2,
         "recorded_accepted": 3,
         "recorded_evaluations": 4,
+        "recorded_rejected": 1,
+        "rejected": 1
+      },
+      "StewardDecisionResponse": {
+        "accepted": 1,
+        "batches": 2,
+        "evaluations": 2,
+        "excluded_not_blind": 0,
+        "failure_codes": {
+          "S1": 1
+        },
+        "qualified": 2,
+        "recorded_accepted": 1,
+        "recorded_evaluations": 2,
         "recorded_rejected": 1,
         "rejected": 1
       }
@@ -159,18 +174,18 @@
       "NextActionResponse": {
         "adversary": {
           "accepted": 0,
-          "batches": 1,
-          "evaluations": 1,
+          "batches": 2,
+          "evaluations": 2,
           "excluded_not_blind": 0,
-          "qualified": 1,
-          "rejected": 1
+          "qualified": 2,
+          "rejected": 2
         },
         "producer": {
-          "accepted": 1,
-          "batches": 1,
-          "evaluations": 1,
+          "accepted": 2,
+          "batches": 2,
+          "evaluations": 2,
           "excluded_not_blind": 0,
-          "qualified": 1,
+          "qualified": 2,
           "rejected": 0
         }
       },
@@ -227,58 +242,76 @@
           "qualified": 1,
           "rejected": 0
         }
+      },
+      "StewardDecisionResponse": {
+        "adversary": {
+          "accepted": 0,
+          "batches": 1,
+          "evaluations": 1,
+          "excluded_not_blind": 0,
+          "qualified": 1,
+          "rejected": 1
+        },
+        "producer": {
+          "accepted": 1,
+          "batches": 1,
+          "evaluations": 1,
+          "excluded_not_blind": 0,
+          "qualified": 1,
+          "rejected": 0
+        }
       }
     },
     "by_role": {
       "adversary": {
         "accepted": 0,
-        "batches": 12,
-        "evaluations": 7,
+        "batches": 14,
+        "evaluations": 9,
         "excluded_not_blind": 5,
         "failure_codes": {
           "S0": 1,
-          "S1": 1,
-          "S3": 2,
+          "S1": 2,
+          "S3": 3,
           "S4": 3
         },
-        "qualified": 7,
+        "qualified": 9,
         "recorded_accepted": 1,
-        "recorded_evaluations": 10,
-        "recorded_rejected": 9,
-        "rejected": 7
+        "recorded_evaluations": 12,
+        "recorded_rejected": 11,
+        "rejected": 9
       },
       "producer": {
-        "accepted": 7,
-        "batches": 11,
-        "evaluations": 7,
+        "accepted": 9,
+        "batches": 13,
+        "evaluations": 9,
         "excluded_not_blind": 4,
         "failure_codes": {},
-        "qualified": 7,
-        "recorded_accepted": 9,
-        "recorded_evaluations": 10,
+        "qualified": 9,
+        "recorded_accepted": 11,
+        "recorded_evaluations": 12,
         "recorded_rejected": 1,
         "rejected": 0
       }
     },
     "coverage_gaps": [],
     "excluded_not_blind": 7,
-    "qualified_accepted": 7,
-    "qualified_batches": 14,
-    "qualified_evaluations": 14,
+    "qualified_accepted": 9,
+    "qualified_batches": 18,
+    "qualified_evaluations": 18,
     "qualified_failure_codes": {
       "S0": 1,
-      "S1": 1,
-      "S3": 2,
+      "S1": 2,
+      "S3": 3,
       "S4": 3
     },
     "qualified_output_metrics": {
-      "average_output_chars": 366.57142857142856,
+      "average_output_chars": 326.3333333333333,
       "fence_usage": 0,
-      "outputs": 14,
+      "outputs": 18,
       "placeholder_copy": 1,
-      "total_output_chars": 5132
+      "total_output_chars": 5874
     },
-    "qualified_rejected": 7,
+    "qualified_rejected": 9,
     "status": "NOT_BLIND"
   },
   "blind_results_included": false,
@@ -406,28 +439,40 @@
     "SmokeResponse|S0|serialization|top-level JSON value must be an object": 4,
     "SmokeResponse|S1|schema|1 validation error for SmokeResponse": 4,
     "SmokeResponse|S1|schema|2 validation errors for SmokeResponse": 1,
-    "SmokeResponse|S4|schema|1 validation error for SmokeResponse": 2
+    "SmokeResponse|S4|schema|1 validation error for SmokeResponse": 2,
+    "StewardDecisionResponse|S0|serialization|Expecting ',' delimiter: line 1 column 148 (char 147)": 1,
+    "StewardDecisionResponse|S0|serialization|Expecting property name enclosed in double quotes: line 1 column 2 (char 1)": 2,
+    "StewardDecisionResponse|S0|serialization|Expecting value: line 1 column 1 (char 0)": 6,
+    "StewardDecisionResponse|S0|serialization|Extra data: line 2 column 1 (char 149)": 3,
+    "StewardDecisionResponse|S0|serialization|Illegal trailing comma before end of object: line 1 column 148 (char 147)": 1,
+    "StewardDecisionResponse|S0|serialization|Unterminated string starting at: line 1 column 16 (char 15)": 1,
+    "StewardDecisionResponse|S0|serialization|Unterminated string starting at: line 1 column 66 (char 65)": 1,
+    "StewardDecisionResponse|S0|serialization|Unterminated string starting at: line 1 column 90 (char 89)": 1,
+    "StewardDecisionResponse|S1|schema|1 validation error for JsonObject": 4,
+    "StewardDecisionResponse|S1|schema|1 validation error for tagged-union[KeepFocusDecision,ShiftFocusDecision,GeneralizeDecision,ArchiveDecision,ReactivateDecision,StopUnresolvedDecision]": 7,
+    "StewardDecisionResponse|S1|schema|2 validation errors for tagged-union[KeepFocusDecision,ShiftFocusDecision,GeneralizeDecision,ArchiveDecision,ReactivateDecision,StopUnresolvedDecision]": 2
   },
   "deterministic": {
-    "accepted": 21,
+    "accepted": 34,
     "failure_codes": {
-      "S0": 140,
-      "S1": 112,
+      "S0": 156,
+      "S1": 125,
       "S2": 59,
       "S3": 22,
       "S4": 77
     },
-    "rejected": 410,
+    "rejected": 439,
     "s5_candidates": 0,
     "s6_limitations": 0,
     "stage_counts": {
       "availability": 3,
+      "coordinator": 13,
       "operation_preflight": 18,
-      "schema": 261,
-      "serialization": 140,
+      "schema": 274,
+      "serialization": 156,
       "state_operation_preflight": 9
     },
-    "total": 431,
+    "total": 473,
     "unexpected_accepts": 0,
     "unexpected_rejects": 0
   },
@@ -450,7 +495,9 @@
         "serialization": 20,
         "state_operation_preflight": 4
       },
-      "total": 88
+      "total": 88,
+      "unexpected_accepts": 0,
+      "unexpected_rejects": 0
     },
     "InitialResponse": {
       "accepted": 1,
@@ -470,7 +517,9 @@
         "serialization": 20,
         "state_operation_preflight": 5
       },
-      "total": 66
+      "total": 66,
+      "unexpected_accepts": 0,
+      "unexpected_rejects": 0
     },
     "ModelScreenHypothesisResponse": {
       "accepted": 2,
@@ -486,7 +535,9 @@
         "schema": 18,
         "serialization": 20
       },
-      "total": 38
+      "total": 38,
+      "unexpected_accepts": 0,
+      "unexpected_rejects": 0
     },
     "NextActionResponse": {
       "accepted": 1,
@@ -505,7 +556,9 @@
         "schema": 23,
         "serialization": 20
       },
-      "total": 44
+      "total": 44,
+      "unexpected_accepts": 0,
+      "unexpected_rejects": 0
     },
     "NextStepResponse": {
       "accepted": 3,
@@ -522,7 +575,9 @@
         "schema": 38,
         "serialization": 20
       },
-      "total": 58
+      "total": 58,
+      "unexpected_accepts": 0,
+      "unexpected_rejects": 0
     },
     "RevisionResponse": {
       "accepted": 11,
@@ -541,7 +596,9 @@
         "schema": 71,
         "serialization": 20
       },
-      "total": 109
+      "total": 109,
+      "unexpected_accepts": 0,
+      "unexpected_rejects": 0
     },
     "SmokeResponse": {
       "accepted": 1,
@@ -557,15 +614,35 @@
         "schema": 8,
         "serialization": 20
       },
-      "total": 28
+      "total": 28,
+      "unexpected_accepts": 0,
+      "unexpected_rejects": 0
+    },
+    "StewardDecisionResponse": {
+      "accepted": 13,
+      "failure_codes": {
+        "S0": 16,
+        "S1": 13
+      },
+      "rejected": 29,
+      "s5_candidates": 0,
+      "s6_limitations": 0,
+      "stage_counts": {
+        "coordinator": 13,
+        "schema": 13,
+        "serialization": 16
+      },
+      "total": 42,
+      "unexpected_accepts": 0,
+      "unexpected_rejects": 0
     }
   },
   "deterministic_correctness": {
-    "invalid_fixtures": 410,
-    "invalid_rejected": 410,
+    "invalid_fixtures": 439,
+    "invalid_rejected": 439,
     "invalid_rejection_rate": 1.0,
-    "valid_accepted": 21,
-    "valid_fixtures": 21,
+    "valid_accepted": 34,
+    "valid_fixtures": 34,
     "valid_pass_rate": 1.0
   },
   "deterministic_correctness_by_contract": {
@@ -624,16 +701,24 @@
       "valid_accepted": 1,
       "valid_fixtures": 1,
       "valid_pass_rate": 1.0
+    },
+    "StewardDecisionResponse": {
+      "invalid_fixtures": 29,
+      "invalid_rejected": 29,
+      "invalid_rejection_rate": 1.0,
+      "valid_accepted": 13,
+      "valid_fixtures": 13,
+      "valid_pass_rate": 1.0
     }
   },
   "deterministic_failure_rate": {
     "confidence": 0.95,
-    "failures": 410,
-    "observed_failure_rate": 0.951276102088167,
-    "total": 431,
-    "upper_failure_rate": 0.9679138516351051
+    "failures": 439,
+    "observed_failure_rate": 0.9281183932346723,
+    "total": 473,
+    "upper_failure_rate": 0.948108014036082
   },
-  "generated_at": "2026-09-01T01:56:25.212204+00:00",
+  "generated_at": "2026-09-01T02:23:30.689094+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -907,6 +992,44 @@
         ],
         "template_source": "experiments/contract_assurance/fixtures/NextStepResponse.json",
         "usage": "Registered LLM-facing contract"
+      },
+      {
+        "availability_validation": "Production environment boundary when applicable",
+        "boundary_stages": [
+          "JSON normalization",
+          "provider JSON envelope",
+          "StewardDecision union validation",
+          "coordinator operation preflight",
+          "raw output retained by screen result"
+        ],
+        "cross_field_validation": "Pydantic model validators and production consumer",
+        "deterministic_consumer": "Registered production-path adapter",
+        "field_namespace_validation": "Pydantic field, literal, and identifier validation",
+        "name": "StewardDecisionResponse",
+        "normalization_behavior": "normalize_json_text; one outer JSON fence only",
+        "parser_entry_point": "investigator.llm.base.parse_model_output",
+        "production_path": "steward_screen.runner.run_live -> GraphInvestigationCoordinator.review_with_steward",
+        "prompt_builders": [
+          "experiments.steward_screen.prompt.build_prompt"
+        ],
+        "prompt_hashes": {
+          "experiments/steward_screen/prompt.py": "0b29e5c739a512ba0641d96050c363250c0d3da700940f22d59aaa62f72a0cd6"
+        },
+        "prompt_sources": [
+          "experiments/steward_screen/prompt.py"
+        ],
+        "public": true,
+        "raw_output_preserved_on_failure": true,
+        "referential_validation": "Production adapter/state boundary when applicable",
+        "schema": "StewardDecisionResponse",
+        "schema_hash": "c1d034291a6ea54ed9e0805c81e02ec4d6c81044e24d58acfa80d0fb6492e705",
+        "schema_validation": "Pydantic model validation",
+        "source": "experiments/steward_screen/runner.py",
+        "source_hash": "a949467a8262fb07d4c0124071c61dc1b0f7b920cf89c1091ebc5e452551f648",
+        "template_hash": "c90166b5084d9b7c6d64eaf3522e79f3ae8101fd93a5aa17636d45e8d7d54cd7",
+        "template_placeholders": [],
+        "template_source": "experiments/contract_assurance/fixtures/StewardDecisionResponse.json",
+        "usage": "Registered LLM-facing contract"
       }
     ],
     "discovered_response_classes": [
@@ -939,7 +1062,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "809147d",
+    "git_commit": "66b61eb",
     "unregistered_response_classes": []
   },
   "prompt_lint": {

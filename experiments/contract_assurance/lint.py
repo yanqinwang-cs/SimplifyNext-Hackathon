@@ -14,7 +14,10 @@ class LintIssue:
 
 def lint_contract(spec: ContractSpec, prompt: str = "", template: Any = None) -> list[LintIssue]:
     issues: list[LintIssue] = []
+    schema = spec.schema.model_json_schema()
     fields = set(spec.schema.model_fields)
+    if not fields and schema.get("oneOf"):
+        fields = {name for branch in schema["oneOf"] for name in _resolve_schema(branch, schema.get("$defs", {})).get("properties", {})}
     if getattr(spec.schema, "model_config", {}).get("extra") != "forbid":
         issues.append(LintIssue(spec.name, "public response schema must set extra='forbid'"))
     if template is not None and isinstance(template, dict):
@@ -30,7 +33,6 @@ def lint_contract(spec: ContractSpec, prompt: str = "", template: Any = None) ->
             if value.strip().startswith("REPLACE_WITH_")
             and not any(value.strip().startswith(prefix) for prefix in spec.template_placeholders)
         )
-        schema = spec.schema.model_json_schema()
         issues.extend(_lint_nested_template(spec.name, schema, template, "", schema.get("$defs", {})))
     if "REPLACE_WITH_" in prompt and not any("REPLACE_WITH_" in value for value in spec.template_placeholders):
         issues.append(LintIssue(spec.name, "prompt contains an unregistered placeholder sentinel"))
@@ -52,6 +54,12 @@ def _lint_nested_template(contract: str, schema: dict[str, Any], template: Any, 
     """Check required nested fields and non-empty collection examples from JSON schema metadata."""
     if not isinstance(template, dict):
         return []
+    if schema.get("oneOf"):
+        discriminator = schema.get("discriminator", {}).get("propertyName")
+        value = template.get(discriminator) if discriminator else None
+        selected = next((branch for branch in schema["oneOf"] if _resolve_schema(branch, definitions).get("properties", {}).get(discriminator, {}).get("const") == value), None)
+        if selected is not None:
+            schema = _resolve_schema(selected, definitions)
     reference = schema.get("$ref")
     if reference and reference.startswith("#/$defs/"):
         schema = definitions.get(reference.rsplit("/", 1)[-1], schema)
@@ -73,3 +81,10 @@ def _lint_nested_template(contract: str, schema: dict[str, Any], template: Any, 
         elif isinstance(child, dict):
             issues.extend(_lint_nested_template(contract, child_schema, child, location, definitions))
     return issues
+
+
+def _resolve_schema(schema: dict[str, Any], definitions: dict[str, Any]) -> dict[str, Any]:
+    reference = schema.get("$ref")
+    if reference and reference.startswith("#/$defs/"):
+        return definitions.get(reference.rsplit("/", 1)[-1], schema)
+    return schema

@@ -248,6 +248,7 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     assert 0 <= report["deterministic_failure_rate"]["upper_failure_rate"] <= 1
     assert report["deterministic_correctness"]["valid_pass_rate"] == 1.0
     assert report["deterministic_correctness"]["invalid_rejection_rate"] == 1.0
+    assert "| Contract | Total | Accepted | Rejected | Valid pass | Invalid reject | S0 | S1 | S2 | S3 | S4 | S5 | S6 | Unexpected accepts | Unexpected rejects |" in render_markdown(report)
     assert report["regressions"]["status"] == "clean"
     assert report["changes_made"] and report["remaining_risks"]
     assert report["blind_compliance"]["qualified_failure_codes"]
@@ -255,6 +256,7 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     assert report["blind_compliance"]["coverage_gaps"] == []
     assert report["deterministic"]["total"] > 0
     assert report["deterministic"]["total"] >= 35
+    assert report["deterministic_by_contract"]["StewardDecisionResponse"]["stage_counts"]["coordinator"] == 13
     assert "unexpected_accepts" in report["deterministic"] and "unexpected_rejects" in report["deterministic"]
     assert report["coverage_ledger"]
     assert report["blind_compliance"]["status"] == "NOT_BLIND"
@@ -381,7 +383,7 @@ def test_next_step_conclusion_reason_must_be_substantive():
 def test_assurance_module_cli_reports_summary(tmp_path: Path):
     root = Path(__file__).resolve().parents[1]
     completed = subprocess.run(["uv", "run", "python", "-m", "experiments.contract_assurance", "--root", str(root), "--output", str(tmp_path), "--commit", "abc"], cwd=root, capture_output=True, text=True, check=True, env={**__import__("os").environ, "UV_CACHE_DIR": "/tmp/codex_uv_contract_assurance"})
-    assert "contracts=7" in completed.stdout and "unexpected_accepts=0" in completed.stdout
+    assert "contracts=8" in completed.stdout and "unexpected_accepts=0" in completed.stdout
 
 
 def test_mutations_preserve_provenance_and_deduplicate():
