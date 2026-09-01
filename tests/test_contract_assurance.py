@@ -313,6 +313,8 @@ def test_revision_transition_reasons_reject_canonical_placeholder_prose():
         UncertaintyTransition(uncertainty_id="H1:U1", transition="keep", reason="How the evidence changed the state.")
     with __import__("pytest").raises(ValueError):
         HypothesisTransition(hypothesis_id="H1", transition="other", reason="A reason.", requested_operation_name="reframe", requested_effect="Change framing.", why_existing_operations_do_not_fit={"keep": "How the evidence changed the state."})
+    with __import__("pytest").raises(ValueError):
+        UncertaintyTransition(uncertainty_id="H1:U1", transition="other", reason="A reason.", requested_operation_name="merge", requested_effect="Combine issues.", why_existing_operations_do_not_fit={"keep": "How the evidence changed the state."})
 
 
 def test_other_transition_operation_reasons_must_be_substantive():
