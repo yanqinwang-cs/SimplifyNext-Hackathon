@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T02:42:57.731473+00:00
+- Generated: 2026-09-01T02:44:41.783724+00:00
 - Contracts: 8
 
 | Metric | Count |
@@ -60,14 +60,14 @@
 ## Blind compliance
 
 - Status: `NOT_BLIND`
-- Batches: 31
-- Qualified batches: 24
+- Batches: 33
+- Qualified batches: 26
 - Excluded as NOT_BLIND: 7
 
 | Blind contract | Batches | Qualified | Excluded |
 | --- | ---: | ---: | ---: |
 | `InitialExpansionResponse` | 6 | 2 | 4 |
-| `InitialResponse` | 2 | 2 | 0 |
+| `InitialResponse` | 4 | 4 | 0 |
 | `ModelScreenHypothesisResponse` | 4 | 4 | 0 |
 | `NextActionResponse` | 6 | 6 | 0 |
 | `NextStepResponse` | 3 | 2 | 1 |
@@ -79,8 +79,8 @@
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | `InitialExpansionResponse` / `adversary` | 4 | 1 | 3 | 1 | 0 | 1 |
 | `InitialExpansionResponse` / `producer` | 3 | 1 | 2 | 1 | 1 | 0 |
-| `InitialResponse` / `adversary` | 1 | 1 | 0 | 1 | 0 | 1 |
-| `InitialResponse` / `producer` | 1 | 1 | 0 | 1 | 1 | 0 |
+| `InitialResponse` / `adversary` | 2 | 2 | 0 | 2 | 0 | 2 |
+| `InitialResponse` / `producer` | 2 | 2 | 0 | 2 | 2 | 0 |
 | `ModelScreenHypothesisResponse` / `adversary` | 2 | 2 | 0 | 2 | 1 | 1 |
 | `ModelScreenHypothesisResponse` / `producer` | 2 | 2 | 0 | 2 | 2 | 0 |
 | `NextActionResponse` / `adversary` | 3 | 3 | 0 | 3 | 1 | 2 |
@@ -96,10 +96,10 @@
 
 | Blind role | Batches | Qualified evaluations | Accepted | Rejected |
 | --- | ---: | ---: | ---: | ---: |
-| `adversary` | 17 | 12 | 2 | 10 |
-| `producer` | 16 | 12 | 12 | 0 |
-- Qualified blind failure codes: `{'S0': 1, 'S1': 2, 'S3': 3, 'S4': 4}`
-- Qualified blind output metrics: placeholder copies `1`, fenced outputs `0`, average length `377.6` characters.
+| `adversary` | 18 | 13 | 2 | 11 |
+| `producer` | 17 | 13 | 13 | 0 |
+- Qualified blind failure codes: `{'S0': 1, 'S1': 2, 'S3': 4, 'S4': 4}`
+- Qualified blind output metrics: placeholder copies `1`, fenced outputs `0`, average length `407.2` characters.
 
 ## Assurance limitations
 
