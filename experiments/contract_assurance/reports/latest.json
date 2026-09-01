@@ -320,6 +320,80 @@
       "evaluations": 17,
       "rejected": 2
     },
+    "producer_compliance_by_contract": {
+      "InitialExpansionResponse": {
+        "accepted": 1,
+        "batches": 4,
+        "compliance_rate": 0.5,
+        "evaluations": 2,
+        "excluded_not_blind": 2,
+        "qualified": 2,
+        "rejected": 1
+      },
+      "InitialResponse": {
+        "accepted": 2,
+        "batches": 2,
+        "compliance_rate": 1.0,
+        "evaluations": 2,
+        "excluded_not_blind": 0,
+        "qualified": 2,
+        "rejected": 0
+      },
+      "ModelScreenHypothesisResponse": {
+        "accepted": 2,
+        "batches": 2,
+        "compliance_rate": 1.0,
+        "evaluations": 2,
+        "excluded_not_blind": 0,
+        "qualified": 2,
+        "rejected": 0
+      },
+      "NextActionResponse": {
+        "accepted": 3,
+        "batches": 3,
+        "compliance_rate": 1.0,
+        "evaluations": 3,
+        "excluded_not_blind": 0,
+        "qualified": 3,
+        "rejected": 0
+      },
+      "NextStepResponse": {
+        "accepted": 1,
+        "batches": 3,
+        "compliance_rate": 0.5,
+        "evaluations": 2,
+        "excluded_not_blind": 1,
+        "qualified": 2,
+        "rejected": 1
+      },
+      "RevisionResponse": {
+        "accepted": 2,
+        "batches": 2,
+        "compliance_rate": 1.0,
+        "evaluations": 2,
+        "excluded_not_blind": 0,
+        "qualified": 2,
+        "rejected": 0
+      },
+      "SmokeResponse": {
+        "accepted": 2,
+        "batches": 3,
+        "compliance_rate": 1.0,
+        "evaluations": 2,
+        "excluded_not_blind": 1,
+        "qualified": 2,
+        "rejected": 0
+      },
+      "StewardDecisionResponse": {
+        "accepted": 2,
+        "batches": 2,
+        "compliance_rate": 1.0,
+        "evaluations": 2,
+        "excluded_not_blind": 0,
+        "qualified": 2,
+        "rejected": 0
+      }
+    },
     "producer_compliance_rolling_window": {
       "accepted": 9,
       "compliance_rate": 0.9,
@@ -764,7 +838,7 @@
     "total": 482,
     "upper_failure_rate": 0.9455654330684751
   },
-  "generated_at": "2026-09-01T03:13:01.543579+00:00",
+  "generated_at": "2026-09-01T03:14:12.328753+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -1115,7 +1189,7 @@
         "symbol": "ExperimentRunner.run"
       }
     ],
-    "git_commit": "1f8c825",
+    "git_commit": "HEAD",
     "unregistered_response_classes": []
   },
   "prompt_lint": {
