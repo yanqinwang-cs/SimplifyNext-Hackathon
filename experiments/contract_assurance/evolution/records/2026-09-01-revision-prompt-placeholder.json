@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-017",
+  "contract": "RevisionResponse",
+  "discovery_source": "prompt/schema/template drift audit",
+  "baseline_failure": {"raw_output": "revision prompt template contained a validator-rejected canonical placeholder", "observed_code": "prompt drift", "intended_code": "clean prompt"},
+  "classification": "S4",
+  "legitimate_semantic_need": "Prompt exemplars must teach substantive output without supplying text that the contract rejects when copied.",
+  "why_existing_contract_insufficient": "The prompt lint did not inspect canonical placeholder prose and the revision template used one directly.",
+  "implementation_change": "Replace the rejected revision rationale exemplar and lint prompts for canonical placeholder prose.",
+  "tests_added": ["canonical placeholder prompt lint regression", "revision prompt substantive exemplar regression"],
+  "expected_reclassifications": ["revision prompt drift -> clean prompt"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [428, 428], "unexpected_outcomes": [0, 0]},
+  "commit": "pending"
+}

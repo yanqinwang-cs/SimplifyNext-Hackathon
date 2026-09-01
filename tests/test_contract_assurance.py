@@ -101,6 +101,17 @@ def test_lint_detects_template_drift():
     assert not any("extra='forbid'" in issue.message for issue in lint_contract(spec))
     assert any("canonical placeholder text" in issue.message for issue in lint_contract(spec, template={"selected_action_id": "A1", "target_uncertainty": "The uncertainty this enquiry addresses."}))
     assert any("unregistered placeholder sentinel" in issue.message for issue in lint_contract(replace(spec, template_placeholders=()), template={"selected_action_id": "REPLACE_WITH_ACTION"}))
+    assert any("prompt contains canonical placeholder text" in issue.message for issue in lint_contract(spec, prompt="How the evidence changed the state."))
+
+
+def test_revision_prompt_uses_substantive_template_exemplar():
+    from investigator.environments.case_01 import Case1ControlledEnvironment
+    from investigator.environments.case_01_prompts import revision_prompt
+    from types import SimpleNamespace
+    environment = Case1ControlledEnvironment(Path(__file__).resolve().parents[1] / "experiments/investigation_smoke/case_01/artifacts")
+    session = SimpleNamespace(case_state=environment.build_initial_state(InitialResponse.model_validate({"hypotheses": [{"id": "H1", "statement": "A", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["U"], "specificity_basis_evidence_ids": []}], **valid_action()})))
+    release = SimpleNamespace(action_id="A1", artifact_id="A1_RELEASE", content="Released evidence.")
+    assert "How the evidence changed the state." not in revision_prompt(environment, session, release)
 
 
 def test_lint_detects_nested_required_and_minimum_collection_drift():

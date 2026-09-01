@@ -34,6 +34,7 @@ def lint_contract(spec: ContractSpec, prompt: str = "", template: Any = None) ->
         issues.extend(_lint_nested_template(spec.name, schema, template, "", schema.get("$defs", {})))
     if "REPLACE_WITH_" in prompt and not any("REPLACE_WITH_" in value for value in spec.template_placeholders):
         issues.append(LintIssue(spec.name, "prompt contains an unregistered placeholder sentinel"))
+    issues.extend(LintIssue(spec.name, f"prompt contains canonical placeholder text {value!r}") for value in sorted(KNOWN_CANONICAL_PLACEHOLDERS) if value in prompt)
     return issues
 
 
