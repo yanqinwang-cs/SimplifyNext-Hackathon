@@ -10,7 +10,7 @@ from .lint import lint_contract
 from .snapshot import verify_snapshot_against_contract
 from .mutations import deduplicate, mutations, write_fixture_manifest
 from .registry import contract_registry
-from .report import coverage_ledger, failure_rate_statistics, summarize, summarize_by_contract, write_history
+from .report import coverage_ledger, deterministic_correctness, deterministic_correctness_by_contract, failure_rate_statistics, summarize, summarize_by_contract, write_history
 
 
 def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> dict[str, Any]:
@@ -50,7 +50,7 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
     summary = summarize(results)
     summary["unexpected_accepts"] = sum(item.accepted and item.details.get("intended_code") != "valid" for item in results)
     summary["unexpected_rejects"] = sum((not item.accepted) and item.details.get("intended_code") == "valid" for item in results)
-    report = {"inventory": inventory(root, commit), "deterministic": summary, "deterministic_failure_rate": failure_rate_statistics(results), "deterministic_by_contract": summarize_by_contract(results), "coverage_ledger": coverage_ledger(results), "blind_results_included": False, "blind_compliance": blind_compliance_summary(root), "human_review_required": summary.get("s5_candidates", 0) > 0, "semantic_limitations": ["S6 reasoning and semantic quality are not assessed by deterministic schema assurance.", "SmokeResponse is schema-sampled offline; its live Bedrock path is excluded from this offline cycle."]}
+    report = {"inventory": inventory(root, commit), "deterministic": summary, "deterministic_failure_rate": failure_rate_statistics(results), "deterministic_correctness": deterministic_correctness(results), "deterministic_correctness_by_contract": deterministic_correctness_by_contract(results), "deterministic_by_contract": summarize_by_contract(results), "coverage_ledger": coverage_ledger(results), "blind_results_included": False, "blind_compliance": blind_compliance_summary(root), "human_review_required": summary.get("s5_candidates", 0) > 0, "semantic_limitations": ["S6 reasoning and semantic quality are not assessed by deterministic schema assurance.", "SmokeResponse is schema-sampled offline; its live Bedrock path is excluded from this offline cycle."]}
     write_history(output_dir, report)
     (output_dir / "inventory.json").write_text(json.dumps(report["inventory"], indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
     return report

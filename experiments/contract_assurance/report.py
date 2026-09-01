@@ -31,6 +31,28 @@ def summarize_by_contract(evaluations: Iterable[Evaluation]) -> dict[str, dict]:
     return {contract: summarize(items) for contract, items in sorted(grouped.items())}
 
 
+def deterministic_correctness(evaluations: Iterable[Evaluation]) -> dict[str, float | int]:
+    """Measure valid-fixture acceptance and invalid-fixture rejection separately."""
+    items = list(evaluations)
+    valid = [item for item in items if item.details.get("intended_code") == "valid"]
+    invalid = [item for item in items if item.details.get("intended_code") not in (None, "valid")]
+    return {
+        "valid_fixtures": len(valid),
+        "valid_accepted": sum(item.accepted for item in valid),
+        "valid_pass_rate": sum(item.accepted for item in valid) / len(valid) if valid else 0.0,
+        "invalid_fixtures": len(invalid),
+        "invalid_rejected": sum(not item.accepted for item in invalid),
+        "invalid_rejection_rate": sum(not item.accepted for item in invalid) / len(invalid) if invalid else 0.0,
+    }
+
+
+def deterministic_correctness_by_contract(evaluations: Iterable[Evaluation]) -> dict[str, dict[str, float | int]]:
+    grouped: dict[str, list[Evaluation]] = {}
+    for item in evaluations:
+        grouped.setdefault(str(item.details.get("contract", "unassigned")), []).append(item)
+    return {contract: deterministic_correctness(items) for contract, items in sorted(grouped.items())}
+
+
 def summarize_blind(evaluations: Iterable[Evaluation], audits: Iterable[BlindBatchAudit]) -> dict:
     qualified = {audit.worker_id for audit in audits if audit.qualifies_as_blind}
     usable = [item for item in evaluations if str(item.details.get("worker_id", "")) in qualified]
@@ -75,6 +97,9 @@ def render_markdown(report: dict) -> str:
         rate = report.get("deterministic_failure_rate")
         if rate:
             lines.append(f"- Observed deterministic failure rate: `{rate.get('observed_failure_rate', 0):.4f}`; upper 95% bound: `{rate.get('upper_failure_rate', 0):.4f}` (compliance statistic, not reasoning confidence).")
+        correctness = report.get("deterministic_correctness")
+        if correctness:
+            lines.append(f"- Valid-fixture pass rate: `{correctness.get('valid_pass_rate', 0):.4f}`; invalid-fixture rejection rate: `{correctness.get('invalid_rejection_rate', 0):.4f}`.")
     if summary.get("failure_codes"):
         lines += ["## Failure codes", ""]
         lines.extend(f"- `{code}`: {count}" for code, count in sorted(summary["failure_codes"].items()))

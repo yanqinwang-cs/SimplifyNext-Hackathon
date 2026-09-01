@@ -13,7 +13,7 @@ from experiments.contract_assurance.mutations import write_fixture_manifest
 from experiments.contract_assurance.mutations import deduplicate, mutations
 from experiments.contract_assurance.lint import lint_contract
 from experiments.contract_assurance.registry import contract_registry, validate_registry
-from experiments.contract_assurance.report import coverage_ledger, failure_rate_statistics, render_markdown, summarize, summarize_blind, summarize_blind_by_role, summarize_by_contract, write_history
+from experiments.contract_assurance.report import coverage_ledger, deterministic_correctness, failure_rate_statistics, render_markdown, summarize, summarize_blind, summarize_blind_by_role, summarize_by_contract, write_history
 from experiments.contract_assurance.snapshot import fingerprint, verify_snapshot, verify_snapshot_against_contract, write_public_snapshot, write_snapshot
 from experiments.contract_assurance.snapshot import validate_public_package
 from experiments.contract_assurance.audit import audit_public_package
@@ -215,6 +215,8 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     assert report["blind_results_included"] is False
     assert report["deterministic_failure_rate"]["confidence"] == 0.95
     assert 0 <= report["deterministic_failure_rate"]["upper_failure_rate"] <= 1
+    assert report["deterministic_correctness"]["valid_pass_rate"] == 1.0
+    assert report["deterministic_correctness"]["invalid_rejection_rate"] == 1.0
     assert report["blind_compliance"]["qualified_failure_codes"]
     assert report["deterministic"]["total"] > 0
     assert report["deterministic"]["total"] >= 35
