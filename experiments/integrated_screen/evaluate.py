@@ -64,7 +64,9 @@ def evaluate_trajectory(result: dict[str, Any], requirements: TrajectoryRequirem
     if requirements.require_stop_unresolved and result.get("termination") != "STOP_UNRESOLVED": failures.append("STOP_UNRESOLVED was not reached")
     if requirements.require_stop_unresolved and requirements.require_trusted_exhaustion_for_stop:
         stop_contexts = [trace for trace in traces if trace.get("actor") == "steward" and trace.get("steward_decision", {}).get("operation") == "stop_unresolved"]
-        if not stop_contexts or stop_contexts[-1].get("materially_usable_action_ids_after"): failures.append("STOP_UNRESOLVED occurred before trusted useful-frontier exhaustion")
+        context = stop_contexts[-1].get("steward_review_context") if stop_contexts else None
+        if not context or not context.get("global_frontier_assessed") or context.get("materially_usable_action_ids") or context.get("obvious_useful_region_remains") or not context.get("local_frontier_exhausted"):
+            failures.append("STOP_UNRESOLVED occurred without trusted global-frontier assessment")
     hard_failures.extend(failures)
     if hard_failures:
         return {"outcome": "FAIL", "hard_failures": hard_failures, "manual_review": []}

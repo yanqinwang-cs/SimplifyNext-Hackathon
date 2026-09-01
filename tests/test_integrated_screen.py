@@ -56,6 +56,16 @@ def test_environment_releases_evidence_and_refreshes_actions():
         environment.execute_enquiry("A1")
 
 
+def test_each_c4_action_is_a_legal_first_enquiry_under_real_locality():
+    for action_id, target in (("A1", "U1"), ("A2", "U1"), ("A3", "U2")):
+        fixture = fixture_map()["C4"]
+        coordinator = InvestigatorCycleCoordinator(deepcopy(fixture.graph), fixture.focus, available_enquiries=fixture.available_enquiries)
+        observation = coordinator.observation()
+        assert target in observation.local_graph.nodes
+        coordinator.apply_turn({"graph_updates": [], "next_step": {"type": "request_enquiry", "reason": "This enquiry addresses the visible uncertainty.", "action_id": action_id, "target_uncertainty_id": target, "expected_information_value": "The release may change the explanation space."}})
+        assert coordinator.cycle.status is CycleStatus.ENQUIRY_IN_FLIGHT
+
+
 def test_trusted_ingestion_releases_evidence_and_recent_marker_is_consumed():
     fixture = fixture_map()["C1"]
     environment = Stage1Environment.for_fixture(fixture)
@@ -132,11 +142,22 @@ def test_c4_frontier_assessment_is_order_independent():
 
 
 def test_stop_evaluator_requires_exhaustion_and_passes_declared_mechanical_requirements():
-    base = {"termination": "STOP_UNRESOLVED", "completed_action_ids": ["A1"], "traces": [{"actor": "steward", "steward_decision": {"operation": "stop_unresolved"}, "materially_usable_action_ids_after": [], "environment_release": [{"id": "E2"}], "visible_released_evidence_ids": ["E2"]}]}
+    trusted_context = {"global_frontier_assessed": True, "local_frontier_exhausted": True, "available_action_ids": [], "materially_usable_action_ids": [], "obvious_useful_region_remains": False, "active_unresolved_ids": ["U1"]}
+    base = {"termination": "STOP_UNRESOLVED", "completed_action_ids": ["A1"], "traces": [{"actor": "steward", "steward_decision": {"operation": "stop_unresolved"}, "steward_review_context": trusted_context, "materially_usable_action_ids_after": [], "environment_release": [{"id": "E2"}], "visible_released_evidence_ids": ["E2"]}]}
     result = evaluate_trajectory(base, TrajectoryRequirements(required_release_ids=["E2"], required_action_ids=["A1"], required_visible_evidence_ids=["E2"], require_stop_unresolved=True))
     assert result["outcome"] == "PASS"
-    failed = evaluate_trajectory({**base, "traces": [{**base["traces"][0], "materially_usable_action_ids_after": ["A2"]}]}, TrajectoryRequirements(require_stop_unresolved=True))
+    failed_context = {**trusted_context, "materially_usable_action_ids": ["A2"], "obvious_useful_region_remains": True}
+    failed = evaluate_trajectory({**base, "traces": [{**base["traces"][0], "steward_review_context": failed_context}]}, TrajectoryRequirements(require_stop_unresolved=True))
     assert failed["outcome"] == "FAIL"
+
+
+def test_stop_requires_trusted_global_assessment_from_actual_steward_step():
+    def check(context):
+        result = evaluate_trajectory({"termination": "STOP_UNRESOLVED", "traces": [{"actor": "steward", "steward_decision": {"operation": "stop_unresolved"}, "steward_review_context": context}]}, TrajectoryRequirements(require_stop_unresolved=True, require_trusted_exhaustion_for_stop=True))
+        return result["outcome"]
+    assert check({"global_frontier_assessed": False, "local_frontier_exhausted": True, "materially_usable_action_ids": [], "obvious_useful_region_remains": False}) == "FAIL"
+    assert check({"global_frontier_assessed": True, "local_frontier_exhausted": True, "materially_usable_action_ids": ["A1"], "obvious_useful_region_remains": True}) == "FAIL"
+    assert check({"global_frontier_assessed": True, "local_frontier_exhausted": True, "materially_usable_action_ids": [], "obvious_useful_region_remains": False}) == "PASS"
 
 
 def test_forbidden_action_is_evaluated_by_execution_time_not_cumulative_state():

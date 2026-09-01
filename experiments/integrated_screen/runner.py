@@ -77,7 +77,7 @@ def run_trajectory(
     termination = None
 
     def trace_base(step: int, actor: str, before: str, before_graph: dict[str, Any]) -> dict[str, Any]:
-        return {"step": step, "actor": actor, "focus_before": coordinator.focus.node_id, "graph_fingerprint_before": before, "available_action_ids_before": [a.action_id for a in environment.current_available_enquiries()], "materially_usable_action_ids_before": environment.materially_usable_action_ids(), "recently_released_evidence_ids": [], "visible_released_evidence_ids": [], "raw_model_output": None, "parsed_response": None, "graph_delta": {}, "enquiry_requested": None, "environment_release": None, "executed_action_id": None, "completed_action_ids": sorted(environment.completed_action_ids), "steward_decision": None, "focus_after": None, "graph_fingerprint_after": None, "available_action_ids_after": None, "materially_usable_action_ids_after": None, "input_tokens": None, "output_tokens": None, "latency_seconds": None, "failure_category": None, "error": None, "_graph_before": before_graph}
+        return {"step": step, "actor": actor, "focus_before": coordinator.focus.node_id, "graph_fingerprint_before": before, "available_action_ids_before": [a.action_id for a in environment.current_available_enquiries()], "materially_usable_action_ids_before": environment.materially_usable_action_ids(), "recently_released_evidence_ids": [], "visible_released_evidence_ids": [], "steward_review_context": None, "raw_model_output": None, "parsed_response": None, "graph_delta": {}, "enquiry_requested": None, "environment_release": None, "executed_action_id": None, "completed_action_ids": sorted(environment.completed_action_ids), "steward_decision": None, "focus_after": None, "graph_fingerprint_after": None, "available_action_ids_after": None, "materially_usable_action_ids_after": None, "input_tokens": None, "output_tokens": None, "latency_seconds": None, "failure_category": None, "error": None, "_graph_before": before_graph}
 
     for step in range(1, max_steps + 1):
         if coordinator.cycle.status is CycleStatus.STOPPED:
@@ -138,6 +138,7 @@ def run_trajectory(
                 break
             trace = trace_base(step, "steward", before, before_graph)
             context = live_review_context(coordinator, environment)
+            trace["steward_review_context"] = context.model_dump(mode="json")
             prompt = build_steward_prompt(coordinator.steward_snapshot(), context)
             trace["prompt_hash"] = _hash(prompt)
             try:
