@@ -159,6 +159,14 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
             unavailable = copy.deepcopy(value)
             unavailable["selected_action_id"] = "A2"
             result.append(Mutation("valid_but_unavailable_action", "S3", json.dumps(unavailable, sort_keys=True)))
+        if contract == "NextActionResponse" and isinstance(value["selected_action_id"], str):
+            namespace_and_placeholder = copy.deepcopy(value)
+            namespace_and_placeholder["selected_action_id"] = "H1"
+            for text_field in ("target_uncertainty", "expected_information_value", "why_this_action_now"):
+                if isinstance(namespace_and_placeholder.get(text_field), str):
+                    namespace_and_placeholder[text_field] = "REPLACE_WITH_SUBSTANTIVE_TEXT"
+                    break
+            result.append(Mutation("wrong_namespace_and_placeholder_action_context", "S2", json.dumps(namespace_and_placeholder, sort_keys=True)))
     for field, field_value in value.items():
         if isinstance(field_value, list) and field_value and (field.endswith("_ids") or field.endswith("_by")):
             wrong_namespace = copy.deepcopy(value)
