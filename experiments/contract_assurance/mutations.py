@@ -449,6 +449,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         seed_blank = copy.deepcopy(value)
         seed_blank["seed_analysis"]["unresolved"] = [""]
         result.append(Mutation("empty_seed_analysis_unresolved", "S4", json.dumps(seed_blank, sort_keys=True)))
+        seed_canonical_placeholder = copy.deepcopy(value)
+        seed_canonical_placeholder["seed_analysis"]["unresolved"] = ["The uncertainty this enquiry addresses."]
+        result.append(Mutation("canonical_placeholder_seed_analysis_unresolved", "S4", json.dumps(seed_canonical_placeholder, sort_keys=True)))
         for field in ("supported_by", "conflicted_by", "specificity_basis_evidence_ids"):
             seed_wrong_namespace = copy.deepcopy(value)
             seed_wrong_namespace["seed_analysis"][field] = ["H1"]

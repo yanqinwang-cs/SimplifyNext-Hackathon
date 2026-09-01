@@ -176,7 +176,7 @@
     "InitialExpansionResponse|S3|state_operation_preflight|Unknown competing hypothesis ID: 'H999'": 1,
     "InitialExpansionResponse|S3|state_operation_preflight|Unknown evidence ID: 'E999'": 1,
     "InitialExpansionResponse|S3|state_operation_preflight|Unknown parent hypothesis ID: 'H999'": 1,
-    "InitialExpansionResponse|S4|schema|1 validation error for InitialExpansionResponse": 14,
+    "InitialExpansionResponse|S4|schema|1 validation error for InitialExpansionResponse": 15,
     "InitialExpansionResponse|S4|state_operation_preflight|Duplicate hypothesis ID in initial expansion: 'H2'": 1,
     "InitialResponse|S0|serialization|Expecting ',' delimiter: line 1 column 483 (char 482)": 1,
     "InitialResponse|S0|serialization|Expecting property name enclosed in double quotes: line 1 column 2 (char 1)": 2,
@@ -284,19 +284,19 @@
       "S1": 112,
       "S2": 56,
       "S3": 22,
-      "S4": 72
+      "S4": 73
     },
-    "rejected": 402,
+    "rejected": 403,
     "s5_candidates": 0,
     "s6_limitations": 0,
     "stage_counts": {
       "availability": 3,
       "operation_preflight": 18,
-      "schema": 253,
+      "schema": 254,
       "serialization": 140,
       "state_operation_preflight": 9
     },
-    "total": 423,
+    "total": 424,
     "unexpected_accepts": 0,
     "unexpected_rejects": 0
   },
@@ -308,18 +308,18 @@
         "S1": 26,
         "S2": 19,
         "S3": 4,
-        "S4": 15
+        "S4": 16
       },
-      "rejected": 84,
+      "rejected": 85,
       "s5_candidates": 0,
       "s6_limitations": 0,
       "stage_counts": {
         "availability": 1,
-        "schema": 61,
+        "schema": 62,
         "serialization": 20,
         "state_operation_preflight": 4
       },
-      "total": 86
+      "total": 87
     },
     "InitialResponse": {
       "accepted": 1,
@@ -430,8 +430,8 @@
     }
   },
   "deterministic_correctness": {
-    "invalid_fixtures": 402,
-    "invalid_rejected": 402,
+    "invalid_fixtures": 403,
+    "invalid_rejected": 403,
     "invalid_rejection_rate": 1.0,
     "valid_accepted": 21,
     "valid_fixtures": 21,
@@ -439,8 +439,8 @@
   },
   "deterministic_correctness_by_contract": {
     "InitialExpansionResponse": {
-      "invalid_fixtures": 84,
-      "invalid_rejected": 84,
+      "invalid_fixtures": 85,
+      "invalid_rejected": 85,
       "invalid_rejection_rate": 1.0,
       "valid_accepted": 2,
       "valid_fixtures": 2,
@@ -497,12 +497,12 @@
   },
   "deterministic_failure_rate": {
     "confidence": 0.95,
-    "failures": 402,
-    "observed_failure_rate": 0.950354609929078,
-    "total": 423,
-    "upper_failure_rate": 0.967302770853952
+    "failures": 403,
+    "observed_failure_rate": 0.9504716981132075,
+    "total": 424,
+    "upper_failure_rate": 0.967380425947322
   },
-  "generated_at": "2026-09-01T01:05:31.779603+00:00",
+  "generated_at": "2026-09-01T01:10:55.575546+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -724,7 +724,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "a81fe98",
+    "git_commit": "210b682",
     "unregistered_response_classes": []
   },
   "regressions": {

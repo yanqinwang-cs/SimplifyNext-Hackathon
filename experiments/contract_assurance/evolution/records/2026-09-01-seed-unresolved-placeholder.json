@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-013",
+  "contract": "InitialExpansionResponse",
+  "discovery_source": "nested seed-analysis unresolved-placeholder coverage audit",
+  "baseline_failure": {"raw_output": "canonical placeholder accepted in seed analysis unresolved list", "observed_code": "accepted", "intended_code": "S4"},
+  "classification": "S4",
+  "legitimate_semantic_need": "Seed analysis unresolved questions must be substantive and cannot copy canonical template prose.",
+  "why_existing_contract_insufficient": "The shared list validator was hardened, but the seed-analysis mutation family did not exercise canonical placeholder prose.",
+  "implementation_change": "Add a deterministic canonical-placeholder mutation for the seed-analysis unresolved list.",
+  "tests_added": ["InitialExpansionResponse seed-analysis canonical unresolved-placeholder fixture"],
+  "expected_reclassifications": ["canonical seed unresolved placeholder: accepted -> S4"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [423, 424], "unexpected_outcomes": [0, 0]},
+  "commit": "pending"
+}
