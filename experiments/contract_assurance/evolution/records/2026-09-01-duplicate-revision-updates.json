@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-007",
+  "contract": "RevisionResponse",
+  "discovery_source": "deterministic duplicate_hypothesis_updates and duplicate_uncertainty_updates fixtures",
+  "baseline_failure": {"raw_output": "two transitions for H1 or H1:U1 in one response", "observed_code": "accepted", "intended_code": "S4"},
+  "classification": "S4",
+  "legitimate_semantic_need": "A revision must express one unambiguous operation per existing entity.",
+  "why_existing_contract_insufficient": "The response model and apply_revision permitted sequential conflicting transitions for one entity.",
+  "implementation_change": "Reject duplicate hypothesis or uncertainty transition targets and classify the invariant as S4.",
+  "tests_added": ["test_revision_allows_only_one_transition_per_entity", "duplicate_hypothesis_updates fixture", "duplicate_uncertainty_updates fixture"],
+  "expected_reclassifications": ["duplicate entity transitions: accepted -> S4"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [409, 411], "unexpected_outcomes": [0, 0]},
+  "commit": "9caa36a"
+}

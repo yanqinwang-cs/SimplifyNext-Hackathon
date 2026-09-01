@@ -268,6 +268,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         valid_update = copy.deepcopy(value)
         valid_update["hypothesis_updates"] = [{"hypothesis_id": "H1", "transition": "weaken", "reason": "New evidence reduces support for this hypothesis."}]
         result.append(Mutation("valid_state_update", "valid", json.dumps(valid_update, sort_keys=True)))
+        duplicate_hypothesis_updates = copy.deepcopy(valid_update)
+        duplicate_hypothesis_updates["hypothesis_updates"].append({"hypothesis_id": "H1", "transition": "conflict", "reason": "A conflicting observation changes the status."})
+        result.append(Mutation("duplicate_hypothesis_updates", "S4", json.dumps(duplicate_hypothesis_updates, sort_keys=True)))
         valid_uncertainty = copy.deepcopy(value)
         valid_uncertainty["new_uncertainties"] = [{"id": "H1:U2", "hypothesis_id": "H1", "description": "A newly identified uncertainty.", "basis_evidence_ids": ["E1"]}]
         result.append(Mutation("valid_new_uncertainty", "valid", json.dumps(valid_uncertainty, sort_keys=True)))
@@ -280,6 +283,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         valid_resolution = copy.deepcopy(value)
         valid_resolution["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "resolve", "reason": "The new evidence resolves this uncertainty.", "basis_evidence_ids": ["E1"]}]
         result.append(Mutation("valid_uncertainty_resolution", "valid", json.dumps(valid_resolution, sort_keys=True)))
+        duplicate_uncertainty_updates = copy.deepcopy(valid_resolution)
+        duplicate_uncertainty_updates["uncertainty_updates"].append({"uncertainty_id": "H1:U1", "transition": "keep", "reason": "A second operation is not allowed."})
+        result.append(Mutation("duplicate_uncertainty_updates", "S4", json.dumps(duplicate_uncertainty_updates, sort_keys=True)))
         valid_new_hypothesis = copy.deepcopy(value)
         valid_new_hypothesis["new_hypotheses"] = [{"id": "H2", "parent_id": None, "statement": "A newly considered explanation.", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["Which observation would distinguish this explanation?"], "specificity_basis_evidence_ids": ["E1"]}]
         result.append(Mutation("valid_new_hypothesis", "valid", json.dumps(valid_new_hypothesis, sort_keys=True)))

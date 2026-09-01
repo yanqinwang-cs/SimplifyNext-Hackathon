@@ -13,7 +13,7 @@ def _validation_code(exc: ValidationError) -> FailureCode:
     errors = exc.errors()
     messages = [str(error.get("msg", "")) for error in errors]
     error_types = [str(error.get("type", "")) for error in errors]
-    if any("requires" in message or "must belong" in message or "only valid" in message or "cannot contain" in message or "Substantive text" in message or "Template placeholder" in message for message in messages):
+    if any("requires" in message or "must belong" in message or "only valid" in message or "cannot contain" in message or "at most one transition" in message or "Substantive text" in message or "Template placeholder" in message for message in messages):
         return FailureCode.S4
     if any("literal_error" in kind or "pattern" in kind or "enum" in kind for kind in error_types):
         return FailureCode.S2

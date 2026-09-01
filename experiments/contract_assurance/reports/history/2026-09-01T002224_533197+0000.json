@@ -172,7 +172,7 @@
     "RevisionResponse|S0|serialization|Unterminated string starting at: line 1 column 75 (char 74)": 1,
     "RevisionResponse|S0|serialization|empty model output": 2,
     "RevisionResponse|S0|serialization|top-level JSON value must be an object": 4,
-    "RevisionResponse|S1|schema|1 validation error for RevisionResponse": 25,
+    "RevisionResponse|S1|schema|1 validation error for RevisionResponse": 27,
     "RevisionResponse|S1|schema|2 validation errors for RevisionResponse": 1,
     "RevisionResponse|S2|schema|1 validation error for RevisionResponse": 9,
     "RevisionResponse|S3|operation_preflight|\"Unknown evidence ID: 'A1_RELEASE'\"": 1,
@@ -187,7 +187,7 @@
     "RevisionResponse|S4|operation_preflight|Duplicate hypothesis ID in revision: 'H1'": 1,
     "RevisionResponse|S4|operation_preflight|Duplicate hypothesis ID in revision: 'H2'": 1,
     "RevisionResponse|S4|operation_preflight|Duplicate uncertainty ID in revision: 'H1:U1'": 1,
-    "RevisionResponse|S4|schema|1 validation error for RevisionResponse": 16,
+    "RevisionResponse|S4|schema|1 validation error for RevisionResponse": 14,
     "SmokeResponse|S0|serialization|Expecting ',' delimiter: line 1 column 15 (char 14)": 1,
     "SmokeResponse|S0|serialization|Expecting property name enclosed in double quotes: line 1 column 2 (char 1)": 2,
     "SmokeResponse|S0|serialization|Expecting value: line 1 column 1 (char 0)": 4,
@@ -205,10 +205,10 @@
     "accepted": 21,
     "failure_codes": {
       "S0": 140,
-      "S1": 112,
+      "S1": 114,
       "S2": 56,
       "S3": 21,
-      "S4": 61
+      "S4": 59
     },
     "rejected": 390,
     "s5_candidates": 0,
@@ -289,10 +289,10 @@
       "accepted": 11,
       "failure_codes": {
         "S0": 20,
-        "S1": 26,
+        "S1": 28,
         "S2": 9,
         "S3": 13,
-        "S4": 20
+        "S4": 18
       },
       "rejected": 88,
       "s5_candidates": 0,
@@ -312,7 +312,7 @@
       "total": 28
     }
   },
-  "generated_at": "2026-09-01T00:22:49.461216+00:00",
+  "generated_at": "2026-09-01T00:22:24.533197+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [

@@ -255,6 +255,12 @@ def test_revision_transition_reasons_must_be_substantive():
     assert hypothesis.code is FailureCode.S4 and uncertainty.code is FailureCode.S4
 
 
+def test_revision_allows_only_one_transition_per_entity():
+    value = {"hypothesis_updates": [{"hypothesis_id": "H1", "transition": "keep", "reason": "Keep it."}, {"hypothesis_id": "H1", "transition": "weaken", "reason": "Weaken it."}], "uncertainty_updates": [], "new_hypotheses": [], "new_uncertainties": [], "revision_rationale": "The evidence updates the state."}
+    result = evaluate_raw(json.dumps(value), RevisionResponse)
+    assert result.code is FailureCode.S4
+
+
 def test_other_transition_operation_reasons_must_be_substantive():
     value = {"hypothesis_id": "H1", "transition": "other", "reason": "A reason.", "requested_operation_name": "reframe", "requested_effect": "Change framing.", "why_existing_operations_do_not_fit": {"keep": ""}}
     result = evaluate_raw(json.dumps(value), HypothesisTransition)

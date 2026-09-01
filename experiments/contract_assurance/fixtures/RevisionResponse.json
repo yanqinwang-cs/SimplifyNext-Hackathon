@@ -259,6 +259,11 @@
       "raw_output": "{\"hypothesis_updates\": [{\"hypothesis_id\": \"H1\", \"reason\": \"New evidence reduces support for this hypothesis.\", \"transition\": \"weaken\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
     {
+      "intended_code": "S4",
+      "name": "duplicate_hypothesis_updates",
+      "raw_output": "{\"hypothesis_updates\": [{\"hypothesis_id\": \"H1\", \"reason\": \"New evidence reduces support for this hypothesis.\", \"transition\": \"weaken\"}, {\"hypothesis_id\": \"H1\", \"reason\": \"A conflicting observation changes the status.\", \"transition\": \"conflict\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
       "intended_code": "valid",
       "name": "valid_new_uncertainty",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"E1\"], \"description\": \"A newly identified uncertainty.\", \"hypothesis_id\": \"H1\", \"id\": \"H1:U2\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
@@ -277,6 +282,11 @@
       "intended_code": "valid",
       "name": "valid_uncertainty_resolution",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"basis_evidence_ids\": [\"E1\"], \"reason\": \"The new evidence resolves this uncertainty.\", \"transition\": \"resolve\", \"uncertainty_id\": \"H1:U1\"}]}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "duplicate_uncertainty_updates",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"basis_evidence_ids\": [\"E1\"], \"reason\": \"The new evidence resolves this uncertainty.\", \"transition\": \"resolve\", \"uncertainty_id\": \"H1:U1\"}, {\"reason\": \"A second operation is not allowed.\", \"transition\": \"keep\", \"uncertainty_id\": \"H1:U1\"}]}"
     },
     {
       "intended_code": "valid",

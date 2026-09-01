@@ -194,6 +194,16 @@ class RevisionResponse(BaseModel):
 
     _valid_rationale = field_validator("revision_rationale")(_reject_placeholder)
 
+    @model_validator(mode="after")
+    def reject_duplicate_updates(self) -> "RevisionResponse":
+        hypothesis_ids = [item.hypothesis_id for item in self.hypothesis_updates]
+        uncertainty_ids = [item.uncertainty_id for item in self.uncertainty_updates]
+        if len(hypothesis_ids) != len(set(hypothesis_ids)):
+            raise ValueError("A hypothesis may have at most one transition per revision")
+        if len(uncertainty_ids) != len(set(uncertainty_ids)):
+            raise ValueError("An uncertainty may have at most one transition per revision")
+        return self
+
 
 class ReleaseRecord(BaseModel):
     action_id: Case1ActionId
