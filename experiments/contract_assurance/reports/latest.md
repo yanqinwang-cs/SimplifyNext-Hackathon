@@ -1,26 +1,26 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T04:11:40.263036+00:00
+- Generated: 2026-09-01T04:13:12.546388+00:00
 - Contracts: 8
 
 | Metric | Count |
 | --- | ---: |
-| Total evaluations | 486 |
+| Total evaluations | 488 |
 | Accepted | 36 |
-| Rejected | 450 |
+| Rejected | 452 |
 | Unexpected accepts | 0 |
 | Unexpected rejects | 0 |
 | S5 candidates | 0 |
 | S6 limitations | 0 |
 
 - Human review required for S5 candidates: `False`
-- Observed deterministic failure rate: `0.9259`; upper 95% bound: `0.9460` (compliance statistic, not reasoning confidence).
+- Observed deterministic failure rate: `0.9262`; upper 95% bound: `0.9462` (compliance statistic, not reasoning confidence).
 - Valid-fixture pass rate: `1.0000`; invalid-fixture rejection rate: `1.0000`.
 ## Failure codes
 
 - `S0`: 156
 - `S1`: 125
-- `S2`: 60
+- `S2`: 62
 - `S3`: 24
 - `S4`: 85
 
@@ -30,7 +30,7 @@
 - `coordinator`: 15
 - `coordinator_preflight`: 7
 - `operation_preflight`: 20
-- `schema`: 276
+- `schema`: 278
 - `serialization`: 156
 - `state_operation_preflight`: 9
 
@@ -130,7 +130,7 @@
 
 | Contract | Total | Accepted | Rejected | Valid pass | Invalid reject | S0 | S1 | S2 | S3 | S4 | S5 | S6 | Unexpected accepts | Unexpected rejects |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `InitialExpansionResponse` | 88 | 2 | 86 | 1.0000 | 1.0000 | 20 | 26 | 20 | 4 | 16 | 0 | 0 | 0 | 0 |
+| `InitialExpansionResponse` | 90 | 2 | 88 | 1.0000 | 1.0000 | 20 | 26 | 22 | 4 | 16 | 0 | 0 | 0 | 0 |
 | `InitialResponse` | 66 | 1 | 65 | 1.0000 | 1.0000 | 20 | 19 | 12 | 3 | 11 | 0 | 0 | 0 | 0 |
 | `ModelScreenHypothesisResponse` | 38 | 2 | 36 | 1.0000 | 1.0000 | 20 | 10 | 0 | 0 | 6 | 0 | 0 | 0 | 0 |
 | `NextActionResponse` | 44 | 1 | 43 | 1.0000 | 1.0000 | 20 | 12 | 7 | 1 | 3 | 0 | 0 | 0 | 0 |

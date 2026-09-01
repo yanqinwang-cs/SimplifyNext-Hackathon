@@ -530,6 +530,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         namespace_and_relationship = copy.deepcopy(value)
         namespace_and_relationship["competing_hypotheses"][0].update({"relationship": "related", "contrasted_hypothesis_id": "E1"})
         result.append(Mutation("wrong_namespace_and_relationship", "S2", json.dumps(namespace_and_relationship, sort_keys=True)))
+        namespace_and_missing_difference = copy.deepcopy(value)
+        namespace_and_missing_difference["competing_hypotheses"][0].update({"supported_by": ["H1"], "material_difference": None})
+        result.append(Mutation("wrong_namespace_and_missing_material_difference", "S2", json.dumps(namespace_and_missing_difference, sort_keys=True)))
         inactive = copy.deepcopy(value)
         inactive["competing_hypotheses"][0]["status"] = "weakened"
         result.append(Mutation("non_active_status", "S2", json.dumps(inactive, sort_keys=True)))
@@ -542,6 +545,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         missing_difference = copy.deepcopy(value)
         missing_difference["competing_hypotheses"][0]["material_difference"] = None
         result.append(Mutation("competing_root_without_material_difference", "S4", json.dumps(missing_difference, sort_keys=True)))
+        unsupported_and_missing_difference = copy.deepcopy(value)
+        unsupported_and_missing_difference["competing_hypotheses"][0].update({"relationship": "related", "material_difference": None})
+        result.append(Mutation("unsupported_relationship_and_missing_material_difference", "S2", json.dumps(unsupported_and_missing_difference, sort_keys=True)))
         competing_with_specialization_evidence = copy.deepcopy(value)
         competing_with_specialization_evidence["competing_hypotheses"][0]["specificity_basis_evidence_ids"] = ["E1"]
         result.append(Mutation("competing_root_with_specialization_evidence", "S4", json.dumps(competing_with_specialization_evidence, sort_keys=True)))
