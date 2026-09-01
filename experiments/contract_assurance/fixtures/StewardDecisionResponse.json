@@ -173,6 +173,31 @@
     },
     {
       "intended_code": "S4",
+      "name": "generalize_root_without_parent",
+      "raw_output": "{\"assessment\": \"The local frontier is exhausted.\", \"operation\": \"generalize\", \"reason\": \"There is no broader active explanation to return to.\", \"target_node_id\": \"H1\"}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "archive_current_focus",
+      "raw_output": "{\"assessment\": \"The current focus is no longer useful.\", \"operation\": \"archive\", \"reason\": \"The branch has no remaining value.\", \"target_node_id\": \"H1\"}"
+    },
+    {
+      "intended_code": "valid",
+      "name": "shift_focus_to_current_node",
+      "raw_output": "{\"assessment\": \"Another frontier is more useful.\", \"destination_node_id\": \"H1\", \"operation\": \"shift_focus\", \"reason\": \"The destination is the current focus.\"}"
+    },
+    {
+      "intended_code": "valid",
+      "name": "reactivate_active_target",
+      "raw_output": "{\"assessment\": \"The active explanation is newly relevant.\", \"operation\": \"reactivate\", \"reason\": \"It should be restored to the active frontier.\", \"target_node_id\": \"H1\"}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "stop_with_unknown_unresolved_namespace",
+      "raw_output": "{\"assessment\": \"The frontier is exhausted.\", \"important_unresolved_ids\": [\"H9:U1\"], \"operation\": \"stop_unresolved\", \"reason\": \"No available enquiry can resolve it.\", \"reopening_conditions\": \"New relevant evidence.\"}"
+    },
+    {
+      "intended_code": "S4",
       "name": "placeholder_text",
       "raw_output": "{\"assessment\": \"The current focus remains useful.\", \"operation\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\", \"reason\": \"The supplied frontier evidence supports retaining focus.\"}"
     }
