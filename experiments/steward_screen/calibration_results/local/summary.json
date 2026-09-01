@@ -5,7 +5,7 @@
     "The offline producer is deterministic and has structural access to scenario state; it is not a frontier language model.",
     "Expected labels are retained by the evaluator only and are not passed to produce()."
   ],
-  "prompt_hash": "90122756e53e5b2b125ace9775b464c81f122bfb08bfdc7c9100640e74fee90c",
+  "prompt_hash": "919194077e0b49a017b2492de08e07102fd6496a31adfc108cf04b1cd5f903ae",
   "runs": 12,
   "schema_valid": 12,
   "operation_correct": 9,
