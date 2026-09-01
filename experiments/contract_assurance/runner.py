@@ -61,7 +61,8 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
     batches = 0
     excluded = 0
     qualified = 0
-    by_role = {"producer": {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "evaluations": 0, "accepted": 0, "rejected": 0}, "adversary": {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "evaluations": 0, "accepted": 0, "rejected": 0}}
+    qualified_evaluations = qualified_accepted = qualified_rejected = 0
+    by_role = {"producer": {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "recorded_evaluations": 0, "recorded_accepted": 0, "recorded_rejected": 0, "evaluations": 0, "accepted": 0, "rejected": 0}, "adversary": {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "recorded_evaluations": 0, "recorded_accepted": 0, "recorded_rejected": 0, "evaluations": 0, "accepted": 0, "rejected": 0}}
     by_contract: dict[str, dict[str, int]] = {}
     for path in sorted((root / "experiments/contract_assurance/results").glob("**/batch_manifest.json")):
         try:
@@ -80,7 +81,7 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
         excluded += int(not is_qualified)
         contracts = {str(item.get("contract", "unknown")) for item in audits}
         for contract in contracts:
-            stats = by_contract.setdefault(contract, {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "evaluations": 0, "accepted": 0, "rejected": 0})
+            stats = by_contract.setdefault(contract, {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "recorded_evaluations": 0, "recorded_accepted": 0, "recorded_rejected": 0, "evaluations": 0, "accepted": 0, "rejected": 0})
             stats["batches"] += 1
             stats["qualified"] += int(is_qualified)
             stats["excluded_not_blind"] += int(not is_qualified)
@@ -97,14 +98,27 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
                 except (OSError, json.JSONDecodeError):
                     evaluations = []
                 if isinstance(evaluations, list):
-                    by_role[role]["evaluations"] += len(evaluations)
-                    by_role[role]["accepted"] += sum(bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
-                    by_role[role]["rejected"] += sum(not bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
+                    recorded_accepted = sum(bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
+                    recorded_rejected = sum(not bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
+                    by_role[role]["recorded_evaluations"] += len(evaluations)
+                    by_role[role]["recorded_accepted"] += recorded_accepted
+                    by_role[role]["recorded_rejected"] += recorded_rejected
+                    if is_qualified:
+                        by_role[role]["evaluations"] += len(evaluations)
+                        by_role[role]["accepted"] += recorded_accepted
+                        by_role[role]["rejected"] += recorded_rejected
+                        qualified_evaluations += len(evaluations)
+                        qualified_accepted += recorded_accepted
+                        qualified_rejected += recorded_rejected
                     for contract in contracts:
-                        by_contract[contract]["evaluations"] += len(evaluations)
-                        by_contract[contract]["accepted"] += sum(bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
-                        by_contract[contract]["rejected"] += sum(not bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
-    return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "by_role": by_role, "by_contract": dict(sorted(by_contract.items()))}
+                        by_contract[contract]["recorded_evaluations"] += len(evaluations)
+                        by_contract[contract]["recorded_accepted"] += recorded_accepted
+                        by_contract[contract]["recorded_rejected"] += recorded_rejected
+                        if is_qualified:
+                            by_contract[contract]["evaluations"] += len(evaluations)
+                            by_contract[contract]["accepted"] += recorded_accepted
+                            by_contract[contract]["rejected"] += recorded_rejected
+    return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "qualified_evaluations": qualified_evaluations, "qualified_accepted": qualified_accepted, "qualified_rejected": qualified_rejected, "by_role": by_role, "by_contract": dict(sorted(by_contract.items()))}
 
 
 def _revision_state(root: Path) -> Any:

@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T00:24:03.262222+00:00
+- Generated: 2026-09-01T00:27:55.947619+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -39,10 +39,10 @@
 | `RevisionResponse` | 2 | 2 | 0 |
 | `SmokeResponse` | 4 | 2 | 2 |
 
-| Blind role | Batches | Evaluations | Accepted | Rejected |
+| Blind role | Batches | Qualified evaluations | Accepted | Rejected |
 | --- | ---: | ---: | ---: | ---: |
-| `adversary` | 11 | 9 | 1 | 8 |
-| `producer` | 10 | 9 | 8 | 1 |
+| `adversary` | 11 | 7 | 0 | 7 |
+| `producer` | 10 | 7 | 7 | 0 |
 
 ## Assurance limitations
 

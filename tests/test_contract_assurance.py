@@ -228,9 +228,9 @@ def test_blind_compliance_scans_nested_batches_and_records_outcomes(tmp_path: Pa
     ]), encoding="utf-8")
     summary = blind_compliance_summary(tmp_path)
     assert summary["batches"] == 1 and summary["excluded_not_blind"] == 1
-    assert summary["by_role"]["producer"]["evaluations"] == 2
-    assert summary["by_role"]["producer"]["accepted"] == 1
-    assert summary["by_role"]["producer"]["rejected"] == 1
+    assert summary["by_role"]["producer"]["recorded_evaluations"] == 2
+    assert summary["by_role"]["producer"]["recorded_accepted"] == 1
+    assert summary["by_role"]["producer"]["recorded_rejected"] == 1
 
     direct = tmp_path / "experiments/contract_assurance/results/direct/adversary"
     direct.mkdir(parents=True)

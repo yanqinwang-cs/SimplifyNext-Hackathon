@@ -8,4 +8,4 @@
 - Pending human decisions: none
 - Latest worker evidence: qualified isolated producer/adversary pairs now cover all seven contracts: NextAction/S0, NextStep/S4, Initial/S3, InitialExpansion/S3, SmokeResponse/S4, ModelScreen/S1, and Revision/S4 adversarial outcomes. All fourteen qualified batches carry Seatbelt launcher and denied-read probe evidence under ignored `experiments/contract_assurance/results/2026-09-01-isolated-*/`; five earlier batches remain `NOT_BLIND` and excluded.
 - Next queued work: extend referential and cross-field mutation combinations; live SmokeResponse Bedrock execution remains intentionally excluded by the no-AWS constraint
-- Last checkpoint: `4e12144` (`Reject duplicate revision targets`); current cycle adds explicit S2/S3 revision evidence-boundary coverage.
+- Last checkpoint: `4e12144` (`Reject duplicate revision targets`); current cycle separates qualified blind outcomes from recorded excluded-batch outcomes.

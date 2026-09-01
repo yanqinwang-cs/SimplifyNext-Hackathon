@@ -82,7 +82,7 @@ def render_markdown(report: dict) -> str:
             lines += ["", "| Blind contract | Batches | Qualified | Excluded |", "| --- | ---: | ---: | ---: |"]
             lines.extend(f"| `{contract}` | {data.get('batches', 0)} | {data.get('qualified', 0)} | {data.get('excluded_not_blind', 0)} |" for contract, data in sorted(blind["by_contract"].items()))
         if blind.get("by_role"):
-            lines += ["", "| Blind role | Batches | Evaluations | Accepted | Rejected |", "| --- | ---: | ---: | ---: | ---: |"]
+            lines += ["", "| Blind role | Batches | Qualified evaluations | Accepted | Rejected |", "| --- | ---: | ---: | ---: | ---: |"]
             lines.extend(f"| `{role}` | {data.get('batches', 0)} | {data.get('evaluations', 0)} | {data.get('accepted', 0)} | {data.get('rejected', 0)} |" for role, data in sorted(blind["by_role"].items()))
     limitations = report.get("semantic_limitations", [])
     if limitations:
