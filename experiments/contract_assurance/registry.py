@@ -5,7 +5,7 @@ from pydantic import TypeAdapter
 from investigator.services import contracts
 from experiments.model_screen.schemas import HypothesisResponse
 from scripts.smoke_bedrock import SmokeResponse
-from investigator.roles import StewardDecision
+from investigator.roles import InvestigatorUpdateResponse, StewardDecision
 
 
 class StewardDecisionResponse:
@@ -56,6 +56,7 @@ CONTRACTS = (
     ContractSpec("RevisionResponse", contracts.RevisionResponse, "src/investigator/services/contracts.py", ("Case1ControlledEnvironment.revision_prompt",), "InvestigationService.propose_revision -> apply_revision", ("REPLACE_WITH_",), prompt_sources=("src/investigator/environments/case_01_prompts.py",), boundary_stages=("JSON normalization", "Pydantic schema validation", "reference validation", "cross-field validation", "state operation preflight", "raw output retained by service")),
     ContractSpec("NextStepResponse", contracts.NextStepResponse, "src/investigator/services/contracts.py", (), "Defined LLM-facing union; no current production caller", template_placeholders=("REPLACE_WITH_",), prompt_sources=(), boundary_stages=("JSON normalization", "Pydantic schema validation", "union branch validation", "raw output retained by adapter")),
     ContractSpec("StewardDecisionResponse", StewardDecisionResponse, "experiments/steward_screen/runner.py", ("experiments.steward_screen.prompt.build_prompt",), "steward_screen.runner.run_live -> GraphInvestigationCoordinator.review_with_steward", prompt_sources=("experiments/steward_screen/prompt.py",), boundary_stages=("JSON normalization", "provider JSON envelope", "StewardDecision union validation", "coordinator operation preflight", "raw output retained by screen result")),
+    ContractSpec("InvestigatorUpdate", InvestigatorUpdateResponse, "src/investigator/roles/investigator.py", (), "GraphInvestigationCoordinator.apply_investigator_update", public=False, boundary_stages=("Pydantic discriminated-union validation", "locality/type preflight", "atomic graph mutation")),
 )
 
 

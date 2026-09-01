@@ -1,8 +1,9 @@
 from enum import Enum
+from typing import Annotated, Literal, TypeAlias
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator, model_validator
 
-from investigator.graph import EdgeRelation, GraphEdge, GraphNode, GraphNodeType
+from investigator.graph import EdgeStrength
 
 
 class InvestigatorOperation(str, Enum):
@@ -16,36 +17,96 @@ class InvestigatorOperation(str, Enum):
     MOVE_FOCUS = "move_focus"
 
 
-class InvestigatorUpdate(BaseModel):
-    """Strict local-explorer command surface; evidence and global edges are absent."""
-
+class _InvestigatorCommand(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    operation: InvestigatorOperation
-    node: GraphNode | None = None
-    edge: GraphEdge | None = None
-    focus_node_id: str | None = None
-    reason: str = ""
+    reason: str
+
+    @field_validator("reason")
+    @classmethod
+    def reason_must_be_concrete(cls, value: str) -> str:
+        if not value.strip() or "REPLACE_WITH_" in value or "{{" in value:
+            raise ValueError("reason must be a non-empty concrete audit rationale")
+        return value
+
+
+class AddPropositionCommand(_InvestigatorCommand):
+    operation: Literal["add_proposition"] = "add_proposition"
+    node_id: str = Field(pattern=r"^P\d+(?:\.\d+)*$")
+    statement: str
+    derived_from_node_ids: list[str] = Field(min_length=1)
 
     @model_validator(mode="after")
-    def validate_operation(self) -> "InvestigatorUpdate":
-        node_ops = {
-            InvestigatorOperation.ADD_PROPOSITION: GraphNodeType.PROPOSITION,
-            InvestigatorOperation.ADD_HYPOTHESIS: GraphNodeType.HYPOTHESIS,
-            InvestigatorOperation.ADD_UNCERTAINTY: GraphNodeType.UNCERTAINTY,
-        }
-        edge_ops = {
-            InvestigatorOperation.ADD_SUPPORT: EdgeRelation.SUPPORTS,
-            InvestigatorOperation.ADD_CONFLICT: EdgeRelation.CONFLICTS,
-            InvestigatorOperation.ADD_DERIVATION: EdgeRelation.DERIVED_FROM,
-            InvestigatorOperation.ADD_SPECIALIZATION: EdgeRelation.SPECIALIZES,
-        }
-        if self.operation in node_ops:
-            if self.node is None or self.node.node_type is not node_ops[self.operation] or self.edge is not None:
-                raise ValueError(f"{self.operation.value} requires only a matching non-evidence node")
-        elif self.operation in edge_ops:
-            if self.edge is None or self.edge.relation is not edge_ops[self.operation] or self.node is not None:
-                raise ValueError(f"{self.operation.value} requires only a matching edge relation")
-        elif self.operation is InvestigatorOperation.MOVE_FOCUS:
-            if self.focus_node_id is None or self.node is not None or self.edge is not None:
-                raise ValueError("move_focus requires only focus_node_id")
+    def sources_are_unique(self) -> "AddPropositionCommand":
+        if len(self.derived_from_node_ids) != len(set(self.derived_from_node_ids)):
+            raise ValueError("derived_from_node_ids must not contain duplicates")
         return self
+
+
+class AddHypothesisCommand(_InvestigatorCommand):
+    operation: Literal["add_hypothesis"] = "add_hypothesis"
+    node_id: str = Field(pattern=r"^H\d+(?:\.\d+)*$")
+    statement: str
+
+
+class AddUncertaintyCommand(_InvestigatorCommand):
+    operation: Literal["add_uncertainty"] = "add_uncertainty"
+    node_id: str = Field(pattern=r"^(?:U\d+(?:\.\d+)*|H\d+(?:\.\d+)*:U\d+(?:\.\d+)*)$")
+    statement: str
+    target_node_id: str = Field(pattern=r"^(?:H\d+(?:\.\d+)*|P\d+(?:\.\d+)*)$")
+
+
+class _RelationCommand(_InvestigatorCommand):
+    source_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*)$")
+    target_node_id: str = Field(pattern=r"^(?:P\d+(?:\.\d+)*|H\d+(?:\.\d+)*)$")
+    strength: EdgeStrength | None = None
+
+
+class AddSupportCommand(_RelationCommand):
+    operation: Literal["add_support"] = "add_support"
+
+
+class AddConflictCommand(_RelationCommand):
+    operation: Literal["add_conflict"] = "add_conflict"
+
+
+class AddDerivationCommand(_InvestigatorCommand):
+    operation: Literal["add_derivation"] = "add_derivation"
+    derived_proposition_id: str = Field(pattern=r"^P\d+(?:\.\d+)*$")
+    source_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*)$")
+
+
+class AddSpecializationCommand(_InvestigatorCommand):
+    operation: Literal["add_specialization"] = "add_specialization"
+    child_hypothesis_id: str = Field(pattern=r"^H\d+(?:\.\d+)*$")
+    parent_hypothesis_id: str = Field(pattern=r"^H\d+(?:\.\d+)*$")
+
+
+class MoveFocusCommand(_InvestigatorCommand):
+    operation: Literal["move_focus"] = "move_focus"
+    focus_node_id: str
+
+
+InvestigatorUpdate: TypeAlias = Annotated[
+    AddPropositionCommand | AddHypothesisCommand | AddUncertaintyCommand |
+    AddSupportCommand | AddConflictCommand | AddDerivationCommand |
+    AddSpecializationCommand | MoveFocusCommand,
+    Field(discriminator="operation"),
+]
+
+INVESTIGATOR_UPDATE_ADAPTER = TypeAdapter(InvestigatorUpdate)
+
+
+class InvestigatorUpdateResponse:
+    """Schema facade backed directly by the production InvestigatorUpdate adapter."""
+
+    model_fields: dict[str, object] = {}
+    model_config = {"extra": "forbid"}
+    _adapter = INVESTIGATOR_UPDATE_ADAPTER
+
+    @classmethod
+    def model_json_schema(cls) -> dict[str, object]:
+        return cls._adapter.json_schema()
+
+    @classmethod
+    def model_validate(cls, value: object) -> object:
+        return cls._adapter.validate_python(value)

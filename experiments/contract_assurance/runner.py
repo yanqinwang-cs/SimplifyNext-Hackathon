@@ -237,16 +237,17 @@ def _steward_decision_payload(scenario: Any) -> dict[str, Any]:
 def verify_committed_packages(root: Path) -> list[str]:
     package_dir = root / "experiments/contract_assurance/blind/packages"
     registry = contract_registry()
+    public_registry = {name: spec for name, spec in registry.items() if spec.public}
     issues: list[str] = []
     paths = sorted(package_dir.glob("*.json"))
     package_names = {path.stem for path in paths}
-    for missing in sorted(set(registry) - package_names):
+    for missing in sorted(set(public_registry) - package_names):
         issues.append(f"missing blind package adapter: {missing}.json")
-    for extra in sorted(package_names - set(registry)):
+    for extra in sorted(package_names - set(public_registry)):
         issues.append(f"blind package has no registered contract: {extra}.json")
     for path in paths:
         payload = json.loads(path.read_text(encoding="utf-8"))
-        spec = registry.get(payload.get("manifest", {}).get("contract"))
+        spec = public_registry.get(payload.get("manifest", {}).get("contract"))
         if spec is None:
             issues.append(f"{path.name}: unknown contract")
             continue
@@ -262,6 +263,8 @@ def _sample_for(schema: type[Any]) -> dict[str, Any] | None:
         return {"step_type": "action", "selected_action_id": "A1", "target_uncertainty": "An open question.", "expected_information_value": "The result can distinguish explanations.", "why_this_action_now": "This enquiry is available now.", "conclusion_hypothesis_id": None, "conclusion_reason": None, "remaining_uncertainty_ids": []}
     if schema.__name__ == "StewardDecisionResponse":
         return {"operation": "keep_focus", "assessment": "The current focus remains useful.", "reason": "The supplied frontier evidence supports retaining focus."}
+    if schema.__name__ == "InvestigatorUpdateResponse":
+        return {"operation": "add_hypothesis", "node_id": "H3", "statement": "A local possibility.", "reason": "It is a useful local hypothesis."}
     if schema.__name__ == "InitialResponse":
         return {"hypotheses": [{"id": "H1", "parent_id": None, "statement": "A broad explanation.", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["What evidence would distinguish alternatives?"], "specificity_basis_evidence_ids": []}], "selected_action_id": "A1", "target_uncertainty": "Whether the claimed event occurred.", "expected_information_value": "The result can distinguish explanations.", "why_this_action_now": "This enquiry is available and relevant."}
     if schema.__name__ == "InitialExpansionResponse":

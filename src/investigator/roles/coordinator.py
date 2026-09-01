@@ -1,7 +1,9 @@
-from investigator.graph import CaseGraph, GraphNodeType, GraphStatus
+from copy import deepcopy
+
+from investigator.graph import CaseGraph, EdgeRelation, GraphEdge, GraphNode, GraphNodeType, GraphStatus, make_edge_id
 from investigator.roles.focus import InvestigationFocus, investigator_region
 from investigator.roles.history import GraphHistory
-from investigator.roles.investigator import InvestigatorOperation, InvestigatorUpdate
+from investigator.roles.investigator import AddConflictCommand, AddDerivationCommand, AddHypothesisCommand, AddPropositionCommand, AddSpecializationCommand, AddSupportCommand, AddUncertaintyCommand, INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdate, MoveFocusCommand
 from investigator.roles.steward import ArchiveDecision, GeneralizeDecision, ReactivateDecision, ShiftFocusDecision, StopUnresolvedDecision, StewardDecision, StewardReviewContext
 
 
@@ -17,15 +19,85 @@ class GraphInvestigationCoordinator:
         self.stopped = False
 
     def apply_investigator_update(self, update: InvestigatorUpdate) -> None:
+        update = INVESTIGATOR_UPDATE_ADAPTER.validate_python(update)
         if self.stopped:
             raise ValueError("Coordinator is stopped")
-        if update.operation in {InvestigatorOperation.ADD_PROPOSITION, InvestigatorOperation.ADD_HYPOTHESIS, InvestigatorOperation.ADD_UNCERTAINTY}:
-            self._apply_local_node(update)
-        elif update.operation in {InvestigatorOperation.ADD_SUPPORT, InvestigatorOperation.ADD_CONFLICT, InvestigatorOperation.ADD_DERIVATION, InvestigatorOperation.ADD_SPECIALIZATION}:
-            self._apply_local_edge(update)
-        else:
+        candidate = deepcopy(self.graph)
+        # Keep newly created IDs available for later local relation commands;
+        # provenance edges must not consume that locality allowance.
+        new_nodes = set(self._new_nodes)
+        if isinstance(update, AddPropositionCommand):
+            self._apply_add_proposition(candidate, new_nodes, update)
+        elif isinstance(update, AddHypothesisCommand):
+            self._apply_add_hypothesis(candidate, new_nodes, update)
+        elif isinstance(update, AddUncertaintyCommand):
+            self._apply_add_uncertainty(candidate, new_nodes, update)
+        elif isinstance(update, (AddSupportCommand, AddConflictCommand)):
+            self._apply_relation(candidate, new_nodes, update)
+        elif isinstance(update, AddDerivationCommand):
+            self._apply_derivation(candidate, new_nodes, update)
+        elif isinstance(update, AddSpecializationCommand):
+            self._apply_specialization(candidate, new_nodes, update)
+        elif isinstance(update, MoveFocusCommand):
             self._move_focus(update.focus_node_id, update.reason, self._permitted_ids())
+        if not isinstance(update, MoveFocusCommand):
+            self.graph = candidate
+        self._new_nodes = new_nodes
         self.history.append(self.graph, self.focus, update.reason)
+
+    def _apply_add_proposition(self, graph: CaseGraph, new_nodes: set[str], update: AddPropositionCommand) -> None:
+        self._require_new_id(graph, update.node_id)
+        permitted = self._permitted_ids() | new_nodes
+        sources = [self._require_local_active(graph, identifier, {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}, permitted) for identifier in update.derived_from_node_ids]
+        graph.add_node(GraphNode(id=update.node_id, node_type=GraphNodeType.PROPOSITION, statement=update.statement))
+        for source in sources:
+            graph.add_edge(GraphEdge(id=make_edge_id(update.node_id, EdgeRelation.DERIVED_FROM, source.id), source_id=update.node_id, target_id=source.id, relation=EdgeRelation.DERIVED_FROM, explanation=update.reason))
+        new_nodes.add(update.node_id)
+
+    def _apply_add_hypothesis(self, graph: CaseGraph, new_nodes: set[str], update: AddHypothesisCommand) -> None:
+        self._require_new_id(graph, update.node_id)
+        graph.add_node(GraphNode(id=update.node_id, node_type=GraphNodeType.HYPOTHESIS, statement=update.statement))
+        new_nodes.add(update.node_id)
+
+    def _apply_add_uncertainty(self, graph: CaseGraph, new_nodes: set[str], update: AddUncertaintyCommand) -> None:
+        self._require_new_id(graph, update.node_id)
+        permitted = self._permitted_ids() | new_nodes
+        target = self._require_local_active(graph, update.target_node_id, {GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}, permitted)
+        graph.add_node(GraphNode(id=update.node_id, node_type=GraphNodeType.UNCERTAINTY, statement=update.statement))
+        graph.add_edge(GraphEdge(id=make_edge_id(update.node_id, EdgeRelation.TARGETS, target.id), source_id=update.node_id, target_id=target.id, relation=EdgeRelation.TARGETS, explanation=update.reason))
+        new_nodes.add(update.node_id)
+
+    def _apply_relation(self, graph: CaseGraph, new_nodes: set[str], update: AddSupportCommand | AddConflictCommand) -> None:
+        permitted = self._permitted_ids() | new_nodes
+        source = self._require_local_active(graph, update.source_node_id, {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}, permitted)
+        target = self._require_local_active(graph, update.target_node_id, {GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}, permitted)
+        relation = EdgeRelation.SUPPORTS if isinstance(update, AddSupportCommand) else EdgeRelation.CONFLICTS
+        graph.add_edge(GraphEdge(id=make_edge_id(source.id, relation, target.id), source_id=source.id, target_id=target.id, relation=relation, strength=update.strength, explanation=update.reason))
+
+    def _apply_derivation(self, graph: CaseGraph, new_nodes: set[str], update: AddDerivationCommand) -> None:
+        permitted = self._permitted_ids() | new_nodes
+        proposition = self._require_local_active(graph, update.derived_proposition_id, {GraphNodeType.PROPOSITION}, permitted)
+        source = self._require_local_active(graph, update.source_node_id, {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}, permitted)
+        graph.add_edge(GraphEdge(id=make_edge_id(proposition.id, EdgeRelation.DERIVED_FROM, source.id), source_id=proposition.id, target_id=source.id, relation=EdgeRelation.DERIVED_FROM, explanation=update.reason))
+
+    def _apply_specialization(self, graph: CaseGraph, new_nodes: set[str], update: AddSpecializationCommand) -> None:
+        permitted = self._permitted_ids() | new_nodes
+        child = self._require_local_active(graph, update.child_hypothesis_id, {GraphNodeType.HYPOTHESIS}, permitted)
+        parent = self._require_local_active(graph, update.parent_hypothesis_id, {GraphNodeType.HYPOTHESIS}, permitted)
+        graph.add_edge(GraphEdge(id=make_edge_id(child.id, EdgeRelation.SPECIALIZES, parent.id), source_id=child.id, target_id=parent.id, relation=EdgeRelation.SPECIALIZES, explanation=update.reason))
+
+    def _require_local_active(self, graph: CaseGraph, identifier: str, types: set[GraphNodeType], permitted: set[str]) -> GraphNode:
+        node = self._require_node(graph, identifier)
+        if identifier not in permitted:
+            raise ValueError("Investigator graph reference is outside the active local region")
+        if node.status is not GraphStatus.ACTIVE or node.node_type not in types:
+            raise ValueError("Investigator graph reference has an invalid type or status")
+        return node
+
+    @staticmethod
+    def _require_new_id(graph: CaseGraph, identifier: str) -> None:
+        if identifier in graph.nodes:
+            raise ValueError(f"Duplicate graph node ID: {identifier!r}")
 
     def review_with_steward(self, decision: StewardDecision, review_context: StewardReviewContext | None = None) -> None:
         if self.stopped:
@@ -54,19 +126,17 @@ class GraphInvestigationCoordinator:
             self._stop_unresolved(decision, review_context)
         self.history.append(self.graph, self.focus, decision.reason)
 
-    def _apply_local_node(self, update: InvestigatorUpdate) -> None:
-        if update.node is None or update.node.node_type is GraphNodeType.EVIDENCE:
-            raise ValueError("Investigator cannot create evidence")
-        self.graph.add_node(update.node)
-        self._new_nodes.add(update.node.id)
+    def _permitted_ids(self) -> set[str]:
+        return {self.focus.node_id, *(node.id for node in self.graph.neighbors(self.focus.node_id))}
 
-    def _apply_local_edge(self, update: InvestigatorUpdate) -> None:
-        edge = update.edge
-        permitted = self._permitted_ids()
-        if edge is None or not ({edge.source_id, edge.target_id} & permitted) or not ({edge.source_id, edge.target_id} - permitted - self._new_nodes) == set():
-            raise ValueError("Investigator edge endpoints must be in the active focus region")
-        self.graph.add_edge(edge)
-        self._new_nodes.difference_update({edge.source_id, edge.target_id})
+    def _move_focus(self, node_id: str, reason: str, permitted: set[str] | None) -> None:
+        node = self._require_node(self.graph, node_id)
+        if node.status is not GraphStatus.ACTIVE:
+            raise ValueError("Investigator focus must be active")
+        if permitted is not None and node_id not in permitted:
+            raise ValueError("Investigator focus destination is outside the active local region")
+        region = investigator_region(self.graph, self.focus.model_copy(update={"node_id": node_id}), depth=1)
+        self.focus = self.focus.moved_to(node_id, sorted(region.nodes), reason)
 
     def _archive(self, decision: ArchiveDecision) -> None:
         target = self._require_node(self.graph, decision.target_node_id)
@@ -98,20 +168,8 @@ class GraphInvestigationCoordinator:
                 raise ValueError("STOP_UNRESOLVED IDs must be listed by trusted active_unresolved_ids")
         self.stopped = True
 
-    def _permitted_ids(self) -> set[str]:
-        return {self.focus.node_id, *(node.id for node in self.graph.neighbors(self.focus.node_id))}
-
-    def _move_focus(self, node_id: str, reason: str, permitted: set[str] | None) -> None:
-        node = self._require_node(self.graph, node_id)
-        if node.status is not GraphStatus.ACTIVE:
-            raise ValueError("Investigator focus must be active")
-        if permitted is not None and node_id not in permitted:
-            raise ValueError("Investigator focus destination is outside the active local region")
-        region = investigator_region(self.graph, self.focus.model_copy(update={"node_id": node_id}), depth=1)
-        self.focus = self.focus.moved_to(node_id, sorted(region.nodes), reason)
-
     @staticmethod
-    def _require_node(graph: CaseGraph, node_id: str):
+    def _require_node(graph: CaseGraph, node_id: str) -> GraphNode:
         try:
             return graph.get_node(node_id)
         except KeyError as exc:

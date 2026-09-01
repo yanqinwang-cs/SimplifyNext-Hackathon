@@ -72,6 +72,7 @@ def test_registry_has_current_service_contracts():
     registry = contract_registry()
     assert {"InitialResponse", "InitialExpansionResponse", "NextActionResponse", "RevisionResponse", "NextStepResponse"} <= set(registry)
     assert "ModelScreenHypothesisResponse" in registry
+    assert registry["InvestigatorUpdate"].production_path == "GraphInvestigationCoordinator.apply_investigator_update"
     assert all(not lint_contract(spec) for spec in registry.values())
     validate_registry()
     documentation = (Path(__file__).resolve().parents[1] / "docs/schema-contracts.md").read_text(encoding="utf-8")
@@ -89,7 +90,7 @@ def test_inventory_discovers_and_registers_all_response_contracts(tmp_path: Path
     assert_inventory_paths(root)
     __import__("experiments.contract_assurance.inventory", fromlist=["assert_dynamic_structured_boundaries"]).assert_dynamic_structured_boundaries(root)
     assert all(item["source_hash"] for item in __import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root)["contracts"])
-    assert all(item["prompt_hashes"] or item["name"] == "NextStepResponse" for item in __import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root)["contracts"])
+    assert all(item["prompt_hashes"] or item["name"] in {"NextStepResponse", "InvestigatorUpdate"} for item in __import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root)["contracts"])
     inventory_data = __import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root)
     assert all(item["template_source"] and item["template_hash"] for item in inventory_data["contracts"])
     assert all(item["parser_entry_point"] and item["normalization_behavior"] and item["schema_validation"] and item["field_namespace_validation"] and item["referential_validation"] and item["availability_validation"] and item["cross_field_validation"] and item["deterministic_consumer"] and item["raw_output_preserved_on_failure"] for item in inventory_data["contracts"])
@@ -516,7 +517,7 @@ def test_all_committed_public_packages_match_registered_contracts():
         assert contract in registry
         assert verify_snapshot_against_contract(payload, registry[contract]) == [], path.name
     assert verify_committed_packages(Path(__file__).resolve().parents[1]) == []
-    assert {path.stem for path in packages.glob("*.json")} == set(registry)
+    assert {path.stem for path in packages.glob("*.json")} == {name for name, spec in registry.items() if spec.public}
 
 
 def test_evolution_records_require_semantic_and_regression_evidence():

@@ -1,0 +1,186 @@
+{
+  "canonical": {
+    "node_id": "H3",
+    "operation": "add_hypothesis",
+    "reason": "It is a useful local hypothesis.",
+    "statement": "A local possibility."
+  },
+  "contract": "InvestigatorUpdate",
+  "mutations": [
+    {
+      "intended_code": "S0",
+      "name": "empty",
+      "raw_output": ""
+    },
+    {
+      "intended_code": "S0",
+      "name": "whitespace",
+      "raw_output": "   "
+    },
+    {
+      "intended_code": "S0",
+      "name": "prose_only",
+      "raw_output": "Here is the requested object."
+    },
+    {
+      "intended_code": "S0",
+      "name": "malformed_json",
+      "raw_output": "{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\""
+    },
+    {
+      "intended_code": "S0",
+      "name": "trailing_comma",
+      "raw_output": "{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\",}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "duplicate_braces",
+      "raw_output": "{{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "prose_before_json",
+      "raw_output": "Here is the object:\n{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "trailing_material",
+      "raw_output": "{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}\nDone."
+    },
+    {
+      "intended_code": "S0",
+      "name": "multiple_json_objects",
+      "raw_output": "{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}\n{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "json_array_top_level",
+      "raw_output": "[{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}]"
+    },
+    {
+      "intended_code": "S0",
+      "name": "json_null_top_level",
+      "raw_output": "null"
+    },
+    {
+      "intended_code": "S0",
+      "name": "json_string_top_level",
+      "raw_output": "\"response\""
+    },
+    {
+      "intended_code": "S0",
+      "name": "json_number_top_level",
+      "raw_output": "7"
+    },
+    {
+      "intended_code": "S0",
+      "name": "empty_fence",
+      "raw_output": "```json\n```"
+    },
+    {
+      "intended_code": "S0",
+      "name": "broken_opening_fence",
+      "raw_output": "```json\n{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}\n"
+    },
+    {
+      "intended_code": "S0",
+      "name": "broken_closing_fence",
+      "raw_output": "{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}\n```"
+    },
+    {
+      "intended_code": "valid",
+      "name": "fenced_json",
+      "raw_output": "```json\n{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}\n```"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_open",
+      "raw_output": "{"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_quarter",
+      "raw_output": "{\"node_id\": \"H3\", \"operation\": \""
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_midpoint",
+      "raw_output": "{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_before_close",
+      "raw_output": "{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility."
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_operation_primitive",
+      "raw_output": "{\"node_id\": \"H3\", \"operation\": 7, \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "renamed_field_operation",
+      "raw_output": "{\"node_id\": \"H3\", \"operation_value\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_node_id_primitive",
+      "raw_output": "{\"node_id\": 7, \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "renamed_field_node_id",
+      "raw_output": "{\"node_id_value\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}"
+    },
+    {
+      "intended_code": "S2",
+      "name": "wrong_namespace_node_id",
+      "raw_output": "{\"node_id\": \"E1\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}"
+    },
+    {
+      "intended_code": "S2",
+      "name": "whitespace_wrapped_node_id",
+      "raw_output": "{\"node_id\": \" H3 \", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}"
+    },
+    {
+      "intended_code": "S2",
+      "name": "case_variant_node_id",
+      "raw_output": "{\"node_id\": \"h3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_statement_primitive",
+      "raw_output": "{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": 7}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "renamed_field_statement",
+      "raw_output": "{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement_value\": \"A local possibility.\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_shape_reason_primitive",
+      "raw_output": "{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": 7, \"statement\": \"A local possibility.\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "renamed_field_reason",
+      "raw_output": "{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason_value\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "unexpected_field",
+      "raw_output": "{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\", \"unexpected_field\": \"x\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "extra_wrapper",
+      "raw_output": "{\"response\": {\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "placeholder_text",
+      "raw_output": "{\"node_id\": \"H3\", \"operation\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}"
+    }
+  ]
+}

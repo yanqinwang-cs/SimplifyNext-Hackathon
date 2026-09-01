@@ -2,7 +2,7 @@ import pytest
 from pydantic import TypeAdapter, ValidationError
 
 from investigator.graph import CaseGraph, EdgeRelation, EdgeStrength, GraphEdge, GraphNode, GraphNodeType, GraphStatus
-from investigator.roles import GraphInvestigationCoordinator, InvestigationFocus, InvestigatorOperation, InvestigatorUpdate, StewardDecision, StewardReviewContext
+from investigator.roles import AddHypothesisCommand, AddSpecializationCommand, GraphInvestigationCoordinator, InvestigationFocus, INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdateResponse, StewardDecision, StewardReviewContext
 from investigator.steward.features import direct_evidence_profile, region_health, tunnel_vision_indicators
 
 
@@ -39,21 +39,27 @@ def trusted_context(**overrides) -> StewardReviewContext:
 def test_investigator_operations_are_narrow_and_local() -> None:
     coordinator = GraphInvestigationCoordinator(graph(), InvestigationFocus(node_id="H1"))
     with pytest.raises(ValidationError):
-        InvestigatorUpdate(operation="add_node", node=GraphNode(id="P3", node_type="proposition", statement="x"))
+        INVESTIGATOR_UPDATE_ADAPTER.validate_python({"operation": "add_node", "node": GraphNode(id="P3", node_type="proposition", statement="x")})
     with pytest.raises(ValidationError):
-        InvestigatorUpdate(operation="add_proposition", node=GraphNode(id="E3", node_type="evidence", statement="x"))
+        INVESTIGATOR_UPDATE_ADAPTER.validate_python({"operation": "add_proposition", "node": GraphNode(id="E3", node_type="evidence", statement="x")})
     for identifier, kind in [("P3", GraphNodeType.PROPOSITION), ("H3", GraphNodeType.HYPOTHESIS), ("U3", GraphNodeType.UNCERTAINTY)]:
-        coordinator.apply_investigator_update(InvestigatorUpdate(operation=f"add_{kind.value}", node=GraphNode(id=identifier, node_type=kind, statement=identifier)))
+        if kind is GraphNodeType.PROPOSITION:
+            update = {"operation": "add_proposition", "node_id": identifier, "statement": identifier, "derived_from_node_ids": ["P1"], "reason": "local proposition"}
+        elif kind is GraphNodeType.HYPOTHESIS:
+            update = AddHypothesisCommand(node_id=identifier, statement=identifier, reason="local hypothesis")
+        else:
+            update = {"operation": "add_uncertainty", "node_id": identifier, "statement": identifier, "target_node_id": "H1", "reason": "local uncertainty"}
+        coordinator.apply_investigator_update(update)
     with pytest.raises(ValueError, match="outside"):
-        coordinator.apply_investigator_update(InvestigatorUpdate(operation="move_focus", focus_node_id="H2"))
+        coordinator.apply_investigator_update({"operation": "move_focus", "focus_node_id": "H2", "reason": "move focus"})
 
 
 def test_investigator_edge_relations_and_specialization_are_explicit() -> None:
-    with pytest.raises(ValidationError):
-        InvestigatorUpdate(operation="add_support", edge=GraphEdge(id="H1_DEPENDS_ON_P1", source_id="H1", target_id="P1", relation=EdgeRelation.DEPENDS_ON))
+    with pytest.raises(ValueError):
+        GraphInvestigationCoordinator(graph(), InvestigationFocus(node_id="H1")).apply_investigator_update({"operation": "add_support", "source_node_id": "H1", "target_node_id": "P1", "strength": "direct", "reason": "support"})
     coordinator = GraphInvestigationCoordinator(graph(), InvestigationFocus(node_id="H1"))
-    coordinator.apply_investigator_update(InvestigatorUpdate(operation="add_hypothesis", node=GraphNode(id="H1.2", node_type="hypothesis", statement="child")))
-    coordinator.apply_investigator_update(InvestigatorUpdate(operation="add_specialization", edge=GraphEdge(id="H1.2_SPECIALIZES_H1", source_id="H1.2", target_id="H1", relation=EdgeRelation.SPECIALIZES)))
+    coordinator.apply_investigator_update(AddHypothesisCommand(node_id="H1.2", statement="child", reason="specific child"))
+    coordinator.apply_investigator_update(AddSpecializationCommand(child_hypothesis_id="H1.2", parent_hypothesis_id="H1", reason="specific child"))
     assert coordinator.graph.ancestors("H1.2")[0].id == "H1"
 
 
@@ -134,3 +140,74 @@ def test_stop_rejects_invalid_uncertainties_and_features_are_structural() -> Non
     conflict_graph.add_edge(GraphEdge(id="P1_CONFLICTS_H1", source_id="P1", target_id="H1", relation=EdgeRelation.CONFLICTS, strength=EdgeStrength.DIRECT))
     conflict = direct_evidence_profile(conflict_graph, {"P1", "H1"}, EdgeRelation.CONFLICTS)
     assert conflict.direct_count == 1 and conflict.unique_evidence_ids == ["E2"]
+
+
+def test_investigator_union_exposes_only_eight_narrow_operations() -> None:
+    schema = InvestigatorUpdateResponse.model_json_schema()
+    serialized = str(schema)
+    for operation in ("add_proposition", "add_hypothesis", "add_uncertainty", "add_support", "add_conflict", "add_derivation", "add_specialization", "move_focus"):
+        assert operation in serialized
+    for forbidden in ("node_type", "status", "metadata", "relation", "edge_id", "edge_status"):
+        assert forbidden not in serialized
+    for operation in ("add_node", "add_evidence", "add_dependency", "add_depends_on"):
+        with pytest.raises(ValidationError):
+            INVESTIGATOR_UPDATE_ADAPTER.validate_python({"operation": operation, "reason": "invalid"})
+
+
+def test_investigator_compound_mutations_are_atomic_and_directional() -> None:
+    source_graph = graph()
+    source_graph.add_node(GraphNode(id="E2", node_type=GraphNodeType.EVIDENCE, statement="E2"))
+    source_graph.add_edge(GraphEdge(id="E2_SUPPORTS_P1", source_id="E2", target_id="P1", relation=EdgeRelation.SUPPORTS))
+    coordinator = GraphInvestigationCoordinator(source_graph, InvestigationFocus(node_id="P1"))
+    coordinator.apply_investigator_update({"operation": "add_proposition", "node_id": "P3", "statement": "shared observation", "derived_from_node_ids": ["E1", "E2"], "reason": "two-source observation"})
+    assert coordinator.graph.nodes["E1"].node_type is GraphNodeType.EVIDENCE
+    assert coordinator.graph.nodes["E2"].node_type is GraphNodeType.EVIDENCE
+    assert coordinator.graph.nodes["P3"].node_type is GraphNodeType.PROPOSITION
+    assert {edge.id for edge in coordinator.graph.outgoing("P3", EdgeRelation.DERIVED_FROM)} == {"P3_DERIVED_FROM_E1", "P3_DERIVED_FROM_E2"}
+    coordinator.apply_investigator_update({"operation": "add_support", "source_node_id": "P3", "target_node_id": "H1", "strength": "direct", "reason": "shared observation supports a hypothesis"})
+    assert "P3_SUPPORTS_H1" in coordinator.graph.edges
+
+    before = set(coordinator.graph.nodes)
+    with pytest.raises(ValueError):
+        coordinator.apply_investigator_update({"operation": "add_proposition", "node_id": "P4", "statement": "partial", "derived_from_node_ids": ["E1", "P999"], "reason": "invalid source"})
+    assert set(coordinator.graph.nodes) == before and "P4" not in coordinator.graph.nodes
+
+
+def test_uncertainty_targets_active_local_proposition_or_hypothesis() -> None:
+    coordinator = GraphInvestigationCoordinator(graph(), InvestigationFocus(node_id="H1"))
+    coordinator.apply_investigator_update({"operation": "add_uncertainty", "node_id": "U3", "statement": "open question", "target_node_id": "H1", "reason": "it matters"})
+    edge = coordinator.graph.get_edge("U3_TARGETS_H1")
+    assert edge.source_id == "U3" and edge.target_id == "H1" and edge.relation is EdgeRelation.TARGETS
+    with pytest.raises(ValueError):
+        coordinator.apply_investigator_update({"operation": "add_uncertainty", "node_id": "U4", "statement": "bad target", "target_node_id": "E1", "reason": "invalid target"})
+
+
+def test_all_eight_investigator_branches_validate_without_graph_metadata_fields() -> None:
+    payloads = [
+        {"operation": "add_proposition", "node_id": "P3", "statement": "p", "derived_from_node_ids": ["E1"], "reason": "r"},
+        {"operation": "add_hypothesis", "node_id": "H3", "statement": "h", "reason": "r"},
+        {"operation": "add_uncertainty", "node_id": "U3", "statement": "u", "target_node_id": "H1", "reason": "r"},
+        {"operation": "add_support", "source_node_id": "E1", "target_node_id": "H1", "strength": "direct", "reason": "r"},
+        {"operation": "add_conflict", "source_node_id": "E1", "target_node_id": "H1", "strength": None, "reason": "r"},
+        {"operation": "add_derivation", "derived_proposition_id": "P1", "source_node_id": "E1", "reason": "r"},
+        {"operation": "add_specialization", "child_hypothesis_id": "H1.1", "parent_hypothesis_id": "H1", "reason": "r"},
+        {"operation": "move_focus", "focus_node_id": "P1", "reason": "r"},
+    ]
+    for payload in payloads:
+        parsed = INVESTIGATOR_UPDATE_ADAPTER.validate_python(payload)
+        assert parsed.operation == payload["operation"]
+        for forbidden in ("node_type", "status", "metadata", "relation", "edge_id", "edge_status"):
+            with pytest.raises(ValidationError):
+                INVESTIGATOR_UPDATE_ADAPTER.validate_python({**payload, forbidden: "injected"})
+
+
+def test_investigator_ids_and_reasons_are_strict() -> None:
+    base = {"operation": "add_hypothesis", "node_id": "H3", "statement": "h", "reason": "r"}
+    for value in ("P3", "U3", "H3:U1"):
+        with pytest.raises(ValidationError):
+            INVESTIGATOR_UPDATE_ADAPTER.validate_python({**base, "node_id": value})
+    for reason in ("", "   ", "REPLACE_WITH_REASON"):
+        with pytest.raises(ValidationError):
+            INVESTIGATOR_UPDATE_ADAPTER.validate_python({**base, "reason": reason})
+    with pytest.raises(ValidationError):
+        INVESTIGATOR_UPDATE_ADAPTER.validate_python({"operation": "add_proposition", "node_id": "P3", "statement": "p", "derived_from_node_ids": ["E1", "E1"], "reason": "r"})
