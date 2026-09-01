@@ -47,6 +47,21 @@ def test_jobs_expand_cartesian_product_and_report_aggregates() -> None:
     assert summary.by_model["mock"]["fully_correct"] == 3
 
 
+def test_anthropic_registry_uses_us_inference_profiles_without_changing_existing_models() -> None:
+    expected = {
+        "anthropic.claude-haiku-4-5": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+        "anthropic.claude-sonnet-4-5": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        "anthropic.claude-opus-4-5": "us.anthropic.claude-opus-4-5-20251101-v1:0",
+    }
+    for name, invocation_id in expected.items():
+        assert name in MODEL_REGISTRY
+        spec = MODEL_REGISTRY[name]
+        assert spec.name == name and spec.invocation_id == invocation_id and spec.region == "us-east-1"
+    for name in ("zai.glm-5", "deepseek.v3.2", "moonshot.kimi-k2-thinking", "qwen.qwen3-next-80b-a3b", "openai.gpt-oss-120b-1:0", "amazon.nova-2-lite-v1:0", "zai.glm-4.7-flash"):
+        assert MODEL_REGISTRY[name].invocation_id == name
+    assert jobs(list(expected), ["K1"], 1) == [(name, "K1", 1) for name in expected]
+
+
 def test_malformed_output_is_recorded_as_schema_failure() -> None:
     scenario = all_scenarios()[0]
     result = evaluate_result("mock", "mock", scenario, 1, "prompt", error=ModelParseError("bad JSON", raw_output="not json"))
