@@ -1,4 +1,4 @@
-from experiments.steward_screen.scenarios import all_scenarios, expanded_scenarios
+from experiments.steward_screen.scenarios import all_scenarios, expanded_scenarios, trajectory_scenarios
 from experiments.steward_screen.sequential import MultipleValidCase, first_move_is_acceptable, run_trajectory, summarize_trajectories
 
 
@@ -38,3 +38,10 @@ def test_trajectory_summary_reports_progress_failures_separately() -> None:
     assert summary["no_progress_loop"] == 0
     assert summary["terminated_step_cap"] == 0
     assert len(summary["details"]) == 2
+
+
+def test_multi_operation_fixture_reassesses_after_each_transition() -> None:
+    result = run_trajectory(trajectory_scenarios()[0], max_steps=4)
+    assert len(result.steps) >= 2
+    assert not result.failures
+    assert result.termination == "quiescent"

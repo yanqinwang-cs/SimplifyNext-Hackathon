@@ -74,3 +74,11 @@ def expanded_scenarios() -> list[StewardScenario]:
             scenario.review_context.active_unresolved_ids = [remap.get(item, item) for item in scenario.review_context.active_unresolved_ids]
         variants.append(scenario)
     return base + variants
+
+
+def trajectory_scenarios() -> list[StewardScenario]:
+    """Small sequential fixtures with several independent global issues."""
+    n, s = GraphNodeType, GraphStatus
+    scenario = _scenario("SEQ_A", "The current explanation remains active and depends on a proposition; a separate branch has no graph relation, while an archived explanation is linked to a new active proposition.", {"H1": _node("H1", n.HYPOTHESIS, "Current explanation."), "H2": _node("H2", n.HYPOTHESIS, "Stale branch."), "H3": _node("H3", n.HYPOTHESIS, "Previously archived explanation.", s.ARCHIVED), "P3": _node("P3", n.PROPOSITION, "New relevant proposition.")}, [_edge("P3", EdgeRelation.SUPPORTS, "H3"), _edge("H1", EdgeRelation.DEPENDS_ON, "P3")], "H1", "keep_focus")
+    scenario.description = "The current explanation remains active; a separate branch has no graph relation, while an archived explanation is linked to a new active proposition."
+    return [scenario]

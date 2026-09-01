@@ -34,7 +34,8 @@ def produce(prompt: str, scenario: StewardScenario) -> dict:
     if parents:
         return {"operation": "generalize", "assessment": "The specific active focus has a viable active parent.", "reason": "Move one level to the immediate active SPECIALIZES parent.", "target_node_id": focus}
 
-    active_unsupported = [node.id for node in graph.nodes.values() if node.id != focus and node.status is GraphStatus.ACTIVE and not any(edge.source_id == node.id or edge.target_id == node.id for edge in graph.edges.values())]
+    protected = {focus, *scenario.focus.recent_node_ids}
+    active_unsupported = [node.id for node in graph.nodes.values() if node.id not in protected and node.status is GraphStatus.ACTIVE and not any(edge.source_id == node.id or edge.target_id == node.id for edge in graph.edges.values())]
     if active_unsupported:
         return {"operation": "archive", "assessment": "An unrelated active object has no useful relation.", "reason": "Remove the stale object from active reasoning.", "target_node_id": sorted(active_unsupported)[0]}
 
