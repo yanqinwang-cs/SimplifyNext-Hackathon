@@ -487,6 +487,7 @@
     "ModelScreenHypothesisResponse|S1|schema|1 validation error for HypothesisResponse": 9,
     "ModelScreenHypothesisResponse|S1|schema|2 validation errors for HypothesisResponse": 1,
     "ModelScreenHypothesisResponse|S4|schema|1 validation error for HypothesisResponse": 6,
+    "ModelScreenHypothesisResponse|S4|schema|2 validation errors for HypothesisResponse": 1,
     "NextActionResponse|S0|serialization|Expecting ',' delimiter: line 1 column 184 (char 183)": 1,
     "NextActionResponse|S0|serialization|Expecting property name enclosed in double quotes: line 1 column 2 (char 1)": 2,
     "NextActionResponse|S0|serialization|Expecting value: line 1 column 1 (char 0)": 4,
@@ -581,9 +582,9 @@
       "S1": 125,
       "S2": 64,
       "S3": 24,
-      "S4": 86
+      "S4": 87
     },
-    "rejected": 455,
+    "rejected": 456,
     "s5_candidates": 0,
     "s6_limitations": 0,
     "stage_counts": {
@@ -591,11 +592,11 @@
       "coordinator": 15,
       "coordinator_preflight": 7,
       "operation_preflight": 20,
-      "schema": 281,
+      "schema": 282,
       "serialization": 156,
       "state_operation_preflight": 9
     },
-    "total": 491,
+    "total": 492,
     "unexpected_accepts": 0,
     "unexpected_rejects": 0
   },
@@ -649,16 +650,16 @@
       "failure_codes": {
         "S0": 20,
         "S1": 10,
-        "S4": 6
+        "S4": 7
       },
-      "rejected": 36,
+      "rejected": 37,
       "s5_candidates": 0,
       "s6_limitations": 0,
       "stage_counts": {
-        "schema": 18,
+        "schema": 19,
         "serialization": 20
       },
-      "total": 38,
+      "total": 39,
       "unexpected_accepts": 0,
       "unexpected_rejects": 0
     },
@@ -763,8 +764,8 @@
     }
   },
   "deterministic_correctness": {
-    "invalid_fixtures": 455,
-    "invalid_rejected": 455,
+    "invalid_fixtures": 456,
+    "invalid_rejected": 456,
     "invalid_rejection_rate": 1.0,
     "valid_accepted": 36,
     "valid_fixtures": 36,
@@ -788,8 +789,8 @@
       "valid_pass_rate": 1.0
     },
     "ModelScreenHypothesisResponse": {
-      "invalid_fixtures": 36,
-      "invalid_rejected": 36,
+      "invalid_fixtures": 37,
+      "invalid_rejected": 37,
       "invalid_rejection_rate": 1.0,
       "valid_accepted": 2,
       "valid_fixtures": 2,
@@ -838,12 +839,12 @@
   },
   "deterministic_failure_rate": {
     "confidence": 0.95,
-    "failures": 455,
-    "observed_failure_rate": 0.9266802443991853,
-    "total": 491,
-    "upper_failure_rate": 0.9465721362079453
+    "failures": 456,
+    "observed_failure_rate": 0.926829268292683,
+    "total": 492,
+    "upper_failure_rate": 0.9466816979476295
   },
-  "generated_at": "2026-09-01T04:17:05.689298+00:00",
+  "generated_at": "2026-09-01T04:18:12.385406+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -1194,7 +1195,7 @@
         "symbol": "ExperimentRunner.run"
       }
     ],
-    "git_commit": "7c357eb",
+    "git_commit": "4d26e78",
     "unregistered_response_classes": []
   },
   "prompt_lint": {

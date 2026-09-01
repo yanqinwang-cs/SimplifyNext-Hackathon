@@ -606,6 +606,10 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
             placeholder = copy.deepcopy(value)
             placeholder["hypotheses"][0][field] = "REPLACE_WITH_SUBSTANTIVE_TEXT"
             result.append(Mutation(f"placeholder_hypothesis_{field}", "S4", json.dumps(placeholder, sort_keys=True)))
+        multiple_placeholders = copy.deepcopy(value)
+        multiple_placeholders["hypotheses"][0]["statement"] = "REPLACE_WITH_HYPOTHESIS"
+        multiple_placeholders["hypotheses"][0]["justification"] = "REPLACE_WITH_JUSTIFICATION"
+        result.append(Mutation("multiple_placeholder_hypothesis_fields", "S4", json.dumps(multiple_placeholders, sort_keys=True)))
     if contract == "SmokeResponse" and "answer" in value:
         empty_answer = copy.deepcopy(value)
         empty_answer["answer"] = ""

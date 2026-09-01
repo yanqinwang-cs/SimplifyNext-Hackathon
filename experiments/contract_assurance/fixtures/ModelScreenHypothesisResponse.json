@@ -204,6 +204,11 @@
       "intended_code": "S4",
       "name": "placeholder_hypothesis_uncertainty",
       "raw_output": "{\"hypotheses\": [{\"justification\": \"Because\", \"statement\": \"A\", \"uncertainty\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "multiple_placeholder_hypothesis_fields",
+      "raw_output": "{\"hypotheses\": [{\"justification\": \"REPLACE_WITH_JUSTIFICATION\", \"statement\": \"REPLACE_WITH_HYPOTHESIS\", \"uncertainty\": \"Unknown\"}, {\"justification\": \"Because\", \"statement\": \"B\", \"uncertainty\": \"Unknown\"}]}"
     }
   ]
 }
