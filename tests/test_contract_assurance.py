@@ -261,6 +261,9 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     assert producer["evaluations"] == producer["accepted"] + producer["rejected"]
     assert producer["compliance_rate"] == producer["accepted"] / producer["evaluations"]
     assert "Producer compliance:" in render_markdown(report)
+    rolling = report["blind_compliance"]["producer_compliance_rolling_window"]
+    assert rolling["evaluations"] <= rolling["window_size"]
+    assert rolling["evaluations"] == rolling["accepted"] + rolling["rejected"]
     assert report["deterministic"]["total"] > 0
     assert report["deterministic"]["total"] >= 35
     assert report["deterministic_by_contract"]["StewardDecisionResponse"]["stage_counts"]["coordinator"] == 15

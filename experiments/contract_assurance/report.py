@@ -150,6 +150,9 @@ def render_markdown(report: dict) -> str:
         producer = blind.get("producer_compliance")
         if producer:
             lines.append(f"- Producer compliance: `{producer.get('accepted', 0)}/{producer.get('evaluations', 0)}` accepted (`{producer.get('compliance_rate', 0):.4f}`) across qualified producer evaluations.")
+        rolling = blind.get("producer_compliance_rolling_window")
+        if rolling:
+            lines.append(f"- Producer rolling-window compliance: last `{rolling.get('evaluations', 0)}` of `{rolling.get('window_size', 0)}` evaluations, `{rolling.get('accepted', 0)}/{rolling.get('evaluations', 0)}` accepted (`{rolling.get('compliance_rate', 0):.4f}`).")
         if blind.get("coverage_gaps"):
             lines.append(f"- Blind coverage gaps requiring fresh batches: `{', '.join(blind['coverage_gaps'])}`")
         resistance = blind.get("adversary_resistance")
