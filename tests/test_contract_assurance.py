@@ -221,6 +221,16 @@ def test_run_blind_batch_rejects_package_audit_mismatch_before_worker(tmp_path: 
         run_blind_batch(package, tmp_path / "batch", command=("worker",), repo_root=tmp_path, package_dir=tmp_path, audit=audit, evaluate=lambda output: Evaluation(True, raw_output=output))
 
 
+def test_run_blind_batch_rejects_package_contract_mismatch_before_worker(tmp_path: Path, monkeypatch):
+    package = tmp_path / "package.json"
+    package.write_text(json.dumps({"contract": "RevisionResponse"}), encoding="utf-8")
+    monkeypatch.setattr("experiments.contract_assurance.blind.execute.run_isolated_worker", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("worker must not start")))
+    payload = json.loads(package.read_text(encoding="utf-8"))
+    audit = BlindBatchAudit("isolated-producer-test", "NextActionResponse", fingerprint(payload), (package.name,), True, False, isolation_evidence=("probe",))
+    with __import__("pytest").raises(ValueError, match="package contract"):
+        run_blind_batch(package, tmp_path / "batch", command=("worker",), repo_root=tmp_path, package_dir=tmp_path, audit=audit, evaluate=lambda output: Evaluation(True, raw_output=output))
+
+
 def test_report_summary_counts_failures():
     results = [evaluate_raw("", NextActionResponse), evaluate_raw(json.dumps(valid_action()), NextActionResponse)]
     assert summarize(results) == {"total": 2, "accepted": 1, "rejected": 1, "failure_codes": {"S0": 1}, "stage_counts": {"schema": 1, "serialization": 1}, "s5_candidates": 0, "s6_limitations": 0}
