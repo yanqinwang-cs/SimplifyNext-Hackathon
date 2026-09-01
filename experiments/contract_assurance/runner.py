@@ -80,7 +80,15 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
             continue
         batches += 1
         status = payload.get("status", payload.get("blind_status"))
-        is_qualified = status == "BLIND" and all(bool(item.get("qualifies_as_blind")) for item in audits)
+        result_path = path.parent / "evaluations.json"
+        try:
+            batch_evaluations = json.loads(result_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            batch_evaluations = None
+        evaluation_count_matches = payload.get("evaluation_count") is None or (
+            isinstance(batch_evaluations, list) and len(batch_evaluations) == payload.get("evaluation_count")
+        )
+        is_qualified = status == "BLIND" and all(bool(item.get("qualifies_as_blind")) for item in audits) and evaluation_count_matches
         qualified += int(is_qualified)
         excluded += int(not is_qualified)
         contracts = {str(item.get("contract", "unknown")) for item in audits}
@@ -96,11 +104,7 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
                 by_role[role]["batches"] += 1
                 by_role[role]["qualified"] += int(is_qualified)
                 by_role[role]["excluded_not_blind"] += int(not is_qualified)
-                result_path = path.parent / "evaluations.json"
-                try:
-                    evaluations = json.loads(result_path.read_text(encoding="utf-8"))
-                except (OSError, json.JSONDecodeError):
-                    evaluations = []
+                evaluations = batch_evaluations if isinstance(batch_evaluations, list) else []
                 if isinstance(evaluations, list):
                     recorded_accepted = sum(bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
                     recorded_rejected = sum(not bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))

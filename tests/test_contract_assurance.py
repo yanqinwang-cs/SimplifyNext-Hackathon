@@ -260,6 +260,13 @@ def test_blind_compliance_scans_nested_batches_and_records_outcomes(tmp_path: Pa
     (direct / "evaluations.json").write_text(json.dumps([{"accepted": False, "code": "S1"}]), encoding="utf-8")
     summary = blind_compliance_summary(tmp_path)
     assert summary["qualified_failure_codes"] == {"S1": 1}
+
+    mismatch = tmp_path / "experiments/contract_assurance/results/direct/mismatch"
+    mismatch.mkdir(parents=True)
+    (mismatch / "batch_manifest.json").write_text(json.dumps({"blind_status": "BLIND", "worker_id": "isolated-producer-2", "contract": "NextActionResponse", "qualifies_as_blind": True, "evaluation_count": 2}), encoding="utf-8")
+    (mismatch / "evaluations.json").write_text(json.dumps([{"accepted": True}]), encoding="utf-8")
+    summary = blind_compliance_summary(tmp_path)
+    assert summary["qualified_batches"] == 1
     (direct / "evaluations.json").write_text(json.dumps([{"accepted": False}]), encoding="utf-8")
     summary = blind_compliance_summary(tmp_path)
     assert summary["qualified_batches"] == 1
