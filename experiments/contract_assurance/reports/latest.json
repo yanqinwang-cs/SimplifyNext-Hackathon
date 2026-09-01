@@ -173,7 +173,7 @@
     "InitialExpansionResponse|S3|state_operation_preflight|Unknown competing hypothesis ID: 'H999'": 1,
     "InitialExpansionResponse|S3|state_operation_preflight|Unknown evidence ID: 'E999'": 1,
     "InitialExpansionResponse|S3|state_operation_preflight|Unknown parent hypothesis ID: 'H999'": 1,
-    "InitialExpansionResponse|S4|schema|1 validation error for InitialExpansionResponse": 10,
+    "InitialExpansionResponse|S4|schema|1 validation error for InitialExpansionResponse": 13,
     "InitialExpansionResponse|S4|state_operation_preflight|Duplicate hypothesis ID in initial expansion: 'H2'": 1,
     "InitialResponse|S0|serialization|Expecting ',' delimiter: line 1 column 483 (char 482)": 1,
     "InitialResponse|S0|serialization|Expecting property name enclosed in double quotes: line 1 column 2 (char 1)": 2,
@@ -190,7 +190,7 @@
     "InitialResponse|S2|schema|1 validation error for InitialResponse": 11,
     "InitialResponse|S3|availability|Action is not currently available: 'A2'": 1,
     "InitialResponse|S3|state_operation_preflight|1 validation error for CaseState": 2,
-    "InitialResponse|S4|schema|1 validation error for InitialResponse": 5,
+    "InitialResponse|S4|schema|1 validation error for InitialResponse": 7,
     "InitialResponse|S4|state_operation_preflight|1 validation error for CaseState": 2,
     "InitialResponse|S4|state_operation_preflight|Duplicate hypothesis ID in initial response: 'H1'": 1,
     "ModelScreenHypothesisResponse|S0|serialization|Expecting ',' delimiter: line 1 column 163 (char 162)": 1,
@@ -281,19 +281,19 @@
       "S1": 112,
       "S2": 56,
       "S3": 22,
-      "S4": 65
+      "S4": 70
     },
-    "rejected": 395,
+    "rejected": 400,
     "s5_candidates": 0,
     "s6_limitations": 0,
     "stage_counts": {
       "availability": 3,
       "operation_preflight": 18,
-      "schema": 246,
+      "schema": 251,
       "serialization": 140,
       "state_operation_preflight": 9
     },
-    "total": 416,
+    "total": 421,
     "unexpected_accepts": 0,
     "unexpected_rejects": 0
   },
@@ -305,18 +305,18 @@
         "S1": 26,
         "S2": 19,
         "S3": 4,
-        "S4": 11
+        "S4": 14
       },
-      "rejected": 80,
+      "rejected": 83,
       "s5_candidates": 0,
       "s6_limitations": 0,
       "stage_counts": {
         "availability": 1,
-        "schema": 57,
+        "schema": 60,
         "serialization": 20,
         "state_operation_preflight": 4
       },
-      "total": 82
+      "total": 85
     },
     "InitialResponse": {
       "accepted": 1,
@@ -325,18 +325,18 @@
         "S1": 19,
         "S2": 11,
         "S3": 3,
-        "S4": 8
+        "S4": 10
       },
-      "rejected": 61,
+      "rejected": 63,
       "s5_candidates": 0,
       "s6_limitations": 0,
       "stage_counts": {
         "availability": 1,
-        "schema": 36,
+        "schema": 38,
         "serialization": 20,
         "state_operation_preflight": 5
       },
-      "total": 62
+      "total": 64
     },
     "ModelScreenHypothesisResponse": {
       "accepted": 2,
@@ -427,8 +427,8 @@
     }
   },
   "deterministic_correctness": {
-    "invalid_fixtures": 395,
-    "invalid_rejected": 395,
+    "invalid_fixtures": 400,
+    "invalid_rejected": 400,
     "invalid_rejection_rate": 1.0,
     "valid_accepted": 21,
     "valid_fixtures": 21,
@@ -436,16 +436,16 @@
   },
   "deterministic_correctness_by_contract": {
     "InitialExpansionResponse": {
-      "invalid_fixtures": 80,
-      "invalid_rejected": 80,
+      "invalid_fixtures": 83,
+      "invalid_rejected": 83,
       "invalid_rejection_rate": 1.0,
       "valid_accepted": 2,
       "valid_fixtures": 2,
       "valid_pass_rate": 1.0
     },
     "InitialResponse": {
-      "invalid_fixtures": 61,
-      "invalid_rejected": 61,
+      "invalid_fixtures": 63,
+      "invalid_rejected": 63,
       "invalid_rejection_rate": 1.0,
       "valid_accepted": 1,
       "valid_fixtures": 1,
@@ -494,12 +494,12 @@
   },
   "deterministic_failure_rate": {
     "confidence": 0.95,
-    "failures": 395,
-    "observed_failure_rate": 0.9495192307692307,
-    "total": 416,
-    "upper_failure_rate": 0.9667486562144427
+    "failures": 400,
+    "observed_failure_rate": 0.9501187648456056,
+    "total": 421,
+    "upper_failure_rate": 0.9671463460562018
   },
-  "generated_at": "2026-09-01T00:54:13.237216+00:00",
+  "generated_at": "2026-09-01T00:57:32.029461+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -578,7 +578,7 @@
         "schema": "InitialResponse",
         "schema_hash": "0bf2d70051b0216d9f2cefa9432cf13b87ad214e2e0e13d710686fa4103978a2",
         "source": "src/investigator/services/contracts.py",
-        "source_hash": "eb4063c3b74fbe5d30702969b864a8ba17e3560d9435f6faa3fec8853bf11037",
+        "source_hash": "63482031464a27fae3c57b010c4d86c1d04499e125093aef1e05d6650ad6ce50",
         "template_placeholders": [
           "REPLACE_WITH_"
         ]
@@ -607,7 +607,7 @@
         "schema": "InitialExpansionResponse",
         "schema_hash": "3ab84fb21b95fbb73d063a580acd3f51ec5299a5657a7a6ea62d6b61e696b7c2",
         "source": "src/investigator/services/contracts.py",
-        "source_hash": "eb4063c3b74fbe5d30702969b864a8ba17e3560d9435f6faa3fec8853bf11037",
+        "source_hash": "63482031464a27fae3c57b010c4d86c1d04499e125093aef1e05d6650ad6ce50",
         "template_placeholders": [
           "REPLACE_WITH_"
         ]
@@ -635,7 +635,7 @@
         "schema": "NextActionResponse",
         "schema_hash": "2ee01b9e0a44aa5ea0159022f89f32b407b9f1bdd33c88f8914b62244611a300",
         "source": "src/investigator/services/contracts.py",
-        "source_hash": "eb4063c3b74fbe5d30702969b864a8ba17e3560d9435f6faa3fec8853bf11037",
+        "source_hash": "63482031464a27fae3c57b010c4d86c1d04499e125093aef1e05d6650ad6ce50",
         "template_placeholders": [
           "REPLACE_WITH_"
         ]
@@ -664,7 +664,7 @@
         "schema": "RevisionResponse",
         "schema_hash": "56906e23079db421c3704a1465b15ff9c008cbde48b2b4d5776f4c4c1e59a455",
         "source": "src/investigator/services/contracts.py",
-        "source_hash": "eb4063c3b74fbe5d30702969b864a8ba17e3560d9435f6faa3fec8853bf11037",
+        "source_hash": "63482031464a27fae3c57b010c4d86c1d04499e125093aef1e05d6650ad6ce50",
         "template_placeholders": [
           "REPLACE_WITH_"
         ]
@@ -685,7 +685,7 @@
         "schema": "NextStepResponse",
         "schema_hash": "f0186ca2f50494c9a630a22fe3bdc890a942cb2607bbe1d15d23957dcf668f29",
         "source": "src/investigator/services/contracts.py",
-        "source_hash": "eb4063c3b74fbe5d30702969b864a8ba17e3560d9435f6faa3fec8853bf11037",
+        "source_hash": "63482031464a27fae3c57b010c4d86c1d04499e125093aef1e05d6650ad6ce50",
         "template_placeholders": [
           "REPLACE_WITH_"
         ]
@@ -721,7 +721,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "0a75ada",
+    "git_commit": "2ff7d4f",
     "unregistered_response_classes": []
   },
   "regressions": {
