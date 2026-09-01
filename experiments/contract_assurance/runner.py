@@ -152,7 +152,8 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
                             by_contract[contract]["rejected"] += recorded_rejected
     qualified_output_metrics["average_output_chars"] = qualified_output_metrics["total_output_chars"] / qualified_output_metrics["outputs"] if qualified_output_metrics["outputs"] else 0.0
     qualified_failure_codes = {code: sum(data["failure_codes"].get(code, 0) for data in by_role.values()) for code in sorted({code for data in by_role.values() for code in data["failure_codes"]})}
-    return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "qualified_evaluations": qualified_evaluations, "qualified_accepted": qualified_accepted, "qualified_rejected": qualified_rejected, "qualified_failure_codes": qualified_failure_codes, "qualified_output_metrics": qualified_output_metrics, "by_role": by_role, "by_contract": dict(sorted(by_contract.items()))}
+    coverage_gaps = sorted(contract for contract in contract_registry() if by_contract.get(contract, {}).get("qualified", 0) == 0)
+    return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "qualified_evaluations": qualified_evaluations, "qualified_accepted": qualified_accepted, "qualified_rejected": qualified_rejected, "qualified_failure_codes": qualified_failure_codes, "qualified_output_metrics": qualified_output_metrics, "coverage_gaps": coverage_gaps, "by_role": by_role, "by_contract": dict(sorted(by_contract.items()))}
 
 
 def _revision_state(root: Path) -> Any:
