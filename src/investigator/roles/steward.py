@@ -10,8 +10,7 @@ class StewardOperation(str, Enum):
     GENERALIZE = "generalize"
     ARCHIVE = "archive"
     REACTIVATE = "reactivate"
-    STOP_UNRESOLVED = "stop_unresolved"
-    READY_FOR_HUMAN_DECISION = "ready_for_human_decision"
+    HANDOFF_TO_HUMAN = "handoff_to_human"
 
 
 class StewardReviewContext(BaseModel):
@@ -65,19 +64,14 @@ class ReactivateDecision(_DecisionBase):
     target_node_id: str
 
 
-class StopUnresolvedDecision(_DecisionBase):
-    operation: Literal["stop_unresolved"] = "stop_unresolved"
-    important_unresolved_ids: list[str] = Field(min_length=1)
+class HandoffToHumanDecision(_DecisionBase):
+    operation: Literal["handoff_to_human"] = "handoff_to_human"
+    important_unresolved_ids: list[str] = Field(default_factory=list)
     reopening_conditions: str
-
-
-class ReadyForHumanDecision(_DecisionBase):
-    operation: Literal["ready_for_human_decision"] = "ready_for_human_decision"
-    remaining_consequential_uncertainty_ids: list[str] = Field(default_factory=list)
     handoff_summary: str
 
 
 StewardDecision: TypeAlias = Annotated[
-    KeepFocusDecision | ShiftFocusDecision | GeneralizeDecision | ArchiveDecision | ReactivateDecision | StopUnresolvedDecision | ReadyForHumanDecision,
+    KeepFocusDecision | ShiftFocusDecision | GeneralizeDecision | ArchiveDecision | ReactivateDecision | HandoffToHumanDecision,
     Field(discriminator="operation"),
 ]

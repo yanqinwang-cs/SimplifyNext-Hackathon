@@ -168,8 +168,8 @@
     },
     {
       "intended_code": "S4",
-      "name": "unknown_stop_unresolved_id",
-      "raw_output": "{\"assessment\": \"The frontier is exhausted.\", \"important_unresolved_ids\": [\"H9\"], \"operation\": \"stop_unresolved\", \"reason\": \"No available enquiry can resolve it.\", \"reopening_conditions\": \"New relevant evidence.\"}"
+      "name": "unknown_handoff_unresolved_id",
+      "raw_output": "{\"assessment\": \"The frontier is exhausted.\", \"handoff_summary\": \"Return the case to a human decision-maker.\", \"important_unresolved_ids\": [\"H9\"], \"operation\": \"handoff_to_human\", \"reason\": \"No available enquiry can resolve it.\", \"reopening_conditions\": \"New relevant evidence.\"}"
     },
     {
       "intended_code": "S4",

@@ -8,7 +8,7 @@ from investigator.graph import CaseGraph, EdgeStatus, GraphNode, GraphNodeType, 
 from investigator.roles.coordinator import GraphInvestigationCoordinator
 from investigator.roles.focus import InvestigationFocus, investigator_region
 from investigator.roles.investigator import INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdate
-from investigator.roles.steward import ReadyForHumanDecision, StewardDecision, StopUnresolvedDecision, StewardReviewContext
+from investigator.roles.steward import HandoffToHumanDecision, StewardDecision, StewardReviewContext
 
 
 class EnquiryKind(str, Enum):
@@ -337,12 +337,9 @@ class InvestigatorCycleCoordinator:
             raise CycleError(CycleFailureCode.GRAPH_UPDATE_FAILURE, f"Steward decision was rejected: {exc}") from exc
         self.graph, self.focus = working.graph, working.focus
         self.cycle.case_revision += 1
-        if isinstance(parsed, StopUnresolvedDecision):
+        if isinstance(parsed, HandoffToHumanDecision):
             self.cycle.status = CycleStatus.STOPPED
-            self.cycle.termination_reason = "STOP_UNRESOLVED"
-        elif isinstance(parsed, ReadyForHumanDecision):
-            self.cycle.status = CycleStatus.STOPPED
-            self.cycle.termination_reason = "READY_FOR_HUMAN_DECISION"
+            self.cycle.termination_reason = "HANDOFF_TO_HUMAN"
         else:
             self.cycle.status = CycleStatus.LOCAL_ACTIVE
             self.cycle.tenure_turn_count = 0

@@ -12,7 +12,8 @@ class TrajectoryRequirements(BaseModel):
     forbidden_actions_after_release: dict[str, list[str]] = Field(default_factory=dict)
     required_visible_evidence_ids: list[str] = Field(default_factory=list)
     require_material_graph_change_after_release: bool = False
-    require_stop_unresolved: bool = False
+    require_handoff_to_human: bool = False
+    require_stop_unresolved: bool = False  # legacy requirement name; operation is now HANDOFF_TO_HUMAN
     require_trusted_exhaustion_for_stop: bool = True
     qualitative_checks: list[str] = Field(default_factory=list)
 
@@ -61,12 +62,15 @@ def evaluate_trajectory(result: dict[str, Any], requirements: TrajectoryRequirem
             )
             if not changed:
                 failures.append("no material graph or focus change occurred after required release")
-    if requirements.require_stop_unresolved and result.get("termination") != "STOP_UNRESOLVED": failures.append("STOP_UNRESOLVED was not reached")
-    if requirements.require_stop_unresolved and requirements.require_trusted_exhaustion_for_stop:
-        stop_contexts = [trace for trace in traces if trace.get("actor") == "steward" and trace.get("steward_decision", {}).get("operation") == "stop_unresolved"]
+    requires_handoff = requirements.require_handoff_to_human or requirements.require_stop_unresolved
+    if requires_handoff and result.get("termination") != "HANDOFF_TO_HUMAN": failures.append("HANDOFF_TO_HUMAN was not reached")
+    if requires_handoff and requirements.require_trusted_exhaustion_for_stop:
+        stop_contexts = [trace for trace in traces if trace.get("actor") == "steward" and trace.get("steward_decision", {}).get("operation") == "handoff_to_human"]
         context = stop_contexts[-1].get("steward_review_context") if stop_contexts else None
         if not context or not context.get("global_frontier_assessed") or context.get("materially_usable_action_ids") or context.get("obvious_useful_region_remains") or not context.get("local_frontier_exhausted"):
-            failures.append("STOP_UNRESOLVED occurred without trusted global-frontier assessment")
+            failures.append("HANDOFF_TO_HUMAN occurred without trusted global-frontier assessment")
+        if not any(trace.get("steward_decision", {}).get("important_unresolved_ids") for trace in stop_contexts):
+            failures.append("HANDOFF_TO_HUMAN did not retain an important unresolved uncertainty")
     hard_failures.extend(failures)
     if hard_failures:
         return {"outcome": "FAIL", "hard_failures": hard_failures, "manual_review": []}

@@ -229,8 +229,8 @@ def _steward_decision_payload(scenario: Any) -> dict[str, Any]:
         payload["target_node_id"] = scenario.expected_target_node_id
     if scenario.expected_destination_node_id:
         payload["destination_node_id"] = scenario.expected_destination_node_id
-    if scenario.expected_operation == "stop_unresolved":
-        payload.update({"important_unresolved_ids": ["U1"], "reopening_conditions": "New relevant evidence."})
+    if scenario.expected_operation == "handoff_to_human":
+        payload.update({"important_unresolved_ids": ["U1"], "reopening_conditions": "New relevant evidence.", "handoff_summary": "Return the unresolved case to a human."})
     return payload
 
 

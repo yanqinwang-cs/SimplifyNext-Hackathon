@@ -8,7 +8,7 @@ from investigator.cycle import (
 )
 from investigator.cycle_prompt import build_investigator_cycle_prompt
 from investigator.graph import CaseGraph, EdgeRelation, GraphEdge, GraphNode, GraphNodeType
-from investigator.roles import InvestigationFocus, ReadyForHumanDecision, StewardReviewContext
+from investigator.roles import HandoffToHumanDecision, InvestigationFocus, StewardReviewContext
 
 
 def graph() -> CaseGraph:
@@ -88,15 +88,15 @@ def test_snapshot_isolated_revision_and_steward_handoff():
 def test_stop_requires_trusted_context_and_prompt_exposes_local_schema():
     item = coordinator(review_context=StewardReviewContext(global_frontier_assessed=True, local_frontier_exhausted=True, active_unresolved_ids=["U1"]))
     item.apply_turn({"graph_updates": [], "next_step": {"type": "local_exhausted", "reason": "No useful local step remains."}})
-    item.apply_steward_decision({"operation": "stop_unresolved", "assessment": "No frontier remains", "reason": "Trusted review supports stopping.", "important_unresolved_ids": ["U1"], "reopening_conditions": "New evidence."}, item.cycle.case_revision)
-    assert item.cycle.status is CycleStatus.STOPPED
+    item.apply_steward_decision({"operation": "handoff_to_human", "assessment": "No frontier remains", "reason": "Trusted review supports handoff.", "important_unresolved_ids": ["U1"], "reopening_conditions": "New evidence.", "handoff_summary": "Return the unresolved case to a human."}, item.cycle.case_revision)
+    assert item.cycle.status is CycleStatus.STOPPED and item.cycle.termination_reason == "HANDOFF_TO_HUMAN"
     prompt = build_investigator_cycle_prompt(coordinator().observation())
     assert "InvestigatorTurnResponse" in prompt and "add_proposition" in prompt and "local_exhausted" in prompt
     assert '"local_graph"' in prompt and '"available_enquiries"' in prompt
 
 
 def ready_context(**overrides):
-    values = {"global_frontier_assessed": True, "local_frontier_exhausted": True, "available_action_ids": ["A1"], "materially_usable_action_ids": [], "obvious_useful_region_remains": False}
+    values = {"global_frontier_assessed": True, "local_frontier_exhausted": True, "available_action_ids": ["A1"], "materially_usable_action_ids": [], "active_unresolved_ids": ["U1"], "obvious_useful_region_remains": False}
     values.update(overrides)
     return StewardReviewContext(**values)
 
@@ -107,24 +107,24 @@ def _awaiting_steward(**context_overrides):
     return item
 
 
-def test_ready_for_human_decision_requires_trusted_exhaustion_and_terminates():
-    ready = {"operation": "ready_for_human_decision", "assessment": "handoff", "reason": "No consequential investigative uncertainty requires another enquiry.", "remaining_consequential_uncertainty_ids": [], "handoff_summary": "The exhausted case is ready for human review."}
+def test_handoff_to_human_requires_trusted_exhaustion_and_terminates():
+    ready = {"operation": "handoff_to_human", "assessment": "handoff", "reason": "No consequential investigative uncertainty requires another enquiry.", "important_unresolved_ids": [], "reopening_conditions": "Reopen for materially contradictory evidence.", "handoff_summary": "The exhausted case is ready for human review."}
     item = _awaiting_steward()
     state = item.apply_steward_decision(ready, item.cycle.case_revision)
-    assert state.status is CycleStatus.STOPPED and state.termination_reason == "READY_FOR_HUMAN_DECISION"
+    assert state.status is CycleStatus.STOPPED and state.termination_reason == "HANDOFF_TO_HUMAN"
     for overrides in ({"global_frontier_assessed": False}, {"materially_usable_action_ids": ["A1"]}, {"obvious_useful_region_remains": True}):
         item = _awaiting_steward(**overrides)
         with pytest.raises(CycleError):
             item.apply_steward_decision(ready, item.cycle.case_revision)
 
 
-def test_ready_rejects_consequential_uncertainty_and_in_flight_enquiry():
+def test_handoff_preserves_consequential_uncertainty_and_rejects_in_flight_enquiry():
     item = _awaiting_steward()
-    decision = {"operation": "ready_for_human_decision", "assessment": "handoff", "reason": "A consequential question remains listed.", "remaining_consequential_uncertainty_ids": ["U1"], "handoff_summary": "This should not pass."}
-    with pytest.raises(CycleError):
-        item.apply_steward_decision(decision, item.cycle.case_revision)
+    decision = {"operation": "handoff_to_human", "assessment": "handoff", "reason": "A consequential question remains listed.", "important_unresolved_ids": ["U1"], "reopening_conditions": "New evidence.", "handoff_summary": "This should not pass."}
+    state = item.apply_steward_decision(decision, item.cycle.case_revision)
+    assert state.termination_reason == "HANDOFF_TO_HUMAN"
     item = coordinator()
     item.apply_turn({"graph_updates": [], "next_step": {"type": "request_enquiry", "action_id": "A3", "target_uncertainty_id": "U1", "expected_information_value": "The check can change the case.", "reason": "The listed check is useful."}})
     with pytest.raises(CycleError) as error:
-        item.apply_steward_decision({"operation": "ready_for_human_decision", "assessment": "handoff", "reason": "No further work.", "remaining_consequential_uncertainty_ids": [], "handoff_summary": "Ready."}, item.cycle.case_revision, review_context=ready_context())
+        item.apply_steward_decision({"operation": "handoff_to_human", "assessment": "handoff", "reason": "No further work.", "important_unresolved_ids": [], "reopening_conditions": "New evidence.", "handoff_summary": "Ready."}, item.cycle.case_revision, review_context=ready_context())
     assert error.value.code is CycleFailureCode.STEWARD_WRITE_DURING_IN_FLIGHT

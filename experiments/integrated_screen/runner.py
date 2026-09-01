@@ -129,7 +129,7 @@ def run_trajectory(
 
     for step in range(1, max_steps + 1):
         if coordinator.cycle.status is CycleStatus.STOPPED:
-            termination = coordinator.cycle.termination_reason or "STOP_UNRESOLVED"
+            termination = coordinator.cycle.termination_reason or "HANDOFF_TO_HUMAN"
             break
         before_graph = coordinator.graph.model_dump(mode="json")
         before = _hash(before_graph)
@@ -195,7 +195,7 @@ def run_trajectory(
                 model_calls += calls_used
                 trace.update({"raw_model_output": call.raw_output, "parsed_response": call.parsed.model_dump(mode="json"), "input_tokens": call.metadata.input_tokens, "output_tokens": call.metadata.output_tokens, "latency_seconds": call.metadata.latency_seconds, "model_attempts": attempts})
                 trace["steward_decision"] = call.parsed.model_dump(mode="json")
-                review_context = context if call.parsed.operation in {"stop_unresolved", "ready_for_human_decision"} else None
+                review_context = context if call.parsed.operation == "handoff_to_human" else None
                 coordinator.apply_steward_decision(call.parsed, coordinator.cycle.case_revision, review_context=review_context)
             except _RetryModelParseError as exc:
                 model_calls += len(exc.attempts)

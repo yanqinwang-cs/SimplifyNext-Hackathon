@@ -28,7 +28,7 @@ def decision(payload: dict):
 
 
 def exhausted_stop(ids=("U1",)) -> dict:
-    return {"assessment": "frontier exhausted", "operation": "stop_unresolved", "reason": "No useful frontier remains", "reopening_conditions": "new evidence", "important_unresolved_ids": list(ids)}
+    return {"assessment": "frontier exhausted", "operation": "handoff_to_human", "reason": "No useful frontier remains", "reopening_conditions": "new evidence", "important_unresolved_ids": list(ids), "handoff_summary": "Return the case to a human decision-maker."}
 
 
 def trusted_context(**overrides) -> StewardReviewContext:

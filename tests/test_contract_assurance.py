@@ -428,7 +428,7 @@ def test_steward_schema_valid_unknown_operations_reach_coordinator_boundary():
     sample = _sample_for(contract_registry()["StewardDecisionResponse"].schema)
     scenario = all_scenarios()[0]
     cases = {item.name: item for item in mutations(sample, contract="StewardDecisionResponse") if item.name.startswith("unknown_")}
-    assert set(cases) == {"unknown_generalize_target", "unknown_archive_target", "unknown_shift_destination", "unknown_stop_unresolved_id"}
+    assert set(cases) == {"unknown_generalize_target", "unknown_archive_target", "unknown_shift_destination", "unknown_handoff_unresolved_id"}
     for item in cases.values():
         result = evaluate_steward(item.raw_output, scenario=scenario)
         assert not result.accepted and result.code is FailureCode.S4 and result.stage == "coordinator_preflight"

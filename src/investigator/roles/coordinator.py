@@ -5,7 +5,7 @@ from investigator.graph import CaseGraph, EdgeRelation, GraphEdge, GraphNode, Gr
 from investigator.roles.focus import InvestigationFocus, investigator_region
 from investigator.roles.history import GraphHistory
 from investigator.roles.investigator import AddConflictCommand, AddDerivationCommand, AddHypothesisCommand, AddPropositionCommand, AddSpecializationCommand, AddSupportCommand, AddUncertaintyCommand, INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdate, MoveFocusCommand
-from investigator.roles.steward import ArchiveDecision, GeneralizeDecision, ReadyForHumanDecision, ReactivateDecision, ShiftFocusDecision, StopUnresolvedDecision, StewardDecision, StewardReviewContext
+from investigator.roles.steward import ArchiveDecision, GeneralizeDecision, HandoffToHumanDecision, ReactivateDecision, ShiftFocusDecision, StewardDecision, StewardReviewContext
 
 
 class GraphInvestigationCoordinator:
@@ -155,7 +155,7 @@ class GraphInvestigationCoordinator:
     def review_with_steward(self, decision: StewardDecision, review_context: StewardReviewContext | None = None) -> None:
         if self.stopped:
             raise ValueError("Coordinator is stopped")
-        if decision.operation not in {"stop_unresolved", "ready_for_human_decision"} and review_context is not None:
+        if decision.operation != "handoff_to_human" and review_context is not None:
             raise ValueError("review_context is valid only for terminal Steward decisions")
         if decision.operation == "keep_focus":
             pass
@@ -173,14 +173,10 @@ class GraphInvestigationCoordinator:
             self._archive(decision)
         elif isinstance(decision, ReactivateDecision):
             self.graph.reactivate_node(decision.target_node_id, decision.reason)
-        elif isinstance(decision, StopUnresolvedDecision):
+        elif isinstance(decision, HandoffToHumanDecision):
             if review_context is None:
-                raise ValueError("STOP_UNRESOLVED requires trusted review_context")
-            self._stop_unresolved(decision, review_context)
-        elif isinstance(decision, ReadyForHumanDecision):
-            if review_context is None:
-                raise ValueError("READY_FOR_HUMAN_DECISION requires trusted review_context")
-            self._ready_for_human_decision(decision, review_context)
+                raise ValueError("HANDOFF_TO_HUMAN requires trusted review_context")
+            self._handoff_to_human(decision, review_context)
         self.history.append(self.graph, self.focus, decision.reason)
 
     def _permitted_ids(self) -> set[str]:
@@ -208,31 +204,22 @@ class GraphInvestigationCoordinator:
         else:
             self.graph.archive_node(target.id, decision.reason)
 
-    def _stop_unresolved(self, decision: StopUnresolvedDecision, context: StewardReviewContext) -> None:
+    def _handoff_to_human(self, decision: HandoffToHumanDecision, context: StewardReviewContext) -> None:
         if not context.global_frontier_assessed:
-            raise ValueError("STOP_UNRESOLVED requires an assessed global frontier")
+            raise ValueError("HANDOFF_TO_HUMAN requires an assessed global frontier")
         if context.neglected_candidate_node_ids or context.obvious_useful_region_remains:
-            raise ValueError("STOP_UNRESOLVED is blocked by a remaining useful graph region")
+            raise ValueError("HANDOFF_TO_HUMAN is blocked by a remaining useful graph region")
         if context.materially_usable_action_ids:
-            raise ValueError("STOP_UNRESOLVED is blocked by materially usable actions")
+            raise ValueError("HANDOFF_TO_HUMAN is blocked by materially usable actions")
         if context.local_exhaustion_required and not context.local_frontier_exhausted:
-            raise ValueError("STOP_UNRESOLVED requires an exhausted local frontier")
+            raise ValueError("HANDOFF_TO_HUMAN requires an exhausted local frontier")
         for identifier in decision.important_unresolved_ids:
             node = self._require_node(self.graph, identifier)
             if node.node_type is not GraphNodeType.UNCERTAINTY or node.status is not GraphStatus.ACTIVE:
-                raise ValueError("STOP_UNRESOLVED IDs must identify active uncertainty nodes")
+                raise ValueError("HANDOFF_TO_HUMAN IDs must identify active uncertainty nodes")
             if identifier not in context.active_unresolved_ids:
-                raise ValueError("STOP_UNRESOLVED IDs must be listed by trusted active_unresolved_ids")
+                raise ValueError("HANDOFF_TO_HUMAN IDs must be listed by trusted active_unresolved_ids")
         self.stopped = True
-
-    @staticmethod
-    def _ready_for_human_decision(decision: ReadyForHumanDecision, context: StewardReviewContext) -> None:
-        if not context.global_frontier_assessed:
-            raise ValueError("READY_FOR_HUMAN_DECISION requires an assessed global frontier")
-        if context.materially_usable_action_ids or context.obvious_useful_region_remains:
-            raise ValueError("READY_FOR_HUMAN_DECISION requires an exhausted useful frontier")
-        if decision.remaining_consequential_uncertainty_ids:
-            raise ValueError("READY_FOR_HUMAN_DECISION cannot retain consequential uncertainty IDs")
 
     @staticmethod
     def _require_node(graph: CaseGraph, node_id: str) -> GraphNode:

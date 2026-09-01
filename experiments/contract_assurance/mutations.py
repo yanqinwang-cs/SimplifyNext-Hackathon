@@ -172,7 +172,7 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
             ("unknown_generalize_target", {"assessment": "The local frontier is exhausted.", "reason": "The parent remains viable.", "operation": "generalize", "target_node_id": "H9"}),
             ("unknown_archive_target", {"assessment": "This branch is no longer useful.", "reason": "No active support remains.", "operation": "archive", "target_node_id": "H9"}),
             ("unknown_shift_destination", {"assessment": "Another frontier is more useful.", "reason": "The destination is the neglected branch.", "operation": "shift_focus", "destination_node_id": "H9"}),
-            ("unknown_stop_unresolved_id", {"assessment": "The frontier is exhausted.", "reason": "No available enquiry can resolve it.", "operation": "stop_unresolved", "important_unresolved_ids": ["H9"], "reopening_conditions": "New relevant evidence."}),
+            ("unknown_handoff_unresolved_id", {"assessment": "The frontier is exhausted.", "reason": "No available enquiry can resolve it.", "operation": "handoff_to_human", "important_unresolved_ids": ["H9"], "reopening_conditions": "New relevant evidence.", "handoff_summary": "Return the case to a human decision-maker."}),
         ):
             result.append(Mutation(name, "S4", json.dumps(payload, sort_keys=True)))
     text_fields = [field for field, item in value.items() if isinstance(item, str)]

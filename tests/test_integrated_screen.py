@@ -145,7 +145,7 @@ def test_c4_frontier_assessment_is_order_independent():
 
 def test_stop_evaluator_requires_exhaustion_and_passes_declared_mechanical_requirements():
     trusted_context = {"global_frontier_assessed": True, "local_frontier_exhausted": True, "available_action_ids": [], "materially_usable_action_ids": [], "obvious_useful_region_remains": False, "active_unresolved_ids": ["U1"]}
-    base = {"termination": "STOP_UNRESOLVED", "completed_action_ids": ["A1"], "traces": [{"actor": "steward", "steward_decision": {"operation": "stop_unresolved"}, "steward_review_context": trusted_context, "materially_usable_action_ids_after": [], "environment_release": [{"id": "E2"}], "visible_released_evidence_ids": ["E2"]}]}
+    base = {"termination": "HANDOFF_TO_HUMAN", "completed_action_ids": ["A1"], "traces": [{"actor": "steward", "steward_decision": {"operation": "handoff_to_human", "important_unresolved_ids": ["U1"]}, "steward_review_context": trusted_context, "materially_usable_action_ids_after": [], "environment_release": [{"id": "E2"}], "visible_released_evidence_ids": ["E2"]}]}
     result = evaluate_trajectory(base, TrajectoryRequirements(required_release_ids=["E2"], required_action_ids=["A1"], required_visible_evidence_ids=["E2"], require_stop_unresolved=True))
     assert result["outcome"] == "PASS"
     failed_context = {**trusted_context, "materially_usable_action_ids": ["A2"], "obvious_useful_region_remains": True}
@@ -155,7 +155,7 @@ def test_stop_evaluator_requires_exhaustion_and_passes_declared_mechanical_requi
 
 def test_stop_requires_trusted_global_assessment_from_actual_steward_step():
     def check(context):
-        result = evaluate_trajectory({"termination": "STOP_UNRESOLVED", "traces": [{"actor": "steward", "steward_decision": {"operation": "stop_unresolved"}, "steward_review_context": context}]}, TrajectoryRequirements(require_stop_unresolved=True, require_trusted_exhaustion_for_stop=True))
+        result = evaluate_trajectory({"termination": "HANDOFF_TO_HUMAN", "traces": [{"actor": "steward", "steward_decision": {"operation": "handoff_to_human", "important_unresolved_ids": ["U1"]}, "steward_review_context": context}]}, TrajectoryRequirements(require_stop_unresolved=True, require_trusted_exhaustion_for_stop=True))
         return result["outcome"]
     assert check({"global_frontier_assessed": False, "local_frontier_exhausted": True, "materially_usable_action_ids": [], "obvious_useful_region_remains": False}) == "FAIL"
     assert check({"global_frontier_assessed": True, "local_frontier_exhausted": True, "materially_usable_action_ids": ["A1"], "obvious_useful_region_remains": True}) == "FAIL"
@@ -164,7 +164,7 @@ def test_stop_requires_trusted_global_assessment_from_actual_steward_step():
 
 def test_forbidden_action_is_evaluated_by_execution_time_not_cumulative_state():
     def check(traces):
-        return evaluate_trajectory({"termination": "STOP_UNRESOLVED", "completed_action_ids": ["A1"], "traces": traces}, TrajectoryRequirements(forbidden_actions_after_release={"E3": ["A1"]}))
+        return evaluate_trajectory({"termination": "HANDOFF_TO_HUMAN", "completed_action_ids": ["A1"], "traces": traces}, TrajectoryRequirements(forbidden_actions_after_release={"E3": ["A1"]}))
     before = check([{"executed_action_id": "A1", "environment_release": []}, {"executed_action_id": None, "environment_release": [{"id": "E3"}], "materially_usable_action_ids_after": []}])
     after = check([{"executed_action_id": None, "environment_release": [{"id": "E3"}], "materially_usable_action_ids_after": []}, {"executed_action_id": "A1", "environment_release": []}])
     never = check([{"executed_action_id": None, "environment_release": [{"id": "E3"}], "materially_usable_action_ids_after": []}])
@@ -177,9 +177,9 @@ def test_material_change_must_happen_after_release():
     release = {"actor": "environment", "environment_release": [{"id": "E2"}], "executed_action_id": "A1", "graph_fingerprint_before": "a", "graph_fingerprint_after": "b"}
     changed = {"actor": "investigator", "environment_release": [], "executed_action_id": None, "graph_fingerprint_before": "b", "graph_fingerprint_after": "c", "graph_delta": {}}
     unchanged = {"actor": "investigator", "environment_release": [], "executed_action_id": None, "graph_fingerprint_before": "b", "graph_fingerprint_after": "b", "graph_delta": {}}
-    assert evaluate_trajectory({"termination": "STOP_UNRESOLVED", "traces": [release, changed]}, requirements)["outcome"] == "PASS"
-    assert evaluate_trajectory({"termination": "STOP_UNRESOLVED", "traces": [release, unchanged]}, requirements)["outcome"] == "FAIL"
-    assert evaluate_trajectory({"termination": "STOP_UNRESOLVED", "traces": [changed, release]}, requirements)["outcome"] == "FAIL"
+    assert evaluate_trajectory({"termination": "HANDOFF_TO_HUMAN", "traces": [release, changed]}, requirements)["outcome"] == "PASS"
+    assert evaluate_trajectory({"termination": "HANDOFF_TO_HUMAN", "traces": [release, unchanged]}, requirements)["outcome"] == "FAIL"
+    assert evaluate_trajectory({"termination": "HANDOFF_TO_HUMAN", "traces": [changed, release]}, requirements)["outcome"] == "FAIL"
 
 
 def test_graph_delta_captures_nodes_edges_and_status_changes():
@@ -329,11 +329,11 @@ def test_c3_ready_for_human_decision_trajectory_is_neutral_and_terminates():
     steward = ScriptedClient(
         {"operation": "archive", "assessment": "remove resolved question", "reason": "The timing uncertainty no longer needs a live node after the release.", "target_node_id": "U1", "destination_node_id": "H1"},
         {"operation": "archive", "assessment": "retire refuted hypothesis", "reason": "The released timestamp conflicts with the prohibited-period hypothesis.", "target_node_id": "H1", "destination_node_id": "P1"},
-        {"operation": "ready_for_human_decision", "assessment": "handoff", "reason": "No consequential investigative uncertainty requires another enquiry.", "remaining_consequential_uncertainty_ids": [], "handoff_summary": "The exhausted investigation is ready for human review."},
+        {"operation": "handoff_to_human", "assessment": "handoff", "reason": "No consequential investigative uncertainty requires another enquiry.", "important_unresolved_ids": [], "reopening_conditions": "Reopen if materially contradictory new evidence emerges.", "handoff_summary": "The exhausted investigation is ready for human review."},
     )
     result = run_trajectory(fixture_map()["C3"], investigator, steward, max_steps=9)
-    assert result["termination"] == "READY_FOR_HUMAN_DECISION"
-    assert result["traces"][-1]["steward_decision"]["operation"] == "ready_for_human_decision"
+    assert result["termination"] == "HANDOFF_TO_HUMAN"
+    assert result["traces"][-1]["steward_decision"]["operation"] == "handoff_to_human"
 
 
 def test_hidden_release_is_not_in_initial_investigator_observation():
