@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-011",
+  "contract": "InitialResponse and InitialExpansionResponse",
+  "discovery_source": "deterministic nested unresolved-placeholder fixtures",
+  "baseline_failure": {"raw_output": "unresolved accepted REPLACE_WITH_UNRESOLVED_QUESTION", "observed_code": "accepted", "intended_code": "S4"},
+  "classification": "S4",
+  "legitimate_semantic_need": "Unresolved questions must contain substantive text rather than copied template sentinels.",
+  "why_existing_contract_insufficient": "The shared list validator rejected blank items but allowed REPLACE_WITH_ sentinels.",
+  "implementation_change": "Reject template sentinels in all validated unresolved-text lists.",
+  "tests_added": ["InitialResponse nested placeholder fixtures", "InitialExpansionResponse nested placeholder fixtures", "shared unresolved-list regression coverage"],
+  "expected_reclassifications": ["nested unresolved placeholders: accepted -> S4"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [416, 421], "unexpected_outcomes": [2, 0]},
+  "commit": "501381b"
+}

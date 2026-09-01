@@ -375,7 +375,7 @@ def test_contract_mutations_cover_nested_shape_and_cross_field_rules():
         "selected_action_id": "A1", "target_uncertainty": "Question", "expected_information_value": "Value", "why_this_action_now": "Reason",
     }
     names = {item.name for item in mutations(expansion, required_fields=("competing_hypotheses",), contract="InitialExpansionResponse")}
-    assert {"unexpected_nested_competing_hypotheses", "empty_required_competing_hypotheses", "competing_root_with_parent", "null_seed_analysis", "wrong_shape_seed_analysis", "unexpected_seed_analysis_field", "empty_seed_analysis_unresolved", "wrong_namespace_seed_analysis_supported_by", "wrong_namespace_seed_analysis_conflicted_by", "wrong_namespace_seed_analysis_specificity_basis_evidence_ids", "wrong_namespace_expansion_supported_by", "wrong_namespace_expansion_conflicted_by", "wrong_namespace_expansion_specificity_basis_evidence_ids", "competing_root_with_specialization_evidence"} <= names
+    assert {"unexpected_nested_competing_hypotheses", "empty_required_competing_hypotheses", "competing_root_with_parent", "null_seed_analysis", "wrong_shape_seed_analysis", "unexpected_seed_analysis_field", "empty_seed_analysis_unresolved", "placeholder_expansion_statement", "placeholder_expansion_unresolved_question", "placeholder_expansion_material_difference", "wrong_namespace_seed_analysis_supported_by", "wrong_namespace_seed_analysis_conflicted_by", "wrong_namespace_seed_analysis_specificity_basis_evidence_ids", "wrong_namespace_expansion_supported_by", "wrong_namespace_expansion_conflicted_by", "wrong_namespace_expansion_specificity_basis_evidence_ids", "competing_root_with_specialization_evidence"} <= names
 
 
 def test_id_array_mutations_generate_wrong_namespace_challenges():

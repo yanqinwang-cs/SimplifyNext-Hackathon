@@ -25,8 +25,8 @@ def _reject_placeholder(value: str | None) -> str | None:
 
 
 def _reject_empty_items(values: list[str]) -> list[str]:
-    if any(not value.strip() for value in values):
-        raise ValueError("Substantive text cannot be empty")
+    if any(not value.strip() or value.strip().startswith("REPLACE_WITH_") for value in values):
+        raise ValueError("Substantive text cannot be empty or a template placeholder")
     return values
 
 
