@@ -473,6 +473,13 @@ def test_blind_role_instructions_exist_without_validator_details():
     assert "failure taxonomy" not in producer
 
 
+def test_generated_results_and_secrets_are_gitignored():
+    root = Path(__file__).resolve().parents[1]
+    for relative in ("experiments/contract_assurance/results/probe/evaluations.json", "runs/probe.json", ".env"):
+        result = subprocess.run(["git", "check-ignore", "--no-index", relative], cwd=root, capture_output=True, text=True)
+        assert result.returncode == 0, relative
+
+
 def test_all_committed_public_packages_match_registered_contracts():
     packages = Path(__file__).resolve().parents[1] / "experiments/contract_assurance/blind/packages"
     registry = contract_registry()
