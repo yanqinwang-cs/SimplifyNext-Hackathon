@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from .evaluate import evaluate_initial, evaluate_next_action, evaluate_raw, evaluate_revision, evaluate_steward
-from .inventory import assert_complete_inventory, assert_inventory_paths, inventory
+from .inventory import assert_complete_inventory, assert_dynamic_structured_boundaries, assert_inventory_paths, inventory
 from .lint import lint_contract
 from .snapshot import fingerprint, verify_snapshot_against_contract
 from .mutations import deduplicate, mutations, write_fixture_manifest
@@ -16,6 +16,7 @@ from .report import coverage_ledger, deterministic_correctness, deterministic_co
 def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> dict[str, Any]:
     assert_complete_inventory(root)
     assert_inventory_paths(root)
+    assert_dynamic_structured_boundaries(root)
     package_issues = verify_committed_packages(root)
     if package_issues:
         raise ValueError("Frozen public package verification failed: " + "; ".join(package_issues))

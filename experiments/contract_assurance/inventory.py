@@ -58,6 +58,32 @@ def assert_inventory_paths(root: Path) -> None:
         raise AssertionError("Missing registered contract paths: " + ", ".join(missing))
 
 
+def assert_dynamic_structured_boundaries(root: Path) -> None:
+    missing: list[str] = []
+    for boundary in DYNAMIC_STRUCTURED_BOUNDARIES:
+        path = root / boundary["path"]
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError):
+            missing.append(f"{boundary['symbol']}: unreadable source")
+            continue
+        class_name, method_name = boundary["symbol"].split(".", 1)
+        methods = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and node.name == method_name
+            and any(isinstance(parent, ast.ClassDef) and parent.name == class_name for parent in ast.walk(tree) if isinstance(parent, ast.ClassDef) and node in parent.body)
+        ]
+        has_client_call = any(
+            isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "call"
+            for method in methods for node in ast.walk(method)
+        )
+        if not methods or not has_client_call:
+            missing.append(f"{boundary['symbol']}: expected structured model-client call not found")
+    if missing:
+        raise AssertionError("Invalid dynamic structured-call inventory: " + "; ".join(missing))
+
+
 def inventory(root: Path, commit: str = "unknown") -> dict[str, Any]:
     specs = list(contract_registry().values())
     entries = []
