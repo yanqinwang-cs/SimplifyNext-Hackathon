@@ -330,6 +330,11 @@
     },
     {
       "intended_code": "S3",
+      "name": "unknown_new_hypothesis_parent_and_evidence",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [{\"conflicted_by\": [\"E999\"], \"id\": \"H2\", \"parent_id\": \"H999\", \"specificity_basis_evidence_ids\": [\"E1\"], \"statement\": \"A newly considered explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"Which observation would distinguish this explanation?\"]}], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S3",
       "name": "unknown_new_hypothesis_conflict_evidence",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [{\"conflicted_by\": [\"E999\"], \"id\": \"H2\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [\"E1\"], \"statement\": \"A newly considered explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"Which observation would distinguish this explanation?\"]}], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
