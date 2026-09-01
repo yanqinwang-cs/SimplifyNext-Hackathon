@@ -633,7 +633,7 @@
     "total": 431,
     "upper_failure_rate": 0.9679138516351051
   },
-  "generated_at": "2026-09-01T01:55:01.387282+00:00",
+  "generated_at": "2026-09-01T01:56:25.212204+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -939,7 +939,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "6f43df3",
+    "git_commit": "809147d",
     "unregistered_response_classes": []
   },
   "prompt_lint": {

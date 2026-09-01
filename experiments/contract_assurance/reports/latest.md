@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T01:55:01.387282+00:00
+- Generated: 2026-09-01T01:56:25.212204+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -103,15 +103,15 @@
 
 ## By contract
 
-| Contract | Total | Accepted | Rejected |
-| --- | ---: | ---: | ---: |
-| `InitialExpansionResponse` | 88 | 2 | 86 |
-| `InitialResponse` | 66 | 1 | 65 |
-| `ModelScreenHypothesisResponse` | 38 | 2 | 36 |
-| `NextActionResponse` | 44 | 1 | 43 |
-| `NextStepResponse` | 58 | 3 | 55 |
-| `RevisionResponse` | 109 | 11 | 98 |
-| `SmokeResponse` | 28 | 1 | 27 |
+| Contract | Total | Accepted | Rejected | Valid pass | Invalid reject | S0 | S1 | S2 | S3 | S4 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `InitialExpansionResponse` | 88 | 2 | 86 | 1.0000 | 1.0000 | 20 | 26 | 20 | 4 | 16 |
+| `InitialResponse` | 66 | 1 | 65 | 1.0000 | 1.0000 | 20 | 19 | 12 | 3 | 11 |
+| `ModelScreenHypothesisResponse` | 38 | 2 | 36 | 1.0000 | 1.0000 | 20 | 10 | 0 | 0 | 6 |
+| `NextActionResponse` | 44 | 1 | 43 | 1.0000 | 1.0000 | 20 | 12 | 7 | 1 | 3 |
+| `NextStepResponse` | 58 | 3 | 55 | 1.0000 | 1.0000 | 20 | 14 | 10 | 0 | 11 |
+| `RevisionResponse` | 109 | 11 | 98 | 1.0000 | 1.0000 | 20 | 26 | 10 | 14 | 28 |
+| `SmokeResponse` | 28 | 1 | 27 | 1.0000 | 1.0000 | 20 | 5 | 0 | 0 | 2 |
 
 ## Contract provenance
 

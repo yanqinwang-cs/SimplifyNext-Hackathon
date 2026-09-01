@@ -146,8 +146,12 @@ def render_markdown(report: dict) -> str:
         lines.extend(f"- {item}" for item in limitations)
     by_contract = report.get("deterministic_by_contract", {})
     if by_contract:
-        lines += ["", "## By contract", "", "| Contract | Total | Accepted | Rejected |", "| --- | ---: | ---: | ---: |"]
-        lines.extend(f"| `{contract}` | {data.get('total', 0)} | {data.get('accepted', 0)} | {data.get('rejected', 0)} |" for contract, data in sorted(by_contract.items()))
+        correctness_by_contract = report.get("deterministic_correctness_by_contract", {})
+        lines += ["", "## By contract", "", "| Contract | Total | Accepted | Rejected | Valid pass | Invalid reject | S0 | S1 | S2 | S3 | S4 |", "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"]
+        for contract, data in sorted(by_contract.items()):
+            correctness = correctness_by_contract.get(contract, {})
+            codes = data.get("failure_codes", {})
+            lines.append(f"| `{contract}` | {data.get('total', 0)} | {data.get('accepted', 0)} | {data.get('rejected', 0)} | {correctness.get('valid_pass_rate', 0):.4f} | {correctness.get('invalid_rejection_rate', 0):.4f} | " + " | ".join(str(codes.get(code, 0)) for code in ("S0", "S1", "S2", "S3", "S4")) + " |")
     inventory_contracts = report.get("inventory", {}).get("contracts", [])
     if inventory_contracts:
         lines += ["", "## Contract provenance", "", "| Contract | Production path | Schema hash | Prompt hash(es) | Template hash |", "| --- | --- | --- | --- | --- |"]
