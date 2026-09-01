@@ -284,6 +284,13 @@
     "rejected": 395,
     "s5_candidates": 0,
     "s6_limitations": 0,
+    "stage_counts": {
+      "availability": 3,
+      "operation_preflight": 18,
+      "schema": 246,
+      "serialization": 140,
+      "state_operation_preflight": 9
+    },
     "total": 416,
     "unexpected_accepts": 0,
     "unexpected_rejects": 0
@@ -301,6 +308,12 @@
       "rejected": 80,
       "s5_candidates": 0,
       "s6_limitations": 0,
+      "stage_counts": {
+        "availability": 1,
+        "schema": 57,
+        "serialization": 20,
+        "state_operation_preflight": 4
+      },
       "total": 82
     },
     "InitialResponse": {
@@ -315,6 +328,12 @@
       "rejected": 61,
       "s5_candidates": 0,
       "s6_limitations": 0,
+      "stage_counts": {
+        "availability": 1,
+        "schema": 36,
+        "serialization": 20,
+        "state_operation_preflight": 5
+      },
       "total": 62
     },
     "ModelScreenHypothesisResponse": {
@@ -327,6 +346,10 @@
       "rejected": 36,
       "s5_candidates": 0,
       "s6_limitations": 0,
+      "stage_counts": {
+        "schema": 18,
+        "serialization": 20
+      },
       "total": 38
     },
     "NextActionResponse": {
@@ -341,6 +364,11 @@
       "rejected": 43,
       "s5_candidates": 0,
       "s6_limitations": 0,
+      "stage_counts": {
+        "availability": 1,
+        "schema": 23,
+        "serialization": 20
+      },
       "total": 44
     },
     "NextStepResponse": {
@@ -354,6 +382,10 @@
       "rejected": 55,
       "s5_candidates": 0,
       "s6_limitations": 0,
+      "stage_counts": {
+        "schema": 38,
+        "serialization": 20
+      },
       "total": 58
     },
     "RevisionResponse": {
@@ -368,6 +400,11 @@
       "rejected": 93,
       "s5_candidates": 0,
       "s6_limitations": 0,
+      "stage_counts": {
+        "operation_preflight": 18,
+        "schema": 66,
+        "serialization": 20
+      },
       "total": 104
     },
     "SmokeResponse": {
@@ -380,6 +417,10 @@
       "rejected": 27,
       "s5_candidates": 0,
       "s6_limitations": 0,
+      "stage_counts": {
+        "schema": 8,
+        "serialization": 20
+      },
       "total": 28
     }
   },
@@ -456,7 +497,7 @@
     "total": 416,
     "upper_failure_rate": 0.9667486562144427
   },
-  "generated_at": "2026-09-01T00:45:08.460603+00:00",
+  "generated_at": "2026-09-01T00:46:39.105272+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -678,7 +719,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "803c3cb",
+    "git_commit": "6579a4c",
     "unregistered_response_classes": []
   },
   "semantic_limitations": [

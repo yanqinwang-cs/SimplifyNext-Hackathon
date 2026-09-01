@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T00:45:08.460603+00:00
+- Generated: 2026-09-01T00:46:39.105272+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -23,6 +23,14 @@
 - `S2`: 56
 - `S3`: 22
 - `S4`: 65
+
+## Production-path stages
+
+- `availability`: 3
+- `operation_preflight`: 18
+- `schema`: 246
+- `serialization`: 140
+- `state_operation_preflight`: 9
 
 ## Blind compliance
 
