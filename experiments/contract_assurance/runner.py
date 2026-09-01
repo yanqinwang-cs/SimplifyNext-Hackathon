@@ -94,6 +94,7 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
     """Summarize recorded producer/adversary batches without admitting unqualified results."""
     batches = 0
     excluded = 0
+    malformed_manifests = 0
     qualified = 0
     qualified_evaluations = qualified_accepted = qualified_rejected = 0
     qualified_output_metrics = {"outputs": 0, "placeholder_copy": 0, "fence_usage": 0, "total_output_chars": 0, "average_output_chars": 0.0}
@@ -110,6 +111,9 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
+            batches += 1
+            excluded += 1
+            malformed_manifests += 1
             continue
         audits = payload.get("audits")
         if audits is None and payload.get("worker_id"):
@@ -238,7 +242,7 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
         data = by_contract_role.get(contract, {}).get("producer", {"batches": 0, "qualified": 0, "evaluations": 0, "accepted": 0, "rejected": 0})
         evaluations = data.get("evaluations", 0)
         producer_by_contract[contract] = {**data, "compliance_rate": data.get("accepted", 0) / evaluations if evaluations else 0.0}
-    return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "qualified_evaluations": qualified_evaluations, "qualified_accepted": qualified_accepted, "qualified_rejected": qualified_rejected, "qualified_failure_codes": qualified_failure_codes, "qualified_output_metrics": qualified_output_metrics, "producer_compliance": producer_compliance, "producer_compliance_rolling_window": rolling_window, "producer_compliance_since_latest_contract_change": since_latest_contract_change, "producer_compliance_by_contract": producer_by_contract, "adversary_resistance": adversary_resistance, "coverage_gaps": coverage_gaps, "by_role": by_role, "by_input_family": dict(sorted(by_input_family.items())), "by_contract": dict(sorted(by_contract.items())), "by_contract_role": {contract: dict(sorted(roles.items())) for contract, roles in sorted(by_contract_role.items())}}
+    return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "malformed_manifests": malformed_manifests, "qualified_evaluations": qualified_evaluations, "qualified_accepted": qualified_accepted, "qualified_rejected": qualified_rejected, "qualified_failure_codes": qualified_failure_codes, "qualified_output_metrics": qualified_output_metrics, "producer_compliance": producer_compliance, "producer_compliance_rolling_window": rolling_window, "producer_compliance_since_latest_contract_change": since_latest_contract_change, "producer_compliance_by_contract": producer_by_contract, "adversary_resistance": adversary_resistance, "coverage_gaps": coverage_gaps, "by_role": by_role, "by_input_family": dict(sorted(by_input_family.items())), "by_contract": dict(sorted(by_contract.items())), "by_contract_role": {contract: dict(sorted(roles.items())) for contract, roles in sorted(by_contract_role.items())}}
 
 
 def _revision_state(root: Path) -> Any:

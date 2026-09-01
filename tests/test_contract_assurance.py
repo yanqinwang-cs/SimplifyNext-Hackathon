@@ -396,6 +396,17 @@ def test_blind_compliance_scans_nested_batches_and_records_outcomes(tmp_path: Pa
     assert summary["by_role"]["adversary"]["evaluations"] == 1
 
 
+def test_blind_compliance_counts_malformed_manifests_as_excluded(tmp_path: Path):
+    batch = tmp_path / "experiments/contract_assurance/results/malformed"
+    batch.mkdir(parents=True)
+    (batch / "batch_manifest.json").write_text('{"status": "NOT_BLIND"}\\n', encoding="utf-8")
+    summary = blind_compliance_summary(tmp_path)
+    assert summary["batches"] == 1
+    assert summary["qualified_batches"] == 0
+    assert summary["excluded_not_blind"] == 1
+    assert summary["malformed_manifests"] == 1
+
+
 def test_new_uncertainty_description_must_be_substantive():
     result = evaluate_raw(json.dumps({"id": "H1:U2", "hypothesis_id": "H1", "description": ""}), NewUncertainty)
     assert not result.accepted and result.code is FailureCode.S4
