@@ -127,7 +127,7 @@ def render_markdown(report: dict) -> str:
                 lines.extend(f"- {item}" for item in value)
     blind = report.get("blind_compliance")
     if blind:
-        lines += ["", "## Blind compliance", "", f"- Status: `{blind.get('status', 'NOT_BLIND')}`", f"- Batches: {blind.get('batches', 0)}", f"- Qualified batches: {blind.get('qualified_batches', 0)}", f"- Excluded as NOT_BLIND: {blind.get('excluded_not_blind', 0)}"]
+        lines += ["", "## Blind compliance", "", f"- Status: `{blind.get('status', 'NOT_BLIND')}`", f"- Batches: {blind.get('batches', 0)}", f"- Qualified batches: {blind.get('qualified_batches', 0)}", f"- Excluded as NOT_BLIND: {blind.get('excluded_not_blind', 0)}", f"- Malformed manifests excluded: {blind.get('malformed_manifests', 0)}"]
         if blind.get("by_contract"):
             lines += ["", "| Blind contract | Batches | Qualified | Excluded |", "| --- | ---: | ---: | ---: |"]
             lines.extend(f"| `{contract}` | {data.get('batches', 0)} | {data.get('qualified', 0)} | {data.get('excluded_not_blind', 0)} |" for contract, data in sorted(blind["by_contract"].items()))

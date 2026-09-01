@@ -405,6 +405,7 @@ def test_blind_compliance_counts_malformed_manifests_as_excluded(tmp_path: Path)
     assert summary["qualified_batches"] == 0
     assert summary["excluded_not_blind"] == 1
     assert summary["malformed_manifests"] == 1
+    assert "Malformed manifests excluded: 1" in render_markdown({"blind_compliance": summary})
 
 
 def test_new_uncertainty_description_must_be_substantive():
