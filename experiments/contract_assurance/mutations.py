@@ -583,6 +583,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         unknown_parent = copy.deepcopy(specialization)
         unknown_parent["competing_hypotheses"][0]["parent_id"] = "H999"
         result.append(Mutation("unknown_parent_hypothesis", "S3", json.dumps(unknown_parent, sort_keys=True)))
+        unknown_parent_and_empty_statement = copy.deepcopy(specialization)
+        unknown_parent_and_empty_statement["competing_hypotheses"][0].update({"parent_id": "H999", "statement": ""})
+        result.append(Mutation("mixed_unknown_parent_empty_statement", "S4", json.dumps(unknown_parent_and_empty_statement, sort_keys=True)))
         unknown_contrast = copy.deepcopy(value)
         unknown_contrast["competing_hypotheses"][0]["contrasted_hypothesis_id"] = "H999"
         result.append(Mutation("unknown_contrast_hypothesis", "S3", json.dumps(unknown_contrast, sort_keys=True)))
