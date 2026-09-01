@@ -11,5 +11,5 @@
   "expected_reclassifications": ["canonical operation-map placeholders: accepted -> S4"],
   "unexpected_regressions": ["none observed"],
   "before_after_compliance": {"deterministic_cases": [426, 428], "unexpected_outcomes": [0, 0]},
-  "commit": "pending"
+  "commit": "8783401"
 }
