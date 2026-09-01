@@ -440,6 +440,16 @@ def test_revision_operation_preflight_rejects_unknown_reference():
     assert not result.accepted and result.code is FailureCode.S3
 
 
+def test_revision_wrong_namespace_evidence_is_s2_before_preflight():
+    from investigator.environments.case_01 import Case1ControlledEnvironment
+    from investigator.services.contracts import InitialResponse
+    environment = Case1ControlledEnvironment(Path(__file__).resolve().parents[1] / "experiments/investigation_smoke/case_01/artifacts")
+    state = environment.build_initial_state(InitialResponse.model_validate({"hypotheses": [{"id": "H1", "statement": "A", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["U"], "specificity_basis_evidence_ids": []}], **valid_action()}))
+    raw = {"hypothesis_updates": [{"hypothesis_id": "H1", "transition": "keep", "reason": "r", "add_supporting_evidence_ids": ["H1"]}], "new_hypotheses": [], "uncertainty_updates": [], "new_uncertainties": [], "revision_rationale": "r"}
+    result = evaluate_revision(json.dumps(raw), state)
+    assert not result.accepted and result.code is FailureCode.S2
+
+
 def test_initial_state_boundary_rejects_unknown_evidence_without_mutation():
     from investigator.services.contracts import InitialResponse
     bad = {"hypotheses": [{"id": "H1", "statement": "A", "status": "active", "supported_by": ["E999"], "conflicted_by": [], "unresolved": ["U"], "specificity_basis_evidence_ids": []}], **valid_action()}
