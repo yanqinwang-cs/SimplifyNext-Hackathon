@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T02:46:39.244891+00:00
+- Generated: 2026-09-01T02:48:13.080587+00:00
 - Contracts: 8
 
 | Metric | Count |
@@ -60,8 +60,8 @@
 ## Blind compliance
 
 - Status: `NOT_BLIND`
-- Batches: 35
-- Qualified batches: 28
+- Batches: 37
+- Qualified batches: 30
 - Excluded as NOT_BLIND: 7
 
 | Blind contract | Batches | Qualified | Excluded |
@@ -70,7 +70,7 @@
 | `InitialResponse` | 4 | 4 | 0 |
 | `ModelScreenHypothesisResponse` | 4 | 4 | 0 |
 | `NextActionResponse` | 6 | 6 | 0 |
-| `NextStepResponse` | 3 | 2 | 1 |
+| `NextStepResponse` | 5 | 4 | 1 |
 | `RevisionResponse` | 4 | 4 | 0 |
 | `SmokeResponse` | 4 | 2 | 2 |
 | `StewardDecisionResponse` | 4 | 4 | 0 |
@@ -85,8 +85,8 @@
 | `ModelScreenHypothesisResponse` / `producer` | 2 | 2 | 0 | 2 | 2 | 0 |
 | `NextActionResponse` / `adversary` | 3 | 3 | 0 | 3 | 1 | 2 |
 | `NextActionResponse` / `producer` | 3 | 3 | 0 | 3 | 3 | 0 |
-| `NextStepResponse` / `adversary` | 2 | 1 | 1 | 1 | 0 | 1 |
-| `NextStepResponse` / `producer` | 2 | 1 | 1 | 1 | 1 | 0 |
+| `NextStepResponse` / `adversary` | 3 | 2 | 1 | 2 | 0 | 2 |
+| `NextStepResponse` / `producer` | 3 | 2 | 1 | 2 | 1 | 1 |
 | `RevisionResponse` / `adversary` | 2 | 2 | 0 | 2 | 0 | 2 |
 | `RevisionResponse` / `producer` | 2 | 2 | 0 | 2 | 2 | 0 |
 | `SmokeResponse` / `adversary` | 2 | 1 | 1 | 1 | 0 | 1 |
@@ -96,10 +96,10 @@
 
 | Blind role | Batches | Qualified evaluations | Accepted | Rejected |
 | --- | ---: | ---: | ---: | ---: |
-| `adversary` | 19 | 14 | 2 | 12 |
-| `producer` | 18 | 14 | 14 | 0 |
-- Qualified blind failure codes: `{'S0': 1, 'S1': 2, 'S3': 5, 'S4': 4}`
-- Qualified blind output metrics: placeholder copies `1`, fenced outputs `0`, average length `439.2` characters.
+| `adversary` | 20 | 15 | 2 | 13 |
+| `producer` | 19 | 15 | 14 | 1 |
+- Qualified blind failure codes: `{'S0': 1, 'S1': 2, 'S3': 5, 'S4': 6}`
+- Qualified blind output metrics: placeholder copies `1`, fenced outputs `0`, average length `428.6` characters.
 
 ## Assurance limitations
 
