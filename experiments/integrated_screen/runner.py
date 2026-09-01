@@ -190,13 +190,16 @@ def dry_run() -> dict[str, Any]:
 
 def manifest(model_investigator: str | None = None, model_steward: str | None = None) -> dict[str, Any]:
     fixtures = all_fixtures()
-    public = [{"fixture_id": fixture.fixture_id, "description": fixture.description, "graph": fixture.graph.model_dump(mode="json")} for fixture in fixtures]
+    public = [{"fixture_id": fixture.fixture_id, "description": fixture.description, "graph": fixture.graph.model_dump(mode="json"), "actions": [action.model_dump(mode="json") for action in fixture.available_enquiries]} for fixture in fixtures]
+    hidden = [{"fixture_id": fixture.fixture_id, "hidden_audit_truth": fixture.hidden_audit_truth, "releases": {action: release.model_dump(mode="json") for action, release in fixture.releases.items()}, "requirements": fixture.requirements.model_dump(mode="json")} for fixture in fixtures]
     return {
         "suite": "integrated-stage1",
-        "suite_version": "stage1-v1",
+        "suite_version": "stage1-v2",
         "fixture_ids": [fixture.fixture_id for fixture in fixtures],
         "fixture_count": len(fixtures),
         "fixture_suite_hash": _hash(public),
+        "hidden_environment_hash": _hash(hidden),
+        "evaluator_requirements_hash": _hash([fixture.requirements.model_dump(mode="json") for fixture in fixtures]),
         "investigator_schema_hash": _hash(__import__("investigator.cycle", fromlist=["TURN_RESPONSE_ADAPTER"]).TURN_RESPONSE_ADAPTER.json_schema()),
         "steward_schema_hash": _hash(TypeAdapter(StewardDecision).json_schema()),
         "investigator_prompt_source_hash": _hash(Path(__file__).parents[2].joinpath("src/investigator/cycle_prompt.py").read_bytes()),

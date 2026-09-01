@@ -36,7 +36,7 @@ def evaluate_trajectory(result: dict[str, Any], requirements: TrajectoryRequirem
         hard_failures.append(result["termination"])
     releases = {evidence["id"] for trace in traces for evidence in (trace.get("environment_release") or [])}
     actions = set(result.get("completed_action_ids", []))
-    visible = {identifier for trace in traces for identifier in trace.get("recently_released_evidence_ids", [])}
+    visible = {identifier for trace in traces for identifier in trace.get("visible_released_evidence_ids", [])}
     failures = []
     for identifier in requirements.required_release_ids:
         if identifier not in releases: failures.append(f"required release missing: {identifier}")

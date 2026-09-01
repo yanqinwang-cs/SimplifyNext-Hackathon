@@ -1,8 +1,16 @@
-# Stage 1 integrated screen
+# Stage 1 integrated screen (stage1-v2)
 
 This experiment is a small sequential Investigator + Case Steward trajectory
-harness. It uses four compact public fixtures (C1 useful release, C2 specific
-child failure, C3 declining clarification value, and C4 unresolved stopping)
+harness. It uses four compact public fixtures: C1 tests a common source making a
+shared signal less discriminating; C2 tests a failed specific child with a
+surviving parent; C3 tests declining clarification value; and C4 tests genuine
+unresolved stopping.
+
+The public starting graphs and actions are intentionally compact: C1 reviews a
+distributed practice solution; C2 verifies a named tutor session; C3 offers
+clarification or timestamp review; and C4 offers archive, revision-metadata,
+and comparison-source enquiries in any order. Released evidence is injected
+only by the trusted deterministic environment after an action executes.
 and a deterministic environment whose hidden release records are never placed
 in model observations.
 
@@ -23,4 +31,6 @@ The live command accepts `--investigator-model`, `--steward-model`,
 `raw_traces.jsonl`, and per-fixture `trajectory_results.json` artifacts under
 the selected output directory. Stage 1 does not
 establish a disciplinary outcome, replace human judgement, or provide a
-production orchestration architecture.
+production orchestration architecture. Stage 1 validates integrated control
+flow and trajectory behavior; it does not establish superiority over the prior
+single-model architecture. That comparison belongs to Stage 2.

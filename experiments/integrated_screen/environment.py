@@ -38,6 +38,7 @@ class Stage1Environment:
     _available: dict[str, AvailableEnquiry]
     _materially_usable: set[str]
     _global_frontier_assessed: bool
+    _assess_global_frontier_when_empty: bool
     _recent: list[GraphNode]
 
     @classmethod
@@ -58,6 +59,7 @@ class Stage1Environment:
             _available=available,
             _materially_usable=material,
             _global_frontier_assessed=False,
+            _assess_global_frontier_when_empty=fixture.assess_global_frontier_when_materially_usable_empty,
             _recent=[],
         )
 
@@ -103,4 +105,4 @@ class Stage1Environment:
         return sorted(self._materially_usable)
 
     def global_frontier_assessed(self) -> bool:
-        return self._global_frontier_assessed
+        return self._global_frontier_assessed or (self._assess_global_frontier_when_empty and not self._materially_usable)

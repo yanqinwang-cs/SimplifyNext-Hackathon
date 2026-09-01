@@ -7,9 +7,10 @@ import pytest
 from experiments.integrated_screen.environment import EvidenceRelease, Stage1Environment
 from experiments.integrated_screen.fixtures import Stage1Fixture, all_fixtures, fixture_map
 from experiments.integrated_screen.evaluate import TrajectoryRequirements, evaluate_trajectory
-from experiments.integrated_screen.runner import _graph_delta, dry_run, live_review_context, run_trajectory
+from experiments.integrated_screen.runner import _graph_delta, dry_run, live_review_context, manifest, run_trajectory
 from experiments.integrated_screen.prompt import build_investigator_prompt
 from investigator.cycle import CycleError, CycleStatus, InvestigatorCycleCoordinator
+from investigator.graph import EdgeRelation, GraphNodeType
 from investigator.llm import ModelCallMetadata, ModelParseError, MockModelClient
 from investigator.roles import KeepFocusDecision
 
@@ -24,6 +25,21 @@ def test_fixture_requirements_are_typed():
     assert all(isinstance(fixture.requirements, TrajectoryRequirements) for fixture in all_fixtures())
 
 
+def test_frozen_fixture_shapes_and_release_statements():
+    c1, c2, c3, c4 = [fixture_map()[key] for key in ("C1", "C2", "C3", "C4")]
+    assert set(c1.graph.nodes) == {"E1", "P1", "H1", "H2", "U1"}
+    assert c1.focus.node_id == "U1" and c1.available_enquiries[0].kind.value == "review"
+    assert c1.releases["A1"].evidence[0].id == "E2"
+    assert c1.graph.edges["U1_TARGETS_P1"].relation is EdgeRelation.TARGETS
+    assert c2.graph.edges["H1.1_SPECIALIZES_H1"].relation is EdgeRelation.SPECIALIZES
+    assert c2.graph.nodes["H1.1"].node_type is GraphNodeType.HYPOTHESIS
+    assert c2.available_enquiries[0].addressable_uncertainty_ids == ["U1"]
+    assert c2.requirements.require_stop_unresolved is False
+    assert c3.releases["A1"].evidence[0].id == "E2" and c3.releases["A2"].evidence[0].id == "E3"
+    assert {action.action_id for action in c3.available_enquiries} == {"A1", "A2"}
+    assert set(c4.releases) == {"A1", "A2", "A3"} and {node.id for node in c4.releases["A3"].evidence} == {"E4"}
+
+
 def test_material_change_requirement_requires_a_release_anchor():
     with pytest.raises(ValueError, match="requires at least one required release"):
         TrajectoryRequirements(require_material_graph_change_after_release=True)
@@ -32,7 +48,7 @@ def test_material_change_requirement_requires_a_release_anchor():
 def test_environment_releases_evidence_and_refreshes_actions():
     fixture = fixture_map()["C4"]
     environment = Stage1Environment.for_fixture(fixture)
-    assert [a.action_id for a in environment.current_available_enquiries()] == ["A1", "A2"]
+    assert [a.action_id for a in environment.current_available_enquiries()] == ["A1", "A2", "A3"]
     release = environment.execute_enquiry("A1")
     assert [node.id for node in release.evidence] == ["E2"]
     assert "A1" not in [a.action_id for a in environment.current_available_enquiries()]
@@ -88,12 +104,35 @@ def test_non_material_action_remains_available_after_release():
     environment = Stage1Environment.for_fixture(fixture)
     environment.execute_enquiry("A1")
     # The release explicitly removes usefulness; no inference from release existence.
-    assert [action.action_id for action in environment.current_available_enquiries()] == ["A2"]
-    assert environment.materially_usable_action_ids() == []
+    assert [action.action_id for action in environment.current_available_enquiries()] == ["A2", "A3"]
+    assert "A2" not in environment.materially_usable_action_ids()
+
+
+def test_c3_both_valid_action_orders_have_expected_material_frontier():
+    for order in (("A1", "A2"), ("A2", "A1")):
+        environment = Stage1Environment.for_fixture(fixture_map()["C3"])
+        first_release = environment.execute_enquiry(order[0])
+        assert [node.id for node in first_release.evidence] == (["E2"] if order[0] == "A1" else ["E3"])
+        if order == ("A1", "A2"):
+            assert environment.materially_usable_action_ids() == ["A2"]
+        else:
+            assert [action.action_id for action in environment.current_available_enquiries()] == ["A1"]
+            assert environment.materially_usable_action_ids() == []
+        environment.execute_enquiry(order[1])
+        assert environment.materially_usable_action_ids() == []
+
+
+def test_c4_frontier_assessment_is_order_independent():
+    for order in (("A1", "A2", "A3"), ("A3", "A1", "A2"), ("A2", "A3", "A1")):
+        environment = Stage1Environment.for_fixture(fixture_map()["C4"])
+        for index, action_id in enumerate(order):
+            environment.execute_enquiry(action_id)
+            assert environment.global_frontier_assessed() is (index == len(order) - 1)
+        assert environment.materially_usable_action_ids() == []
 
 
 def test_stop_evaluator_requires_exhaustion_and_passes_declared_mechanical_requirements():
-    base = {"termination": "STOP_UNRESOLVED", "completed_action_ids": ["A1"], "traces": [{"actor": "steward", "steward_decision": {"operation": "stop_unresolved"}, "materially_usable_action_ids_after": [], "environment_release": [{"id": "E2"}], "recently_released_evidence_ids": ["E2"]}]}
+    base = {"termination": "STOP_UNRESOLVED", "completed_action_ids": ["A1"], "traces": [{"actor": "steward", "steward_decision": {"operation": "stop_unresolved"}, "materially_usable_action_ids_after": [], "environment_release": [{"id": "E2"}], "visible_released_evidence_ids": ["E2"]}]}
     result = evaluate_trajectory(base, TrajectoryRequirements(required_release_ids=["E2"], required_action_ids=["A1"], required_visible_evidence_ids=["E2"], require_stop_unresolved=True))
     assert result["outcome"] == "PASS"
     failed = evaluate_trajectory({**base, "traces": [{**base["traces"][0], "materially_usable_action_ids_after": ["A2"]}]}, TrajectoryRequirements(require_stop_unresolved=True))
@@ -127,11 +166,19 @@ def test_graph_delta_captures_nodes_edges_and_status_changes():
 
 
 def test_hidden_release_is_not_in_initial_investigator_observation():
-    fixture = fixture_map()["C1"]
-    environment = Stage1Environment.for_fixture(fixture)
-    coordinator = InvestigatorCycleCoordinator(deepcopy(fixture.graph), fixture.focus, available_enquiries=environment.current_available_enquiries())
-    prompt = build_investigator_prompt(coordinator.observation())
-    assert "commonly distributed practice solution" not in prompt
+    for fixture in all_fixtures():
+        environment = Stage1Environment.for_fixture(fixture)
+        coordinator = InvestigatorCycleCoordinator(deepcopy(fixture.graph), fixture.focus, available_enquiries=environment.current_available_enquiries())
+        prompt = build_investigator_prompt(coordinator.observation())
+        assert fixture.hidden_audit_truth not in prompt
+
+
+def test_manifest_freezes_public_hidden_and_requirement_hashes_without_content_leakage():
+    value = manifest()
+    assert value["suite_version"] == "stage1-v2"
+    assert value["fixture_count"] == 4
+    assert value["hidden_environment_hash"] and value["evaluator_requirements_hash"]
+    assert "hidden_audit_truth" not in value and "releases" not in value
 
 
 class ScriptedClient:
