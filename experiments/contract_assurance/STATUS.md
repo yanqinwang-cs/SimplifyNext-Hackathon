@@ -1,7 +1,7 @@
 # Status
 
 - Branch: `codex/contract-assurance-goal`
-- Current git commit: `3ce08e3` (latest stable assurance checkpoint)
+- Current git commit: `ac1570e` (latest stable assurance checkpoint)
 - Baseline commit: `946f799`
 - Active focus: deterministic fixture expansion and blind execution readiness
 - Completed cycle: repository inventory, production operation-preflight checks, mutation/fixture manifests, public-package controls, history report export, eight frozen public packages, package drift gates, baseline reports, and explicit runtime boundary metadata
@@ -9,4 +9,4 @@
 - Pending human decisions: none
 - Latest worker evidence: 25 isolated producer/adversary batches are recorded; 18 qualify and 7 are excluded. Qualified pairs cover all eight registered contracts, including current-hash InitialExpansionResponse, StewardDecision, and fresh NextAction batches; four historical InitialExpansionResponse batches and three other historical batches remain excluded because their package hash or manifest evidence is stale. Qualified batches carry Seatbelt launcher and denied-read probe evidence under ignored `experiments/contract_assurance/results/2026-09-01-isolated-*/`.
 - Next queued work: extend referential and cross-field mutation combinations; live SmokeResponse Bedrock execution remains intentionally excluded by the no-AWS constraint
-- Last checkpoint: `3ce08e3` (`Record dynamic structured call boundary`); current cycle records the caller-supplied Gate1 structured-call boundary and refreshes inventory/report provenance.
+- Last checkpoint: `ac1570e` (`Refresh inventory checkpoint provenance`); current cycle records the caller-supplied Gate1 structured-call boundary and refreshes inventory/report provenance.
