@@ -143,6 +143,11 @@
       "intended_code": "S4",
       "name": "empty_answer",
       "raw_output": "{\"answer\": \"\"}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "placeholder_answer",
+      "raw_output": "{\"answer\": \"REPLACE_WITH_NUMERIC_ANSWER\"}"
     }
   ]
 }

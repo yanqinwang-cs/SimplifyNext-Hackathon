@@ -558,7 +558,7 @@
     "SmokeResponse|S0|serialization|top-level JSON value must be an object": 4,
     "SmokeResponse|S1|schema|1 validation error for SmokeResponse": 4,
     "SmokeResponse|S1|schema|2 validation errors for SmokeResponse": 1,
-    "SmokeResponse|S4|schema|1 validation error for SmokeResponse": 2,
+    "SmokeResponse|S4|schema|1 validation error for SmokeResponse": 3,
     "StewardDecisionResponse|S0|serialization|Expecting ',' delimiter: line 1 column 148 (char 147)": 1,
     "StewardDecisionResponse|S0|serialization|Expecting property name enclosed in double quotes: line 1 column 2 (char 1)": 2,
     "StewardDecisionResponse|S0|serialization|Expecting value: line 1 column 1 (char 0)": 6,
@@ -582,9 +582,9 @@
       "S1": 125,
       "S2": 64,
       "S3": 24,
-      "S4": 88
+      "S4": 89
     },
-    "rejected": 457,
+    "rejected": 458,
     "s5_candidates": 0,
     "s6_limitations": 0,
     "stage_counts": {
@@ -592,11 +592,11 @@
       "coordinator": 15,
       "coordinator_preflight": 7,
       "operation_preflight": 20,
-      "schema": 283,
+      "schema": 284,
       "serialization": 156,
       "state_operation_preflight": 9
     },
-    "total": 493,
+    "total": 494,
     "unexpected_accepts": 0,
     "unexpected_rejects": 0
   },
@@ -729,16 +729,16 @@
       "failure_codes": {
         "S0": 20,
         "S1": 5,
-        "S4": 2
+        "S4": 3
       },
-      "rejected": 27,
+      "rejected": 28,
       "s5_candidates": 0,
       "s6_limitations": 0,
       "stage_counts": {
-        "schema": 8,
+        "schema": 9,
         "serialization": 20
       },
-      "total": 28,
+      "total": 29,
       "unexpected_accepts": 0,
       "unexpected_rejects": 0
     },
@@ -764,8 +764,8 @@
     }
   },
   "deterministic_correctness": {
-    "invalid_fixtures": 457,
-    "invalid_rejected": 457,
+    "invalid_fixtures": 458,
+    "invalid_rejected": 458,
     "invalid_rejection_rate": 1.0,
     "valid_accepted": 36,
     "valid_fixtures": 36,
@@ -821,8 +821,8 @@
       "valid_pass_rate": 1.0
     },
     "SmokeResponse": {
-      "invalid_fixtures": 27,
-      "invalid_rejected": 27,
+      "invalid_fixtures": 28,
+      "invalid_rejected": 28,
       "invalid_rejection_rate": 1.0,
       "valid_accepted": 1,
       "valid_fixtures": 1,
@@ -839,12 +839,12 @@
   },
   "deterministic_failure_rate": {
     "confidence": 0.95,
-    "failures": 457,
-    "observed_failure_rate": 0.9269776876267748,
-    "total": 493,
-    "upper_failure_rate": 0.9467908111866956
+    "failures": 458,
+    "observed_failure_rate": 0.9271255060728745,
+    "total": 494,
+    "upper_failure_rate": 0.9468994786739552
   },
-  "generated_at": "2026-09-01T04:19:55.594869+00:00",
+  "generated_at": "2026-09-01T04:21:23.407707+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -1195,7 +1195,7 @@
         "symbol": "ExperimentRunner.run"
       }
     ],
-    "git_commit": "335f72d",
+    "git_commit": "cea88a3",
     "unregistered_response_classes": []
   },
   "prompt_lint": {
