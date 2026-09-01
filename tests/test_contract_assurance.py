@@ -494,6 +494,8 @@ def test_committed_evolution_records_are_complete():
     records = list(root.glob("*.json"))
     assert records
     assert all(validate_evolution_record(json.loads(path.read_text(encoding="utf-8"))) == [] for path in records)
+    complete = {field: "present" for field in ("change_id", "contract", "discovery_source", "baseline_failure", "classification", "legitimate_semantic_need", "why_existing_contract_insufficient", "implementation_change", "tests_added", "expected_reclassifications", "unexpected_regressions", "before_after_compliance")}
+    assert "commit" in validate_evolution_record({**complete, "commit": "pending"})
 
 
 def test_registered_experiment_contracts_forbid_unexpected_fields():

@@ -23,4 +23,7 @@ class EvolutionRecord:
 
 
 def validate_evolution_record(record: dict[str, Any]) -> list[str]:
-    return [field for field in REQUIRED_FIELDS if not record.get(field)]
+    missing = [field for field in REQUIRED_FIELDS if not record.get(field)]
+    if record.get("commit") in {"pending", "unknown"}:
+        missing.append("commit")
+    return missing
