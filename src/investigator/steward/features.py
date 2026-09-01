@@ -20,10 +20,10 @@ class RegionHealth(BaseModel):
     model_config = ConfigDict(extra="forbid")
     focus_node_id: str
     node_ids: list[str]
-    support_profile: EvidenceProfile
+    direct_evidence_profile: EvidenceProfile
     conflict_profile: EvidenceProfile
     unresolved_ids: list[str]
-    specialization_depth: int
+    current_specialization_depth: int
     descendant_count: int
     recent_visit_count: int
     recent_new_support_count: int = 0
@@ -35,14 +35,15 @@ class RegionHealth(BaseModel):
 class TunnelVisionIndicators(BaseModel):
     model_config = ConfigDict(extra="forbid")
     same_root_steps: int
-    specialization_depth_change: int
+    current_specialization_depth: int
     new_nodes_recent: int
     new_support_edges_recent: int
     new_conflict_edges_recent: int
     neglected_candidate_ids: list[str]
 
 
-def _profile(graph: CaseGraph, node_ids: set[str], relation: EdgeRelation) -> EvidenceProfile:
+def direct_evidence_profile(graph: CaseGraph, node_ids: set[str], relation: EdgeRelation = EdgeRelation.SUPPORTS) -> EvidenceProfile:
+    """Count direct evidence edges only; no mediated or recursive support is inferred."""
     edges = [edge for edge in graph.edges.values() if edge.status.value == "active" and edge.relation is relation and edge.target_id in node_ids]
     counts = Counter(edge.strength for edge in edges)
     evidence_ids = sorted({edge.source_id for edge in edges if graph.nodes[edge.source_id].node_type is GraphNodeType.EVIDENCE})
@@ -54,14 +55,13 @@ def region_health(graph: CaseGraph, focus: InvestigationFocus, depth: int = 1) -
     region = investigator_region(graph, focus, depth)
     node_ids = set(region.nodes)
     unresolved = sorted({edge.source_id for edge in graph.edges.values() if edge.relation is EdgeRelation.TARGETS and edge.source_id in node_ids and graph.nodes[edge.source_id].node_type is GraphNodeType.UNCERTAINTY})
-    shared = sum(1 for node in graph.nodes.values() if node.node_type is GraphNodeType.PROPOSITION and len(graph.incoming(node.id, EdgeRelation.DEPENDS_ON)) > 1)
-    return RegionHealth(focus_node_id=focus.node_id, node_ids=sorted(node_ids), support_profile=_profile(graph, node_ids, EdgeRelation.SUPPORTS), conflict_profile=_profile(graph, node_ids, EdgeRelation.CONFLICTS), unresolved_ids=unresolved, specialization_depth=len(graph.ancestors(focus.node_id)) if graph.nodes[focus.node_id].node_type is GraphNodeType.HYPOTHESIS else 0, descendant_count=len(graph.descendants(focus.node_id)) if graph.nodes[focus.node_id].node_type is GraphNodeType.HYPOTHESIS else 0, recent_visit_count=focus.recent_node_ids.count(focus.node_id), shared_dependency_count=shared, active=graph.nodes[focus.node_id].status is GraphStatus.ACTIVE)
+    shared = sum(1 for node in graph.nodes.values() if node.id in node_ids and node.node_type is GraphNodeType.PROPOSITION and len(graph.incoming(node.id, EdgeRelation.DEPENDS_ON)) > 1)
+    return RegionHealth(focus_node_id=focus.node_id, node_ids=sorted(node_ids), direct_evidence_profile=direct_evidence_profile(graph, node_ids), conflict_profile=direct_evidence_profile(graph, node_ids, EdgeRelation.CONFLICTS), unresolved_ids=unresolved, current_specialization_depth=len(graph.ancestors(focus.node_id)) if graph.nodes[focus.node_id].node_type is GraphNodeType.HYPOTHESIS else 0, descendant_count=len(graph.descendants(focus.node_id)) if graph.nodes[focus.node_id].node_type is GraphNodeType.HYPOTHESIS else 0, recent_visit_count=focus.recent_node_ids.count(focus.node_id), shared_dependency_count=shared, active=graph.nodes[focus.node_id].status is GraphStatus.ACTIVE)
 
 
 def neglected_regions(graph: CaseGraph, focus: InvestigationFocus) -> list[str]:
     visited = set(focus.recent_region_node_ids)
     candidates = []
-    active_hypotheses = [node.id for node in graph.nodes.values() if node.node_type is GraphNodeType.HYPOTHESIS and node.status is GraphStatus.ACTIVE]
     for node in sorted(graph.nodes.values(), key=lambda item: item.id):
         if node.status is not GraphStatus.ACTIVE or node.id in visited:
             continue
@@ -81,6 +81,9 @@ def tunnel_vision_indicators(graph: CaseGraph, focus: InvestigationFocus, recent
             roots.append((ancestors[-1].id if ancestors else node_id))
     same_root = 0
     if roots:
-        same_root = sum(1 for root in reversed(roots) if root == roots[-1])
+        for root in reversed(roots):
+            if root != roots[-1]:
+                break
+            same_root += 1
     depth = len(graph.ancestors(focus.node_id)) if focus.node_id in graph.nodes and graph.nodes[focus.node_id].node_type is GraphNodeType.HYPOTHESIS else 0
-    return TunnelVisionIndicators(same_root_steps=same_root, specialization_depth_change=depth, new_nodes_recent=sum(recent_graph_node_counts or []), new_support_edges_recent=sum(recent_support_counts or []), new_conflict_edges_recent=sum(recent_conflict_counts or []), neglected_candidate_ids=neglected_regions(graph, focus))
+    return TunnelVisionIndicators(same_root_steps=same_root, current_specialization_depth=depth, new_nodes_recent=sum(recent_graph_node_counts or []), new_support_edges_recent=sum(recent_support_counts or []), new_conflict_edges_recent=sum(recent_conflict_counts or []), neglected_candidate_ids=neglected_regions(graph, focus))
