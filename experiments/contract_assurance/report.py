@@ -21,7 +21,8 @@ def coverage_ledger(evaluations: Iterable[Evaluation]) -> dict[str, int]:
 def summarize(evaluations: Iterable[Evaluation]) -> dict:
     items = list(evaluations)
     counts = Counter(item.code.value for item in items if item.code)
-    return {"total": len(items), "accepted": sum(item.accepted for item in items), "rejected": sum(not item.accepted for item in items), "failure_codes": dict(counts), "s5_candidates": counts.get("S5", 0), "s6_limitations": counts.get("S6", 0)}
+    stages = Counter(item.stage or "unknown" for item in items)
+    return {"total": len(items), "accepted": sum(item.accepted for item in items), "rejected": sum(not item.accepted for item in items), "failure_codes": dict(counts), "stage_counts": dict(sorted(stages.items())), "s5_candidates": counts.get("S5", 0), "s6_limitations": counts.get("S6", 0)}
 
 
 def summarize_by_contract(evaluations: Iterable[Evaluation]) -> dict[str, dict]:
@@ -103,6 +104,9 @@ def render_markdown(report: dict) -> str:
     if summary.get("failure_codes"):
         lines += ["## Failure codes", ""]
         lines.extend(f"- `{code}`: {count}" for code, count in sorted(summary["failure_codes"].items()))
+    if summary.get("stage_counts"):
+        lines += ["", "## Production-path stages", ""]
+        lines.extend(f"- `{stage}`: {count}" for stage, count in sorted(summary["stage_counts"].items()))
     blind = report.get("blind_compliance")
     if blind:
         lines += ["", "## Blind compliance", "", f"- Status: `{blind.get('status', 'NOT_BLIND')}`", f"- Batches: {blind.get('batches', 0)}", f"- Qualified batches: {blind.get('qualified_batches', 0)}", f"- Excluded as NOT_BLIND: {blind.get('excluded_not_blind', 0)}"]
