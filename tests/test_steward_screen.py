@@ -59,8 +59,8 @@ def test_steward_prompt_uses_neutral_ordered_ontology_and_references() -> None:
     prompt = build_prompt(all_scenarios()[0])
     for section in ["<ROLE>", "<INVESTIGATIVE_PURPOSE>", "<OBJECT_LEGEND>", "<RELATION_LEGEND>", "<POLICY_CONTEXT>", "<POLICY_DISCIPLINE>", "<STEWARD_OPERATIONS>", "<AUTHORITY_BOUNDARY>", "<CASE_PARTICIPANTS>", "<CASEGRAPH>", "<CURRENT_FOCUS>", "<FOCUS_HISTORY>", "<DETERMINISTIC_FEATURES>", "<OUTPUT_CONTRACT>"]:
         assert section in prompt
-    assert "{{PERSON1}}" in prompt and "{{PERSON2}}" in prompt
-    assert "{{H1}}" in prompt and "{{E1}}" in prompt and "{{R1.1}}" in prompt
+    assert "PERSON1" in prompt and "PERSON2" in prompt
+    assert '"id": "H1"' in prompt and '"id": "E1"' in prompt and "R1.1" in prompt
     assert "determine guilt" not in prompt.lower()
     assert "choose an exact enquiry or tool" in prompt
 
@@ -78,6 +78,8 @@ def test_steward_prompt_exposes_exact_zero_shot_output_contract() -> None:
     assert "Do not ... markdown/code fences" not in contract
     assert "markdown/code fences" in contract
     assert "commentary outside the JSON" in contract
-    assert 'Prompt references may be rendered as {{P1}}' in contract
-    assert 'raw stable ID "P1" without braces' in contract
+    assert "Every identifier shown in the case context is already the exact stable identifier" in contract
+    assert "Copy it exactly into identifier-valued output fields" in contract
     assert "<OUTPUT_EXAMPLE>" not in prompt
+    for identifier in ("P1", "H1", "E1", "U1", "PERSON1", "R1.1"):
+        assert f"{{{{{identifier}}}}}" not in prompt
