@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T03:36:24.630722+00:00
+- Generated: 2026-09-01T03:37:07.376799+00:00
 - Contracts: 8
 
 | Metric | Count |
@@ -149,4 +149,4 @@
 | `NextStepResponse` | Defined LLM-facing union; no current production caller | `f0186ca2f50494c9a630a22fe3bdc890a942cb2607bbe1d15d23957dcf668f29` | none | `2d2dd7902ecb2f042fbf318a8a98b11ba75c1125586fcc024c80373eae176113` |
 | `RevisionResponse` | InvestigationService.propose_revision -> apply_revision | `56906e23079db421c3704a1465b15ff9c008cbde48b2b4d5776f4c4c1e59a455` | src/investigator/environments/case_01_prompts.py: db8d5fb1b0f793ac73f616331e3bf27737803e78360af972ab68431455507dce | `2ef32d075192816a26ddba52189c1efdcbadc4ba7a6f9aeeeba09b87866fafc6` |
 | `SmokeResponse` | BedrockModelClient.call (manual smoke script; excluded from offline runs) | `fc008e3ce54e1de048758174b829e39bd4c47b13edbd2574f60044ecce9e9f22` | scripts/smoke_bedrock.py: 5248e4bdee0d861bb8e5440e8fafc5708749bd084f88c5b67b274a336bfaa89b | `5575ae1c4f02063d00c02afe7bf4137684215f5dabb64eefebb44f98e90ff156` |
-| `StewardDecisionResponse` | steward_screen.runner.run_live -> GraphInvestigationCoordinator.review_with_steward | `c1d034291a6ea54ed9e0805c81e02ec4d6c81044e24d58acfa80d0fb6492e705` | experiments/steward_screen/prompt.py: 0b29e5c739a512ba0641d96050c363250c0d3da700940f22d59aaa62f72a0cd6 | `c90166b5084d9b7c6d64eaf3522e79f3ae8101fd93a5aa17636d45e8d7d54cd7` |
+| `StewardDecisionResponse` | steward_screen.runner.run_live -> GraphInvestigationCoordinator.review_with_steward | `c1d034291a6ea54ed9e0805c81e02ec4d6c81044e24d58acfa80d0fb6492e705` | experiments/steward_screen/prompt.py: e36a1d02e41890fc5e62823786bff6133ebd8933c4f892f0867fadc94c2438d1 | `c90166b5084d9b7c6d64eaf3522e79f3ae8101fd93a5aa17636d45e8d7d54cd7` |

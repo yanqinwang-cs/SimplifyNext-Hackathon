@@ -291,7 +291,7 @@
         "experiments.steward_screen.prompt.build_prompt"
       ],
       "prompt_hashes": {
-        "experiments/steward_screen/prompt.py": "0b29e5c739a512ba0641d96050c363250c0d3da700940f22d59aaa62f72a0cd6"
+        "experiments/steward_screen/prompt.py": "e36a1d02e41890fc5e62823786bff6133ebd8933c4f892f0867fadc94c2438d1"
       },
       "prompt_sources": [
         "experiments/steward_screen/prompt.py"
@@ -347,6 +347,6 @@
       "symbol": "ExperimentRunner.run"
     }
   ],
-  "git_commit": "57ffb908f1a28d1f90a8d72e8f96f32b3aaa396e",
+  "git_commit": "baa573b8f88c19b7b161ab34b2dbe78944c0de5e",
   "unregistered_response_classes": []
 }
