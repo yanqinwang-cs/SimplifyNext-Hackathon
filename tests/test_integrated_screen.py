@@ -6,7 +6,8 @@ import pytest
 
 from experiments.integrated_screen.environment import Stage1Environment
 from experiments.integrated_screen.fixtures import all_fixtures, fixture_map
-from experiments.integrated_screen.runner import dry_run, live_review_context, run_trajectory
+from experiments.integrated_screen.evaluate import TrajectoryRequirements, evaluate_trajectory
+from experiments.integrated_screen.runner import _graph_delta, dry_run, live_review_context, run_trajectory
 from experiments.integrated_screen.prompt import build_investigator_prompt
 from investigator.cycle import CycleError, CycleStatus, InvestigatorCycleCoordinator
 from investigator.llm import ModelCallMetadata, ModelParseError, MockModelClient
@@ -39,6 +40,7 @@ def test_trusted_ingestion_releases_evidence_and_recent_marker_is_consumed():
     coordinator.complete_enquiry_with_evidence("A1", release.evidence)
     coordinator.set_available_enquiries(environment.current_available_enquiries())
     assert coordinator.observation().recently_released_evidence_ids == ["E2"]
+    assert "E2" in coordinator.observation().local_graph.nodes
     coordinator.apply_turn({"graph_updates": [], "next_step": {"type": "local_exhausted", "reason": "The released evidence is now visible for review."}})
     assert coordinator.observation().recently_released_evidence_ids == []
 
@@ -59,6 +61,40 @@ def test_live_context_reflects_current_frontier_without_neglected_heuristic():
     assert context.available_action_ids == ["A1"]
     assert context.neglected_candidate_node_ids == []
     assert context.materially_usable_action_ids == ["A1"]
+
+
+def test_local_exhaustion_claim_does_not_override_trusted_material_frontier():
+    fixture = fixture_map()["C1"]
+    environment = Stage1Environment.for_fixture(fixture)
+    coordinator = InvestigatorCycleCoordinator(deepcopy(fixture.graph), fixture.focus, available_enquiries=environment.current_available_enquiries())
+    coordinator.cycle.handoff_reason = "LOCAL_EXHAUSTED"
+    context = live_review_context(coordinator, environment)
+    assert context.local_frontier_exhausted is False
+    assert context.obvious_useful_region_remains is True
+
+
+def test_non_material_action_remains_available_after_release():
+    fixture = fixture_map()["C4"]
+    fixture.releases["A1"].no_longer_materially_usable_action_ids = ["A2"]
+    environment = Stage1Environment.for_fixture(fixture)
+    environment.execute_enquiry("A1")
+    # The release explicitly removes usefulness; no inference from release existence.
+    assert [action.action_id for action in environment.current_available_enquiries()] == ["A2"]
+    assert environment.materially_usable_action_ids() == []
+
+
+def test_stop_evaluator_requires_exhaustion_and_passes_declared_mechanical_requirements():
+    base = {"termination": "STOP_UNRESOLVED", "completed_action_ids": ["A1"], "traces": [{"actor": "steward", "steward_decision": {"operation": "stop_unresolved"}, "materially_usable_action_ids_after": [], "environment_release": [{"id": "E2"}], "recently_released_evidence_ids": ["E2"]}]}
+    result = evaluate_trajectory(base, TrajectoryRequirements(required_release_ids=["E2"], required_action_ids=["A1"], required_visible_evidence_ids=["E2"], require_stop_unresolved=True))
+    assert result["outcome"] == "PASS"
+    failed = evaluate_trajectory({**base, "traces": [{**base["traces"][0], "materially_usable_action_ids_after": ["A2"]}]}, TrajectoryRequirements(require_stop_unresolved=True))
+    assert failed["outcome"] == "FAIL"
+
+
+def test_graph_delta_captures_nodes_edges_and_status_changes():
+    before = {"nodes": {"H1": {"status": "active"}}, "edges": {}}
+    after = {"nodes": {"H1": {"status": "archived"}, "E2": {"status": "active"}}, "edges": {"E2_SUPPORTS_H1": {}}}
+    assert _graph_delta(before, after) == {"added_node_ids": ["E2"], "added_edge_ids": ["E2_SUPPORTS_H1"], "removed_edge_ids": [], "node_status_changes": [{"node_id": "H1", "before": "active", "after": "archived"}]}
 
 
 def test_hidden_release_is_not_in_initial_investigator_observation():

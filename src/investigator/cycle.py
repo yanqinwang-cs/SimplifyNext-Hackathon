@@ -192,9 +192,13 @@ class InvestigatorCycleCoordinator:
         self.review_context = review_context
         self.cycle = InvestigatorCycleState(max_turns_per_tenure=max_turns_per_tenure)
         self._new_nodes: set[str] = set()
+        self._recent_environment_evidence_ids: set[str] = set()
 
     def observation(self) -> InvestigatorObservation:
         region = investigator_region(self.graph, self.focus, depth=1)
+        for identifier in self._recent_environment_evidence_ids:
+            if identifier in self.graph.nodes:
+                region.nodes[identifier] = deepcopy(self.graph.nodes[identifier])
         return InvestigatorObservation(current_focus=self.focus.model_copy(deep=True), local_graph=deepcopy(region), available_enquiries=deepcopy(self.available_enquiries), participants=deepcopy(self.participants), tenure_turn_count=self.cycle.tenure_turn_count, max_turns_per_tenure=self.cycle.max_turns_per_tenure, turns_remaining=max(0, self.cycle.max_turns_per_tenure - self.cycle.tenure_turn_count), in_flight_enquiry=deepcopy(self.cycle.in_flight_enquiry), recently_released_evidence_ids=list(self.cycle.recently_released_evidence_ids))
 
     def set_available_enquiries(self, enquiries: list[AvailableEnquiry]) -> None:
@@ -238,6 +242,7 @@ class InvestigatorCycleCoordinator:
             raise CycleError(CycleFailureCode.TOO_MANY_GRAPH_UPDATES, "An Investigator turn may contain at most five graph updates")
         working = GraphInvestigationCoordinator(deepcopy(self.graph), self.focus.model_copy(deep=True))
         working._new_nodes = set(self._new_nodes)
+        working._recent_environment_evidence_ids = set(self._recent_environment_evidence_ids)
         try:
             for update in response.graph_updates:
                 working.apply_investigator_update(update)
@@ -270,6 +275,7 @@ class InvestigatorCycleCoordinator:
             self.cycle.handoff_reason = "LOCAL_EXHAUSTED"
         # A release is visible in this observation and consumed after this turn.
         self.cycle.recently_released_evidence_ids = []
+        self._recent_environment_evidence_ids = set()
         return self.cycle.model_copy(deep=True)
 
     def complete_enquiry(self, completion: EnquiryCompletion | dict) -> InvestigatorCycleState:
@@ -286,6 +292,7 @@ class InvestigatorCycleCoordinator:
             if node is None or node.node_type is not GraphNodeType.EVIDENCE:
                 raise CycleError(CycleFailureCode.INVALID_ENQUIRY_COMPLETION, "Released evidence IDs must identify existing evidence nodes")
         self.cycle.recently_released_evidence_ids = list(completion.released_evidence_ids)
+        self._recent_environment_evidence_ids = set(completion.released_evidence_ids)
         self.cycle.in_flight_enquiry = None
         self.cycle.case_revision += 1
         if self.cycle.steward_review_required_after_enquiry:

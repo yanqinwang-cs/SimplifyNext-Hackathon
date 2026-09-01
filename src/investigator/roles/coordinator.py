@@ -14,6 +14,7 @@ class GraphInvestigationCoordinator:
         self._require_node(graph, focus.node_id)
         self.graph, self.focus = graph, focus
         self._new_nodes: set[str] = set()
+        self._recent_environment_evidence_ids: set[str] = set()
         self.history = GraphHistory()
         self.history.append(graph, focus, "initial graph")
         self.stopped = False
@@ -127,7 +128,7 @@ class GraphInvestigationCoordinator:
         self.history.append(self.graph, self.focus, decision.reason)
 
     def _permitted_ids(self) -> set[str]:
-        return {self.focus.node_id, *(node.id for node in self.graph.neighbors(self.focus.node_id))}
+        return {self.focus.node_id, *(node.id for node in self.graph.neighbors(self.focus.node_id)), *self._recent_environment_evidence_ids}
 
     def _move_focus(self, node_id: str, reason: str, permitted: set[str] | None) -> None:
         node = self._require_node(self.graph, node_id)

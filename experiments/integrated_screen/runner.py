@@ -35,18 +35,29 @@ def _graph_hash(coordinator: InvestigatorCycleCoordinator) -> str:
     return _hash(coordinator.graph.model_dump(mode="json"))
 
 
+def _graph_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
+    before_nodes, after_nodes = before["nodes"], after["nodes"]
+    before_edges, after_edges = before["edges"], after["edges"]
+    return {
+        "added_node_ids": sorted(set(after_nodes) - set(before_nodes)),
+        "added_edge_ids": sorted(set(after_edges) - set(before_edges)),
+        "removed_edge_ids": sorted(set(before_edges) - set(after_edges)),
+        "node_status_changes": [{"node_id": identifier, "before": before_nodes[identifier]["status"], "after": after_nodes[identifier]["status"]} for identifier in sorted(set(before_nodes) & set(after_nodes)) if before_nodes[identifier]["status"] != after_nodes[identifier]["status"]],
+    }
+
+
 def live_review_context(coordinator: InvestigatorCycleCoordinator, environment: Stage1Environment) -> StewardReviewContext:
     available = environment.current_available_enquiries()
     unresolved = sorted(node.id for node in coordinator.graph.nodes.values() if node.node_type.value == "uncertainty" and node.status.value == "active")
-    exhausted = not available or coordinator.cycle.handoff_reason == "LOCAL_EXHAUSTED"
+    material = environment.materially_usable_action_ids()
     return StewardReviewContext(
-        global_frontier_assessed=not available,
-        local_frontier_exhausted=exhausted,
+        global_frontier_assessed=environment.global_frontier_assessed(),
+        local_frontier_exhausted=not material,
         local_exhaustion_required=False,
         available_action_ids=[item.action_id for item in available],
-        materially_usable_action_ids=environment.materially_usable_action_ids(),
+        materially_usable_action_ids=material,
         active_unresolved_ids=unresolved,
-        obvious_useful_region_remains=bool(environment.materially_usable_action_ids()),
+        obvious_useful_region_remains=bool(material),
     )
 
 
@@ -65,17 +76,18 @@ def run_trajectory(
     model_calls = 0
     termination = None
 
-    def trace_base(step: int, actor: str, before: str) -> dict[str, Any]:
-        return {"step": step, "actor": actor, "focus_before": coordinator.focus.node_id, "graph_fingerprint_before": before, "available_enquiries_before": [a.action_id for a in environment.current_available_enquiries()], "raw_model_output": None, "parsed_response": None, "graph_delta": [], "enquiry_requested": None, "environment_release": None, "completed_action_ids": sorted(environment.completed_action_ids), "steward_decision": None, "focus_after": None, "graph_fingerprint_after": None, "input_tokens": None, "output_tokens": None, "latency_seconds": None, "error": None}
+    def trace_base(step: int, actor: str, before: str, before_graph: dict[str, Any]) -> dict[str, Any]:
+        return {"step": step, "actor": actor, "focus_before": coordinator.focus.node_id, "graph_fingerprint_before": before, "available_action_ids_before": [a.action_id for a in environment.current_available_enquiries()], "materially_usable_action_ids_before": environment.materially_usable_action_ids(), "recently_released_evidence_ids": [], "visible_released_evidence_ids": [], "raw_model_output": None, "parsed_response": None, "graph_delta": {}, "enquiry_requested": None, "environment_release": None, "completed_action_ids": sorted(environment.completed_action_ids), "steward_decision": None, "focus_after": None, "graph_fingerprint_after": None, "available_action_ids_after": None, "materially_usable_action_ids_after": None, "input_tokens": None, "output_tokens": None, "latency_seconds": None, "failure_category": None, "error": None, "_graph_before": before_graph}
 
     for step in range(1, max_steps + 1):
         if coordinator.cycle.status is CycleStatus.STOPPED:
             termination = "STOP_UNRESOLVED"
             break
-        before = _graph_hash(coordinator)
+        before_graph = coordinator.graph.model_dump(mode="json")
+        before = _hash(before_graph)
         status = coordinator.cycle.status
         if status is CycleStatus.ENQUIRY_IN_FLIGHT:
-            trace = trace_base(step, "environment", before)
+            trace = trace_base(step, "environment", before, before_graph)
             action_id = coordinator.cycle.in_flight_enquiry.action_id
             try:
                 release = environment.execute_enquiry(action_id)
@@ -84,7 +96,8 @@ def run_trajectory(
                 trace["environment_release"] = [node.model_dump(mode="json") for node in release.evidence]
                 trace["completed_action_ids"] = sorted(environment.completed_action_ids)
             except Exception as exc:
-                trace["error"] = f"environment_release: {exc}"
+                trace["failure_category"] = "ENVIRONMENT_RELEASE"
+                trace["error"] = str(exc)
                 traces.append(trace)
                 termination = "FAIL / ENVIRONMENT_RELEASE"
                 break
@@ -92,8 +105,10 @@ def run_trajectory(
             if model_calls >= max_model_calls:
                 termination = "FAIL / MODEL_BUDGET_EXCEEDED"
                 break
-            trace = trace_base(step, "investigator", before)
+            trace = trace_base(step, "investigator", before, before_graph)
             observation = coordinator.observation()
+            trace["recently_released_evidence_ids"] = list(observation.recently_released_evidence_ids)
+            trace["visible_released_evidence_ids"] = [identifier for identifier in observation.recently_released_evidence_ids if identifier in observation.local_graph.nodes]
             prompt = build_investigator_prompt(observation)
             trace["prompt_hash"] = _hash(prompt)
             try:
@@ -106,13 +121,13 @@ def run_trajectory(
                 coordinator.apply_turn(response)
             except ModelParseError as exc:
                 model_calls += 1
-                trace.update({"raw_model_output": exc.raw_output, "error": f"investigator_parse: {exc}"})
+                trace.update({"raw_model_output": exc.raw_output, "failure_category": "INVESTIGATOR_SCHEMA", "error": str(exc)})
                 traces.append(trace)
                 termination = "FAIL / INVESTIGATOR_SCHEMA"
                 break
             except Exception as exc:
                 model_calls += 1
-                trace["error"] = f"investigator_apply: {exc}"
+                trace.update({"failure_category": "INVESTIGATOR_APPLY", "error": str(exc)})
                 traces.append(trace)
                 termination = "FAIL / INVESTIGATOR_APPLY"
                 break
@@ -120,7 +135,7 @@ def run_trajectory(
             if model_calls >= max_model_calls:
                 termination = "FAIL / MODEL_BUDGET_EXCEEDED"
                 break
-            trace = trace_base(step, "steward", before)
+            trace = trace_base(step, "steward", before, before_graph)
             context = live_review_context(coordinator, environment)
             prompt = build_steward_prompt(coordinator.steward_snapshot(), context)
             trace["prompt_hash"] = _hash(prompt)
@@ -132,24 +147,27 @@ def run_trajectory(
                 coordinator.apply_steward_decision(call.parsed, coordinator.cycle.case_revision, review_context=context)
             except ModelParseError as exc:
                 model_calls += 1
-                trace.update({"raw_model_output": exc.raw_output, "error": f"steward_parse: {exc}"})
+                trace.update({"raw_model_output": exc.raw_output, "failure_category": "STEWARD_SCHEMA", "error": str(exc)})
                 traces.append(trace)
                 termination = "FAIL / STEWARD_SCHEMA"
                 break
             except Exception as exc:
-                trace["error"] = f"steward_apply: {exc}"
+                trace.update({"failure_category": "STEWARD_APPLY", "error": str(exc)})
                 traces.append(trace)
                 termination = "FAIL / STEWARD_APPLY"
                 break
-        trace["graph_delta"] = sorted(set(coordinator.graph.nodes) - set(fixture.graph.nodes))
+        trace["graph_delta"] = _graph_delta(before_graph, coordinator.graph.model_dump(mode="json"))
         trace["focus_after"] = coordinator.focus.node_id
         trace["graph_fingerprint_after"] = _graph_hash(coordinator)
+        trace["available_action_ids_after"] = [a.action_id for a in environment.current_available_enquiries()]
+        trace["materially_usable_action_ids_after"] = environment.materially_usable_action_ids()
+        trace.pop("_graph_before", None)
         traces.append(trace)
     else:
         termination = "FAIL / LOOP_BUDGET_EXCEEDED"
     if termination is None:
         termination = "QUIESCENT"
-    result = {"fixture_id": fixture.fixture_id, "termination": termination, "model_calls": model_calls, "completed_action_ids": sorted(environment.completed_action_ids), "traces": traces, "final_graph": coordinator.graph.model_dump(mode="json"), "final_focus": coordinator.focus.model_dump(mode="json")}
+    result = {"fixture_id": fixture.fixture_id, "termination": termination, "model_calls": model_calls, "completed_action_ids": sorted(environment.completed_action_ids), "traces": traces, "final_graph": coordinator.graph.model_dump(mode="json"), "final_graph_fingerprint": _graph_hash(coordinator), "final_focus": coordinator.focus.model_dump(mode="json"), "final_environment": {"available_action_ids": [a.action_id for a in environment.current_available_enquiries()], "materially_usable_action_ids": environment.materially_usable_action_ids(), "completed_action_ids": sorted(environment.completed_action_ids)}}
     result["evaluation"] = evaluate_trajectory(result)
     return result
 
@@ -212,6 +230,7 @@ def main() -> None:
     run_manifest = manifest(args.investigator_model, args.steward_model)
     run_manifest.update({"run_id": run_id, "selected_fixtures": args.fixtures})
     (output / "manifest.json").write_text(json.dumps(run_manifest, indent=2) + "\n")
+    (output / "trajectory_results.json").write_text(json.dumps(results, indent=2, sort_keys=True) + "\n")
     with (output / "raw_traces.jsonl").open("w", encoding="utf-8") as handle:
         for result in results:
             for trace in result["traces"]:
