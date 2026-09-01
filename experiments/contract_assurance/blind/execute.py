@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Callable, Sequence
 
 from ..audit import BlindBatchAudit, record_batch
+from ..snapshot import fingerprint
 from .isolation import run_isolated_worker
 
 
@@ -27,7 +28,11 @@ def run_blind_batch(
     """
     package = Path(package_path)
     package_text = package.read_text(encoding="utf-8")
-    json.loads(package_text)  # Fail before execution if the supplied package is not JSON.
+    package_payload = json.loads(package_text)  # Fail before execution if the supplied package is not JSON.
+    if package_payload.get("manifest", {}).get("contract", package_payload.get("contract")) != audit.contract:
+        raise ValueError("supplied package contract does not match blind audit")
+    if fingerprint(package_payload) != audit.package_hash:
+        raise ValueError("supplied package hash does not match blind audit")
     completed = run_isolated_worker(
         command,
         repo_root=repo_root,

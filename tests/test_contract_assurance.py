@@ -204,12 +204,21 @@ def test_run_blind_batch_streams_package_and_records_worker_metadata(tmp_path: P
         return subprocess.CompletedProcess(command, 0, stdout='{}', stderr='')
 
     monkeypatch.setattr("experiments.contract_assurance.blind.execute.run_isolated_worker", fake_worker)
-    audit = BlindBatchAudit("isolated-producer-test", "NextActionResponse", "hash", (package.name,), True, False, isolation_evidence=("probe",))
+    audit = BlindBatchAudit("isolated-producer-test", "NextActionResponse", fingerprint(json.loads(package.read_text())), (package.name,), True, False, isolation_evidence=("probe",))
     destination = run_blind_batch(package, tmp_path / "batch", command=("worker",), repo_root=tmp_path, package_dir=tmp_path, audit=audit, evaluate=lambda output: Evaluation(True, raw_output=output))
     assert seen["input_text"] == package.read_text(encoding="utf-8")
     manifest = json.loads((destination / "batch_manifest.json").read_text())
     assert manifest["blind_status"] == "BLIND"
     assert json.loads((destination / "evaluations.json").read_text())[0]["details"]["worker_returncode"] == 0
+
+
+def test_run_blind_batch_rejects_package_audit_mismatch_before_worker(tmp_path: Path, monkeypatch):
+    package = tmp_path / "package.json"
+    package.write_text(json.dumps({"contract": "NextActionResponse"}), encoding="utf-8")
+    monkeypatch.setattr("experiments.contract_assurance.blind.execute.run_isolated_worker", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("worker must not start")))
+    audit = BlindBatchAudit("isolated-producer-test", "NextActionResponse", "stale", (package.name,), True, False, isolation_evidence=("probe",))
+    with __import__("pytest").raises(ValueError, match="package hash"):
+        run_blind_batch(package, tmp_path / "batch", command=("worker",), repo_root=tmp_path, package_dir=tmp_path, audit=audit, evaluate=lambda output: Evaluation(True, raw_output=output))
 
 
 def test_report_summary_counts_failures():
