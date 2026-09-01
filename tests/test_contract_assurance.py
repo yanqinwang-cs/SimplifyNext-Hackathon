@@ -506,6 +506,24 @@ def test_steward_schema_valid_unknown_operations_reach_coordinator_boundary():
         assert not result.accepted and result.code is FailureCode.S4 and result.stage == "coordinator_preflight"
 
 
+def test_steward_unknown_operations_are_rejected_across_all_graph_shapes():
+    from experiments.contract_assurance.evaluate import evaluate_steward
+    from experiments.contract_assurance.runner import _sample_for
+    from experiments.contract_assurance.registry import contract_registry
+    from experiments.steward_screen.scenarios import all_scenarios
+
+    sample = _sample_for(contract_registry()["StewardDecisionResponse"].schema)
+    unknown = [item for item in mutations(sample, contract="StewardDecisionResponse") if item.name.startswith("unknown_")]
+    scenarios = all_scenarios()
+    assert len(scenarios) == 12
+    for scenario in scenarios:
+        for item in unknown:
+            result = evaluate_steward(item.raw_output, scenario=scenario)
+            assert not result.accepted, (scenario.scenario_id, item.name)
+            assert result.code is FailureCode.S4, (scenario.scenario_id, item.name, result.message)
+            assert result.stage == "coordinator_preflight", (scenario.scenario_id, item.name, result.stage)
+
+
 def test_contract_mutations_cover_nested_shape_and_cross_field_rules():
     expansion = {
         "seed_analysis": {"supported_by": ["E1"], "conflicted_by": [], "unresolved": ["Question"], "specificity_basis_evidence_ids": []},
