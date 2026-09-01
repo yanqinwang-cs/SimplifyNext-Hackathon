@@ -839,7 +839,7 @@
     "total": 484,
     "upper_failure_rate": 0.9457924102962553
   },
-  "generated_at": "2026-09-01T03:52:28.166104+00:00",
+  "generated_at": "2026-09-01T04:02:26.636120+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -1134,7 +1134,7 @@
           "experiments.steward_screen.prompt.build_prompt"
         ],
         "prompt_hashes": {
-          "experiments/steward_screen/prompt.py": "8a122ba9fcadeb43392c8fc47d78eac6b76d686ead8b1e4f148ef995c5f751ed"
+          "experiments/steward_screen/prompt.py": "b615a96a55412065901a49895a9c079f242bacc53092d7105a958b6f3281315a"
         },
         "prompt_sources": [
           "experiments/steward_screen/prompt.py"
@@ -1190,7 +1190,7 @@
         "symbol": "ExperimentRunner.run"
       }
     ],
-    "git_commit": "f6796eccf7d23818f5ec8594348a97e4ca7456f7",
+    "git_commit": "e0c7edbcc25c59517440757412c0fe3551875d2f",
     "unregistered_response_classes": []
   },
   "prompt_lint": {
