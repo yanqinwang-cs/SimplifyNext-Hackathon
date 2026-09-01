@@ -50,7 +50,7 @@ def test_outer_json_fence_is_the_only_normalization():
 
 def test_canonical_placeholders_are_rejected_by_real_contracts():
     initial = {"hypotheses": [{"id": "H1", "statement": "A", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["U"], "specificity_basis_evidence_ids": []}], "selected_action_id": "A1", "target_uncertainty": "The uncertainty this enquiry addresses.", "expected_information_value": "Useful value.", "why_this_action_now": "Useful reason."}
-    assert evaluate_raw(json.dumps(initial), InitialResponse).code is FailureCode.S1
+    assert evaluate_raw(json.dumps(initial), InitialResponse).code is FailureCode.S4
     placeholder_action = valid_action() | {"selected_action_id": "A9"}
     assert evaluate_raw(json.dumps(placeholder_action), NextActionResponse).code is FailureCode.S2
     revision = {"hypothesis_updates": [], "new_hypotheses": [], "uncertainty_updates": [], "new_uncertainties": [], "revision_rationale": "How the evidence changed the state."}
@@ -271,6 +271,8 @@ def test_model_screen_hypothesis_text_must_be_substantive():
 def test_smoke_response_answer_must_be_substantive():
     result = evaluate_raw(json.dumps({"answer": ""}), SmokeResponse)
     assert result.code is FailureCode.S4
+    placeholder = evaluate_raw(json.dumps({"answer": "REPLACE_WITH_SUBSTANTIVE_TEXT"}), SmokeResponse)
+    assert placeholder.code is FailureCode.S4
 
 
 def test_next_step_conclusion_reason_must_be_substantive():

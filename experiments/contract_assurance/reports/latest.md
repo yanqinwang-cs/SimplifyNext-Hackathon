@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T00:16:56.125541+00:00
+- Generated: 2026-09-01T00:19:10.647726+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -17,16 +17,16 @@
 ## Failure codes
 
 - `S0`: 140
-- `S1`: 127
+- `S1`: 112
 - `S2`: 56
 - `S3`: 21
-- `S4`: 44
+- `S4`: 59
 
 ## Blind compliance
 
 - Status: `NOT_BLIND`
-- Batches: 13
-- Qualified batches: 8
+- Batches: 15
+- Qualified batches: 10
 - Excluded as NOT_BLIND: 5
 
 | Blind contract | Batches | Qualified | Excluded |
@@ -35,12 +35,12 @@
 | `InitialResponse` | 2 | 2 | 0 |
 | `NextActionResponse` | 2 | 2 | 0 |
 | `NextStepResponse` | 3 | 2 | 1 |
-| `SmokeResponse` | 2 | 0 | 2 |
+| `SmokeResponse` | 4 | 2 | 2 |
 
 | Blind role | Batches | Evaluations | Accepted | Rejected |
 | --- | ---: | ---: | ---: | ---: |
-| `adversary` | 8 | 6 | 1 | 5 |
-| `producer` | 7 | 6 | 5 | 1 |
+| `adversary` | 9 | 7 | 1 | 6 |
+| `producer` | 8 | 7 | 6 | 1 |
 
 ## Assurance limitations
 
