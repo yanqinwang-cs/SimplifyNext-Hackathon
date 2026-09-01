@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-020",
+  "contract": "Schema-evolution records",
+  "discovery_source": "completion audit of immutable evolution provenance",
+  "baseline_failure": {"raw_output": "record validator accepted commit='pending'", "observed_code": "incomplete provenance", "intended_code": "rejected"},
+  "classification": "S4",
+  "legitimate_semantic_need": "Every committed evolution decision must point to a concrete checkpoint rather than an unresolved placeholder.",
+  "why_existing_contract_insufficient": "Required-field validation treated any non-empty commit string as complete.",
+  "implementation_change": "Reject pending and unknown commit placeholders while preserving valid short test references.",
+  "tests_added": ["pending evolution commit is rejected", "all committed records remain complete"],
+  "expected_reclassifications": ["pending provenance: accepted -> rejected"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [428, 428], "unexpected_outcomes": [0, 0]},
+  "commit": "1c60d3a"
+}
