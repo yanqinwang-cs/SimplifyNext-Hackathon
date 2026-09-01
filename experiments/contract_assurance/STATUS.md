@@ -1,7 +1,7 @@
 # Status
 
 - Branch: `codex/contract-assurance-goal`
-- Report source commit: `8f2531e` (latest report source; current assurance code checkpoint is `1045048`)
+- Report source commit: `1817055` (latest report source; report artifact refresh follows this code checkpoint)
 - Baseline commit: `946f799`
 - Active focus: deterministic fixture expansion and blind execution readiness
 - Completed cycle: repository inventory, production operation-preflight checks, mutation/fixture manifests, public-package controls, history report export, eight frozen public packages, package drift gates, baseline reports, and explicit runtime boundary metadata
@@ -9,4 +9,4 @@
 - Pending human decisions: none
 - Latest worker evidence: 41 isolated producer/adversary batches are recorded; 34 qualify and 7 are excluded. Qualified pairs cover all eight registered contracts, including fresh exact-package StewardDecision, NextAction, ModelScreenHypothesisResponse, InitialResponse, RevisionResponse, NextStepResponse, InitialExpansionResponse, and SmokeResponse pairs. Across 17 qualified adversary evaluations, 15 were correctly rejected and 2 were accepted with semantics explicitly unassessed outside deterministic enforceability. The SmokeResponse adversary copied the registered placeholder and was correctly rejected as S4 without a live Bedrock call; both InitialExpansion workers violated relationship-branch invariants and were correctly rejected as S4; the RevisionResponse adversary’s unavailable `A1_RELEASE` evidence reference was correctly rejected as S3. Four historical InitialExpansionResponse batches and three other historical batches remain excluded because their package hash or manifest evidence is stale. Qualified batches carry Seatbelt launcher and denied-read probe evidence under ignored `experiments/contract_assurance/results/2026-09-01-isolated-*/`.
 - Next queued work: extend referential and cross-field mutation combinations; live SmokeResponse Bedrock execution remains intentionally excluded by the no-AWS constraint
-- Last checkpoint: `1045048` (`Test isolated worker input streaming`); isolated-worker stdin streaming is regression-tested, with the managed host’s denied `sandbox_apply` environment explicitly skipped rather than treated as successful isolation.
+- Last checkpoint: `1817055` (`Record isolation test limitation`); the complete assurance command and repository suite were rerun, and refreshed report artifacts retain this exact source revision.
