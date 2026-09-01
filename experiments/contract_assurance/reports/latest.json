@@ -101,6 +101,134 @@
         "rejected": 1
       }
     },
+    "by_contract_role": {
+      "InitialExpansionResponse": {
+        "adversary": {
+          "accepted": 0,
+          "batches": 4,
+          "evaluations": 1,
+          "excluded_not_blind": 3,
+          "qualified": 1,
+          "rejected": 1
+        },
+        "producer": {
+          "accepted": 1,
+          "batches": 3,
+          "evaluations": 1,
+          "excluded_not_blind": 2,
+          "qualified": 1,
+          "rejected": 0
+        }
+      },
+      "InitialResponse": {
+        "adversary": {
+          "accepted": 0,
+          "batches": 1,
+          "evaluations": 1,
+          "excluded_not_blind": 0,
+          "qualified": 1,
+          "rejected": 1
+        },
+        "producer": {
+          "accepted": 1,
+          "batches": 1,
+          "evaluations": 1,
+          "excluded_not_blind": 0,
+          "qualified": 1,
+          "rejected": 0
+        }
+      },
+      "ModelScreenHypothesisResponse": {
+        "adversary": {
+          "accepted": 0,
+          "batches": 1,
+          "evaluations": 1,
+          "excluded_not_blind": 0,
+          "qualified": 1,
+          "rejected": 1
+        },
+        "producer": {
+          "accepted": 1,
+          "batches": 1,
+          "evaluations": 1,
+          "excluded_not_blind": 0,
+          "qualified": 1,
+          "rejected": 0
+        }
+      },
+      "NextActionResponse": {
+        "adversary": {
+          "accepted": 0,
+          "batches": 1,
+          "evaluations": 1,
+          "excluded_not_blind": 0,
+          "qualified": 1,
+          "rejected": 1
+        },
+        "producer": {
+          "accepted": 1,
+          "batches": 1,
+          "evaluations": 1,
+          "excluded_not_blind": 0,
+          "qualified": 1,
+          "rejected": 0
+        }
+      },
+      "NextStepResponse": {
+        "adversary": {
+          "accepted": 0,
+          "batches": 2,
+          "evaluations": 1,
+          "excluded_not_blind": 1,
+          "qualified": 1,
+          "rejected": 1
+        },
+        "producer": {
+          "accepted": 1,
+          "batches": 2,
+          "evaluations": 1,
+          "excluded_not_blind": 1,
+          "qualified": 1,
+          "rejected": 0
+        }
+      },
+      "RevisionResponse": {
+        "adversary": {
+          "accepted": 0,
+          "batches": 1,
+          "evaluations": 1,
+          "excluded_not_blind": 0,
+          "qualified": 1,
+          "rejected": 1
+        },
+        "producer": {
+          "accepted": 1,
+          "batches": 1,
+          "evaluations": 1,
+          "excluded_not_blind": 0,
+          "qualified": 1,
+          "rejected": 0
+        }
+      },
+      "SmokeResponse": {
+        "adversary": {
+          "accepted": 0,
+          "batches": 2,
+          "evaluations": 1,
+          "excluded_not_blind": 1,
+          "qualified": 1,
+          "rejected": 1
+        },
+        "producer": {
+          "accepted": 1,
+          "batches": 2,
+          "evaluations": 1,
+          "excluded_not_blind": 1,
+          "qualified": 1,
+          "rejected": 0
+        }
+      }
+    },
     "by_role": {
       "adversary": {
         "accepted": 0,
@@ -505,7 +633,7 @@
     "total": 431,
     "upper_failure_rate": 0.9679138516351051
   },
-  "generated_at": "2026-09-01T01:53:35.380905+00:00",
+  "generated_at": "2026-09-01T01:55:01.387282+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -811,7 +939,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "741d0b8",
+    "git_commit": "6f43df3",
     "unregistered_response_classes": []
   },
   "prompt_lint": {

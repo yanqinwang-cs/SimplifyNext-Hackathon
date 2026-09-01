@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T01:53:35.380905+00:00
+- Generated: 2026-09-01T01:55:01.387282+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -71,6 +71,23 @@
 | `NextStepResponse` | 3 | 2 | 1 |
 | `RevisionResponse` | 2 | 2 | 0 |
 | `SmokeResponse` | 4 | 2 | 2 |
+
+| Blind contract/role | Batches | Qualified | Excluded | Evaluations | Accepted | Rejected |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `InitialExpansionResponse` / `adversary` | 4 | 1 | 3 | 1 | 0 | 1 |
+| `InitialExpansionResponse` / `producer` | 3 | 1 | 2 | 1 | 1 | 0 |
+| `InitialResponse` / `adversary` | 1 | 1 | 0 | 1 | 0 | 1 |
+| `InitialResponse` / `producer` | 1 | 1 | 0 | 1 | 1 | 0 |
+| `ModelScreenHypothesisResponse` / `adversary` | 1 | 1 | 0 | 1 | 0 | 1 |
+| `ModelScreenHypothesisResponse` / `producer` | 1 | 1 | 0 | 1 | 1 | 0 |
+| `NextActionResponse` / `adversary` | 1 | 1 | 0 | 1 | 0 | 1 |
+| `NextActionResponse` / `producer` | 1 | 1 | 0 | 1 | 1 | 0 |
+| `NextStepResponse` / `adversary` | 2 | 1 | 1 | 1 | 0 | 1 |
+| `NextStepResponse` / `producer` | 2 | 1 | 1 | 1 | 1 | 0 |
+| `RevisionResponse` / `adversary` | 1 | 1 | 0 | 1 | 0 | 1 |
+| `RevisionResponse` / `producer` | 1 | 1 | 0 | 1 | 1 | 0 |
+| `SmokeResponse` / `adversary` | 2 | 1 | 1 | 1 | 0 | 1 |
+| `SmokeResponse` / `producer` | 2 | 1 | 1 | 1 | 1 | 0 |
 
 | Blind role | Batches | Qualified evaluations | Accepted | Rejected |
 | --- | ---: | ---: | ---: | ---: |

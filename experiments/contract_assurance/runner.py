@@ -88,6 +88,7 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
     role_template = {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "recorded_evaluations": 0, "recorded_accepted": 0, "recorded_rejected": 0, "evaluations": 0, "accepted": 0, "rejected": 0, "failure_codes": {}}
     by_role = {"producer": {**role_template, "failure_codes": {}}, "adversary": {**role_template, "failure_codes": {}}}
     by_contract: dict[str, dict[str, int]] = {}
+    by_contract_role: dict[str, dict[str, dict[str, int]]] = {}
     for path in sorted((root / "experiments/contract_assurance/results").glob("**/batch_manifest.json")):
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
@@ -131,6 +132,11 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
             worker_id = str(item.get("worker_id", "")).lower()
             role = "adversary" if "adversary" in worker_id else "producer" if "producer" in worker_id else None
             if role:
+                item_contract = str(item.get("contract", "unknown"))
+                contract_role = by_contract_role.setdefault(item_contract, {}).setdefault(role, {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "evaluations": 0, "accepted": 0, "rejected": 0})
+                contract_role["batches"] += 1
+                contract_role["qualified"] += int(is_qualified)
+                contract_role["excluded_not_blind"] += int(not is_qualified)
                 by_role[role]["batches"] += 1
                 by_role[role]["qualified"] += int(is_qualified)
                 by_role[role]["excluded_not_blind"] += int(not is_qualified)
@@ -167,13 +173,16 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
                         by_contract[contract]["recorded_accepted"] += recorded_accepted
                         by_contract[contract]["recorded_rejected"] += recorded_rejected
                         if is_qualified:
-                            by_contract[contract]["evaluations"] += len(evaluations)
-                            by_contract[contract]["accepted"] += recorded_accepted
-                            by_contract[contract]["rejected"] += recorded_rejected
+                            by_contract[item_contract]["evaluations"] += len(evaluations)
+                            by_contract[item_contract]["accepted"] += recorded_accepted
+                            by_contract[item_contract]["rejected"] += recorded_rejected
+                            contract_role["evaluations"] += len(evaluations)
+                            contract_role["accepted"] += recorded_accepted
+                            contract_role["rejected"] += recorded_rejected
     qualified_output_metrics["average_output_chars"] = qualified_output_metrics["total_output_chars"] / qualified_output_metrics["outputs"] if qualified_output_metrics["outputs"] else 0.0
     qualified_failure_codes = {code: sum(data["failure_codes"].get(code, 0) for data in by_role.values()) for code in sorted({code for data in by_role.values() for code in data["failure_codes"]})}
     coverage_gaps = sorted(contract for contract in contract_registry() if by_contract.get(contract, {}).get("qualified", 0) == 0)
-    return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "qualified_evaluations": qualified_evaluations, "qualified_accepted": qualified_accepted, "qualified_rejected": qualified_rejected, "qualified_failure_codes": qualified_failure_codes, "qualified_output_metrics": qualified_output_metrics, "coverage_gaps": coverage_gaps, "by_role": by_role, "by_contract": dict(sorted(by_contract.items()))}
+    return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "qualified_evaluations": qualified_evaluations, "qualified_accepted": qualified_accepted, "qualified_rejected": qualified_rejected, "qualified_failure_codes": qualified_failure_codes, "qualified_output_metrics": qualified_output_metrics, "coverage_gaps": coverage_gaps, "by_role": by_role, "by_contract": dict(sorted(by_contract.items())), "by_contract_role": {contract: dict(sorted(roles.items())) for contract, roles in sorted(by_contract_role.items())}}
 
 
 def _revision_state(root: Path) -> Any:
