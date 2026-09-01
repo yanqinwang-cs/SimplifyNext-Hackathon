@@ -31,34 +31,58 @@ class _InvestigatorCommand(BaseModel):
 
 class AddPropositionCommand(_InvestigatorCommand):
     operation: Literal["add_proposition"] = "add_proposition"
-    node_id: str = Field(pattern=r"^P\d+(?:\.\d+)*$")
+    node_id: str | None = Field(default=None, pattern=r"^P\d+(?:\.\d+)*$")
+    local_ref: str | None = Field(default=None, pattern=r"^[A-Za-z][A-Za-z0-9_]*$")
     statement: str
-    derived_from_node_ids: list[str] = Field(min_length=1)
+    derived_from_node_ids: list[str] = Field(default_factory=list)
+    derived_from_node_refs: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def sources_are_unique(self) -> "AddPropositionCommand":
-        if len(self.derived_from_node_ids) != len(set(self.derived_from_node_ids)):
+        if not self.derived_from_node_ids and not self.derived_from_node_refs:
+            raise ValueError("a proposition needs at least one source node ID or local reference")
+        values = [*self.derived_from_node_ids, *self.derived_from_node_refs]
+        if len(values) != len(set(values)):
             raise ValueError("derived_from_node_ids must not contain duplicates")
         return self
 
 
 class AddHypothesisCommand(_InvestigatorCommand):
     operation: Literal["add_hypothesis"] = "add_hypothesis"
-    node_id: str = Field(pattern=r"^H\d+(?:\.\d+)*$")
+    node_id: str | None = Field(default=None, pattern=r"^H\d+(?:\.\d+)*$")
+    local_ref: str | None = Field(default=None, pattern=r"^[A-Za-z][A-Za-z0-9_]*$")
     statement: str
 
 
 class AddUncertaintyCommand(_InvestigatorCommand):
     operation: Literal["add_uncertainty"] = "add_uncertainty"
-    node_id: str = Field(pattern=r"^U\d+(?:\.\d+)*$")
+    node_id: str | None = Field(default=None, pattern=r"^U\d+(?:\.\d+)*$")
+    local_ref: str | None = Field(default=None, pattern=r"^[A-Za-z][A-Za-z0-9_]*$")
     statement: str
-    target_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*|H\d+(?:\.\d+)*)$")
+    target_node_id: str | None = Field(default=None, pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*|H\d+(?:\.\d+)*)$")
+    target_node_ref: str | None = Field(default=None, pattern=r"^[A-Za-z][A-Za-z0-9_]*$")
+
+    @model_validator(mode="after")
+    def target_is_identified(self) -> "AddUncertaintyCommand":
+        if (self.target_node_id is None) == (self.target_node_ref is None):
+            raise ValueError("an uncertainty needs exactly one target node ID or local reference")
+        return self
 
 
 class _RelationCommand(_InvestigatorCommand):
-    source_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*)$")
-    target_node_id: str = Field(pattern=r"^(?:P\d+(?:\.\d+)*|H\d+(?:\.\d+)*)$")
+    source_node_id: str | None = Field(default=None, pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*)$")
+    target_node_id: str | None = Field(default=None, pattern=r"^(?:P\d+(?:\.\d+)*|H\d+(?:\.\d+)*)$")
+    source_node_ref: str | None = Field(default=None, pattern=r"^[A-Za-z][A-Za-z0-9_]*$")
+    target_node_ref: str | None = Field(default=None, pattern=r"^[A-Za-z][A-Za-z0-9_]*$")
     strength: EdgeStrength | None = None
+
+    @model_validator(mode="after")
+    def endpoints_are_identified(self) -> "_RelationCommand":
+        if (self.source_node_id is None) == (self.source_node_ref is None):
+            raise ValueError("a relation needs exactly one source node ID or local reference")
+        if (self.target_node_id is None) == (self.target_node_ref is None):
+            raise ValueError("a relation needs exactly one target node ID or local reference")
+        return self
 
 
 class AddSupportCommand(_RelationCommand):
@@ -71,19 +95,46 @@ class AddConflictCommand(_RelationCommand):
 
 class AddDerivationCommand(_InvestigatorCommand):
     operation: Literal["add_derivation"] = "add_derivation"
-    derived_proposition_id: str = Field(pattern=r"^P\d+(?:\.\d+)*$")
-    source_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*)$")
+    derived_proposition_id: str | None = Field(default=None, pattern=r"^P\d+(?:\.\d+)*$")
+    source_node_id: str | None = Field(default=None, pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*)$")
+    derived_proposition_ref: str | None = Field(default=None, pattern=r"^[A-Za-z][A-Za-z0-9_]*$")
+    source_node_ref: str | None = Field(default=None, pattern=r"^[A-Za-z][A-Za-z0-9_]*$")
+
+    @model_validator(mode="after")
+    def endpoints_are_identified(self) -> "AddDerivationCommand":
+        if (self.derived_proposition_id is None) == (self.derived_proposition_ref is None):
+            raise ValueError("a derivation needs exactly one proposition ID or local reference")
+        if (self.source_node_id is None) == (self.source_node_ref is None):
+            raise ValueError("a derivation needs exactly one source node ID or local reference")
+        return self
 
 
 class AddSpecializationCommand(_InvestigatorCommand):
     operation: Literal["add_specialization"] = "add_specialization"
-    child_hypothesis_id: str = Field(pattern=r"^H\d+(?:\.\d+)*$")
-    parent_hypothesis_id: str = Field(pattern=r"^H\d+(?:\.\d+)*$")
+    child_hypothesis_id: str | None = Field(default=None, pattern=r"^H\d+(?:\.\d+)*$")
+    parent_hypothesis_id: str | None = Field(default=None, pattern=r"^H\d+(?:\.\d+)*$")
+    child_hypothesis_ref: str | None = Field(default=None, pattern=r"^[A-Za-z][A-Za-z0-9_]*$")
+    parent_hypothesis_ref: str | None = Field(default=None, pattern=r"^[A-Za-z][A-Za-z0-9_]*$")
+
+    @model_validator(mode="after")
+    def endpoints_are_identified(self) -> "AddSpecializationCommand":
+        if (self.child_hypothesis_id is None) == (self.child_hypothesis_ref is None):
+            raise ValueError("a specialization needs exactly one child hypothesis ID or local reference")
+        if (self.parent_hypothesis_id is None) == (self.parent_hypothesis_ref is None):
+            raise ValueError("a specialization needs exactly one parent hypothesis ID or local reference")
+        return self
 
 
 class MoveFocusCommand(_InvestigatorCommand):
     operation: Literal["move_focus"] = "move_focus"
-    focus_node_id: str
+    focus_node_id: str | None = None
+    focus_node_ref: str | None = Field(default=None, pattern=r"^[A-Za-z][A-Za-z0-9_]*$")
+
+    @model_validator(mode="after")
+    def destination_is_identified(self) -> "MoveFocusCommand":
+        if (self.focus_node_id is None) == (self.focus_node_ref is None):
+            raise ValueError("a focus move needs exactly one focus node ID or local reference")
+        return self
 
 
 InvestigatorUpdate: TypeAlias = Annotated[

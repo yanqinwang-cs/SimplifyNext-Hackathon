@@ -1,4 +1,5 @@
 from copy import deepcopy
+import re
 
 from investigator.graph import CaseGraph, EdgeRelation, GraphEdge, GraphNode, GraphNodeType, GraphStatus, make_edge_id
 from investigator.roles.focus import InvestigationFocus, investigator_region
@@ -19,8 +20,43 @@ class GraphInvestigationCoordinator:
         self.history.append(graph, focus, "initial graph")
         self.stopped = False
 
-    def apply_investigator_update(self, update: InvestigatorUpdate) -> None:
-        update = INVESTIGATOR_UPDATE_ADAPTER.validate_python(update)
+    def apply_investigator_update(self, update: InvestigatorUpdate, aliases: dict[str, str] | None = None) -> None:
+        aliases = aliases if aliases is not None else {}
+        raw = update.model_dump(exclude_none=True) if hasattr(update, "model_dump") else dict(update)
+        operation = raw.get("operation")
+        if operation in {"add_proposition", "add_hypothesis", "add_uncertainty"}:
+            local_ref = raw.get("local_ref")
+            if local_ref and local_ref in aliases:
+                raise ValueError(f"Duplicate local reference: {local_ref!r}")
+            if not raw.get("node_id"):
+                raw["node_id"] = self._next_free_id({"add_proposition": "P", "add_hypothesis": "H", "add_uncertainty": "U"}[operation])
+
+        def resolve(field: str, ref_field: str) -> None:
+            reference = raw.pop(ref_field, None)
+            if reference is not None:
+                if reference not in aliases:
+                    raise ValueError(f"Unknown local reference: {reference!r}")
+                if field in raw:
+                    raise ValueError(f"Provide either {field} or {ref_field}, not both")
+                raw[field] = aliases[reference]
+
+        if operation == "add_proposition":
+            refs = raw.pop("derived_from_node_refs", [])
+            raw["derived_from_node_ids"] = [*raw.get("derived_from_node_ids", []), *(self._alias_id(ref, aliases) for ref in refs)]
+        elif operation == "add_uncertainty":
+            resolve("target_node_id", "target_node_ref")
+        elif operation in {"add_support", "add_conflict"}:
+            resolve("source_node_id", "source_node_ref")
+            resolve("target_node_id", "target_node_ref")
+        elif operation == "add_derivation":
+            resolve("derived_proposition_id", "derived_proposition_ref")
+            resolve("source_node_id", "source_node_ref")
+        elif operation == "add_specialization":
+            resolve("child_hypothesis_id", "child_hypothesis_ref")
+            resolve("parent_hypothesis_id", "parent_hypothesis_ref")
+        elif operation == "move_focus":
+            resolve("focus_node_id", "focus_node_ref")
+        update = INVESTIGATOR_UPDATE_ADAPTER.validate_python(raw)
         if self.stopped:
             raise ValueError("Coordinator is stopped")
         candidate = deepcopy(self.graph)
@@ -40,11 +76,27 @@ class GraphInvestigationCoordinator:
         elif isinstance(update, AddSpecializationCommand):
             self._apply_specialization(candidate, new_nodes, update)
         elif isinstance(update, MoveFocusCommand):
-            self._move_focus(update.focus_node_id, update.reason, self._permitted_ids())
+            self._move_focus(update.focus_node_id, update.reason, self._permitted_ids() | new_nodes)
         if not isinstance(update, MoveFocusCommand):
             self.graph = candidate
         self._new_nodes = new_nodes
+        local_ref = getattr(update, "local_ref", None)
+        if local_ref:
+            aliases[local_ref] = update.node_id
         self.history.append(self.graph, self.focus, update.reason)
+
+    @staticmethod
+    def _alias_id(reference: str, aliases: dict[str, str]) -> str:
+        if reference not in aliases:
+            raise ValueError(f"Unknown local reference: {reference!r}")
+        return aliases[reference]
+
+    def _next_free_id(self, prefix: str) -> str:
+        used = {identifier for identifier in self.graph.nodes if re.fullmatch(rf"{prefix}\d+", identifier)}
+        number = 1
+        while f"{prefix}{number}" in used:
+            number += 1
+        return f"{prefix}{number}"
 
     def _apply_add_proposition(self, graph: CaseGraph, new_nodes: set[str], update: AddPropositionCommand) -> None:
         self._require_new_id(graph, update.node_id)

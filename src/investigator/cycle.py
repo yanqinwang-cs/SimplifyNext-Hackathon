@@ -243,9 +243,10 @@ class InvestigatorCycleCoordinator:
         working = GraphInvestigationCoordinator(deepcopy(self.graph), self.focus.model_copy(deep=True))
         working._new_nodes = set(self._new_nodes)
         working._recent_environment_evidence_ids = set(self._recent_environment_evidence_ids)
+        aliases: dict[str, str] = {}
         try:
             for update in response.graph_updates:
-                working.apply_investigator_update(update)
+                working.apply_investigator_update(update, aliases=aliases)
         except Exception as exc:
             raise CycleError(CycleFailureCode.TURN_ATOMIC_ROLLBACK, f"Investigator turn rolled back after graph update failure: {exc}") from exc
         next_step = response.next_step

@@ -10,9 +10,11 @@ from experiments.integrated_screen.evaluate import TrajectoryRequirements, evalu
 from experiments.integrated_screen.runner import _graph_delta, dry_run, live_review_context, manifest, run_trajectory
 from experiments.integrated_screen.prompt import build_investigator_prompt
 from investigator.cycle import CycleError, CycleStatus, InvestigatorCycleCoordinator
-from investigator.graph import EdgeRelation, GraphNodeType
+from investigator.cycle_prompt import build_investigator_cycle_prompt
+from investigator.graph import EdgeRelation, GraphNode, GraphNodeType, GraphStatus
 from investigator.llm import ModelCallMetadata, ModelParseError, MockModelClient
 from investigator.roles import KeepFocusDecision
+from investigator.roles import GraphInvestigationCoordinator, InvestigationFocus
 
 
 def test_all_stage1_fixtures_validate_and_dry_run_is_offline(monkeypatch):
@@ -184,6 +186,69 @@ def test_graph_delta_captures_nodes_edges_and_status_changes():
     before = {"nodes": {"H1": {"status": "active"}}, "edges": {}}
     after = {"nodes": {"H1": {"status": "archived"}, "E2": {"status": "active"}}, "edges": {"E2_SUPPORTS_H1": {}}}
     assert _graph_delta(before, after) == {"added_node_ids": ["E2"], "added_edge_ids": ["E2_SUPPORTS_H1"], "removed_edge_ids": [], "node_status_changes": [{"node_id": "H1", "before": "active", "after": "archived"}]}
+
+
+def _coordinator_for_creation():
+    fixture = fixture_map()["C1"]
+    return GraphInvestigationCoordinator(deepcopy(fixture.graph), InvestigationFocus(node_id="H1"))
+
+
+def test_creation_ids_are_allocated_and_same_turn_aliases_resolve():
+    coordinator = _coordinator_for_creation()
+    coordinator.apply_investigator_update({"operation": "add_proposition", "statement": "A bounded observation.", "derived_from_node_ids": ["P1"], "reason": "It is grounded in the existing proposition."})
+    assert "P2" in coordinator.graph.nodes
+
+    cycle = InvestigatorCycleCoordinator(deepcopy(fixture_map()["C1"].graph), fixture_map()["C1"].focus)
+    cycle.apply_turn({"graph_updates": [{"operation": "add_proposition", "local_ref": "new_prop", "statement": "A bounded observation.", "derived_from_node_ids": ["P1"], "reason": "It is grounded in the existing proposition."}, {"operation": "add_support", "source_node_ref": "new_prop", "target_node_id": "P1", "reason": "The bounded observation is relevant."}], "next_step": {"type": "local_exhausted", "reason": "The local batch is complete."}})
+    assert "P2_SUPPORTS_P1" in cycle.graph.edges
+
+
+def test_same_turn_create_then_focus_succeeds_and_aliases_do_not_persist():
+    fixture = fixture_map()["C1"]
+    coordinator = InvestigatorCycleCoordinator(deepcopy(fixture.graph), fixture.focus, available_enquiries=fixture.available_enquiries)
+    coordinator.apply_turn({"graph_updates": [{"operation": "add_proposition", "local_ref": "p", "statement": "A bounded observation.", "derived_from_node_ids": ["P1"], "reason": "It is grounded."}, {"operation": "move_focus", "focus_node_ref": "p", "reason": "The new observation is now the local focus."}], "next_step": {"type": "local_exhausted", "reason": "The local batch is complete."}})
+    assert coordinator.focus.node_id == "P2"
+    assert "local_ref" not in coordinator.graph.nodes["P2"].model_dump()
+
+
+def test_allocator_uses_next_free_ids_and_failed_batch_does_not_consume_id():
+    coordinator = _coordinator_for_creation()
+    coordinator.apply_investigator_update({"operation": "add_proposition", "local_ref": "one", "statement": "p", "derived_from_node_ids": ["P1"], "reason": "grounded"})
+    coordinator.apply_investigator_update({"operation": "add_proposition", "local_ref": "two", "statement": "p", "derived_from_node_ids": ["P1"], "reason": "grounded"})
+    assert {"P2", "P3"} <= set(coordinator.graph.nodes)
+    failed = InvestigatorCycleCoordinator(deepcopy(fixture_map()["C1"].graph), InvestigationFocus(node_id="U1"))
+    with pytest.raises(Exception, match="Unknown local reference"):
+        failed.apply_turn({"graph_updates": [{"operation": "add_proposition", "local_ref": "p", "statement": "p", "derived_from_node_ids": ["P1"], "reason": "grounded"}, {"operation": "add_support", "source_node_ref": "missing", "target_node_id": "H1", "reason": "bad"}], "next_step": {"type": "local_exhausted", "reason": "invalid"}})
+    assert "P2" not in failed.graph.nodes
+    failed.apply_turn({"graph_updates": [{"operation": "add_proposition", "local_ref": "p", "statement": "p", "derived_from_node_ids": ["P1"], "reason": "grounded"}], "next_step": {"type": "local_exhausted", "reason": "valid"}})
+    assert "P2" in failed.graph.nodes
+
+
+def test_hypothesis_uncertainty_allocators_skip_archived_ids():
+    fixture = fixture_map()["C1"]
+    graph = deepcopy(fixture.graph)
+    graph.add_node(GraphNode(id="H3", node_type=GraphNodeType.HYPOTHESIS, statement="Archived hypothesis.", status=GraphStatus.ARCHIVED))
+    graph.add_node(GraphNode(id="U2", node_type=GraphNodeType.UNCERTAINTY, statement="Archived uncertainty.", status=GraphStatus.ARCHIVED))
+    coordinator = GraphInvestigationCoordinator(graph, InvestigationFocus(node_id="U1"))
+    coordinator.apply_investigator_update({"operation": "add_hypothesis", "statement": "A new local possibility.", "reason": "It is a distinct local explanation."})
+    coordinator.apply_investigator_update({"operation": "add_uncertainty", "statement": "A new unresolved question.", "target_node_id": "P1", "reason": "It identifies a remaining question."})
+    assert "H4" in coordinator.graph.nodes and "U3" in coordinator.graph.nodes
+
+
+def test_unknown_and_duplicate_local_aliases_fail_without_graph_mutation():
+    coordinator = _coordinator_for_creation()
+    with pytest.raises(ValueError, match="Unknown local reference"):
+        coordinator.apply_investigator_update({"operation": "add_support", "source_node_ref": "missing", "target_node_id": "H1", "reason": "bad"})
+    with pytest.raises(ValueError, match="Duplicate local reference"):
+        coordinator = InvestigatorCycleCoordinator(deepcopy(fixture_map()["C1"].graph), fixture_map()["C1"].focus)
+        coordinator.apply_turn({"graph_updates": [{"operation": "add_proposition", "local_ref": "p", "statement": "p", "derived_from_node_ids": ["P1"], "reason": "grounded"}, {"operation": "add_proposition", "local_ref": "p", "statement": "q", "derived_from_node_ids": ["P1"], "reason": "grounded"}], "next_step": {"type": "local_exhausted", "reason": "invalid"}})
+    assert "P2" not in coordinator.graph.nodes
+
+
+def test_prompt_clarifies_material_conflict_semantics():
+    prompt = build_investigator_cycle_prompt(InvestigatorCycleCoordinator(deepcopy(fixture_map()["C1"].graph), fixture_map()["C1"].focus).observation())
+    assert "CONFLICTS means material incompatibility" in prompt
+    assert "reduces an observation's discriminating value" in prompt
 
 
 def test_hidden_release_is_not_in_initial_investigator_observation():
