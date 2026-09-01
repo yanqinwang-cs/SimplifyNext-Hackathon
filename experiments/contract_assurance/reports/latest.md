@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T03:11:32.709815+00:00
+- Generated: 2026-09-01T03:13:01.543579+00:00
 - Contracts: 8
 
 | Metric | Count |
@@ -106,6 +106,7 @@
 - Qualified blind output metrics: placeholder copies `2`, fenced outputs `0`, average length `449.3` characters.
 - Producer compliance: `15/17` accepted (`0.8824`) across qualified producer evaluations.
 - Producer rolling-window compliance: last `10` of `10` evaluations, `9/10` accepted (`0.9000`).
+- Producer compliance since latest contract change (basis: `current frozen package hash`): `15/17` accepted (`0.8824`).
 - Adversary resistance: `15` correctly rejected; `2` accepted with semantics unassessed outside deterministic enforceability.
 
 ## Assurance limitations
