@@ -263,7 +263,8 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     assert "Producer compliance:" in render_markdown(report)
     assert report["deterministic"]["total"] > 0
     assert report["deterministic"]["total"] >= 35
-    assert report["deterministic_by_contract"]["StewardDecisionResponse"]["stage_counts"]["coordinator"] == 13
+    assert report["deterministic_by_contract"]["StewardDecisionResponse"]["stage_counts"]["coordinator"] == 15
+    assert report["deterministic_by_contract"]["StewardDecisionResponse"]["failure_codes"].get("S4", 0) >= 5
     assert "unexpected_accepts" in report["deterministic"] and "unexpected_rejects" in report["deterministic"]
     assert report["coverage_ledger"]
     assert report["blind_compliance"]["status"] == "NOT_BLIND"

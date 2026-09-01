@@ -173,8 +173,14 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
             ("unknown_archive_target", {"assessment": "This branch is no longer useful.", "reason": "No active support remains.", "operation": "archive", "target_node_id": "H9"}),
             ("unknown_shift_destination", {"assessment": "Another frontier is more useful.", "reason": "The destination is the neglected branch.", "operation": "shift_focus", "destination_node_id": "H9"}),
             ("unknown_stop_unresolved_id", {"assessment": "The frontier is exhausted.", "reason": "No available enquiry can resolve it.", "operation": "stop_unresolved", "important_unresolved_ids": ["H9"], "reopening_conditions": "New relevant evidence."}),
+            ("generalize_root_without_parent", {"assessment": "The local frontier is exhausted.", "reason": "There is no broader active explanation to return to.", "operation": "generalize", "target_node_id": "H1"}),
+            ("archive_current_focus", {"assessment": "The current focus is no longer useful.", "reason": "The branch has no remaining value.", "operation": "archive", "target_node_id": "H1"}),
+            ("shift_focus_to_current_node", {"assessment": "Another frontier is more useful.", "reason": "The destination is the current focus.", "operation": "shift_focus", "destination_node_id": "H1"}),
+            ("reactivate_active_target", {"assessment": "The active explanation is newly relevant.", "reason": "It should be restored to the active frontier.", "operation": "reactivate", "target_node_id": "H1"}),
+            ("stop_with_unknown_unresolved_namespace", {"assessment": "The frontier is exhausted.", "reason": "No available enquiry can resolve it.", "operation": "stop_unresolved", "important_unresolved_ids": ["H9:U1"], "reopening_conditions": "New relevant evidence."}),
         ):
-            result.append(Mutation(name, "S4", json.dumps(payload, sort_keys=True)))
+            intended_code = "valid" if name in {"shift_focus_to_current_node", "reactivate_active_target"} else "S4"
+            result.append(Mutation(name, intended_code, json.dumps(payload, sort_keys=True)))
     text_fields = [field for field, item in value.items() if isinstance(item, str)]
     if text_fields:
         placeholder = copy.deepcopy(value)
