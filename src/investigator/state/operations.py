@@ -48,6 +48,7 @@ def apply_hypothesis_updates(
 def build_initial_state(case_id: str, title: str, sources: dict[str, Source], evidence: dict[str, EvidenceItem], response: Any) -> CaseState:
     hypotheses: dict[str, Hypothesis] = {}
     uncertainties: dict[str, Uncertainty] = {}
+    next_uncertainty = 1
     for proposal in response.hypotheses:
         if proposal.id in hypotheses:
             raise ValueError(f"Duplicate hypothesis ID in initial response: {proposal.id!r}")
@@ -55,12 +56,13 @@ def build_initial_state(case_id: str, title: str, sources: dict[str, Source], ev
             id=proposal.id, parent_id=proposal.parent_id, statement=proposal.statement,
             origin=HypothesisOrigin.AGENT_SUGGESTION, status=HypothesisStatus(proposal.status),
             supporting_evidence_ids=proposal.supported_by, conflicting_evidence_ids=proposal.conflicted_by,
-            unresolved_issue_ids=[f"{proposal.id}:U{i}" for i in range(1, len(proposal.unresolved) + 1)],
+            unresolved_issue_ids=[f"U{i}" for i in range(next_uncertainty, next_uncertainty + len(proposal.unresolved))],
             specificity_basis=proposal.specificity_basis_evidence_ids,
         )
         hypotheses[proposal.id] = hypothesis
         for index, description in enumerate(proposal.unresolved, start=1):
-            uncertainty_id = f"{proposal.id}:U{index}"
+            uncertainty_id = f"U{next_uncertainty}"
+            next_uncertainty += 1
             if uncertainty_id in uncertainties:
                 raise ValueError(f"Duplicate uncertainty ID in initial response: {uncertainty_id!r}")
             uncertainties[uncertainty_id] = Uncertainty(id=uncertainty_id, kind=UncertaintyKind.UNKNOWN, description=description)
@@ -74,6 +76,7 @@ def build_seeded_initial_state(case_id: str, title: str, sources: dict[str, Sour
         (proposal.id, proposal.parent_id, proposal.statement, proposal, HypothesisOrigin.AGENT_SUGGESTION)
         for proposal in alternatives
     ]
+    next_uncertainty = 1
     for identifier, parent_id, statement, proposal, origin in proposals:
         if identifier in hypotheses:
             raise ValueError(f"Duplicate hypothesis ID in initial expansion: {identifier!r}")
@@ -88,11 +91,12 @@ def build_seeded_initial_state(case_id: str, title: str, sources: dict[str, Sour
         hypotheses[identifier] = Hypothesis(
             id=identifier, parent_id=parent_id, statement=statement, origin=origin, status=HypothesisStatus.ACTIVE,
             supporting_evidence_ids=proposal.supported_by, conflicting_evidence_ids=proposal.conflicted_by,
-            unresolved_issue_ids=[f"{identifier}:U{i}" for i in range(1, len(proposal.unresolved) + 1)],
+            unresolved_issue_ids=[f"U{i}" for i in range(next_uncertainty, next_uncertainty + len(proposal.unresolved))],
             specificity_basis=proposal.specificity_basis_evidence_ids,
         )
         for index, description in enumerate(proposal.unresolved, start=1):
-            uncertainty_id = f"{identifier}:U{index}"
+            uncertainty_id = f"U{next_uncertainty}"
+            next_uncertainty += 1
             uncertainties[uncertainty_id] = Uncertainty(id=uncertainty_id, kind=UncertaintyKind.UNKNOWN, description=description)
     return CaseState(case_id=case_id, title=title, sources=sources, evidence=evidence, hypotheses=hypotheses, uncertainties=uncertainties)
 
@@ -128,10 +132,11 @@ def apply_revision(state: CaseState, response: Any) -> CaseState:
     for proposal in response.new_hypotheses:
         if proposal.id in updated.hypotheses:
             raise ValueError(f"Duplicate hypothesis ID in revision: {proposal.id!r}")
-        for uncertainty in [Uncertainty(id=f"{proposal.id}:U{i}", kind=UncertaintyKind.UNKNOWN, description=d) for i, d in enumerate(proposal.unresolved, start=1)]:
+        next_number = max([int(identifier[1:].split(".")[0]) for identifier in updated.uncertainties if identifier.startswith("U")] or [0]) + 1
+        for uncertainty in [Uncertainty(id=f"U{next_number + i}", kind=UncertaintyKind.UNKNOWN, description=d) for i, d in enumerate(proposal.unresolved)]:
             if uncertainty.id in updated.uncertainties:
                 raise ValueError(f"Duplicate uncertainty ID in revision: {uncertainty.id!r}")
             updated.uncertainties[uncertainty.id] = uncertainty
-        updated.hypotheses[proposal.id] = Hypothesis(id=proposal.id, parent_id=proposal.parent_id, statement=proposal.statement, origin=HypothesisOrigin.AGENT_SUGGESTION, status=HypothesisStatus(proposal.status), supporting_evidence_ids=proposal.supported_by, conflicting_evidence_ids=proposal.conflicted_by, unresolved_issue_ids=[f"{proposal.id}:U{i}" for i in range(1, len(proposal.unresolved) + 1)], specificity_basis=proposal.specificity_basis_evidence_ids)
+        updated.hypotheses[proposal.id] = Hypothesis(id=proposal.id, parent_id=proposal.parent_id, statement=proposal.statement, origin=HypothesisOrigin.AGENT_SUGGESTION, status=HypothesisStatus(proposal.status), supporting_evidence_ids=proposal.supported_by, conflicting_evidence_ids=proposal.conflicted_by, unresolved_issue_ids=[uncertainty.id for uncertainty in updated.uncertainties.values() if uncertainty.id.startswith("U")][-len(proposal.unresolved):], specificity_basis=proposal.specificity_basis_evidence_ids)
     updated.revision += 1
     return CaseState.model_validate(updated.model_dump())

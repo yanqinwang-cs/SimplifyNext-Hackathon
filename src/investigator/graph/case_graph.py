@@ -11,7 +11,7 @@ _COMPATIBLE = {
     EdgeRelation.CONFLICTS: ({GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}, {GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}),
     EdgeRelation.SPECIALIZES: ({GraphNodeType.HYPOTHESIS}, {GraphNodeType.HYPOTHESIS}),
     EdgeRelation.DEPENDS_ON: ({GraphNodeType.HYPOTHESIS, GraphNodeType.PROPOSITION}, {GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}),
-    EdgeRelation.TARGETS: ({GraphNodeType.UNCERTAINTY}, {GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}),
+    EdgeRelation.TARGETS: ({GraphNodeType.UNCERTAINTY}, {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}),
     EdgeRelation.DERIVED_FROM: ({GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}, {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}),
 }
 

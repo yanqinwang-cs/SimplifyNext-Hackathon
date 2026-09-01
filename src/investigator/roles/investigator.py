@@ -50,9 +50,9 @@ class AddHypothesisCommand(_InvestigatorCommand):
 
 class AddUncertaintyCommand(_InvestigatorCommand):
     operation: Literal["add_uncertainty"] = "add_uncertainty"
-    node_id: str = Field(pattern=r"^(?:U\d+(?:\.\d+)*|H\d+(?:\.\d+)*:U\d+(?:\.\d+)*)$")
+    node_id: str = Field(pattern=r"^U\d+(?:\.\d+)*$")
     statement: str
-    target_node_id: str = Field(pattern=r"^(?:H\d+(?:\.\d+)*|P\d+(?:\.\d+)*)$")
+    target_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*|H\d+(?:\.\d+)*)$")
 
 
 class _RelationCommand(_InvestigatorCommand):

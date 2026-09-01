@@ -185,13 +185,6 @@ class NewUncertainty(BaseModel):
 
     _valid_description = field_validator("description")(_reject_placeholder)
 
-    @model_validator(mode="after")
-    def validate_owner(self) -> "NewUncertainty":
-        if self.id.split(":", 1)[0] != self.hypothesis_id:
-            raise ValueError("New uncertainty ID must belong to its hypothesis_id")
-        return self
-
-
 class RevisionResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     hypothesis_updates: list[HypothesisTransition] = Field(default_factory=list)

@@ -91,6 +91,6 @@ def _valid_node_id(node_id: str, node_type: GraphNodeType) -> bool:
         GraphNodeType.EVIDENCE: r"(?:E\d+(?:\.\d+)*|A\d+_RELEASE)",
         GraphNodeType.PROPOSITION: r"P\d+(?:\.\d+)*",
         GraphNodeType.HYPOTHESIS: r"H\d+(?:\.\d+)*",
-        GraphNodeType.UNCERTAINTY: r"(?:U\d+(?:\.\d+)*|H\d+(?:\.\d+)*:U\d+(?:\.\d+)*)",
+        GraphNodeType.UNCERTAINTY: r"U\d+(?:\.\d+)*",
     }
     return bool(re.fullmatch(patterns[node_type], node_id))

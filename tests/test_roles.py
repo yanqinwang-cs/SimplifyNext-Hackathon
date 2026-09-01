@@ -2,6 +2,7 @@ import pytest
 from pydantic import TypeAdapter, ValidationError
 
 from investigator.graph import CaseGraph, EdgeRelation, EdgeStrength, GraphEdge, GraphNode, GraphNodeType, GraphStatus
+from investigator.cycle import InvestigatorCycleCoordinator
 from investigator.roles import AddHypothesisCommand, AddSpecializationCommand, GraphInvestigationCoordinator, InvestigationFocus, INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdateResponse, StewardDecision, StewardReviewContext
 from investigator.steward.features import direct_evidence_profile, region_health, tunnel_vision_indicators
 
@@ -211,3 +212,22 @@ def test_investigator_ids_and_reasons_are_strict() -> None:
             INVESTIGATOR_UPDATE_ADAPTER.validate_python({**base, "reason": reason})
     with pytest.raises(ValidationError):
         INVESTIGATOR_UPDATE_ADAPTER.validate_python({"operation": "add_proposition", "node_id": "P3", "statement": "p", "derived_from_node_ids": ["E1", "E1"], "reason": "r"})
+
+
+def test_uncertainty_ids_are_global_and_targets_are_explicit() -> None:
+    for target in ("E1", "P1", "H1"):
+        update = INVESTIGATOR_UPDATE_ADAPTER.validate_python({"operation": "add_uncertainty", "node_id": "U3", "statement": "An unresolved question.", "target_node_id": target, "reason": "The target makes the subject explicit."})
+        assert update.target_node_id == target
+    for identifier in ("H1:U1", "P1:U1", "E1:U1"):
+        with pytest.raises(ValidationError):
+            INVESTIGATOR_UPDATE_ADAPTER.validate_python({"operation": "add_uncertainty", "node_id": identifier, "statement": "q", "target_node_id": "H1", "reason": "r"})
+    with pytest.raises(ValidationError):
+        INVESTIGATOR_UPDATE_ADAPTER.validate_python({"operation": "add_uncertainty", "node_id": "U4", "statement": "q", "target_node_id": "U1", "reason": "r"})
+
+
+def test_uncertainty_target_evidence_is_created_atomically() -> None:
+    from experiments.investigator_screen.fixtures import all_fixtures
+    fixture = all_fixtures()[0]
+    coordinator = InvestigatorCycleCoordinator(fixture.observation.local_graph, fixture.observation.current_focus)
+    coordinator.apply_turn({"graph_updates": [{"operation": "add_uncertainty", "node_id": "U2", "statement": "Whether E1 needs clarification.", "target_node_id": "E1", "reason": "The evidence leaves a bounded question."}], "next_step": {"type": "local_exhausted", "reason": "No further local work remains."}})
+    assert coordinator.graph.edges["U2_TARGETS_E1"].relation.value == "targets"

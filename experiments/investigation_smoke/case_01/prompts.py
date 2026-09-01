@@ -44,7 +44,7 @@ def revision_output_template(release_evidence_id: str) -> dict:
         }],
         "new_hypotheses": [],
         "uncertainty_updates": [{
-            "uncertainty_id": "H1:U1", "transition": "refine",
+            "uncertainty_id": "U1", "transition": "refine",
             "reason": "Why this uncertainty changed.", "new_description": "A more precise unresolved question.",
             "basis_evidence_ids": [release_evidence_id],
             "requested_operation_name": None, "requested_effect": None,
@@ -69,7 +69,7 @@ Generate an initial hypothesis tree grounded in the case information below. Emit
 CANONICAL JSON OUTPUT TEMPLATE
 Fill this one canonical JSON template:
 {json.dumps(initial_output_template(), indent=2)}
-Use exactly these fields and no extras. Arrays remain arrays even when empty. Use bare canonical IDs only in ID fields. Use natural-language explanations only in text fields. Do not place explanations in fields ending with `_id`, `_ids`, or `_evidence_ids`.
+Use exactly these fields and no extras. Arrays remain arrays even when empty. Use bare canonical IDs only in ID fields. Uncertainty IDs use global U<number> IDs; their subject is represented by an explicit TARGETS relation, not encoded in the ID. Use natural-language explanations only in text fields. Do not place explanations in fields ending with `_id`, `_ids`, or `_evidence_ids`.
 
 Available enquiries:
 {catalogue_text()}
@@ -126,7 +126,7 @@ Return only JSON with exactly these keys and no extras. Fill the one canonical t
 
 Canonical JSON template:
 {json.dumps(revision_output_template(release_evidence_id), indent=2)}
-ID FIELDS: bare canonical IDs only. TEXT FIELDS: natural-language explanations only. Do not place explanations in any field ending with `_id`, `_ids`, or `_evidence_ids`. Keep every array as an array even when empty. New uncertainty IDs must use the canonical H1:U1 form and belong to their declared hypothesis. `other` fields must be null unless the transition is `other`; `other` never executes arbitrary semantics.
+ID FIELDS: bare canonical IDs only. TEXT FIELDS: natural-language explanations only. Do not place explanations in any field ending with `_id`, `_ids`, or `_evidence_ids`. Keep every array as an array even when empty. Uncertainty IDs use global canonical U<number> IDs; their subject is represented by an explicit TARGETS relation, not encoded in the ID. `other` fields must be null unless the transition is `other`; `other` never executes arbitrary semantics.
 
 Selected enquiry:
 {json.dumps(selected_action, indent=2)}

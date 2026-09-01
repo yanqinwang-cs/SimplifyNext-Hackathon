@@ -17,7 +17,7 @@
     "contract": "RevisionResponse",
     "git_commit": "006dfa4",
     "prompt_hash": "a3d02bae5354707fa7221c943f77605a05360eec9ca8cc9d06c6ff94c146cd02",
-    "schema_hash": "56906e23079db421c3704a1465b15ff9c008cbde48b2b4d5776f4c4c1e59a455",
+    "schema_hash": "8d50b401fc3ffeb82b018296cf5922b38e4d67563c6a01fcf2ad824d1c794fb9",
     "source": "src/investigator/services/contracts.py",
     "template_hash": "ed211757c76ad6456dec7c22175c7becad076e9de93d00afc641dce97a70d5ad"
   },
@@ -230,7 +230,7 @@
             "type": "string"
           },
           "id": {
-            "pattern": "^H[1-9][0-9]*(?:\\.[1-9][0-9]*)*:U[1-9][0-9]*$",
+            "pattern": "^U[1-9][0-9]*(?:\\.[1-9][0-9]*)*$",
             "title": "Id",
             "type": "string"
           }
@@ -298,7 +298,7 @@
             "$ref": "#/$defs/UncertaintyTransitionType"
           },
           "uncertainty_id": {
-            "pattern": "^H[1-9][0-9]*(?:\\.[1-9][0-9]*)*:U[1-9][0-9]*$",
+            "pattern": "^U[1-9][0-9]*(?:\\.[1-9][0-9]*)*$",
             "title": "Uncertainty Id",
             "type": "string"
           },

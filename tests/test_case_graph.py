@@ -82,8 +82,8 @@ def test_canonical_graph_node_and_edge_ids() -> None:
     assert node("A1_RELEASE", GraphNodeType.EVIDENCE)
     assert node("H1.2", GraphNodeType.HYPOTHESIS)
     assert node("P3.1", GraphNodeType.PROPOSITION)
-    assert node("H1:U1", GraphNodeType.UNCERTAINTY)
-    for identifier, kind in [("E1", GraphNodeType.HYPOTHESIS), ("P1", GraphNodeType.EVIDENCE), ("hello world", GraphNodeType.HYPOTHESIS), ("H1..2", GraphNodeType.HYPOTHESIS), ("H:U", GraphNodeType.UNCERTAINTY), ("A_RELEASE", GraphNodeType.EVIDENCE)]:
+    assert node("U2", GraphNodeType.UNCERTAINTY)
+    for identifier, kind in [("E1", GraphNodeType.HYPOTHESIS), ("P1", GraphNodeType.EVIDENCE), ("hello world", GraphNodeType.HYPOTHESIS), ("H1..2", GraphNodeType.HYPOTHESIS), ("H1:U1", GraphNodeType.UNCERTAINTY), ("P1:U1", GraphNodeType.UNCERTAINTY), ("E1:U1", GraphNodeType.UNCERTAINTY), ("A_RELEASE", GraphNodeType.EVIDENCE)]:
         with pytest.raises(ValueError):
             node(identifier, kind)
     with pytest.raises(ValueError):

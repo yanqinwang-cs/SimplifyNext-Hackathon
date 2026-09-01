@@ -259,22 +259,22 @@
     {
       "intended_code": "S4",
       "name": "action_with_conclusion_reason",
-      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": \"The current evidence supports this conclusion.\", \"expected_information_value\": \"high\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"A1\", \"step_type\": \"action\", \"target_uncertainty\": \"H1:U1\", \"why_this_action_now\": \"This enquiry best distinguishes the live hypotheses.\"}"
+      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": \"The current evidence supports this conclusion.\", \"expected_information_value\": \"high\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"A1\", \"step_type\": \"action\", \"target_uncertainty\": \"U1\", \"why_this_action_now\": \"This enquiry best distinguishes the live hypotheses.\"}"
     },
     {
       "intended_code": "S4",
       "name": "conclusion_with_remaining_uncertainties",
-      "raw_output": "{\"conclusion_hypothesis_id\": \"H1\", \"conclusion_reason\": \"The current evidence supports this conclusion.\", \"expected_information_value\": null, \"remaining_uncertainty_ids\": [\"H1:U1\"], \"selected_action_id\": null, \"step_type\": \"conclusion\", \"target_uncertainty\": null, \"why_this_action_now\": null}"
+      "raw_output": "{\"conclusion_hypothesis_id\": \"H1\", \"conclusion_reason\": \"The current evidence supports this conclusion.\", \"expected_information_value\": null, \"remaining_uncertainty_ids\": [\"U1\"], \"selected_action_id\": null, \"step_type\": \"conclusion\", \"target_uncertainty\": null, \"why_this_action_now\": null}"
     },
     {
       "intended_code": "S4",
       "name": "stop_unresolved_with_conclusion_id",
-      "raw_output": "{\"conclusion_hypothesis_id\": \"H1\", \"conclusion_reason\": \"The remaining uncertainty cannot be resolved with available enquiries.\", \"expected_information_value\": null, \"remaining_uncertainty_ids\": [\"H1:U1\"], \"selected_action_id\": null, \"step_type\": \"stop_unresolved\", \"target_uncertainty\": null, \"why_this_action_now\": null}"
+      "raw_output": "{\"conclusion_hypothesis_id\": \"H1\", \"conclusion_reason\": \"The remaining uncertainty cannot be resolved with available enquiries.\", \"expected_information_value\": null, \"remaining_uncertainty_ids\": [\"U1\"], \"selected_action_id\": null, \"step_type\": \"stop_unresolved\", \"target_uncertainty\": null, \"why_this_action_now\": null}"
     },
     {
       "intended_code": "S4",
       "name": "stop_unresolved_with_action_fields",
-      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": \"The remaining uncertainty cannot be resolved with available enquiries.\", \"expected_information_value\": \"It may distinguish explanations.\", \"remaining_uncertainty_ids\": [\"H1:U1\"], \"selected_action_id\": \"A1\", \"step_type\": \"stop_unresolved\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"It is available now.\"}"
+      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": \"The remaining uncertainty cannot be resolved with available enquiries.\", \"expected_information_value\": \"It may distinguish explanations.\", \"remaining_uncertainty_ids\": [\"U1\"], \"selected_action_id\": \"A1\", \"step_type\": \"stop_unresolved\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"It is available now.\"}"
     },
     {
       "intended_code": "valid",
@@ -289,7 +289,7 @@
     {
       "intended_code": "valid",
       "name": "valid_stop_unresolved_branch",
-      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": \"The remaining uncertainty cannot be resolved with available enquiries.\", \"expected_information_value\": null, \"remaining_uncertainty_ids\": [\"H1:U1\"], \"selected_action_id\": null, \"step_type\": \"stop_unresolved\", \"target_uncertainty\": null, \"why_this_action_now\": null}"
+      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": \"The remaining uncertainty cannot be resolved with available enquiries.\", \"expected_information_value\": null, \"remaining_uncertainty_ids\": [\"U1\"], \"selected_action_id\": null, \"step_type\": \"stop_unresolved\", \"target_uncertainty\": null, \"why_this_action_now\": null}"
     },
     {
       "intended_code": "S4",

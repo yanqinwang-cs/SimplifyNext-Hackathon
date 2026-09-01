@@ -64,9 +64,9 @@ def test_other_operations_require_details_and_are_forbidden_for_normal_transitio
     with pytest.raises(ValidationError, match="OTHER-only"):
         HypothesisTransition(hypothesis_id="H1", transition="keep", reason="x", requested_effect="split")
     with pytest.raises(ValidationError, match="requires"):
-        UncertaintyTransition(uncertainty_id="H1:U1", transition="other", reason="x")
+        UncertaintyTransition(uncertainty_id="U1", transition="other", reason="x")
     with pytest.raises(ValidationError, match="requires new_description"):
-        UncertaintyTransition(uncertainty_id="H1:U1", transition="refine", reason="x")
+        UncertaintyTransition(uncertainty_id="U1", transition="refine", reason="x")
 
 
 def test_duplicate_initial_hypothesis_ids_are_rejected_before_state_construction() -> None:
@@ -82,18 +82,18 @@ def test_uncertainty_updates_resolve_and_add_structured_uncertainties() -> None:
         hypothesis_updates=[],
         new_hypotheses=[],
         uncertainty_updates=[UncertaintyTransition(
-            uncertainty_id="H1:U1", transition=UncertaintyTransitionType.RESOLVE, reason="Release resolves it."
+            uncertainty_id="U1", transition=UncertaintyTransitionType.RESOLVE, reason="Release resolves it."
         )],
         new_uncertainties=[NewUncertainty(
-            id="H1:U9", hypothesis_id="H1", description="A newly observed uncertainty."
+            id="U9", hypothesis_id="H1", description="A newly observed uncertainty."
         )],
         revision_rationale="The uncertainty set changed.",
     )
     updated = apply_revision(state, response)
-    assert "H1:U1" not in updated.uncertainties
-    assert "H1:U1" not in updated.get_hypothesis("H1").unresolved_issue_ids
-    assert "H1:U9" in updated.uncertainties
-    assert "H1:U9" in updated.get_hypothesis("H1").unresolved_issue_ids
+    assert "U1" not in updated.uncertainties
+    assert "U1" not in updated.get_hypothesis("H1").unresolved_issue_ids
+    assert "U9" in updated.uncertainties
+    assert "U9" in updated.get_hypothesis("H1").unresolved_issue_ids
 
 
 def test_refine_updates_description_and_other_preserves_state() -> None:
@@ -101,13 +101,13 @@ def test_refine_updates_description_and_other_preserves_state() -> None:
     refined = apply_revision(state, RevisionResponse(
         hypothesis_updates=[], new_hypotheses=[],
         uncertainty_updates=[UncertaintyTransition(
-            uncertainty_id="H1:U1", transition="refine", reason="Evidence narrows the question.",
+            uncertainty_id="U1", transition="refine", reason="Evidence narrows the question.",
             new_description="A more precise question.", basis_evidence_ids=["E1"],
         )], new_uncertainties=[], revision_rationale="refined",
     ))
-    assert refined.uncertainties["H1:U1"].description == "A more precise question."
-    assert refined.uncertainties["H1:U1"].evidence_ids == ["E1"]
-    assert state.uncertainties["H1:U1"].description != refined.uncertainties["H1:U1"].description
+    assert refined.uncertainties["U1"].description == "A more precise question."
+    assert refined.uncertainties["U1"].evidence_ids == ["E1"]
+    assert state.uncertainties["U1"].description != refined.uncertainties["U1"].description
 
     other = HypothesisTransition(
         hypothesis_id="H1", transition="other", reason="Structural change is unsupported.",
@@ -123,19 +123,19 @@ def test_refine_updates_description_and_other_preserves_state() -> None:
 
 def test_uncertainty_provenance_is_deduplicated_and_unknown_ids_fail() -> None:
     state = initial_state(initial_response())
-    state.uncertainties["H1:U1"].evidence_ids = ["E1"]
+    state.uncertainties["U1"].evidence_ids = ["E1"]
     refined = apply_revision(state, RevisionResponse(
         hypothesis_updates=[], new_hypotheses=[],
         uncertainty_updates=[UncertaintyTransition(
-            uncertainty_id="H1:U1", transition="keep", reason="Same basis remains relevant.", basis_evidence_ids=["E1", "E2"],
+            uncertainty_id="U1", transition="keep", reason="Same basis remains relevant.", basis_evidence_ids=["E1", "E2"],
         )], new_uncertainties=[], revision_rationale="kept",
     ))
-    assert refined.uncertainties["H1:U1"].evidence_ids == ["E1", "E2"]
+    assert refined.uncertainties["U1"].evidence_ids == ["E1", "E2"]
     with pytest.raises(KeyError, match="Unknown evidence"):
         apply_revision(state, RevisionResponse(
             hypothesis_updates=[], new_hypotheses=[],
             uncertainty_updates=[UncertaintyTransition(
-                uncertainty_id="H1:U1", transition="keep", reason="bad", basis_evidence_ids=["E99"],
+                uncertainty_id="U1", transition="keep", reason="bad", basis_evidence_ids=["E99"],
             )], new_uncertainties=[], revision_rationale="bad",
         ))
 
@@ -175,7 +175,7 @@ def test_state_referential_integrity_rejects_missing_source_and_uncertainty() ->
             "evidence": {"E1": {"id": "E1", "source_id": "missing", "raw_content": "x", "kind": "other"}},
         })
     state = initial_state(initial_response())
-    state.hypotheses["H1"].unresolved_issue_ids.append("H1:U99")
+    state.hypotheses["H1"].unresolved_issue_ids.append("U99")
     with pytest.raises(ValueError, match="Unknown uncertainty"):
         CaseState.model_validate(state.model_dump())
 

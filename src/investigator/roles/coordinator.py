@@ -62,7 +62,7 @@ class GraphInvestigationCoordinator:
     def _apply_add_uncertainty(self, graph: CaseGraph, new_nodes: set[str], update: AddUncertaintyCommand) -> None:
         self._require_new_id(graph, update.node_id)
         permitted = self._permitted_ids() | new_nodes
-        target = self._require_local_active(graph, update.target_node_id, {GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}, permitted)
+        target = self._require_local_active(graph, update.target_node_id, {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}, permitted)
         graph.add_node(GraphNode(id=update.node_id, node_type=GraphNodeType.UNCERTAINTY, statement=update.statement))
         graph.add_edge(GraphEdge(id=make_edge_id(update.node_id, EdgeRelation.TARGETS, target.id), source_id=update.node_id, target_id=target.id, relation=EdgeRelation.TARGETS, explanation=update.reason))
         new_nodes.add(update.node_id)

@@ -564,9 +564,9 @@ def test_revision_operation_preflight_rejects_unknown_reference():
     assert not result.accepted and result.code is FailureCode.S3
 
 
-def test_new_uncertainty_id_must_match_declared_owner():
-    with __import__("pytest").raises(ValueError, match="must belong"):
-        NewUncertainty(id="H2:U1", hypothesis_id="H1", description="A new uncertainty.", basis_evidence_ids=["E1"])
+def test_new_uncertainty_id_does_not_encode_declared_owner():
+    uncertainty = NewUncertainty(id="U2", hypothesis_id="H1", description="A new uncertainty.", basis_evidence_ids=["E1"])
+    assert uncertainty.id == "U2"
 
 
 def test_revision_wrong_namespace_evidence_is_s2_before_preflight():

@@ -246,7 +246,7 @@
     {
       "intended_code": "S2",
       "name": "unsupported_uncertainty_transition",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"The issue can be revisited later.\", \"transition\": \"defer\", \"uncertainty_id\": \"H1:U1\"}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"The issue can be revisited later.\", \"transition\": \"defer\", \"uncertainty_id\": \"U1\"}]}"
     },
     {
       "intended_code": "S4",
@@ -266,17 +266,17 @@
     {
       "intended_code": "S4",
       "name": "empty_uncertainty_transition_reason",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"\", \"transition\": \"keep\", \"uncertainty_id\": \"H1:U1\"}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"\", \"transition\": \"keep\", \"uncertainty_id\": \"U1\"}]}"
     },
     {
       "intended_code": "S4",
       "name": "placeholder_uncertainty_transition_reason",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"REPLACE_WITH_REASON\", \"transition\": \"keep\", \"uncertainty_id\": \"H1:U1\"}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"REPLACE_WITH_REASON\", \"transition\": \"keep\", \"uncertainty_id\": \"U1\"}]}"
     },
     {
       "intended_code": "S4",
       "name": "canonical_uncertainty_transition_reason",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"How the evidence changed the state.\", \"transition\": \"keep\", \"uncertainty_id\": \"H1:U1\"}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"How the evidence changed the state.\", \"transition\": \"keep\", \"uncertainty_id\": \"U1\"}]}"
     },
     {
       "intended_code": "valid",
@@ -291,27 +291,27 @@
     {
       "intended_code": "valid",
       "name": "valid_new_uncertainty",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"E1\"], \"description\": \"A newly identified uncertainty.\", \"hypothesis_id\": \"H1\", \"id\": \"H1:U2\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"E1\"], \"description\": \"A newly identified uncertainty.\", \"hypothesis_id\": \"H1\", \"id\": \"U2\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
     {
       "intended_code": "S2",
       "name": "wrong_namespace_new_uncertainty_evidence",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"H1\"], \"description\": \"A newly identified uncertainty.\", \"hypothesis_id\": \"H1\", \"id\": \"H1:U2\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"H1\"], \"description\": \"A newly identified uncertainty.\", \"hypothesis_id\": \"H1\", \"id\": \"U2\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
     {
       "intended_code": "valid",
       "name": "valid_uncertainty_refinement",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"basis_evidence_ids\": [\"E1\"], \"new_description\": \"Which aspect of the claim remains unresolved?\", \"reason\": \"The new evidence narrows the open question.\", \"transition\": \"refine\", \"uncertainty_id\": \"H1:U1\"}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"basis_evidence_ids\": [\"E1\"], \"new_description\": \"Which aspect of the claim remains unresolved?\", \"reason\": \"The new evidence narrows the open question.\", \"transition\": \"refine\", \"uncertainty_id\": \"U1\"}]}"
     },
     {
       "intended_code": "valid",
       "name": "valid_uncertainty_resolution",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"basis_evidence_ids\": [\"E1\"], \"reason\": \"The new evidence resolves this uncertainty.\", \"transition\": \"resolve\", \"uncertainty_id\": \"H1:U1\"}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"basis_evidence_ids\": [\"E1\"], \"reason\": \"The new evidence resolves this uncertainty.\", \"transition\": \"resolve\", \"uncertainty_id\": \"U1\"}]}"
     },
     {
       "intended_code": "S4",
       "name": "duplicate_uncertainty_updates",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"basis_evidence_ids\": [\"E1\"], \"reason\": \"The new evidence resolves this uncertainty.\", \"transition\": \"resolve\", \"uncertainty_id\": \"H1:U1\"}, {\"reason\": \"A second operation is not allowed.\", \"transition\": \"keep\", \"uncertainty_id\": \"H1:U1\"}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"basis_evidence_ids\": [\"E1\"], \"reason\": \"The new evidence resolves this uncertainty.\", \"transition\": \"resolve\", \"uncertainty_id\": \"U1\"}, {\"reason\": \"A second operation is not allowed.\", \"transition\": \"keep\", \"uncertainty_id\": \"U1\"}]}"
     },
     {
       "intended_code": "valid",
@@ -401,32 +401,32 @@
     {
       "intended_code": "valid",
       "name": "valid_other_uncertainty_operation",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"The requested uncertainty operation is not represented by existing transitions.\", \"requested_effect\": \"Combine this uncertainty with a related unresolved issue.\", \"requested_operation_name\": \"merge\", \"transition\": \"other\", \"uncertainty_id\": \"H1:U1\", \"why_existing_operations_do_not_fit\": {\"refine\": \"Refinement would preserve separate uncertainty records.\"}}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"The requested uncertainty operation is not represented by existing transitions.\", \"requested_effect\": \"Combine this uncertainty with a related unresolved issue.\", \"requested_operation_name\": \"merge\", \"transition\": \"other\", \"uncertainty_id\": \"U1\", \"why_existing_operations_do_not_fit\": {\"refine\": \"Refinement would preserve separate uncertainty records.\"}}]}"
     },
     {
       "intended_code": "S4",
       "name": "placeholder_other_uncertainty_reason",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"The requested uncertainty operation is not represented by existing transitions.\", \"requested_effect\": \"Combine this uncertainty with a related unresolved issue.\", \"requested_operation_name\": \"merge\", \"transition\": \"other\", \"uncertainty_id\": \"H1:U1\", \"why_existing_operations_do_not_fit\": {\"REPLACE_WITH_OPERATION\": \"It does not fit.\"}}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"The requested uncertainty operation is not represented by existing transitions.\", \"requested_effect\": \"Combine this uncertainty with a related unresolved issue.\", \"requested_operation_name\": \"merge\", \"transition\": \"other\", \"uncertainty_id\": \"U1\", \"why_existing_operations_do_not_fit\": {\"REPLACE_WITH_OPERATION\": \"It does not fit.\"}}]}"
     },
     {
       "intended_code": "S4",
       "name": "canonical_other_uncertainty_operation_reason",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"The requested uncertainty operation is not represented by existing transitions.\", \"requested_effect\": \"Combine this uncertainty with a related unresolved issue.\", \"requested_operation_name\": \"merge\", \"transition\": \"other\", \"uncertainty_id\": \"H1:U1\", \"why_existing_operations_do_not_fit\": {\"keep\": \"How the evidence changed the state.\"}}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"The requested uncertainty operation is not represented by existing transitions.\", \"requested_effect\": \"Combine this uncertainty with a related unresolved issue.\", \"requested_operation_name\": \"merge\", \"transition\": \"other\", \"uncertainty_id\": \"U1\", \"why_existing_operations_do_not_fit\": {\"keep\": \"How the evidence changed the state.\"}}]}"
     },
     {
       "intended_code": "S4",
       "name": "other_uncertainty_with_evidence_fields",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"basis_evidence_ids\": [\"E1\"], \"reason\": \"The requested uncertainty operation is not represented by existing transitions.\", \"requested_effect\": \"Combine this uncertainty with a related unresolved issue.\", \"requested_operation_name\": \"merge\", \"transition\": \"other\", \"uncertainty_id\": \"H1:U1\", \"why_existing_operations_do_not_fit\": {\"refine\": \"Refinement would preserve separate uncertainty records.\"}}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"basis_evidence_ids\": [\"E1\"], \"reason\": \"The requested uncertainty operation is not represented by existing transitions.\", \"requested_effect\": \"Combine this uncertainty with a related unresolved issue.\", \"requested_operation_name\": \"merge\", \"transition\": \"other\", \"uncertainty_id\": \"U1\", \"why_existing_operations_do_not_fit\": {\"refine\": \"Refinement would preserve separate uncertainty records.\"}}]}"
     },
     {
       "intended_code": "S4",
       "name": "other_uncertainty_without_operation_details",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"A reason.\", \"transition\": \"other\", \"uncertainty_id\": \"H1:U1\"}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"A reason.\", \"transition\": \"other\", \"uncertainty_id\": \"U1\"}]}"
     },
     {
       "intended_code": "S4",
       "name": "uncertainty_other_fields_on_keep",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"A reason.\", \"requested_effect\": \"Combine issues.\", \"requested_operation_name\": \"merge\", \"transition\": \"keep\", \"uncertainty_id\": \"H1:U1\", \"why_existing_operations_do_not_fit\": {\"keep\": \"It preserves separate issues.\"}}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"A reason.\", \"requested_effect\": \"Combine issues.\", \"requested_operation_name\": \"merge\", \"transition\": \"keep\", \"uncertainty_id\": \"U1\", \"why_existing_operations_do_not_fit\": {\"keep\": \"It preserves separate issues.\"}}]}"
     },
     {
       "intended_code": "S4",
@@ -481,7 +481,7 @@
     {
       "intended_code": "S3",
       "name": "unknown_uncertainty_evidence_reference",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"basis_evidence_ids\": [\"E999\"], \"reason\": \"A reason.\", \"transition\": \"keep\", \"uncertainty_id\": \"H1:U1\"}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"basis_evidence_ids\": [\"E999\"], \"reason\": \"A reason.\", \"transition\": \"keep\", \"uncertainty_id\": \"U1\"}]}"
     },
     {
       "intended_code": "S3",
@@ -491,7 +491,7 @@
     {
       "intended_code": "S3",
       "name": "unknown_new_uncertainty_evidence_reference",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"E999\"], \"description\": \"A new uncertainty.\", \"hypothesis_id\": \"H1\", \"id\": \"H1:U2\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"E999\"], \"description\": \"A new uncertainty.\", \"hypothesis_id\": \"H1\", \"id\": \"U2\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
     {
       "intended_code": "S3",
@@ -511,27 +511,27 @@
     {
       "intended_code": "S4",
       "name": "refine_without_description",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"A reason.\", \"transition\": \"refine\", \"uncertainty_id\": \"H1:U1\"}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"A reason.\", \"transition\": \"refine\", \"uncertainty_id\": \"U1\"}]}"
     },
     {
       "intended_code": "S4",
       "name": "refine_with_other_fields",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"new_description\": \"A narrower question.\", \"reason\": \"A reason.\", \"requested_effect\": \"Combine issues.\", \"requested_operation_name\": \"merge\", \"transition\": \"refine\", \"uncertainty_id\": \"H1:U1\", \"why_existing_operations_do_not_fit\": {\"refine\": \"It preserves separate issues.\"}}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"new_description\": \"A narrower question.\", \"reason\": \"A reason.\", \"requested_effect\": \"Combine issues.\", \"requested_operation_name\": \"merge\", \"transition\": \"refine\", \"uncertainty_id\": \"U1\", \"why_existing_operations_do_not_fit\": {\"refine\": \"It preserves separate issues.\"}}]}"
     },
     {
       "intended_code": "S4",
       "name": "resolve_with_description",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"new_description\": \"Contradictory detail.\", \"reason\": \"A reason.\", \"transition\": \"resolve\", \"uncertainty_id\": \"H1:U1\"}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"new_description\": \"Contradictory detail.\", \"reason\": \"A reason.\", \"transition\": \"resolve\", \"uncertainty_id\": \"U1\"}]}"
     },
     {
       "intended_code": "S4",
       "name": "keep_with_description",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"new_description\": \"A narrower question.\", \"reason\": \"A reason.\", \"transition\": \"keep\", \"uncertainty_id\": \"H1:U1\"}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"new_description\": \"A narrower question.\", \"reason\": \"A reason.\", \"transition\": \"keep\", \"uncertainty_id\": \"U1\"}]}"
     },
     {
       "intended_code": "S4",
       "name": "remove_with_description",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"new_description\": \"A narrower question.\", \"reason\": \"A reason.\", \"transition\": \"remove\", \"uncertainty_id\": \"H1:U1\"}]}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"new_description\": \"A narrower question.\", \"reason\": \"A reason.\", \"transition\": \"remove\", \"uncertainty_id\": \"U1\"}]}"
     },
     {
       "intended_code": "S4",
@@ -541,7 +541,7 @@
     {
       "intended_code": "S4",
       "name": "duplicate_new_uncertainty_id",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"E1\"], \"description\": \"A duplicate uncertainty.\", \"hypothesis_id\": \"H1\", \"id\": \"H1:U1\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"E1\"], \"description\": \"A duplicate uncertainty.\", \"hypothesis_id\": \"H1\", \"id\": \"U1\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
     {
       "intended_code": "S4",
@@ -551,7 +551,7 @@
     {
       "intended_code": "S4",
       "name": "empty_new_uncertainty_description",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"E1\"], \"description\": \"\", \"hypothesis_id\": \"H1\", \"id\": \"H1:U2\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"E1\"], \"description\": \"\", \"hypothesis_id\": \"H1\", \"id\": \"U2\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     }
   ]
 }

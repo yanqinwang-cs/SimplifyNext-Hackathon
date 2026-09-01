@@ -48,7 +48,7 @@ def _safe_model_name(model_id: str) -> str:
 def _uncertainties_for(proposal: HypothesisProposal) -> list[Uncertainty]:
     return [
         Uncertainty(
-            id=f"{proposal.id}:U{index}",
+            id=f"U{index}",
             kind=UncertaintyKind.UNKNOWN,
             description=description,
         )
@@ -65,7 +65,7 @@ def _hypothesis_from_proposal(proposal: HypothesisProposal) -> Hypothesis:
         status=HypothesisStatus(proposal.status),
         supporting_evidence_ids=proposal.supported_by,
         conflicting_evidence_ids=proposal.conflicted_by,
-        unresolved_issue_ids=[f"{proposal.id}:U{index}" for index in range(1, len(proposal.unresolved) + 1)],
+        unresolved_issue_ids=[f"U{index}" for index in range(1, len(proposal.unresolved) + 1)],
         specificity_basis=proposal.specificity_basis_evidence_ids,
     )
 

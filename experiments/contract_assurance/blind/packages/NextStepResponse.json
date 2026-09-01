@@ -17,7 +17,7 @@
     "contract": "NextStepResponse",
     "git_commit": "006dfa4",
     "prompt_hash": "ca399721be50acb576b54bd6de54bb02d7c23ab28fa08240ac002cf0e69d7fb6",
-    "schema_hash": "f0186ca2f50494c9a630a22fe3bdc890a942cb2607bbe1d15d23957dcf668f29",
+    "schema_hash": "4fd10ab42685a6b876031e227aaf278226573b7dfc007f2f647cc93236c667ee",
     "source": "src/investigator/services/contracts.py",
     "template_hash": "f6d5700e8cf2a1cf672b2437ba86721cba6699303e3f51ec3bfa8d9d969a5c0f"
   },
@@ -63,7 +63,7 @@
       },
       "remaining_uncertainty_ids": {
         "items": {
-          "pattern": "^H[1-9][0-9]*(?:\\.[1-9][0-9]*)*:U[1-9][0-9]*$",
+          "pattern": "^U[1-9][0-9]*(?:\\.[1-9][0-9]*)*$",
           "type": "string"
         },
         "title": "Remaining Uncertainty Ids",

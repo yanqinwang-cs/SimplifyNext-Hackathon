@@ -207,7 +207,7 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         action_with_conclusion_reason = {
             "step_type": "action",
             "selected_action_id": "A1",
-            "target_uncertainty": "H1:U1",
+            "target_uncertainty": "U1",
             "expected_information_value": "high",
             "why_this_action_now": "This enquiry best distinguishes the live hypotheses.",
             "conclusion_hypothesis_id": None,
@@ -223,7 +223,7 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
             "why_this_action_now": None,
             "conclusion_hypothesis_id": "H1",
             "conclusion_reason": "The current evidence supports this conclusion.",
-            "remaining_uncertainty_ids": ["H1:U1"],
+            "remaining_uncertainty_ids": ["U1"],
         }
         result.append(Mutation("conclusion_with_remaining_uncertainties", "S4", json.dumps(conclusion_with_remaining_ids, sort_keys=True)))
         stop_with_conclusion_id = {
@@ -234,7 +234,7 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
             "why_this_action_now": None,
             "conclusion_hypothesis_id": "H1",
             "conclusion_reason": "The remaining uncertainty cannot be resolved with available enquiries.",
-            "remaining_uncertainty_ids": ["H1:U1"],
+            "remaining_uncertainty_ids": ["U1"],
         }
         result.append(Mutation("stop_unresolved_with_conclusion_id", "S4", json.dumps(stop_with_conclusion_id, sort_keys=True)))
         stop_with_action_fields = {
@@ -245,7 +245,7 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
             "why_this_action_now": "It is available now.",
             "conclusion_hypothesis_id": None,
             "conclusion_reason": "The remaining uncertainty cannot be resolved with available enquiries.",
-            "remaining_uncertainty_ids": ["H1:U1"],
+            "remaining_uncertainty_ids": ["U1"],
         }
         result.append(Mutation("stop_unresolved_with_action_fields", "S4", json.dumps(stop_with_action_fields, sort_keys=True)))
         conclusion = {"step_type": "conclusion", "selected_action_id": None, "target_uncertainty": None, "expected_information_value": None, "why_this_action_now": None, "conclusion_hypothesis_id": "H1", "conclusion_reason": "The current evidence supports this conclusion.", "remaining_uncertainty_ids": []}
@@ -253,7 +253,7 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         empty_conclusion_reason = copy.deepcopy(conclusion)
         empty_conclusion_reason["conclusion_reason"] = ""
         result.append(Mutation("empty_conclusion_reason", "S4", json.dumps(empty_conclusion_reason, sort_keys=True)))
-        stop = {"step_type": "stop_unresolved", "selected_action_id": None, "target_uncertainty": None, "expected_information_value": None, "why_this_action_now": None, "conclusion_hypothesis_id": None, "conclusion_reason": "The remaining uncertainty cannot be resolved with available enquiries.", "remaining_uncertainty_ids": ["H1:U1"]}
+        stop = {"step_type": "stop_unresolved", "selected_action_id": None, "target_uncertainty": None, "expected_information_value": None, "why_this_action_now": None, "conclusion_hypothesis_id": None, "conclusion_reason": "The remaining uncertainty cannot be resolved with available enquiries.", "remaining_uncertainty_ids": ["U1"]}
         result.append(Mutation("valid_stop_unresolved_branch", "valid", json.dumps(stop, sort_keys=True)))
         missing_stop_reason = {"step_type": "stop_unresolved", "remaining_uncertainty_ids": []}
         result.append(Mutation("stop_without_reason_or_ids", "S4", json.dumps(missing_stop_reason, sort_keys=True)))
@@ -271,7 +271,7 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         unsupported_hypothesis_transition["hypothesis_updates"] = [{"hypothesis_id": "H1", "transition": "deprioritize", "reason": "The current evidence lowers priority."}]
         result.append(Mutation("unsupported_hypothesis_transition", "S2", json.dumps(unsupported_hypothesis_transition, sort_keys=True)))
         unsupported_uncertainty_transition = copy.deepcopy(value)
-        unsupported_uncertainty_transition["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "defer", "reason": "The issue can be revisited later."}]
+        unsupported_uncertainty_transition["uncertainty_updates"] = [{"uncertainty_id": "U1", "transition": "defer", "reason": "The issue can be revisited later."}]
         result.append(Mutation("unsupported_uncertainty_transition", "S2", json.dumps(unsupported_uncertainty_transition, sort_keys=True)))
         empty_hypothesis_reason = copy.deepcopy(value)
         empty_hypothesis_reason["hypothesis_updates"] = [{"hypothesis_id": "H1", "transition": "keep", "reason": ""}]
@@ -283,13 +283,13 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         canonical_hypothesis_reason["hypothesis_updates"] = [{"hypothesis_id": "H1", "transition": "keep", "reason": "How the evidence changed the state."}]
         result.append(Mutation("canonical_hypothesis_transition_reason", "S4", json.dumps(canonical_hypothesis_reason, sort_keys=True)))
         empty_uncertainty_reason = copy.deepcopy(value)
-        empty_uncertainty_reason["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "keep", "reason": ""}]
+        empty_uncertainty_reason["uncertainty_updates"] = [{"uncertainty_id": "U1", "transition": "keep", "reason": ""}]
         result.append(Mutation("empty_uncertainty_transition_reason", "S4", json.dumps(empty_uncertainty_reason, sort_keys=True)))
         placeholder_uncertainty_reason = copy.deepcopy(value)
-        placeholder_uncertainty_reason["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "keep", "reason": "REPLACE_WITH_REASON"}]
+        placeholder_uncertainty_reason["uncertainty_updates"] = [{"uncertainty_id": "U1", "transition": "keep", "reason": "REPLACE_WITH_REASON"}]
         result.append(Mutation("placeholder_uncertainty_transition_reason", "S4", json.dumps(placeholder_uncertainty_reason, sort_keys=True)))
         canonical_uncertainty_reason = copy.deepcopy(value)
-        canonical_uncertainty_reason["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "keep", "reason": "How the evidence changed the state."}]
+        canonical_uncertainty_reason["uncertainty_updates"] = [{"uncertainty_id": "U1", "transition": "keep", "reason": "How the evidence changed the state."}]
         result.append(Mutation("canonical_uncertainty_transition_reason", "S4", json.dumps(canonical_uncertainty_reason, sort_keys=True)))
         valid_update = copy.deepcopy(value)
         valid_update["hypothesis_updates"] = [{"hypothesis_id": "H1", "transition": "weaken", "reason": "New evidence reduces support for this hypothesis."}]
@@ -298,19 +298,19 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         duplicate_hypothesis_updates["hypothesis_updates"].append({"hypothesis_id": "H1", "transition": "conflict", "reason": "A conflicting observation changes the status."})
         result.append(Mutation("duplicate_hypothesis_updates", "S4", json.dumps(duplicate_hypothesis_updates, sort_keys=True)))
         valid_uncertainty = copy.deepcopy(value)
-        valid_uncertainty["new_uncertainties"] = [{"id": "H1:U2", "hypothesis_id": "H1", "description": "A newly identified uncertainty.", "basis_evidence_ids": ["E1"]}]
+        valid_uncertainty["new_uncertainties"] = [{"id": "U2", "hypothesis_id": "H1", "description": "A newly identified uncertainty.", "basis_evidence_ids": ["E1"]}]
         result.append(Mutation("valid_new_uncertainty", "valid", json.dumps(valid_uncertainty, sort_keys=True)))
         wrong_new_uncertainty_evidence_namespace = copy.deepcopy(valid_uncertainty)
         wrong_new_uncertainty_evidence_namespace["new_uncertainties"][0]["basis_evidence_ids"] = ["H1"]
         result.append(Mutation("wrong_namespace_new_uncertainty_evidence", "S2", json.dumps(wrong_new_uncertainty_evidence_namespace, sort_keys=True)))
         valid_refinement = copy.deepcopy(value)
-        valid_refinement["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "refine", "reason": "The new evidence narrows the open question.", "new_description": "Which aspect of the claim remains unresolved?", "basis_evidence_ids": ["E1"]}]
+        valid_refinement["uncertainty_updates"] = [{"uncertainty_id": "U1", "transition": "refine", "reason": "The new evidence narrows the open question.", "new_description": "Which aspect of the claim remains unresolved?", "basis_evidence_ids": ["E1"]}]
         result.append(Mutation("valid_uncertainty_refinement", "valid", json.dumps(valid_refinement, sort_keys=True)))
         valid_resolution = copy.deepcopy(value)
-        valid_resolution["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "resolve", "reason": "The new evidence resolves this uncertainty.", "basis_evidence_ids": ["E1"]}]
+        valid_resolution["uncertainty_updates"] = [{"uncertainty_id": "U1", "transition": "resolve", "reason": "The new evidence resolves this uncertainty.", "basis_evidence_ids": ["E1"]}]
         result.append(Mutation("valid_uncertainty_resolution", "valid", json.dumps(valid_resolution, sort_keys=True)))
         duplicate_uncertainty_updates = copy.deepcopy(valid_resolution)
-        duplicate_uncertainty_updates["uncertainty_updates"].append({"uncertainty_id": "H1:U1", "transition": "keep", "reason": "A second operation is not allowed."})
+        duplicate_uncertainty_updates["uncertainty_updates"].append({"uncertainty_id": "U1", "transition": "keep", "reason": "A second operation is not allowed."})
         result.append(Mutation("duplicate_uncertainty_updates", "S4", json.dumps(duplicate_uncertainty_updates, sort_keys=True)))
         valid_new_hypothesis = copy.deepcopy(value)
         valid_new_hypothesis["new_hypotheses"] = [{"id": "H2", "parent_id": None, "statement": "A newly considered explanation.", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["Which observation would distinguish this explanation?"], "specificity_basis_evidence_ids": ["E1"]}]
@@ -364,7 +364,7 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         leaked_hypothesis_other_fields["hypothesis_updates"] = [{"hypothesis_id": "H1", "transition": "keep", "reason": "A reason.", "requested_operation_name": "reframe", "requested_effect": "Change framing.", "why_existing_operations_do_not_fit": {"keep": "It does not change framing."}}]
         result.append(Mutation("hypothesis_other_fields_on_keep", "S4", json.dumps(leaked_hypothesis_other_fields, sort_keys=True)))
         valid_uncertainty_other = copy.deepcopy(value)
-        valid_uncertainty_other["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "other", "reason": "The requested uncertainty operation is not represented by existing transitions.", "requested_operation_name": "merge", "requested_effect": "Combine this uncertainty with a related unresolved issue.", "why_existing_operations_do_not_fit": {"refine": "Refinement would preserve separate uncertainty records."}}]
+        valid_uncertainty_other["uncertainty_updates"] = [{"uncertainty_id": "U1", "transition": "other", "reason": "The requested uncertainty operation is not represented by existing transitions.", "requested_operation_name": "merge", "requested_effect": "Combine this uncertainty with a related unresolved issue.", "why_existing_operations_do_not_fit": {"refine": "Refinement would preserve separate uncertainty records."}}]
         result.append(Mutation("valid_other_uncertainty_operation", "valid", json.dumps(valid_uncertainty_other, sort_keys=True)))
         placeholder_uncertainty_reason = copy.deepcopy(valid_uncertainty_other)
         placeholder_uncertainty_reason["uncertainty_updates"][0]["why_existing_operations_do_not_fit"] = {"REPLACE_WITH_OPERATION": "It does not fit."}
@@ -376,10 +376,10 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         other_uncertainty_with_evidence["uncertainty_updates"][0]["basis_evidence_ids"] = ["E1"]
         result.append(Mutation("other_uncertainty_with_evidence_fields", "S4", json.dumps(other_uncertainty_with_evidence, sort_keys=True)))
         invalid_uncertainty_other = copy.deepcopy(value)
-        invalid_uncertainty_other["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "other", "reason": "A reason."}]
+        invalid_uncertainty_other["uncertainty_updates"] = [{"uncertainty_id": "U1", "transition": "other", "reason": "A reason."}]
         result.append(Mutation("other_uncertainty_without_operation_details", "S4", json.dumps(invalid_uncertainty_other, sort_keys=True)))
         leaked_uncertainty_other_fields = copy.deepcopy(value)
-        leaked_uncertainty_other_fields["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "keep", "reason": "A reason.", "requested_operation_name": "merge", "requested_effect": "Combine issues.", "why_existing_operations_do_not_fit": {"keep": "It preserves separate issues."}}]
+        leaked_uncertainty_other_fields["uncertainty_updates"] = [{"uncertainty_id": "U1", "transition": "keep", "reason": "A reason.", "requested_operation_name": "merge", "requested_effect": "Combine issues.", "why_existing_operations_do_not_fit": {"keep": "It preserves separate issues."}}]
         result.append(Mutation("uncertainty_other_fields_on_keep", "S4", json.dumps(leaked_uncertainty_other_fields, sort_keys=True)))
         mismatch = copy.deepcopy(value)
         mismatch["new_uncertainties"] = [{"id": "H2:U1", "hypothesis_id": "H1", "description": "A new uncertainty.", "basis_evidence_ids": ["E1"]}]
@@ -412,13 +412,13 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         source_id_as_evidence["hypothesis_updates"] = [{"hypothesis_id": "H1", "transition": "keep", "reason": "A reason.", "add_supporting_evidence_ids": ["case_01_visible"]}]
         result.append(Mutation("source_id_in_evidence_reference", "S2", json.dumps(source_id_as_evidence, sort_keys=True)))
         unknown_uncertainty_evidence = copy.deepcopy(value)
-        unknown_uncertainty_evidence["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "keep", "reason": "A reason.", "basis_evidence_ids": ["E999"]}]
+        unknown_uncertainty_evidence["uncertainty_updates"] = [{"uncertainty_id": "U1", "transition": "keep", "reason": "A reason.", "basis_evidence_ids": ["E999"]}]
         result.append(Mutation("unknown_uncertainty_evidence_reference", "S3", json.dumps(unknown_uncertainty_evidence, sort_keys=True)))
         unknown_new_hypothesis_evidence = copy.deepcopy(value)
         unknown_new_hypothesis_evidence["new_hypotheses"] = [{"id": "H2", "parent_id": None, "statement": "A new explanation.", "status": "active", "supported_by": ["E999"], "conflicted_by": [], "unresolved": ["A remaining question."], "specificity_basis_evidence_ids": []}]
         result.append(Mutation("unknown_new_hypothesis_evidence_reference", "S3", json.dumps(unknown_new_hypothesis_evidence, sort_keys=True)))
         unknown_new_uncertainty_evidence = copy.deepcopy(value)
-        unknown_new_uncertainty_evidence["new_uncertainties"] = [{"id": "H1:U2", "hypothesis_id": "H1", "description": "A new uncertainty.", "basis_evidence_ids": ["E999"]}]
+        unknown_new_uncertainty_evidence["new_uncertainties"] = [{"id": "U2", "hypothesis_id": "H1", "description": "A new uncertainty.", "basis_evidence_ids": ["E999"]}]
         result.append(Mutation("unknown_new_uncertainty_evidence_reference", "S3", json.dumps(unknown_new_uncertainty_evidence, sort_keys=True)))
         unknown_new_uncertainty_owner = copy.deepcopy(value)
         unknown_new_uncertainty_owner["new_uncertainties"] = [{"id": "H2:U1", "hypothesis_id": "H2", "description": "A new uncertainty.", "basis_evidence_ids": ["E1"]}]
@@ -430,33 +430,33 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         wrong_uncertainty_namespace["uncertainty_updates"] = [{"uncertainty_id": "E1", "transition": "keep", "reason": "A reason."}]
         result.append(Mutation("wrong_namespace_uncertainty_update", "S2", json.dumps(wrong_uncertainty_namespace, sort_keys=True)))
         refine_without_description = copy.deepcopy(value)
-        refine_without_description["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "refine", "reason": "A reason."}]
+        refine_without_description["uncertainty_updates"] = [{"uncertainty_id": "U1", "transition": "refine", "reason": "A reason."}]
         result.append(Mutation("refine_without_description", "S4", json.dumps(refine_without_description, sort_keys=True)))
         refine_with_other_fields = copy.deepcopy(value)
-        refine_with_other_fields["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "refine", "reason": "A reason.", "new_description": "A narrower question.", "requested_operation_name": "merge", "requested_effect": "Combine issues.", "why_existing_operations_do_not_fit": {"refine": "It preserves separate issues."}}]
+        refine_with_other_fields["uncertainty_updates"] = [{"uncertainty_id": "U1", "transition": "refine", "reason": "A reason.", "new_description": "A narrower question.", "requested_operation_name": "merge", "requested_effect": "Combine issues.", "why_existing_operations_do_not_fit": {"refine": "It preserves separate issues."}}]
         result.append(Mutation("refine_with_other_fields", "S4", json.dumps(refine_with_other_fields, sort_keys=True)))
         resolve_with_description = copy.deepcopy(value)
-        resolve_with_description["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "resolve", "reason": "A reason.", "new_description": "Contradictory detail."}]
+        resolve_with_description["uncertainty_updates"] = [{"uncertainty_id": "U1", "transition": "resolve", "reason": "A reason.", "new_description": "Contradictory detail."}]
         result.append(Mutation("resolve_with_description", "S4", json.dumps(resolve_with_description, sort_keys=True)))
         keep_with_description = copy.deepcopy(value)
-        keep_with_description["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "keep", "reason": "A reason.", "new_description": "A narrower question."}]
+        keep_with_description["uncertainty_updates"] = [{"uncertainty_id": "U1", "transition": "keep", "reason": "A reason.", "new_description": "A narrower question."}]
         result.append(Mutation("keep_with_description", "S4", json.dumps(keep_with_description, sort_keys=True)))
         remove_with_description = copy.deepcopy(value)
-        remove_with_description["uncertainty_updates"] = [{"uncertainty_id": "H1:U1", "transition": "remove", "reason": "A reason.", "new_description": "A narrower question."}]
+        remove_with_description["uncertainty_updates"] = [{"uncertainty_id": "U1", "transition": "remove", "reason": "A reason.", "new_description": "A narrower question."}]
         result.append(Mutation("remove_with_description", "S4", json.dumps(remove_with_description, sort_keys=True)))
         duplicate_hypotheses = copy.deepcopy(value)
         proposal = {"id": "H2", "parent_id": None, "statement": "A new explanation.", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["A remaining question."], "specificity_basis_evidence_ids": []}
         duplicate_hypotheses["new_hypotheses"] = [proposal, copy.deepcopy(proposal)]
         result.append(Mutation("duplicate_new_hypothesis_id", "S4", json.dumps(duplicate_hypotheses, sort_keys=True)))
         duplicate_uncertainty = copy.deepcopy(value)
-        duplicate_uncertainty["new_uncertainties"] = [{"id": "H1:U1", "hypothesis_id": "H1", "description": "A duplicate uncertainty.", "basis_evidence_ids": ["E1"]}]
+        duplicate_uncertainty["new_uncertainties"] = [{"id": "U1", "hypothesis_id": "H1", "description": "A duplicate uncertainty.", "basis_evidence_ids": ["E1"]}]
         result.append(Mutation("duplicate_new_uncertainty_id", "S4", json.dumps(duplicate_uncertainty, sort_keys=True)))
         generated_uncertainty_collision = copy.deepcopy(value)
         generated_uncertainty_collision["new_hypotheses"] = [copy.deepcopy(proposal)]
         generated_uncertainty_collision["new_uncertainties"] = [{"id": "H2:U1", "hypothesis_id": "H2", "description": "An explicitly added uncertainty.", "basis_evidence_ids": ["E1"]}]
         result.append(Mutation("generated_uncertainty_id_collision", "S4", json.dumps(generated_uncertainty_collision, sort_keys=True)))
         empty_uncertainty_description = copy.deepcopy(value)
-        empty_uncertainty_description["new_uncertainties"] = [{"id": "H1:U2", "hypothesis_id": "H1", "description": "", "basis_evidence_ids": ["E1"]}]
+        empty_uncertainty_description["new_uncertainties"] = [{"id": "U2", "hypothesis_id": "H1", "description": "", "basis_evidence_ids": ["E1"]}]
         result.append(Mutation("empty_new_uncertainty_description", "S4", json.dumps(empty_uncertainty_description, sort_keys=True)))
     if contract in {"InitialResponse", "InitialExpansionResponse"} and "hypotheses" in value:
         empty = copy.deepcopy(value)

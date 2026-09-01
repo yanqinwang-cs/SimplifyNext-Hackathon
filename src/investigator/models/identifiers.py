@@ -13,7 +13,6 @@ HypothesisId = Annotated[
 ]
 UncertaintyId = Annotated[
     str,
-    StringConstraints(pattern=r"^H[1-9][0-9]*(?:\.[1-9][0-9]*)*:U[1-9][0-9]*$"),
+    StringConstraints(pattern=r"^U[1-9][0-9]*(?:\.[1-9][0-9]*)*$"),
 ]
 Case1ActionId = Literal["A1", "A2", "A3", "A4"]
-
