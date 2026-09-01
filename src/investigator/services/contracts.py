@@ -107,6 +107,8 @@ class InitialExpansionHypothesis(BaseModel):
         if self.relationship == "competing_root":
             if self.parent_id is not None or self.contrasted_hypothesis_id is None or not self.material_difference:
                 raise ValueError("competing_root requires null parent, contrast target, and material_difference")
+            if self.specificity_basis_evidence_ids:
+                raise ValueError("competing_root cannot contain specialization evidence")
             if self.contrasted_hypothesis_id == self.id:
                 raise ValueError("A competing root cannot contrast against itself")
         elif self.parent_id is None or not self.specificity_basis_evidence_ids:

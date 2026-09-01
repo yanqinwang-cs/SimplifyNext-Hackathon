@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-006",
+  "contract": "InitialExpansionResponse",
+  "discovery_source": "deterministic competing_root_with_specialization_evidence fixture",
+  "baseline_failure": {"raw_output": "competing_root.specificity_basis_evidence_ids=['E1']", "observed_code": "accepted", "intended_code": "S4"},
+  "classification": "S4",
+  "legitimate_semantic_need": "Competing roots and specializations must remain disjoint relationship branches.",
+  "why_existing_contract_insufficient": "The competing-root validator enforced contrast fields but allowed specialization-only evidence.",
+  "implementation_change": "Reject non-empty specificity_basis_evidence_ids on competing_root hypotheses.",
+  "tests_added": ["competing_root_with_specialization_evidence fixture", "nested relationship mutation assertion"],
+  "expected_reclassifications": ["competing-root specialization evidence: accepted -> S4"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [405, 406], "unexpected_outcomes": [0, 0]},
+  "commit": "3a278b6"
+}
