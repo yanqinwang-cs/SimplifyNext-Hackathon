@@ -72,6 +72,9 @@ def render_markdown(report: dict) -> str:
     if "accepted" in summary:
         lines += ["| Metric | Count |", "| --- | ---: |", f"| Total evaluations | {summary.get('total', 0)} |", f"| Accepted | {summary.get('accepted', 0)} |", f"| Rejected | {summary.get('rejected', 0)} |", f"| Unexpected accepts | {summary.get('unexpected_accepts', 0)} |", f"| Unexpected rejects | {summary.get('unexpected_rejects', 0)} |", f"| S5 candidates | {summary.get('s5_candidates', 0)} |", f"| S6 limitations | {summary.get('s6_limitations', 0)} |", ""]
         lines.append(f"- Human review required for S5 candidates: `{report.get('human_review_required', summary.get('s5_candidates', 0) > 0)}`")
+        rate = report.get("deterministic_failure_rate")
+        if rate:
+            lines.append(f"- Observed deterministic failure rate: `{rate.get('observed_failure_rate', 0):.4f}`; upper 95% bound: `{rate.get('upper_failure_rate', 0):.4f}` (compliance statistic, not reasoning confidence).")
     if summary.get("failure_codes"):
         lines += ["## Failure codes", ""]
         lines.extend(f"- `{code}`: {count}" for code, count in sorted(summary["failure_codes"].items()))
