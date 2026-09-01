@@ -16,5 +16,23 @@
     "S1",
     "A2",
     "T2"
-  ]
+  ],
+  "calibration_cases": [
+    "A1",
+    "A2",
+    "G1",
+    "G2",
+    "K1",
+    "K2",
+    "S1",
+    "S2"
+  ],
+  "holdout_cases": [
+    "R1",
+    "R2",
+    "T1",
+    "T2"
+  ],
+  "holdout_fully_correct": 3,
+  "holdout_result": "frozen prompt evaluated without another revision"
 }

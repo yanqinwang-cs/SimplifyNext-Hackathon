@@ -26,6 +26,8 @@ def run(output: Path) -> dict:
     with (output / "runs.jsonl").open("w", encoding="utf-8") as handle:
         for result in results:
             handle.write(result.model_dump_json() + "\n")
+    calibration_ids = {scenario.scenario_id for scenario in scenarios[:8]}
+    holdout = [result for result in results if result.scenario_id not in calibration_ids]
     report = {
         "producer": "luna-simulated",
         "blind_status": "PARTIAL_BLIND",
@@ -37,6 +39,10 @@ def run(output: Path) -> dict:
         "identifier_correct": sum(result.identifier_correct for result in results),
         "post_state_correct": sum(result.post_state_correct for result in results),
         "strict_failures": [result.scenario_id for result in results if not (result.schema_valid and result.operation_correct and result.identifier_correct and result.coordinator_accepted and result.post_state_correct)],
+        "calibration_cases": sorted(calibration_ids),
+        "holdout_cases": [result.scenario_id for result in holdout],
+        "holdout_fully_correct": sum(result.schema_valid and result.operation_correct and result.identifier_correct and result.coordinator_accepted and result.post_state_correct for result in holdout),
+        "holdout_result": "frozen prompt evaluated without another revision",
     }
     (output / "summary.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     return report
