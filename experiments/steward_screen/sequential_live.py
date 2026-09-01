@@ -7,11 +7,11 @@ import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from statistics import median
 from typing import Any
 from pydantic import RootModel, TypeAdapter
 
 from investigator.llm.bedrock import BedrockConfigurationError, BedrockModelClient
+from investigator.llm import ModelParseError
 from investigator.roles import StewardDecision
 from investigator.schema_fingerprint import schema_fingerprint
 from experiments.steward_screen.fresh_fixtures import HISTORICAL_SUITE_HASH, SUITE_VERSION, fresh_fixtures
@@ -23,11 +23,7 @@ class JsonObject(RootModel[dict[str, Any]]):
     """Provider envelope; the trajectory evaluator performs Steward validation."""
 
 
-EXPECTED = {
-    "fixture_suite_hash": "4ba630bd9a4717329d102c91365463363ea4deb8f21bebd9f957ed441d8dfba9",
-    "schema_hash": "d51e77d4478ddd8d8d67517a3844776acc2809fcb92c99d5d428f419f74b4eae",
-    "evaluator_hash": "00ec0dd9415ebe7992b5e4b59a8a0d96a32f060f93906296f0e959c46d20cf06",
-}
+HISTORICAL_SCHEMA_HASH = "d51e77d4478ddd8d8d67517a3844776acc2809fcb92c99d5d428f419f74b4eae"
 
 
 def _sha(data: bytes) -> str:
@@ -44,7 +40,7 @@ def frozen_manifest() -> dict[str, Any]:
         "historical_fixture_suite_hash": HISTORICAL_SUITE_HASH,
         "historical_fixture_status": "INVALID_FOR_MODEL_COMPARISON_AFTER_EPISTEMIC_FIXTURE_AUDIT",
         "schema_hash": schema_fingerprint(TypeAdapter(StewardDecision).json_schema()),
-        "historical_schema_hash": EXPECTED["schema_hash"],
+        "historical_schema_hash": HISTORICAL_SCHEMA_HASH,
         "historical_schema_hash_method": "sha256(json.dumps(StewardDecision.__metadata__, sort_keys=True, default=str).encode())",
         "schema_hash_method": "sha256(json.dumps(TypeAdapter(StewardDecision).json_schema(), sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode('utf-8'))",
         "evaluator_hash": _sha((root / "experiments/steward_screen/trajectory.py").read_bytes()),
@@ -61,8 +57,30 @@ class LiveProducer:
         self.calls: list[dict[str, Any]] = []
 
     def __call__(self, prompt: str) -> Any:
-        call = self.client.call(prompt, JsonObject)
-        self.calls.append({"prompt_hash": _sha(prompt.encode()), "raw_output": call.raw_output, "latency_seconds": call.metadata.latency_seconds, "input_tokens": call.metadata.input_tokens, "output_tokens": call.metadata.output_tokens})
+        prompt_hash = _sha(prompt.encode())
+        try:
+            call = self.client.call(prompt, JsonObject)
+        except Exception as exc:
+            self.calls.append({
+                "prompt_hash": prompt_hash,
+                "raw_output": getattr(exc, "raw_output", None),
+                "latency_seconds": None,
+                "input_tokens": None,
+                "output_tokens": None,
+                "stop_reason": None,
+                "parse_success": False,
+                "error": str(exc),
+            })
+            raise
+        self.calls.append({
+            "prompt_hash": prompt_hash,
+            "raw_output": call.raw_output,
+            "latency_seconds": call.metadata.latency_seconds,
+            "input_tokens": call.metadata.input_tokens,
+            "output_tokens": call.metadata.output_tokens,
+            "stop_reason": call.metadata.finish_reason,
+            "parse_success": call.metadata.parse_success,
+        })
         return call.raw_output
 
 
@@ -74,8 +92,20 @@ def run_live(model_name: str, fixture_ids: list[str], output_dir: Path) -> dict[
     traces = []
     for fixture_id in fixture_ids:
         producer = LiveProducer(client)
-        result = run_fixture(fixtures[fixture_id], producer)
-        traces.append({"run_id": f"{model_name}:{fixture_id}", "model_name": model_name, "invocation_id": spec.invocation_id, "region": spec.region, "fixture_id": fixture_id, "result": result.__dict__, "calls": producer.calls})
+        try:
+            result = run_fixture(fixtures[fixture_id], producer)
+            result_payload = result.__dict__
+            failure_stage = None
+            error = None
+        except ModelParseError as exc:
+            result_payload = None
+            failure_stage = "model_parse"
+            error = str(exc)
+        except Exception as exc:
+            result_payload = None
+            failure_stage = "model_call"
+            error = str(exc)
+        traces.append({"run_id": f"{model_name}:{fixture_id}", "model_name": model_name, "invocation_id": spec.invocation_id, "region": spec.region, "fixture_id": fixture_id, "result": result_payload, "failure_stage": failure_stage, "error": error, "calls": producer.calls})
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "manifest.json").write_text(json.dumps({**frozen_manifest(), "model_name": model_name}, indent=2, sort_keys=True), encoding="utf-8")
     (output_dir / "raw_traces.jsonl").write_text("\n".join(json.dumps(t, default=str, sort_keys=True) for t in traces) + "\n", encoding="utf-8")
