@@ -1,6 +1,6 @@
 {
   "blind_compliance": {
-    "batches": 9,
+    "batches": 7,
     "by_contract": {
       "InitialExpansionResponse": {
         "accepted": 0,
@@ -19,12 +19,12 @@
         "rejected": 1
       },
       "NextStepResponse": {
-        "accepted": 1,
-        "batches": 3,
-        "evaluations": 4,
+        "accepted": 0,
+        "batches": 1,
+        "evaluations": 2,
         "excluded_not_blind": 1,
-        "qualified": 2,
-        "rejected": 3
+        "qualified": 0,
+        "rejected": 2
       },
       "SmokeResponse": {
         "accepted": 2,
@@ -38,23 +38,23 @@
     "by_role": {
       "adversary": {
         "accepted": 1,
-        "batches": 6,
-        "evaluations": 4,
+        "batches": 5,
+        "evaluations": 3,
         "excluded_not_blind": 4,
-        "qualified": 2,
-        "rejected": 3
+        "qualified": 1,
+        "rejected": 2
       },
       "producer": {
-        "accepted": 3,
-        "batches": 5,
-        "evaluations": 4,
+        "accepted": 2,
+        "batches": 4,
+        "evaluations": 3,
         "excluded_not_blind": 3,
-        "qualified": 2,
+        "qualified": 1,
         "rejected": 1
       }
     },
     "excluded_not_blind": 5,
-    "qualified_batches": 4,
+    "qualified_batches": 2,
     "status": "NOT_BLIND"
   },
   "blind_results_included": false,
@@ -286,7 +286,7 @@
       "total": 28
     }
   },
-  "generated_at": "2026-09-01T00:14:10.779946+00:00",
+  "generated_at": "2026-09-01T00:12:26.860635+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -508,7 +508,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "a6a8aaf",
+    "git_commit": "29273f1",
     "unregistered_response_classes": []
   },
   "semantic_limitations": [
