@@ -86,19 +86,37 @@ class TrajectoryFixture(BaseModel):
             node = self.graph.nodes[issue.target_node_id]
             if issue.kind is IssueKind.STALE_ACTIVE and node.status is not GraphStatus.ACTIVE: raise ValueError("STALE_ACTIVE must start active")
             if issue.kind is IssueKind.RELEVANT_ARCHIVED and node.status is not GraphStatus.ARCHIVED: raise ValueError("RELEVANT_ARCHIVED must start archived")
+            if issue.kind is IssueKind.NEGLECTED_ACTIVE and node.status is GraphStatus.ARCHIVED:
+                allowed = any(self.issues_by_id(dep).kind is IssueKind.RELEVANT_ARCHIVED and self.issues_by_id(dep).target_node_id == issue.target_node_id for dep in issue.depends_on_issue_ids)
+                if not allowed: raise ValueError("NEGLECTED_ACTIVE must start active unless directly dependent on reactivation")
             if issue.kind in {IssueKind.OVER_SPECIFIC_FOCUS, IssueKind.CURRENT_FOCUS_STALE} and self.focus.node_id != issue.target_node_id: raise ValueError("focus issue must target current focus")
             if issue.kind is IssueKind.OVER_SPECIFIC_FOCUS:
                 if issue.parent_node_id not in ids or self.graph.nodes[issue.parent_node_id].status is not GraphStatus.ACTIVE or not any(e.source_id == issue.target_node_id and e.target_id == issue.parent_node_id and e.relation is EdgeRelation.SPECIALIZES for e in self.graph.edges.values()):
                     raise ValueError("invalid immediate SPECIALIZES parent")
             if issue.kind is IssueKind.CURRENT_FOCUS_STALE and (not issue.allowed_destination_node_ids or issue.target_node_id in issue.allowed_destination_node_ids):
                 raise ValueError("current-focus issue needs distinct destinations")
+            if issue.kind in {IssueKind.OVER_SPECIFIC_FOCUS, IssueKind.CURRENT_FOCUS_STALE} and node.status is not GraphStatus.ACTIVE: raise ValueError("focus issue target must start active")
+            if issue.kind is IssueKind.CURRENT_FOCUS_STALE and any(self.graph.nodes[d].status is not GraphStatus.ACTIVE for d in issue.allowed_destination_node_ids): raise ValueError("focus destinations must start active")
+            if issue.kind is IssueKind.STALE_ACTIVE and issue.target_node_id in self.must_remain_active_node_ids: raise ValueError("contradictory stale protection")
+            if issue.kind is IssueKind.RELEVANT_ARCHIVED and issue.target_node_id in self.must_remain_archived_node_ids: raise ValueError("contradictory reactivation protection")
+            if issue.kind is IssueKind.NEGLECTED_ACTIVE and issue.target_node_id in self.must_remain_archived_node_ids: raise ValueError("contradictory neglected protection")
+            if issue.kind is IssueKind.CURRENT_FOCUS_STALE and issue.target_node_id in self.must_remain_active_node_ids: raise ValueError("contradictory focus retirement protection")
         # dependency graph must be acyclic
         def visit(x: str, path: set[str]) -> None:
             if x in path: raise ValueError("issue dependency cycle")
             for dep in next(i for i in self.issues if i.issue_id == x).depends_on_issue_ids: visit(dep, path | {x})
         for i in self.issues: visit(i.issue_id, set())
         if self.terminal_mode is TerminalMode.STOP_UNRESOLVED and self.review_context is None: raise ValueError("trusted review context required")
+        if self.terminal_mode is TerminalMode.STOP_UNRESOLVED:
+            review = self.review_context
+            if not review.global_frontier_assessed or review.neglected_candidate_node_ids or review.obvious_useful_region_remains or review.materially_usable_action_ids or (review.local_exhaustion_required and not review.local_frontier_exhausted):
+                raise ValueError("STOP_UNRESOLVED fixture context cannot support stopping")
+            for identifier in review.active_unresolved_ids:
+                if identifier not in ids or self.graph.nodes[identifier].node_type.value != "uncertainty" or self.graph.nodes[identifier].status is not GraphStatus.ACTIVE: raise ValueError("STOP_UNRESOLVED unresolved IDs must be active uncertainties")
         return self
+
+    def issues_by_id(self, issue_id: str) -> StewardIssue:
+        return next(i for i in self.issues if i.issue_id == issue_id)
 
     def observation(self, graph: CaseGraph | None = None, focus: InvestigationFocus | None = None) -> StewardObservation:
         return StewardObservation(observation_id=self.fixture_id, description=self.description, graph=graph or self.graph, focus=focus or self.focus, participants=self.participants, review_context=self.review_context)
@@ -129,7 +147,8 @@ def _resolved(issue: StewardIssue, c: GraphInvestigationCoordinator) -> bool:
 
 
 def _fingerprint(c: GraphInvestigationCoordinator, issues: list[StewardIssue]) -> tuple:
-    return (c.focus.node_id, tuple(sorted((n.id, n.status.value) for n in c.graph.nodes.values())), c.stopped, tuple((i.issue_id, _resolved(i, c)) for i in issues))
+    statuses = issue_states(issues, c)
+    return (c.focus.node_id, tuple(sorted((n.id, n.status.value) for n in c.graph.nodes.values())), c.stopped, tuple((i.issue_id, statuses[i.issue_id].value) for i in issues))
 
 
 @dataclass
@@ -160,6 +179,8 @@ def _parse_raw(raw: Any) -> Any:
 
 def run_fixture(fixture: TrajectoryFixture, producer: Producer) -> TrajectoryResult:
     c = GraphInvestigationCoordinator(deepcopy(fixture.graph), fixture.focus.model_copy(deep=True)); result = TrajectoryResult(); seen = {_fingerprint(c, fixture.issues)}; unchanged_keep = 0; no_progress = 0
+    def add_failure(code: str) -> None:
+        if code not in result.failures: result.failures.append(code)
     for step in range(1, fixture.step_cap + 1):
         obs = fixture.observation(c.graph, c.focus); raw = producer(build_prompt(obs))
         if raw is None or raw == "": result.failures.append("NULL_OR_NO_DECISION"); result.termination = "failure"; break
@@ -189,7 +210,7 @@ def run_fixture(fixture: TrajectoryFixture, producer: Producer) -> TrajectoryRes
             result.termination = "stopped" if not [i for i in fixture.issues if not after_states[i.issue_id]] and fixture.terminal_mode is TerminalMode.STOP_UNRESOLVED else "failure"; break
         if fixture.terminal_mode is TerminalMode.QUIESCENCE and all(after_states.values()): result.termination = "quiescent"; break
         if step == fixture.step_cap and any(not value for value in after_states.values()):
-            result.failures.append("STEP_CAP_WITH_PENDING_ISSUES"); result.termination = "step_cap"; break
+            add_failure("STEP_CAP_WITH_PENDING_ISSUES"); result.termination = "step_cap"; break
         if not resolved: no_progress += 1
         else: no_progress = 0
         if decision.operation == "keep_focus" and not resolved: unchanged_keep += 1
@@ -198,5 +219,5 @@ def run_fixture(fixture: TrajectoryFixture, producer: Producer) -> TrajectoryRes
         if no_progress >= 3: result.failures.append("NO_PROGRESS_LOOP"); result.termination = "failure"; break
         if after in seen and not resolved and decision.operation != "keep_focus" and unchanged_keep < 2: result.failures.append("OSCILLATION"); result.termination = "failure"; break
         seen.add(after)
-    if result.termination == "step_cap" and any(not _resolved(i, c) for i in fixture.issues): result.failures.append("STEP_CAP_WITH_PENDING_ISSUES")
+    if result.termination == "step_cap" and any(not _resolved(i, c) for i in fixture.issues): add_failure("STEP_CAP_WITH_PENDING_ISSUES")
     return result
