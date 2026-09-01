@@ -630,6 +630,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         namespace_and_status = copy.deepcopy(value)
         namespace_and_status["hypotheses"][0].update({"supported_by": ["H1"], "status": "weakened"})
         result.append(Mutation("wrong_namespace_and_status", "S2", json.dumps(namespace_and_status, sort_keys=True)))
+        namespace_and_unknown_parent = copy.deepcopy(value)
+        namespace_and_unknown_parent["hypotheses"][0].update({"supported_by": ["H1"], "parent_id": "H999"})
+        result.append(Mutation("wrong_namespace_and_unknown_parent", "S2", json.dumps(namespace_and_unknown_parent, sort_keys=True)))
         unknown_parent = copy.deepcopy(value)
         unknown_parent["hypotheses"][0]["parent_id"] = "H999"
         result.append(Mutation("unknown_initial_parent_hypothesis", "S3", json.dumps(unknown_parent, sort_keys=True)))
