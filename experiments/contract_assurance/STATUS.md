@@ -1,7 +1,7 @@
 # Status
 
 - Branch: `codex/steward-prompt-calibration-goal`
-- Report source commit: `8cdc216` (latest report source; latest main Steward prompt normalization revalidated cleanly)
+- Report source commit: `7c9ee60` (latest report source; latest main Steward prompt normalization revalidated cleanly)
 - Baseline commit: `946f799`
 - Active focus: deterministic fixture expansion and blind execution readiness
 - Completed cycle: repository inventory, production operation-preflight checks, mutation/fixture manifests, public-package controls, history report export, eight frozen public packages, package drift gates, baseline reports, and explicit runtime boundary metadata
@@ -9,4 +9,4 @@
 - Pending human decisions: none
 - Latest worker evidence: 45 isolated producer/adversary batch manifests are recorded; 34 qualify and 11 are excluded, including four malformed historical manifests that are now counted explicitly. Qualified pairs cover all eight registered contracts, including fresh exact-package StewardDecision, NextAction, ModelScreenHypothesisResponse, InitialResponse, RevisionResponse, NextStepResponse, InitialExpansionResponse, and SmokeResponse pairs. Across 17 qualified adversary evaluations, 15 were correctly rejected and 2 were accepted with semantics explicitly unassessed outside deterministic enforceability. The SmokeResponse adversary copied the registered placeholder and was correctly rejected as S4 without a live Bedrock call; both InitialExpansion workers violated relationship-branch invariants and were correctly rejected as S4; the RevisionResponse adversary’s unavailable `A1_RELEASE` evidence reference was correctly rejected as S3. Four historical InitialExpansionResponse batches and three other historical batches remain excluded because their package hash or manifest evidence is stale. Qualified batches carry Seatbelt launcher and denied-read probe evidence under ignored `experiments/contract_assurance/results/2026-09-01-isolated-*/`.
 - Next queued work: extend referential and cross-field mutation combinations; live SmokeResponse Bedrock execution remains intentionally excluded by the no-AWS constraint
-- Last checkpoint: `8cdc216` (NextActionResponse mixed availability/field-validity rotation revalidated through the assurance gates).
+- Last checkpoint: `7c9ee60` (calibration/main merge revalidated through the assurance gates).
