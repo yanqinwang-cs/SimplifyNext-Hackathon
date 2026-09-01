@@ -7,7 +7,7 @@ from typing import Any
 from .evaluate import evaluate_initial, evaluate_next_action, evaluate_raw, evaluate_revision
 from .inventory import assert_complete_inventory, assert_inventory_paths, inventory
 from .lint import lint_contract
-from .snapshot import verify_snapshot_against_contract
+from .snapshot import fingerprint, verify_snapshot_against_contract
 from .mutations import deduplicate, mutations, write_fixture_manifest
 from .registry import contract_registry
 from .report import coverage_ledger, deterministic_correctness, deterministic_correctness_by_contract, failure_rate_statistics, summarize, summarize_by_contract, write_history
@@ -88,7 +88,17 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
         evaluation_count_matches = payload.get("evaluation_count") is None or (
             isinstance(batch_evaluations, list) and len(batch_evaluations) == payload.get("evaluation_count")
         )
-        is_qualified = status == "BLIND" and all(bool(item.get("qualifies_as_blind")) for item in audits) and evaluation_count_matches
+        package_hash_matches = True
+        for audit in audits:
+            recorded_hash = audit.get("package_hash")
+            if not recorded_hash:
+                continue
+            package_path = root / "experiments/contract_assurance/blind/packages" / f"{audit.get('contract', '')}.json"
+            try:
+                package_hash_matches &= fingerprint(json.loads(package_path.read_text(encoding="utf-8"))) == recorded_hash
+            except (OSError, json.JSONDecodeError):
+                package_hash_matches = False
+        is_qualified = status == "BLIND" and all(bool(item.get("qualifies_as_blind")) for item in audits) and evaluation_count_matches and package_hash_matches
         qualified += int(is_qualified)
         excluded += int(not is_qualified)
         contracts = {str(item.get("contract", "unknown")) for item in audits}

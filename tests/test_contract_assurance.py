@@ -267,6 +267,17 @@ def test_blind_compliance_scans_nested_batches_and_records_outcomes(tmp_path: Pa
     (mismatch / "evaluations.json").write_text(json.dumps([{"accepted": True}]), encoding="utf-8")
     summary = blind_compliance_summary(tmp_path)
     assert summary["qualified_batches"] == 1
+
+    package_dir = tmp_path / "experiments/contract_assurance/blind/packages"
+    package_dir.mkdir(parents=True)
+    source_package = Path(__file__).resolve().parents[1] / "experiments/contract_assurance/blind/packages/NextActionResponse.json"
+    (package_dir / "NextActionResponse.json").write_text(source_package.read_text(encoding="utf-8"), encoding="utf-8")
+    hash_mismatch = tmp_path / "experiments/contract_assurance/results/direct/hash-mismatch"
+    hash_mismatch.mkdir(parents=True)
+    (hash_mismatch / "batch_manifest.json").write_text(json.dumps({"blind_status": "BLIND", "worker_id": "isolated-producer-3", "contract": "NextActionResponse", "qualifies_as_blind": True, "package_hash": "stale"}), encoding="utf-8")
+    (hash_mismatch / "evaluations.json").write_text(json.dumps([{"accepted": True}]), encoding="utf-8")
+    summary = blind_compliance_summary(tmp_path)
+    assert summary["qualified_batches"] == 1
     (direct / "evaluations.json").write_text(json.dumps([{"accepted": False}]), encoding="utf-8")
     summary = blind_compliance_summary(tmp_path)
     assert summary["qualified_batches"] == 1
