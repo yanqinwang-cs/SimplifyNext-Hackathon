@@ -13,6 +13,7 @@ from typing import Any, Protocol
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
 from investigator.graph import CaseGraph, EdgeRelation, GraphStatus
+from investigator.llm import normalize_json_text
 from investigator.roles import GraphInvestigationCoordinator, InvestigationFocus, StewardDecision, StewardReviewContext
 from experiments.steward_screen.prompt import build_prompt
 
@@ -63,6 +64,7 @@ class TrajectoryFixture(BaseModel):
     must_remain_archived_node_ids: set[str] = Field(default_factory=set)
     terminal_mode: TerminalMode = TerminalMode.QUIESCENCE
     step_cap: int = 8
+    required_edges: list[tuple[str, str, str]] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_fixture(self) -> "TrajectoryFixture":
@@ -71,6 +73,10 @@ class TrajectoryFixture(BaseModel):
             raise ValueError("STOP_UNRESOLVED fixtures require trusted review context")
         if not {self.focus.node_id, *self.must_remain_active_node_ids, *self.must_remain_archived_node_ids} <= ids:
             raise ValueError("fixture references an unknown node")
+        if any(self.graph.nodes[n].status is not GraphStatus.ACTIVE for n in self.must_remain_active_node_ids): raise ValueError("must_remain_active nodes must start active")
+        if any(self.graph.nodes[n].status is not GraphStatus.ARCHIVED for n in self.must_remain_archived_node_ids): raise ValueError("must_remain_archived nodes must start archived")
+        actual_edges = {(e.source_id, e.relation.value, e.target_id) for e in self.graph.edges.values()}
+        if not set(self.required_edges) <= actual_edges: raise ValueError("fixture structural basis is absent")
         issue_ids = {i.issue_id for i in self.issues}
         if len(issue_ids) != len(self.issues) or any(set(i.depends_on_issue_ids) - issue_ids for i in self.issues):
             raise ValueError("issue IDs or dependencies are invalid")
@@ -133,36 +139,64 @@ class TrajectoryResult:
     termination: str = "step_cap"
 
 
+class IssueState(str, Enum):
+    BLOCKED = "BLOCKED"
+    ACTIONABLE = "ACTIONABLE"
+    RESOLVED = "RESOLVED"
+
+
+def issue_states(issues: list[StewardIssue], c: GraphInvestigationCoordinator) -> dict[str, IssueState]:
+    resolved = {i.issue_id: _resolved(i, c) for i in issues}
+    return {i.issue_id: IssueState.BLOCKED if any(not resolved[d] for d in i.depends_on_issue_ids) else IssueState.RESOLVED if resolved[i.issue_id] else IssueState.ACTIONABLE for i in issues}
+
+
+def _parse_raw(raw: Any) -> Any:
+    if isinstance(raw, str):
+        import json
+        text = normalize_json_text(raw)
+        return json.loads(text)
+    return raw
+
+
 def run_fixture(fixture: TrajectoryFixture, producer: Producer) -> TrajectoryResult:
     c = GraphInvestigationCoordinator(deepcopy(fixture.graph), fixture.focus.model_copy(deep=True)); result = TrajectoryResult(); seen = {_fingerprint(c, fixture.issues)}; unchanged_keep = 0; no_progress = 0
     for step in range(1, fixture.step_cap + 1):
         obs = fixture.observation(c.graph, c.focus); raw = producer(build_prompt(obs))
         if raw is None or raw == "": result.failures.append("NULL_OR_NO_DECISION"); result.termination = "failure"; break
         if isinstance(raw, list): result.failures.append("MULTIPLE_OPERATIONS_RETURNED"); result.termination = "failure"; break
-        try: decision = _ADAPTER.validate_python(raw)
-        except Exception: result.failures.append("SCHEMA_FAILURE"); result.termination = "failure"; break
-        before = _fingerprint(c, fixture.issues); before_states = {i.issue_id: _resolved(i, c) for i in fixture.issues}
-        try: c.review_with_steward(decision, review_context=obs.review_context)
+        try: decision = _ADAPTER.validate_python(_parse_raw(raw))
+        except ValueError as exc:
+            result.failures.append("MULTIPLE_OPERATIONS_RETURNED" if "Extra data" in str(exc) else "SCHEMA_FAILURE"); result.termination = "failure"; break
+        before = _fingerprint(c, fixture.issues); before_statuses = issue_states(fixture.issues, c); before_states = {k: v is IssueState.RESOLVED for k,v in before_statuses.items()}
+        try:
+            if decision.operation == "reactivate" and c.graph.nodes.get(decision.target_node_id) is not None and c.graph.nodes[decision.target_node_id].status is not GraphStatus.ARCHIVED:
+                raise ValueError("REACTIVATE target must be archived")
+            c.review_with_steward(decision, review_context=obs.review_context if decision.operation == "stop_unresolved" else None)
         except ValueError as exc:
             msg = str(exc); code = "INVENTED_IDENTIFIER" if "Unknown graph node" in msg else ("ILLEGAL_SHIFT" if decision.operation == "shift_focus" else "ILLEGAL_REACTIVATE" if decision.operation == "reactivate" else "BAD_GENERALIZATION" if decision.operation == "generalize" else "PREMATURE_STOP" if decision.operation == "stop_unresolved" else "ILLEGAL_ARCHIVE")
             result.failures.append(code); result.termination = "failure"; break
-        after = _fingerprint(c, fixture.issues); after_states = {i.issue_id: _resolved(i, c) for i in fixture.issues}; resolved = [k for k,v in after_states.items() if v and not before_states[k]]
-        harmful = decision.operation == "archive" and decision.target_node_id in fixture.must_remain_active_node_ids
-        if harmful: result.failures.append("HARMFUL_ARCHIVE")
+        after = _fingerprint(c, fixture.issues); after_statuses = issue_states(fixture.issues, c); after_states = {k: v is IssueState.RESOLVED for k,v in after_statuses.items()}; resolved = [k for k,v in after_states.items() if v and not before_states[k]]
+        harmful_archive = any(c.graph.nodes[n].status is GraphStatus.ARCHIVED for n in fixture.must_remain_active_node_ids) or any(i.kind in {IssueKind.NEGLECTED_ACTIVE, IssueKind.OVER_SPECIFIC_FOCUS} and not after_states[i.issue_id] and c.graph.nodes[i.target_node_id].status is GraphStatus.ARCHIVED for i in fixture.issues)
+        harmful_reactivation = any(c.graph.nodes[n].status is GraphStatus.ACTIVE for n in fixture.must_remain_archived_node_ids)
+        harmful = harmful_archive or harmful_reactivation
+        if harmful_archive: result.failures.append("HARMFUL_ARCHIVE")
+        if harmful_reactivation: result.failures.append("HARMFUL_REACTIVATION")
         cls = "PROGRESS" if resolved and not harmful else ("NEUTRAL" if not harmful else "HARMFUL")
-        result.steps.append({"step": step, "operation": decision.operation, "classification": cls, "before": before, "after": after, "resolved": resolved, "remaining": [i.issue_id for i in fixture.issues if not after_states[i.issue_id]]})
-        if c.stopped and any(not value for value in after_states.values()):
+        result.steps.append({"step": step, "raw_output": raw, "operation": decision.operation, "classification": cls, "before": before, "after": after, "resolved": resolved, "remaining": [i.issue_id for i in fixture.issues if not after_states[i.issue_id]]})
+        if c.stopped and (fixture.terminal_mode is not TerminalMode.STOP_UNRESOLVED or any(not value for value in after_states.values())):
             result.failures.append("PREMATURE_STOP")
         if c.stopped:
             result.termination = "stopped" if not [i for i in fixture.issues if not after_states[i.issue_id]] and fixture.terminal_mode is TerminalMode.STOP_UNRESOLVED else "failure"; break
+        if fixture.terminal_mode is TerminalMode.QUIESCENCE and all(after_states.values()): result.termination = "quiescent"; break
+        if step == fixture.step_cap and any(not value for value in after_states.values()):
+            result.failures.append("STEP_CAP_WITH_PENDING_ISSUES"); result.termination = "step_cap"; break
         if not resolved: no_progress += 1
         else: no_progress = 0
         if decision.operation == "keep_focus" and not resolved: unchanged_keep += 1
         else: unchanged_keep = 0
         if unchanged_keep >= 2: result.failures.append("STALE_KEEP_LOOP"); result.termination = "failure"; break
         if no_progress >= 3: result.failures.append("NO_PROGRESS_LOOP"); result.termination = "failure"; break
-        if after in seen and not resolved: result.failures.append("OSCILLATION"); result.termination = "failure"; break
+        if after in seen and not resolved and decision.operation != "keep_focus" and unchanged_keep < 2: result.failures.append("OSCILLATION"); result.termination = "failure"; break
         seen.add(after)
-        if all(after_states.values()) and fixture.terminal_mode is TerminalMode.QUIESCENCE: result.termination = "quiescent"; break
     if result.termination == "step_cap" and any(not _resolved(i, c) for i in fixture.issues): result.failures.append("STEP_CAP_WITH_PENDING_ISSUES")
     return result
