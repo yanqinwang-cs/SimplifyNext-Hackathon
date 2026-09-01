@@ -68,11 +68,14 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
-        audits = payload.get("audits", [])
+        audits = payload.get("audits")
+        if audits is None and payload.get("worker_id"):
+            audits = [payload]
         if not isinstance(audits, list):
             continue
         batches += 1
-        is_qualified = payload.get("status") == "BLIND" and all(bool(item.get("qualifies_as_blind")) for item in audits)
+        status = payload.get("status", payload.get("blind_status"))
+        is_qualified = status == "BLIND" and all(bool(item.get("qualifies_as_blind")) for item in audits)
         qualified += int(is_qualified)
         excluded += int(not is_qualified)
         contracts = {str(item.get("contract", "unknown")) for item in audits}

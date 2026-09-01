@@ -232,6 +232,17 @@ def test_blind_compliance_scans_nested_batches_and_records_outcomes(tmp_path: Pa
     assert summary["by_role"]["producer"]["accepted"] == 1
     assert summary["by_role"]["producer"]["rejected"] == 1
 
+    direct = tmp_path / "experiments/contract_assurance/results/direct/adversary"
+    direct.mkdir(parents=True)
+    (direct / "batch_manifest.json").write_text(json.dumps({
+        "blind_status": "BLIND", "worker_id": "isolated-adversary-1", "contract": "NextActionResponse",
+        "qualifies_as_blind": True,
+    }), encoding="utf-8")
+    (direct / "evaluations.json").write_text(json.dumps([{"accepted": False}]), encoding="utf-8")
+    summary = blind_compliance_summary(tmp_path)
+    assert summary["qualified_batches"] == 1
+    assert summary["by_role"]["adversary"]["evaluations"] == 1
+
 
 def test_new_uncertainty_description_must_be_substantive():
     result = evaluate_raw(json.dumps({"id": "H1:U2", "hypothesis_id": "H1", "description": ""}), NewUncertainty)

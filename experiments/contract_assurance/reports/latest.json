@@ -1,6 +1,6 @@
 {
   "blind_compliance": {
-    "batches": 5,
+    "batches": 7,
     "by_contract": {
       "InitialExpansionResponse": {
         "accepted": 0,
@@ -10,6 +10,14 @@
         "qualified": 0,
         "rejected": 0
       },
+      "NextActionResponse": {
+        "accepted": 1,
+        "batches": 2,
+        "evaluations": 2,
+        "excluded_not_blind": 0,
+        "qualified": 2,
+        "rejected": 1
+      },
       "NextStepResponse": {
         "accepted": 0,
         "batches": 1,
@@ -17,28 +25,36 @@
         "excluded_not_blind": 1,
         "qualified": 0,
         "rejected": 2
+      },
+      "SmokeResponse": {
+        "accepted": 2,
+        "batches": 2,
+        "evaluations": 2,
+        "excluded_not_blind": 2,
+        "qualified": 0,
+        "rejected": 0
       }
     },
     "by_role": {
       "adversary": {
-        "accepted": 0,
-        "batches": 3,
-        "evaluations": 1,
-        "excluded_not_blind": 3,
-        "qualified": 0,
-        "rejected": 1
+        "accepted": 1,
+        "batches": 5,
+        "evaluations": 3,
+        "excluded_not_blind": 4,
+        "qualified": 1,
+        "rejected": 2
       },
       "producer": {
-        "accepted": 0,
-        "batches": 2,
-        "evaluations": 1,
-        "excluded_not_blind": 2,
-        "qualified": 0,
+        "accepted": 2,
+        "batches": 4,
+        "evaluations": 3,
+        "excluded_not_blind": 3,
+        "qualified": 1,
         "rejected": 1
       }
     },
     "excluded_not_blind": 5,
-    "qualified_batches": 0,
+    "qualified_batches": 2,
     "status": "NOT_BLIND"
   },
   "blind_results_included": false,
@@ -270,7 +286,7 @@
       "total": 28
     }
   },
-  "generated_at": "2026-09-01T00:06:22.468167+00:00",
+  "generated_at": "2026-09-01T00:12:26.860635+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -492,7 +508,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "04c46fa",
+    "git_commit": "29273f1",
     "unregistered_response_classes": []
   },
   "semantic_limitations": [
