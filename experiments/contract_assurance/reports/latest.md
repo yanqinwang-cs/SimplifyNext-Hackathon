@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T02:50:05.844997+00:00
+- Generated: 2026-09-01T02:51:51.059688+00:00
 - Contracts: 8
 
 | Metric | Count |
@@ -60,8 +60,8 @@
 ## Blind compliance
 
 - Status: `NOT_BLIND`
-- Batches: 39
-- Qualified batches: 32
+- Batches: 41
+- Qualified batches: 34
 - Excluded as NOT_BLIND: 7
 
 | Blind contract | Batches | Qualified | Excluded |
@@ -72,7 +72,7 @@
 | `NextActionResponse` | 6 | 6 | 0 |
 | `NextStepResponse` | 5 | 4 | 1 |
 | `RevisionResponse` | 4 | 4 | 0 |
-| `SmokeResponse` | 4 | 2 | 2 |
+| `SmokeResponse` | 6 | 4 | 2 |
 | `StewardDecisionResponse` | 4 | 4 | 0 |
 
 | Blind contract/role | Batches | Qualified | Excluded | Evaluations | Accepted | Rejected |
@@ -89,17 +89,17 @@
 | `NextStepResponse` / `producer` | 3 | 2 | 1 | 2 | 1 | 1 |
 | `RevisionResponse` / `adversary` | 2 | 2 | 0 | 2 | 0 | 2 |
 | `RevisionResponse` / `producer` | 2 | 2 | 0 | 2 | 2 | 0 |
-| `SmokeResponse` / `adversary` | 2 | 1 | 1 | 1 | 0 | 1 |
-| `SmokeResponse` / `producer` | 2 | 1 | 1 | 1 | 1 | 0 |
+| `SmokeResponse` / `adversary` | 3 | 2 | 1 | 2 | 0 | 2 |
+| `SmokeResponse` / `producer` | 3 | 2 | 1 | 2 | 2 | 0 |
 | `StewardDecisionResponse` / `adversary` | 2 | 2 | 0 | 2 | 0 | 2 |
 | `StewardDecisionResponse` / `producer` | 2 | 2 | 0 | 2 | 2 | 0 |
 
 | Blind role | Batches | Qualified evaluations | Accepted | Rejected |
 | --- | ---: | ---: | ---: | ---: |
-| `adversary` | 21 | 16 | 2 | 14 |
-| `producer` | 20 | 16 | 14 | 2 |
-- Qualified blind failure codes: `{'S0': 1, 'S1': 2, 'S3': 5, 'S4': 8}`
-- Qualified blind output metrics: placeholder copies `1`, fenced outputs `0`, average length `475.9` characters.
+| `adversary` | 22 | 17 | 2 | 15 |
+| `producer` | 21 | 17 | 15 | 2 |
+- Qualified blind failure codes: `{'S0': 1, 'S1': 2, 'S3': 5, 'S4': 9}`
+- Qualified blind output metrics: placeholder copies `2`, fenced outputs `0`, average length `449.3` characters.
 
 ## Assurance limitations
 
