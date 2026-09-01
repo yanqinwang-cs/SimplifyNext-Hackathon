@@ -246,6 +246,10 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
             "remaining_uncertainty_ids": ["H1:U1"],
         }
         result.append(Mutation("conclusion_with_remaining_uncertainties", "S4", json.dumps(conclusion_with_remaining_ids, sort_keys=True)))
+        mixed_conclusion_reference_reason = copy.deepcopy(conclusion_with_remaining_ids)
+        mixed_conclusion_reference_reason["conclusion_reason"] = ""
+        mixed_conclusion_reference_reason["remaining_uncertainty_ids"] = ["H999:U1"]
+        result.append(Mutation("mixed_conclusion_unknown_reference_empty_reason", "S4", json.dumps(mixed_conclusion_reference_reason, sort_keys=True)))
         stop_with_conclusion_id = {
             "step_type": "stop_unresolved",
             "selected_action_id": None,

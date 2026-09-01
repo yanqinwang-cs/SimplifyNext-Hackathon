@@ -273,6 +273,11 @@
     },
     {
       "intended_code": "S4",
+      "name": "mixed_conclusion_unknown_reference_empty_reason",
+      "raw_output": "{\"conclusion_hypothesis_id\": \"H1\", \"conclusion_reason\": \"\", \"expected_information_value\": null, \"remaining_uncertainty_ids\": [\"H999:U1\"], \"selected_action_id\": null, \"step_type\": \"conclusion\", \"target_uncertainty\": null, \"why_this_action_now\": null}"
+    },
+    {
+      "intended_code": "S4",
       "name": "stop_unresolved_with_conclusion_id",
       "raw_output": "{\"conclusion_hypothesis_id\": \"H1\", \"conclusion_reason\": \"The remaining uncertainty cannot be resolved with available enquiries.\", \"expected_information_value\": null, \"remaining_uncertainty_ids\": [\"H1:U1\"], \"selected_action_id\": null, \"step_type\": \"stop_unresolved\", \"target_uncertainty\": null, \"why_this_action_now\": null}"
     },
