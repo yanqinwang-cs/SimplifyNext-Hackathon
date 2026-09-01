@@ -6,6 +6,7 @@ from investigator.services import contracts
 from experiments.model_screen.schemas import HypothesisResponse
 from scripts.smoke_bedrock import SmokeResponse
 from investigator.roles import InvestigatorUpdateResponse, StewardDecision
+from investigator.cycle import InvestigatorTurnResponse
 
 
 class StewardDecisionResponse:
@@ -57,6 +58,7 @@ CONTRACTS = (
     ContractSpec("NextStepResponse", contracts.NextStepResponse, "src/investigator/services/contracts.py", (), "Defined LLM-facing union; no current production caller", template_placeholders=("REPLACE_WITH_",), prompt_sources=(), boundary_stages=("JSON normalization", "Pydantic schema validation", "union branch validation", "raw output retained by adapter")),
     ContractSpec("StewardDecisionResponse", StewardDecisionResponse, "experiments/steward_screen/runner.py", ("experiments.steward_screen.prompt.build_prompt",), "steward_screen.runner.run_live -> GraphInvestigationCoordinator.review_with_steward", prompt_sources=("experiments/steward_screen/prompt.py",), boundary_stages=("JSON normalization", "provider JSON envelope", "StewardDecision union validation", "coordinator operation preflight", "raw output retained by screen result")),
     ContractSpec("InvestigatorUpdate", InvestigatorUpdateResponse, "src/investigator/roles/investigator.py", (), "GraphInvestigationCoordinator.apply_investigator_update", public=False, boundary_stages=("Pydantic discriminated-union validation", "locality/type preflight", "atomic graph mutation")),
+    ContractSpec("InvestigatorTurnResponse", InvestigatorTurnResponse, "src/investigator/cycle.py", ("investigator.cycle_prompt.build_investigator_cycle_prompt",), "InvestigatorCycleCoordinator.apply_turn", public=False, prompt_sources=("src/investigator/cycle_prompt.py",), boundary_stages=("Pydantic turn-schema validation", "ordered graph-update preflight", "atomic cycle transaction")),
 )
 
 

@@ -1,0 +1,199 @@
+{
+  "canonical": {
+    "graph_updates": [
+      {
+        "node_id": "H3",
+        "operation": "add_hypothesis",
+        "reason": "It is a useful local hypothesis.",
+        "statement": "A local possibility."
+      }
+    ],
+    "next_step": {
+      "reason": "Another bounded local step is useful.",
+      "type": "continue_local"
+    }
+  },
+  "contract": "InvestigatorTurnResponse",
+  "mutations": [
+    {
+      "intended_code": "S0",
+      "name": "empty",
+      "raw_output": ""
+    },
+    {
+      "intended_code": "S0",
+      "name": "whitespace",
+      "raw_output": "   "
+    },
+    {
+      "intended_code": "S0",
+      "name": "prose_only",
+      "raw_output": "Here is the requested object."
+    },
+    {
+      "intended_code": "S0",
+      "name": "malformed_json",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "trailing_comma",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"},}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "duplicate_braces",
+      "raw_output": "{{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "prose_before_json",
+      "raw_output": "Here is the object:\n{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "trailing_material",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}\nDone."
+    },
+    {
+      "intended_code": "S0",
+      "name": "multiple_json_objects",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}\n{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}"
+    },
+    {
+      "intended_code": "S0",
+      "name": "json_array_top_level",
+      "raw_output": "[{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}]"
+    },
+    {
+      "intended_code": "S0",
+      "name": "json_null_top_level",
+      "raw_output": "null"
+    },
+    {
+      "intended_code": "S0",
+      "name": "json_string_top_level",
+      "raw_output": "\"response\""
+    },
+    {
+      "intended_code": "S0",
+      "name": "json_number_top_level",
+      "raw_output": "7"
+    },
+    {
+      "intended_code": "S0",
+      "name": "empty_fence",
+      "raw_output": "```json\n```"
+    },
+    {
+      "intended_code": "S0",
+      "name": "broken_opening_fence",
+      "raw_output": "```json\n{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}\n"
+    },
+    {
+      "intended_code": "S0",
+      "name": "broken_closing_fence",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}\n```"
+    },
+    {
+      "intended_code": "valid",
+      "name": "fenced_json",
+      "raw_output": "```json\n{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}\n```"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_open",
+      "raw_output": "{"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_quarter",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypoth"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_midpoint",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"stateme"
+    },
+    {
+      "intended_code": "S0",
+      "name": "truncated_json_before_close",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\""
+    },
+    {
+      "intended_code": "S1",
+      "name": "remove_graph_updates",
+      "raw_output": "{\"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_primitive_graph_updates",
+      "raw_output": "{\"graph_updates\": {}, \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "null_required_graph_updates",
+      "raw_output": "{\"graph_updates\": null, \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "empty_required_graph_updates",
+      "raw_output": "{\"graph_updates\": [], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "remove_next_step",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}]}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_primitive_next_step",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": []}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "null_required_next_step",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": null}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "unexpected_field",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}, \"unexpected_field\": \"x\"}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "extra_wrapper",
+      "raw_output": "{\"response\": {\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "unexpected_nested_graph_updates",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\", \"unexpected_nested_field\": true}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "wrong_nested_primitive_graph_updates_operation",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": [], \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}"
+    },
+    {
+      "intended_code": "S1",
+      "name": "null_nested_graph_updates_operation",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"H3\", \"operation\": null, \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}"
+    },
+    {
+      "intended_code": "S2",
+      "name": "wrong_namespace_graph_updates_node_id",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"E1\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}"
+    },
+    {
+      "intended_code": "S2",
+      "name": "whitespace_wrapped_graph_updates_node_id",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \" H3 \", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}"
+    },
+    {
+      "intended_code": "S2",
+      "name": "case_variant_graph_updates_node_id",
+      "raw_output": "{\"graph_updates\": [{\"node_id\": \"h3\", \"operation\": \"add_hypothesis\", \"reason\": \"It is a useful local hypothesis.\", \"statement\": \"A local possibility.\"}], \"next_step\": {\"reason\": \"Another bounded local step is useful.\", \"type\": \"continue_local\"}}"
+    }
+  ]
+}

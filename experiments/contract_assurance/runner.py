@@ -265,6 +265,8 @@ def _sample_for(schema: type[Any]) -> dict[str, Any] | None:
         return {"operation": "keep_focus", "assessment": "The current focus remains useful.", "reason": "The supplied frontier evidence supports retaining focus."}
     if schema.__name__ == "InvestigatorUpdateResponse":
         return {"operation": "add_hypothesis", "node_id": "H3", "statement": "A local possibility.", "reason": "It is a useful local hypothesis."}
+    if schema.__name__ == "InvestigatorTurnResponse":
+        return {"graph_updates": [{"operation": "add_hypothesis", "node_id": "H3", "statement": "A local possibility.", "reason": "It is a useful local hypothesis."}], "next_step": {"type": "continue_local", "reason": "Another bounded local step is useful."}}
     if schema.__name__ == "InitialResponse":
         return {"hypotheses": [{"id": "H1", "parent_id": None, "statement": "A broad explanation.", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["What evidence would distinguish alternatives?"], "specificity_basis_evidence_ids": []}], "selected_action_id": "A1", "target_uncertainty": "Whether the claimed event occurred.", "expected_information_value": "The result can distinguish explanations.", "why_this_action_now": "This enquiry is available and relevant."}
     if schema.__name__ == "InitialExpansionResponse":
