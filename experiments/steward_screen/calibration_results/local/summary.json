@@ -1,0 +1,20 @@
+{
+  "producer": "luna-simulated",
+  "blind_status": "PARTIAL_BLIND",
+  "blinding_limitations": [
+    "The offline producer is deterministic and has structural access to scenario state; it is not a frontier language model.",
+    "Expected labels are retained by the evaluator only and are not passed to produce()."
+  ],
+  "prompt_hash": "90122756e53e5b2b125ace9775b464c81f122bfb08bfdc7c9100640e74fee90c",
+  "runs": 12,
+  "schema_valid": 12,
+  "operation_correct": 9,
+  "identifier_correct": 8,
+  "post_state_correct": 8,
+  "strict_failures": [
+    "K2",
+    "S1",
+    "A2",
+    "T2"
+  ]
+}
