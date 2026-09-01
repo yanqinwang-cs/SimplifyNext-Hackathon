@@ -88,5 +88,5 @@ def summarize_trajectories(scenarios: list[StewardScenario], max_steps: int = 6)
         "no_progress_loop": sum("NO_PROGRESS_LOOP" in item.failures for item in outcomes),
         "oscillation": sum("OSCILLATION" in item.failures for item in outcomes),
         "steps": [len(item.steps) for item in outcomes],
-        "details": [{"scenario_id": scenario.scenario_id, "steps": item.steps, "failures": item.failures, "termination": item.termination} for scenario, item in zip(scenarios, outcomes)],
+        "details": [{"scenario_id": scenario.scenario_id, "operations": [step["operation"] for step in item.steps], "failures": item.failures, "termination": item.termination} for scenario, item in zip(scenarios, outcomes)],
     }
