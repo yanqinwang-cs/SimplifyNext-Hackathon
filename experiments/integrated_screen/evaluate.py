@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class TrajectoryRequirements(BaseModel):
@@ -15,6 +15,12 @@ class TrajectoryRequirements(BaseModel):
     require_stop_unresolved: bool = False
     require_trusted_exhaustion_for_stop: bool = True
     qualitative_checks: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def material_change_has_release_anchor(self) -> "TrajectoryRequirements":
+        if self.require_material_graph_change_after_release and not self.required_release_ids:
+            raise ValueError("material graph change requires at least one required release ID")
+        return self
 
 
 HARD_FAILURE_PREFIXES = ("FAIL /",)
@@ -37,12 +43,24 @@ def evaluate_trajectory(result: dict[str, Any], requirements: TrajectoryRequirem
     for identifier in requirements.required_action_ids:
         if identifier not in actions: failures.append(f"required action missing: {identifier}")
     for release_id, forbidden in requirements.forbidden_actions_after_release.items():
-        released = False
-        for trace in traces:
-            if released and set(trace.get("completed_action_ids", [])) & set(forbidden): failures.append(f"forbidden action executed after release: {release_id}")
-            if release_id in {item["id"] for item in (trace.get("environment_release") or [])}: released = True
+        anchor = next((index for index, trace in enumerate(traces) if release_id in {item["id"] for item in (trace.get("environment_release") or [])}), None)
+        if anchor is not None:
+            for trace in traces[anchor + 1:]:
+                if trace.get("executed_action_id") in forbidden:
+                    failures.append(f"forbidden action executed after release: {release_id}")
     for identifier in requirements.required_visible_evidence_ids:
         if identifier not in visible: failures.append(f"released evidence was not visible in an Investigator observation: {identifier}")
+    if requirements.require_material_graph_change_after_release:
+        anchors = [index for index, trace in enumerate(traces) if any(item["id"] in requirements.required_release_ids for item in (trace.get("environment_release") or []))]
+        if anchors:
+            anchor = anchors[0]
+            changed = any(
+                trace.get("actor") in {"investigator", "steward"}
+                and (trace.get("graph_fingerprint_before") != trace.get("graph_fingerprint_after") or trace.get("focus_before") != trace.get("focus_after") or any(trace.get("graph_delta", {}).get(key) for key in ("added_node_ids", "added_edge_ids", "removed_edge_ids", "node_status_changes")))
+                for trace in traces[anchor + 1:]
+            )
+            if not changed:
+                failures.append("no material graph or focus change occurred after required release")
     if requirements.require_stop_unresolved and result.get("termination") != "STOP_UNRESOLVED": failures.append("STOP_UNRESOLVED was not reached")
     if requirements.require_stop_unresolved and requirements.require_trusted_exhaustion_for_stop:
         stop_contexts = [trace for trace in traces if trace.get("actor") == "steward" and trace.get("steward_decision", {}).get("operation") == "stop_unresolved"]

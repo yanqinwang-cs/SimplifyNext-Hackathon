@@ -77,7 +77,7 @@ def run_trajectory(
     termination = None
 
     def trace_base(step: int, actor: str, before: str, before_graph: dict[str, Any]) -> dict[str, Any]:
-        return {"step": step, "actor": actor, "focus_before": coordinator.focus.node_id, "graph_fingerprint_before": before, "available_action_ids_before": [a.action_id for a in environment.current_available_enquiries()], "materially_usable_action_ids_before": environment.materially_usable_action_ids(), "recently_released_evidence_ids": [], "visible_released_evidence_ids": [], "raw_model_output": None, "parsed_response": None, "graph_delta": {}, "enquiry_requested": None, "environment_release": None, "completed_action_ids": sorted(environment.completed_action_ids), "steward_decision": None, "focus_after": None, "graph_fingerprint_after": None, "available_action_ids_after": None, "materially_usable_action_ids_after": None, "input_tokens": None, "output_tokens": None, "latency_seconds": None, "failure_category": None, "error": None, "_graph_before": before_graph}
+        return {"step": step, "actor": actor, "focus_before": coordinator.focus.node_id, "graph_fingerprint_before": before, "available_action_ids_before": [a.action_id for a in environment.current_available_enquiries()], "materially_usable_action_ids_before": environment.materially_usable_action_ids(), "recently_released_evidence_ids": [], "visible_released_evidence_ids": [], "raw_model_output": None, "parsed_response": None, "graph_delta": {}, "enquiry_requested": None, "environment_release": None, "executed_action_id": None, "completed_action_ids": sorted(environment.completed_action_ids), "steward_decision": None, "focus_after": None, "graph_fingerprint_after": None, "available_action_ids_after": None, "materially_usable_action_ids_after": None, "input_tokens": None, "output_tokens": None, "latency_seconds": None, "failure_category": None, "error": None, "_graph_before": before_graph}
 
     for step in range(1, max_steps + 1):
         if coordinator.cycle.status is CycleStatus.STOPPED:
@@ -91,6 +91,7 @@ def run_trajectory(
             action_id = coordinator.cycle.in_flight_enquiry.action_id
             try:
                 release = environment.execute_enquiry(action_id)
+                trace["executed_action_id"] = action_id
                 coordinator.complete_enquiry_with_evidence(action_id, release.evidence)
                 coordinator.set_available_enquiries(environment.current_available_enquiries())
                 trace["environment_release"] = [node.model_dump(mode="json") for node in release.evidence]
@@ -168,7 +169,7 @@ def run_trajectory(
     if termination is None:
         termination = "QUIESCENT"
     result = {"fixture_id": fixture.fixture_id, "termination": termination, "model_calls": model_calls, "completed_action_ids": sorted(environment.completed_action_ids), "traces": traces, "final_graph": coordinator.graph.model_dump(mode="json"), "final_graph_fingerprint": _graph_hash(coordinator), "final_focus": coordinator.focus.model_dump(mode="json"), "final_environment": {"available_action_ids": [a.action_id for a in environment.current_available_enquiries()], "materially_usable_action_ids": environment.materially_usable_action_ids(), "completed_action_ids": sorted(environment.completed_action_ids)}}
-    result["evaluation"] = evaluate_trajectory(result)
+    result["evaluation"] = evaluate_trajectory(result, fixture.requirements)
     return result
 
 

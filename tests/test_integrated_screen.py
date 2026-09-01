@@ -4,8 +4,8 @@ from copy import deepcopy
 
 import pytest
 
-from experiments.integrated_screen.environment import Stage1Environment
-from experiments.integrated_screen.fixtures import all_fixtures, fixture_map
+from experiments.integrated_screen.environment import EvidenceRelease, Stage1Environment
+from experiments.integrated_screen.fixtures import Stage1Fixture, all_fixtures, fixture_map
 from experiments.integrated_screen.evaluate import TrajectoryRequirements, evaluate_trajectory
 from experiments.integrated_screen.runner import _graph_delta, dry_run, live_review_context, run_trajectory
 from experiments.integrated_screen.prompt import build_investigator_prompt
@@ -18,6 +18,15 @@ def test_all_stage1_fixtures_validate_and_dry_run_is_offline(monkeypatch):
     assert [fixture.fixture_id for fixture in all_fixtures()] == ["C1", "C2", "C3", "C4"]
     monkeypatch.setattr("experiments.integrated_screen.runner.BedrockModelClient", lambda **_: pytest.fail("AWS client constructed in dry-run"))
     assert dry_run()["model_calls"] == 0
+
+
+def test_fixture_requirements_are_typed():
+    assert all(isinstance(fixture.requirements, TrajectoryRequirements) for fixture in all_fixtures())
+
+
+def test_material_change_requirement_requires_a_release_anchor():
+    with pytest.raises(ValueError, match="requires at least one required release"):
+        TrajectoryRequirements(require_material_graph_change_after_release=True)
 
 
 def test_environment_releases_evidence_and_refreshes_actions():
@@ -89,6 +98,26 @@ def test_stop_evaluator_requires_exhaustion_and_passes_declared_mechanical_requi
     assert result["outcome"] == "PASS"
     failed = evaluate_trajectory({**base, "traces": [{**base["traces"][0], "materially_usable_action_ids_after": ["A2"]}]}, TrajectoryRequirements(require_stop_unresolved=True))
     assert failed["outcome"] == "FAIL"
+
+
+def test_forbidden_action_is_evaluated_by_execution_time_not_cumulative_state():
+    def check(traces):
+        return evaluate_trajectory({"termination": "STOP_UNRESOLVED", "completed_action_ids": ["A1"], "traces": traces}, TrajectoryRequirements(forbidden_actions_after_release={"E3": ["A1"]}))
+    before = check([{"executed_action_id": "A1", "environment_release": []}, {"executed_action_id": None, "environment_release": [{"id": "E3"}], "materially_usable_action_ids_after": []}])
+    after = check([{"executed_action_id": None, "environment_release": [{"id": "E3"}], "materially_usable_action_ids_after": []}, {"executed_action_id": "A1", "environment_release": []}])
+    never = check([{"executed_action_id": None, "environment_release": [{"id": "E3"}], "materially_usable_action_ids_after": []}])
+    assert before["outcome"] == never["outcome"] == "PASS"
+    assert after["outcome"] == "FAIL"
+
+
+def test_material_change_must_happen_after_release():
+    requirements = TrajectoryRequirements(required_release_ids=["E2"], require_material_graph_change_after_release=True)
+    release = {"actor": "environment", "environment_release": [{"id": "E2"}], "executed_action_id": "A1", "graph_fingerprint_before": "a", "graph_fingerprint_after": "b"}
+    changed = {"actor": "investigator", "environment_release": [], "executed_action_id": None, "graph_fingerprint_before": "b", "graph_fingerprint_after": "c", "graph_delta": {}}
+    unchanged = {"actor": "investigator", "environment_release": [], "executed_action_id": None, "graph_fingerprint_before": "b", "graph_fingerprint_after": "b", "graph_delta": {}}
+    assert evaluate_trajectory({"termination": "STOP_UNRESOLVED", "traces": [release, changed]}, requirements)["outcome"] == "PASS"
+    assert evaluate_trajectory({"termination": "STOP_UNRESOLVED", "traces": [release, unchanged]}, requirements)["outcome"] == "FAIL"
+    assert evaluate_trajectory({"termination": "STOP_UNRESOLVED", "traces": [changed, release]}, requirements)["outcome"] == "FAIL"
 
 
 def test_graph_delta_captures_nodes_edges_and_status_changes():
