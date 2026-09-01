@@ -412,6 +412,12 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         empty["hypotheses"] = []
         result.append(Mutation("empty_hypotheses", "S1", json.dumps(empty, sort_keys=True)))
     if contract == "InitialExpansionResponse":
+        seed_blank = copy.deepcopy(value)
+        seed_blank["seed_analysis"]["unresolved"] = [""]
+        result.append(Mutation("empty_seed_analysis_unresolved", "S4", json.dumps(seed_blank, sort_keys=True)))
+        seed_wrong_namespace = copy.deepcopy(value)
+        seed_wrong_namespace["seed_analysis"]["supported_by"] = ["H1"]
+        result.append(Mutation("wrong_namespace_seed_analysis_evidence", "S2", json.dumps(seed_wrong_namespace, sort_keys=True)))
         empty_statement = copy.deepcopy(value)
         empty_statement["competing_hypotheses"][0]["statement"] = ""
         result.append(Mutation("empty_expansion_statement", "S4", json.dumps(empty_statement, sort_keys=True)))

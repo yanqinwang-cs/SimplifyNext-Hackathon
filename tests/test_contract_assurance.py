@@ -304,7 +304,7 @@ def test_contract_mutations_cover_nested_shape_and_cross_field_rules():
         "selected_action_id": "A1", "target_uncertainty": "Question", "expected_information_value": "Value", "why_this_action_now": "Reason",
     }
     names = {item.name for item in mutations(expansion, required_fields=("competing_hypotheses",), contract="InitialExpansionResponse")}
-    assert {"unexpected_nested_competing_hypotheses", "empty_required_competing_hypotheses", "competing_root_with_parent"} <= names
+    assert {"unexpected_nested_competing_hypotheses", "empty_required_competing_hypotheses", "competing_root_with_parent", "empty_seed_analysis_unresolved", "wrong_namespace_seed_analysis_evidence"} <= names
 
 
 def test_id_array_mutations_generate_wrong_namespace_challenges():
