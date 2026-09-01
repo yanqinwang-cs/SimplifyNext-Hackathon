@@ -77,8 +77,10 @@ def test_all_case_execution_creates_result_files_and_does_not_overwrite(tmp_path
         f"case_0{i}.json" for i in range(1, 6)
     ]
     assert (output_dir / "run_summary.json").is_file()
-    with pytest.raises(FileExistsError):
-        run("test-model", None, tmp_path, client=FakeClient([model_result() for _ in CASES]))
+    second_output_dir = run("test-model-2", None, tmp_path, client=FakeClient([model_result() for _ in CASES]))
+    assert second_output_dir != output_dir
+    assert (output_dir / "run_summary.json").is_file()
+    assert (second_output_dir / "run_summary.json").is_file()
 
 
 def test_api_error_is_recorded_without_retry() -> None:
