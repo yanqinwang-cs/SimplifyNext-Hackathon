@@ -482,6 +482,8 @@ def test_generated_results_and_secrets_are_gitignored():
 
 def test_all_committed_public_packages_match_registered_contracts():
     packages = Path(__file__).resolve().parents[1] / "experiments/contract_assurance/blind/packages"
+    snapshots = Path(__file__).resolve().parents[1] / "experiments/contract_assurance/snapshots"
+    assert (snapshots / "README.md").exists()
     registry = contract_registry()
     for path in packages.glob("*.json"):
         payload = json.loads(path.read_text())
