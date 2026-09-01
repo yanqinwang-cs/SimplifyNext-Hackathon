@@ -3,128 +3,96 @@
   "step_cap": 4,
   "terminated_stopped": 1,
   "terminated_clear_failure": 0,
-  "terminated_step_cap": 11,
+  "terminated_step_cap": 0,
   "illegal_operation": 0,
-  "no_progress_loop": 11,
+  "no_progress_loop": 0,
   "oscillation": 0,
   "steps": [
-    4,
-    4,
-    4,
-    4,
-    4,
-    4,
-    4,
-    4,
-    4,
-    4,
     1,
-    4
+    2,
+    1,
+    3,
+    2,
+    3,
+    2,
+    2,
+    4,
+    2,
+    1,
+    1
   ],
   "details": [
     {
       "scenario_id": "K1",
       "operations": [
-        "keep_focus",
-        "keep_focus",
-        "keep_focus",
         "keep_focus"
       ],
-      "failures": [
-        "NO_PROGRESS_LOOP"
-      ],
-      "termination": "step_cap"
+      "failures": [],
+      "termination": "quiescent"
     },
     {
       "scenario_id": "K2",
       "operations": [
         "generalize",
-        "keep_focus",
-        "keep_focus",
         "keep_focus"
       ],
-      "failures": [
-        "NO_PROGRESS_LOOP"
-      ],
-      "termination": "step_cap"
+      "failures": [],
+      "termination": "quiescent"
     },
     {
       "scenario_id": "S1",
       "operations": [
-        "keep_focus",
-        "keep_focus",
-        "keep_focus",
         "keep_focus"
       ],
-      "failures": [
-        "NO_PROGRESS_LOOP"
-      ],
-      "termination": "step_cap"
+      "failures": [],
+      "termination": "quiescent"
     },
     {
       "scenario_id": "S2",
       "operations": [
         "shift_focus",
         "archive",
-        "keep_focus",
         "keep_focus"
       ],
-      "failures": [
-        "NO_PROGRESS_LOOP"
-      ],
-      "termination": "step_cap"
+      "failures": [],
+      "termination": "quiescent"
     },
     {
       "scenario_id": "G1",
       "operations": [
         "generalize",
-        "keep_focus",
-        "keep_focus",
         "keep_focus"
       ],
-      "failures": [
-        "NO_PROGRESS_LOOP"
-      ],
-      "termination": "step_cap"
+      "failures": [],
+      "termination": "quiescent"
     },
     {
       "scenario_id": "G2",
       "operations": [
         "generalize",
         "generalize",
-        "keep_focus",
         "keep_focus"
       ],
-      "failures": [
-        "NO_PROGRESS_LOOP"
-      ],
-      "termination": "step_cap"
+      "failures": [],
+      "termination": "quiescent"
     },
     {
       "scenario_id": "A1",
       "operations": [
         "archive",
-        "keep_focus",
-        "keep_focus",
         "keep_focus"
       ],
-      "failures": [
-        "NO_PROGRESS_LOOP"
-      ],
-      "termination": "step_cap"
+      "failures": [],
+      "termination": "quiescent"
     },
     {
       "scenario_id": "A2",
       "operations": [
         "archive",
-        "keep_focus",
-        "keep_focus",
         "keep_focus"
       ],
-      "failures": [
-        "NO_PROGRESS_LOOP"
-      ],
-      "termination": "step_cap"
+      "failures": [],
+      "termination": "quiescent"
     },
     {
       "scenario_id": "R1",
@@ -134,23 +102,17 @@
         "archive",
         "keep_focus"
       ],
-      "failures": [
-        "NO_PROGRESS_LOOP"
-      ],
-      "termination": "step_cap"
+      "failures": [],
+      "termination": "quiescent"
     },
     {
       "scenario_id": "R2",
       "operations": [
         "reactivate",
-        "keep_focus",
-        "keep_focus",
         "keep_focus"
       ],
-      "failures": [
-        "NO_PROGRESS_LOOP"
-      ],
-      "termination": "step_cap"
+      "failures": [],
+      "termination": "quiescent"
     },
     {
       "scenario_id": "T1",
@@ -163,15 +125,10 @@
     {
       "scenario_id": "T2",
       "operations": [
-        "keep_focus",
-        "keep_focus",
-        "keep_focus",
         "keep_focus"
       ],
-      "failures": [
-        "NO_PROGRESS_LOOP"
-      ],
-      "termination": "step_cap"
+      "failures": [],
+      "termination": "quiescent"
     }
   ]
 }

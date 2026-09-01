@@ -5,6 +5,7 @@ from copy import deepcopy
 
 from pydantic import TypeAdapter
 
+from investigator.graph import EdgeRelation, GraphStatus
 from investigator.roles import GraphInvestigationCoordinator, StewardDecision
 
 from experiments.steward_screen.luna import produce
@@ -37,6 +38,16 @@ def _fingerprint(coordinator: GraphInvestigationCoordinator) -> tuple:
     return (coordinator.focus.node_id, tuple(sorted((node.id, node.status.value) for node in coordinator.graph.nodes.values())), coordinator.stopped)
 
 
+def _useful_frontier_remains(coordinator: GraphInvestigationCoordinator) -> bool:
+    graph = coordinator.graph
+    focus = coordinator.focus.node_id
+    if any(node.status is GraphStatus.ARCHIVED and any(edge.source_id == node.id or edge.target_id == node.id for edge in graph.edges.values()) for node in graph.nodes.values()):
+        return True
+    if any(node.id != focus and node.status is GraphStatus.ACTIVE and not any(edge.source_id == node.id or edge.target_id == node.id for edge in graph.edges.values()) for node in graph.nodes.values()):
+        return True
+    return any(edge.source_id == focus and edge.relation is EdgeRelation.SPECIALIZES and graph.nodes[edge.target_id].status is GraphStatus.ACTIVE for edge in graph.edges.values())
+
+
 def run_trajectory(scenario: StewardScenario, max_steps: int = 6) -> TrajectoryResult:
     """Apply one legal-or-illegal Luna decision at a time and reassess state."""
     coordinator = GraphInvestigationCoordinator(deepcopy(scenario.graph), scenario.focus.model_copy(deep=True))
@@ -67,6 +78,9 @@ def run_trajectory(scenario: StewardScenario, max_steps: int = 6) -> TrajectoryR
             result.termination = "stopped"
             break
         if after == before:
+            if decision.operation == "keep_focus" and not _useful_frontier_remains(coordinator):
+                result.termination = "quiescent"
+                break
             if "NO_PROGRESS_LOOP" not in result.failures:
                 result.failures.append("NO_PROGRESS_LOOP")
         elif after in seen and "OSCILLATION" not in result.failures:

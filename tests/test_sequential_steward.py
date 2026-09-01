@@ -8,11 +8,16 @@ def test_sequential_runner_emits_one_operation_and_recomputes_state() -> None:
     assert all("operation" in step and "before" in step and "after" in step for step in result.steps)
 
 
-def test_sequential_runner_has_step_cap_and_detects_stale_keep() -> None:
+def test_sequential_runner_respects_step_cap() -> None:
     result = run_trajectory(all_scenarios()[0], max_steps=2)
     assert len(result.steps) <= 2
-    assert result.termination == "step_cap"
-    assert "NO_PROGRESS_LOOP" in result.failures
+    assert result.termination in {"quiescent", "step_cap"}
+
+
+def test_justified_keep_terminates_quiescently_when_no_frontier_remains() -> None:
+    result = run_trajectory(all_scenarios()[0], max_steps=2)
+    assert result.termination == "quiescent"
+    assert "NO_PROGRESS_LOOP" not in result.failures
 
 
 def test_expanded_cases_remain_unique_for_sequential_input() -> None:
@@ -30,5 +35,6 @@ def test_multiple_valid_case_accepts_any_declared_legal_first_move() -> None:
 def test_trajectory_summary_reports_progress_failures_separately() -> None:
     summary = summarize_trajectories(all_scenarios()[:2], max_steps=2)
     assert summary["scenarios"] == 2
-    assert summary["no_progress_loop"] >= 1
+    assert summary["no_progress_loop"] == 0
+    assert summary["terminated_step_cap"] == 0
     assert len(summary["details"]) == 2
