@@ -1,6 +1,6 @@
 {
   "blind_compliance": {
-    "batches": 19,
+    "batches": 17,
     "by_contract": {
       "InitialExpansionResponse": {
         "accepted": 1,
@@ -42,14 +42,6 @@
         "qualified": 2,
         "rejected": 3
       },
-      "RevisionResponse": {
-        "accepted": 1,
-        "batches": 2,
-        "evaluations": 2,
-        "excluded_not_blind": 0,
-        "qualified": 2,
-        "rejected": 1
-      },
       "SmokeResponse": {
         "accepted": 3,
         "batches": 4,
@@ -62,23 +54,23 @@
     "by_role": {
       "adversary": {
         "accepted": 1,
-        "batches": 11,
-        "evaluations": 9,
+        "batches": 10,
+        "evaluations": 8,
         "excluded_not_blind": 4,
-        "qualified": 7,
-        "rejected": 8
+        "qualified": 6,
+        "rejected": 7
       },
       "producer": {
-        "accepted": 8,
-        "batches": 10,
-        "evaluations": 9,
+        "accepted": 7,
+        "batches": 9,
+        "evaluations": 8,
         "excluded_not_blind": 3,
-        "qualified": 7,
+        "qualified": 6,
         "rejected": 1
       }
     },
     "excluded_not_blind": 5,
-    "qualified_batches": 14,
+    "qualified_batches": 12,
     "status": "NOT_BLIND"
   },
   "blind_results_included": false,
@@ -312,7 +304,7 @@
       "total": 28
     }
   },
-  "generated_at": "2026-09-01T00:20:58.458862+00:00",
+  "generated_at": "2026-09-01T00:20:21.390870+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [

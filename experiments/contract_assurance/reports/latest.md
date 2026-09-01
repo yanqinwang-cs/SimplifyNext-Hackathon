@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T00:19:10.647726+00:00
+- Generated: 2026-09-01T00:20:58.458862+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -25,22 +25,24 @@
 ## Blind compliance
 
 - Status: `NOT_BLIND`
-- Batches: 15
-- Qualified batches: 10
+- Batches: 19
+- Qualified batches: 14
 - Excluded as NOT_BLIND: 5
 
 | Blind contract | Batches | Qualified | Excluded |
 | --- | ---: | ---: | ---: |
 | `InitialExpansionResponse` | 4 | 2 | 2 |
 | `InitialResponse` | 2 | 2 | 0 |
+| `ModelScreenHypothesisResponse` | 2 | 2 | 0 |
 | `NextActionResponse` | 2 | 2 | 0 |
 | `NextStepResponse` | 3 | 2 | 1 |
+| `RevisionResponse` | 2 | 2 | 0 |
 | `SmokeResponse` | 4 | 2 | 2 |
 
 | Blind role | Batches | Evaluations | Accepted | Rejected |
 | --- | ---: | ---: | ---: | ---: |
-| `adversary` | 9 | 7 | 1 | 6 |
-| `producer` | 8 | 7 | 6 | 1 |
+| `adversary` | 11 | 9 | 1 | 8 |
+| `producer` | 10 | 9 | 8 | 1 |
 
 ## Assurance limitations
 
