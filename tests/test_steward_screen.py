@@ -83,3 +83,58 @@ def test_steward_prompt_exposes_exact_zero_shot_output_contract() -> None:
     assert "<OUTPUT_EXAMPLE>" not in prompt
     for identifier in ("P1", "H1", "E1", "U1", "PERSON1", "R1.1"):
         assert f"{{{{{identifier}}}}}" not in prompt
+
+
+def test_steward_prompt_defines_each_operation_with_four_constraints() -> None:
+    prompt = build_prompt(all_scenarios()[0])
+    operations = prompt.split("<STEWARD_OPERATIONS>\n", 1)[1].split("\n</STEWARD_OPERATIONS>", 1)[0]
+    for marker in ("PRECONDITION:", "ACTION:", "POSTCONDITION:", "VALIDATE:"):
+        assert operations.count(marker) == 6
+    assert "no other global graph-management operation is warranted" in operations
+    assert "specific CHILD being generalized FROM" in operations
+    assert "non-focus target is archived and focus is unchanged" in operations
+    assert "target_node_id exists, is ARCHIVED" in operations
+    assert "Trusted external review context permits stopping" in operations
+
+
+def test_case_only_operation_error_is_diagnostic_only() -> None:
+    scenario = next(item for item in all_scenarios() if item.scenario_id == "S1")
+    payload = decision_payload(scenario)
+    payload["operation"] = "SHIFT_FOCUS"
+    result = evaluate_result("mock", "mock", scenario, 1, "prompt", fake_result(payload))
+    assert not result.schema_valid
+    assert result.schema_failure_code == "F2_INVALID_OPERATION_ENUM"
+    assert result.schema_recoverable
+    assert result.diagnostic_operation == "shift_focus"
+    assert result.diagnostic_destination_node_id == "P1"
+    assert result.diagnostic_decision_correct
+    assert not result.coordinator_accepted and not result.post_state_correct
+
+
+def test_diagnostics_do_not_correct_semantic_identifiers_or_operations() -> None:
+    generalize = next(item for item in all_scenarios() if item.scenario_id == "G1")
+    wrong_target = decision_payload(generalize)
+    wrong_target["target_node_id"] = "H1"
+    result = evaluate_result("mock", "mock", generalize, 1, "prompt", fake_result(wrong_target))
+    assert result.schema_valid and result.operation_correct
+    assert not result.identifier_correct
+    assert result.diagnostic_target_node_id == "H1"
+    assert not result.diagnostic_decision_correct
+
+    reactivate = next(item for item in all_scenarios() if item.scenario_id == "R1")
+    wrong_operation = decision_payload(reactivate)
+    wrong_operation["operation"] = "shift_focus"
+    wrong_operation.pop("target_node_id")
+    wrong_operation["destination_node_id"] = "H2"
+    result = evaluate_result("mock", "mock", reactivate, 1, "prompt", fake_result(wrong_operation))
+    assert result.schema_valid and not result.operation_correct
+    assert not result.coordinator_accepted
+    assert result.diagnostic_operation == "shift_focus"
+
+    archive = next(item for item in all_scenarios() if item.scenario_id == "A1")
+    keep = decision_payload(archive)
+    keep["operation"] = "keep_focus"
+    keep.pop("target_node_id", None)
+    result = evaluate_result("mock", "mock", archive, 1, "prompt", fake_result(keep))
+    assert result.schema_valid and not result.operation_correct
+    assert result.diagnostic_operation == "keep_focus"
