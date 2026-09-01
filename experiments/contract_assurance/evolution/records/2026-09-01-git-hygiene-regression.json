@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-022",
+  "contract": "Repository hygiene",
+  "discovery_source": "initial-deliverables gitignore audit",
+  "baseline_failure": {"raw_output": "generated-results ignore rules had no executable regression test", "observed_code": "unverified hygiene", "intended_code": "verified ignore rules"},
+  "classification": "S4",
+  "legitimate_semantic_need": "Generated outputs and environment secrets must not enter assurance commits.",
+  "why_existing_contract_insufficient": "The required .gitignore entries existed but could regress without a test.",
+  "implementation_change": "Add a git check-ignore regression for assurance results, runs, and .env files.",
+  "tests_added": ["generated results are ignored", "runs and .env are ignored"],
+  "expected_reclassifications": ["unverified hygiene -> verified ignore rules"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [428, 428], "unexpected_outcomes": [0, 0]},
+  "commit": "a1f45bd"
+}
