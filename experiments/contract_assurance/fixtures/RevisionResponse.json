@@ -235,6 +235,11 @@
     },
     {
       "intended_code": "S2",
+      "name": "wrong_namespace_and_supported_transition",
+      "raw_output": "{\"hypothesis_updates\": [{\"hypothesis_id\": \"E1\", \"reason\": \"The evidence does not change this hypothesis.\", \"transition\": \"keep\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S2",
       "name": "unsupported_hypothesis_transition",
       "raw_output": "{\"hypothesis_updates\": [{\"hypothesis_id\": \"H1\", \"reason\": \"The current evidence lowers priority.\", \"transition\": \"deprioritize\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },

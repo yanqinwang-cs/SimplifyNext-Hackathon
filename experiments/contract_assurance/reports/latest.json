@@ -173,6 +173,7 @@
     "InitialExpansionResponse|S1|schema|1 validation error for InitialExpansionResponse": 25,
     "InitialExpansionResponse|S1|schema|7 validation errors for InitialExpansionResponse": 1,
     "InitialExpansionResponse|S2|schema|1 validation error for InitialExpansionResponse": 19,
+    "InitialExpansionResponse|S2|schema|2 validation errors for InitialExpansionResponse": 1,
     "InitialExpansionResponse|S3|availability|Action is not currently available: 'A2'": 1,
     "InitialExpansionResponse|S3|state_operation_preflight|Unknown competing hypothesis ID: 'H999'": 1,
     "InitialExpansionResponse|S3|state_operation_preflight|Unknown evidence ID: 'E999'": 1,
@@ -192,6 +193,7 @@
     "InitialResponse|S1|schema|1 validation error for InitialResponse": 18,
     "InitialResponse|S1|schema|6 validation errors for InitialResponse": 1,
     "InitialResponse|S2|schema|1 validation error for InitialResponse": 11,
+    "InitialResponse|S2|schema|2 validation errors for InitialResponse": 1,
     "InitialResponse|S3|availability|Action is not currently available: 'A2'": 1,
     "InitialResponse|S3|state_operation_preflight|1 validation error for CaseState": 2,
     "InitialResponse|S4|schema|1 validation error for InitialResponse": 8,
@@ -251,7 +253,7 @@
     "RevisionResponse|S0|serialization|top-level JSON value must be an object": 4,
     "RevisionResponse|S1|schema|1 validation error for RevisionResponse": 25,
     "RevisionResponse|S1|schema|2 validation errors for RevisionResponse": 1,
-    "RevisionResponse|S2|schema|1 validation error for RevisionResponse": 9,
+    "RevisionResponse|S2|schema|1 validation error for RevisionResponse": 10,
     "RevisionResponse|S3|operation_preflight|\"Unknown evidence ID: 'A1_RELEASE'\"": 1,
     "RevisionResponse|S3|operation_preflight|\"Unknown evidence ID: 'A2_RELEASE'\"": 1,
     "RevisionResponse|S3|operation_preflight|\"Unknown evidence ID: 'A3_RELEASE'\"": 1,
@@ -283,21 +285,21 @@
     "failure_codes": {
       "S0": 140,
       "S1": 112,
-      "S2": 56,
+      "S2": 59,
       "S3": 22,
       "S4": 77
     },
-    "rejected": 407,
+    "rejected": 410,
     "s5_candidates": 0,
     "s6_limitations": 0,
     "stage_counts": {
       "availability": 3,
       "operation_preflight": 18,
-      "schema": 258,
+      "schema": 261,
       "serialization": 140,
       "state_operation_preflight": 9
     },
-    "total": 428,
+    "total": 431,
     "unexpected_accepts": 0,
     "unexpected_rejects": 0
   },
@@ -307,40 +309,40 @@
       "failure_codes": {
         "S0": 20,
         "S1": 26,
-        "S2": 19,
+        "S2": 20,
         "S3": 4,
         "S4": 16
       },
-      "rejected": 85,
+      "rejected": 86,
       "s5_candidates": 0,
       "s6_limitations": 0,
       "stage_counts": {
         "availability": 1,
-        "schema": 62,
+        "schema": 63,
         "serialization": 20,
         "state_operation_preflight": 4
       },
-      "total": 87
+      "total": 88
     },
     "InitialResponse": {
       "accepted": 1,
       "failure_codes": {
         "S0": 20,
         "S1": 19,
-        "S2": 11,
+        "S2": 12,
         "S3": 3,
         "S4": 11
       },
-      "rejected": 64,
+      "rejected": 65,
       "s5_candidates": 0,
       "s6_limitations": 0,
       "stage_counts": {
         "availability": 1,
-        "schema": 39,
+        "schema": 40,
         "serialization": 20,
         "state_operation_preflight": 5
       },
-      "total": 65
+      "total": 66
     },
     "ModelScreenHypothesisResponse": {
       "accepted": 2,
@@ -399,19 +401,19 @@
       "failure_codes": {
         "S0": 20,
         "S1": 26,
-        "S2": 9,
+        "S2": 10,
         "S3": 14,
         "S4": 28
       },
-      "rejected": 97,
+      "rejected": 98,
       "s5_candidates": 0,
       "s6_limitations": 0,
       "stage_counts": {
         "operation_preflight": 18,
-        "schema": 70,
+        "schema": 71,
         "serialization": 20
       },
-      "total": 108
+      "total": 109
     },
     "SmokeResponse": {
       "accepted": 1,
@@ -431,8 +433,8 @@
     }
   },
   "deterministic_correctness": {
-    "invalid_fixtures": 407,
-    "invalid_rejected": 407,
+    "invalid_fixtures": 410,
+    "invalid_rejected": 410,
     "invalid_rejection_rate": 1.0,
     "valid_accepted": 21,
     "valid_fixtures": 21,
@@ -440,16 +442,16 @@
   },
   "deterministic_correctness_by_contract": {
     "InitialExpansionResponse": {
-      "invalid_fixtures": 85,
-      "invalid_rejected": 85,
+      "invalid_fixtures": 86,
+      "invalid_rejected": 86,
       "invalid_rejection_rate": 1.0,
       "valid_accepted": 2,
       "valid_fixtures": 2,
       "valid_pass_rate": 1.0
     },
     "InitialResponse": {
-      "invalid_fixtures": 64,
-      "invalid_rejected": 64,
+      "invalid_fixtures": 65,
+      "invalid_rejected": 65,
       "invalid_rejection_rate": 1.0,
       "valid_accepted": 1,
       "valid_fixtures": 1,
@@ -480,8 +482,8 @@
       "valid_pass_rate": 1.0
     },
     "RevisionResponse": {
-      "invalid_fixtures": 97,
-      "invalid_rejected": 97,
+      "invalid_fixtures": 98,
+      "invalid_rejected": 98,
       "invalid_rejection_rate": 1.0,
       "valid_accepted": 11,
       "valid_fixtures": 11,
@@ -498,12 +500,12 @@
   },
   "deterministic_failure_rate": {
     "confidence": 0.95,
-    "failures": 407,
-    "observed_failure_rate": 0.9509345794392523,
-    "total": 428,
-    "upper_failure_rate": 0.9676873921473405
+    "failures": 410,
+    "observed_failure_rate": 0.951276102088167,
+    "total": 431,
+    "upper_failure_rate": 0.9679138516351051
   },
-  "generated_at": "2026-09-01T01:46:43.107916+00:00",
+  "generated_at": "2026-09-01T01:48:08.397450+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -809,7 +811,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "bb3cbcd",
+    "git_commit": "working-tree",
     "unregistered_response_classes": []
   },
   "prompt_lint": {

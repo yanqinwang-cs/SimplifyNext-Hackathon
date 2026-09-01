@@ -253,6 +253,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         mismatch["competing_hypotheses"][0]["parent_id"] = "H1"
         result.append(Mutation("competing_root_with_parent", "S4", json.dumps(mismatch, sort_keys=True)))
     if contract == "RevisionResponse":
+        namespace_and_transition = copy.deepcopy(value)
+        namespace_and_transition["hypothesis_updates"] = [{"hypothesis_id": "E1", "transition": "keep", "reason": "The evidence does not change this hypothesis."}]
+        result.append(Mutation("wrong_namespace_and_supported_transition", "S2", json.dumps(namespace_and_transition, sort_keys=True)))
         unsupported_hypothesis_transition = copy.deepcopy(value)
         unsupported_hypothesis_transition["hypothesis_updates"] = [{"hypothesis_id": "H1", "transition": "deprioritize", "reason": "The current evidence lowers priority."}]
         result.append(Mutation("unsupported_hypothesis_transition", "S2", json.dumps(unsupported_hypothesis_transition, sort_keys=True)))
@@ -493,6 +496,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         unsupported = copy.deepcopy(value)
         unsupported["competing_hypotheses"][0]["relationship"] = "related"
         result.append(Mutation("unsupported_relationship", "S2", json.dumps(unsupported, sort_keys=True)))
+        namespace_and_relationship = copy.deepcopy(value)
+        namespace_and_relationship["competing_hypotheses"][0].update({"relationship": "related", "contrasted_hypothesis_id": "E1"})
+        result.append(Mutation("wrong_namespace_and_relationship", "S2", json.dumps(namespace_and_relationship, sort_keys=True)))
         inactive = copy.deepcopy(value)
         inactive["competing_hypotheses"][0]["status"] = "weakened"
         result.append(Mutation("non_active_status", "S2", json.dumps(inactive, sort_keys=True)))
@@ -580,6 +586,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
             wrong_namespace = copy.deepcopy(value)
             wrong_namespace["hypotheses"][0][field] = ["H1"]
             result.append(Mutation(f"wrong_namespace_initial_{field}", "S2", json.dumps(wrong_namespace, sort_keys=True)))
+        namespace_and_status = copy.deepcopy(value)
+        namespace_and_status["hypotheses"][0].update({"supported_by": ["H1"], "status": "weakened"})
+        result.append(Mutation("wrong_namespace_and_status", "S2", json.dumps(namespace_and_status, sort_keys=True)))
         unknown_parent = copy.deepcopy(value)
         unknown_parent["hypotheses"][0]["parent_id"] = "H999"
         result.append(Mutation("unknown_initial_parent_hypothesis", "S3", json.dumps(unknown_parent, sort_keys=True)))
