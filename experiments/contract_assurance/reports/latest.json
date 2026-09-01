@@ -1,6 +1,6 @@
 {
   "blind_compliance": {
-    "batches": 27,
+    "batches": 29,
     "by_contract": {
       "InitialExpansionResponse": {
         "accepted": 1,
@@ -45,17 +45,17 @@
         "rejected": 1
       },
       "NextActionResponse": {
-        "accepted": 2,
-        "batches": 4,
-        "evaluations": 4,
+        "accepted": 4,
+        "batches": 6,
+        "evaluations": 6,
         "excluded_not_blind": 0,
         "failure_codes": {
           "S0": 1,
           "S3": 1
         },
-        "qualified": 4,
-        "recorded_accepted": 2,
-        "recorded_evaluations": 4,
+        "qualified": 6,
+        "recorded_accepted": 4,
+        "recorded_evaluations": 6,
         "recorded_rejected": 2,
         "rejected": 2
       },
@@ -174,19 +174,19 @@
       },
       "NextActionResponse": {
         "adversary": {
-          "accepted": 0,
-          "batches": 2,
-          "evaluations": 2,
+          "accepted": 1,
+          "batches": 3,
+          "evaluations": 3,
           "excluded_not_blind": 0,
-          "qualified": 2,
+          "qualified": 3,
           "rejected": 2
         },
         "producer": {
-          "accepted": 2,
-          "batches": 2,
-          "evaluations": 2,
+          "accepted": 3,
+          "batches": 3,
+          "evaluations": 3,
           "excluded_not_blind": 0,
-          "qualified": 2,
+          "qualified": 3,
           "rejected": 0
         }
       },
@@ -265,9 +265,9 @@
     },
     "by_role": {
       "adversary": {
-        "accepted": 0,
-        "batches": 15,
-        "evaluations": 10,
+        "accepted": 1,
+        "batches": 16,
+        "evaluations": 11,
         "excluded_not_blind": 5,
         "failure_codes": {
           "S0": 1,
@@ -275,30 +275,30 @@
           "S3": 3,
           "S4": 4
         },
-        "qualified": 10,
-        "recorded_accepted": 1,
-        "recorded_evaluations": 13,
+        "qualified": 11,
+        "recorded_accepted": 2,
+        "recorded_evaluations": 14,
         "recorded_rejected": 12,
         "rejected": 10
       },
       "producer": {
-        "accepted": 10,
-        "batches": 14,
-        "evaluations": 10,
+        "accepted": 11,
+        "batches": 15,
+        "evaluations": 11,
         "excluded_not_blind": 4,
         "failure_codes": {},
-        "qualified": 10,
-        "recorded_accepted": 12,
-        "recorded_evaluations": 13,
+        "qualified": 11,
+        "recorded_accepted": 13,
+        "recorded_evaluations": 14,
         "recorded_rejected": 1,
         "rejected": 0
       }
     },
     "coverage_gaps": [],
     "excluded_not_blind": 7,
-    "qualified_accepted": 10,
-    "qualified_batches": 20,
-    "qualified_evaluations": 20,
+    "qualified_accepted": 12,
+    "qualified_batches": 22,
+    "qualified_evaluations": 22,
     "qualified_failure_codes": {
       "S0": 1,
       "S1": 2,
@@ -306,11 +306,11 @@
       "S4": 4
     },
     "qualified_output_metrics": {
-      "average_output_chars": 325.95,
+      "average_output_chars": 331.22727272727275,
       "fence_usage": 0,
-      "outputs": 20,
+      "outputs": 22,
       "placeholder_copy": 1,
-      "total_output_chars": 6519
+      "total_output_chars": 7287
     },
     "qualified_rejected": 10,
     "status": "NOT_BLIND"
@@ -724,7 +724,7 @@
     "total": 477,
     "upper_failure_rate": 0.9485470142820811
   },
-  "generated_at": "2026-09-01T02:39:21.514569+00:00",
+  "generated_at": "2026-09-01T02:41:07.050083+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -1075,7 +1075,7 @@
         "symbol": "ExperimentRunner.run"
       }
     ],
-    "git_commit": "25244ff",
+    "git_commit": "15ae603",
     "unregistered_response_classes": []
   },
   "prompt_lint": {
