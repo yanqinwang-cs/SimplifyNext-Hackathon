@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-019",
+  "contract": "All registered contracts",
+  "discovery_source": "report completeness audit",
+  "baseline_failure": {"raw_output": "lint gate status was machine-readable but absent from Markdown report", "observed_code": "incomplete report evidence", "intended_code": "visible clean lint status"},
+  "classification": "S4",
+  "legitimate_semantic_need": "Human reviewers must be able to verify prompt/schema/template lint status from the concise report.",
+  "why_existing_contract_insufficient": "The runner persisted prompt_lint in JSON but the Markdown renderer omitted it.",
+  "implementation_change": "Render prompt/schema/template lint status and issue count in the Markdown report.",
+  "tests_added": ["Markdown report includes lint section"],
+  "expected_reclassifications": ["incomplete report evidence -> visible clean lint status"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [428, 428], "unexpected_outcomes": [0, 0]},
+  "commit": "pending"
+}

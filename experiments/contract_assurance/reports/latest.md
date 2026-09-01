@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T01:33:45.394346+00:00
+- Generated: 2026-09-01T01:34:34.266761+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -31,6 +31,11 @@
 - `schema`: 258
 - `serialization`: 140
 - `state_operation_preflight`: 9
+
+## Prompt/schema/template lint
+
+- Status: `clean`
+- Issues: 0
 
 ## Changes made
 

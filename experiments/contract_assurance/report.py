@@ -107,6 +107,10 @@ def render_markdown(report: dict) -> str:
     if summary.get("stage_counts"):
         lines += ["", "## Production-path stages", ""]
         lines.extend(f"- `{stage}`: {count}" for stage, count in sorted(summary["stage_counts"].items()))
+    prompt_lint = report.get("prompt_lint")
+    if prompt_lint:
+        lines += ["", "## Prompt/schema/template lint", "", f"- Status: `{prompt_lint.get('status', 'unknown')}`", f"- Issues: {len(prompt_lint.get('issues', []))}"]
+        lines.extend(f"- {issue}" for issue in prompt_lint.get("issues", []))
     for heading, key in (("Changes made", "changes_made"), ("Regressions", "regressions"), ("Remaining risks", "remaining_risks")):
         value = report.get(key)
         if value:
