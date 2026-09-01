@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T00:39:53.082743+00:00
+- Generated: 2026-09-01T00:41:25.181858+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -44,6 +44,7 @@
 | --- | ---: | ---: | ---: | ---: |
 | `adversary` | 11 | 7 | 0 | 7 |
 | `producer` | 10 | 7 | 7 | 0 |
+- Qualified blind failure codes: `{'S0': 1, 'S1': 3, 'S3': 2, 'S4': 3}`
 
 ## Assurance limitations
 
