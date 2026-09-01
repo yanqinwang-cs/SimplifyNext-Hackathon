@@ -253,6 +253,8 @@ def test_revision_transition_reasons_must_be_substantive():
     hypothesis = evaluate_raw(json.dumps({"hypothesis_id": "H1", "transition": "keep", "reason": ""}), HypothesisTransition)
     uncertainty = evaluate_raw(json.dumps({"uncertainty_id": "H1:U1", "transition": "keep", "reason": ""}), UncertaintyTransition)
     assert hypothesis.code is FailureCode.S4 and uncertainty.code is FailureCode.S4
+    placeholder = evaluate_raw(json.dumps({"hypothesis_id": "H1", "transition": "keep", "reason": "REPLACE_WITH_REASON"}), HypothesisTransition)
+    assert placeholder.code is FailureCode.S4
 
 
 def test_revision_allows_only_one_transition_per_entity():

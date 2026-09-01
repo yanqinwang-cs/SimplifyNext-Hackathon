@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-009",
+  "contract": "RevisionResponse",
+  "discovery_source": "deterministic placeholder transition-reason fixtures",
+  "baseline_failure": {"raw_output": "HypothesisTransition(reason='REPLACE_WITH_REASON') or UncertaintyTransition(reason='REPLACE_WITH_REASON')", "observed_code": "accepted", "intended_code": "S4"},
+  "classification": "S4",
+  "legitimate_semantic_need": "Revision explanations must not remain unresolved template placeholders.",
+  "why_existing_contract_insufficient": "Nested transition text validation rejected blanks but allowed REPLACE_WITH_ sentinels.",
+  "implementation_change": "Reject template placeholders in transition reasons and optional operation text.",
+  "tests_added": ["placeholder_hypothesis_transition_reason fixture", "placeholder_uncertainty_transition_reason fixture", "revision placeholder regression assertion"],
+  "expected_reclassifications": ["nested transition placeholders: accepted -> S4"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [412, 414], "unexpected_outcomes": [0, 0]},
+  "commit": "0e570a9"
+}

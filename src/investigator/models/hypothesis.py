@@ -85,8 +85,8 @@ class HypothesisTransition(BaseModel):
     @field_validator("reason", "requested_operation_name", "requested_effect")
     @classmethod
     def substantive_text(cls, value: str | None) -> str | None:
-        if value is not None and not value.strip():
-            raise ValueError("Substantive text cannot be empty")
+        if value is not None and (not value.strip() or value.strip().startswith("REPLACE_WITH_")):
+            raise ValueError("Substantive text cannot be empty or a template placeholder")
         return value
 
     @field_validator("why_existing_operations_do_not_fit")
@@ -132,8 +132,8 @@ class UncertaintyTransition(BaseModel):
     @field_validator("reason", "new_description", "requested_operation_name", "requested_effect")
     @classmethod
     def substantive_text(cls, value: str | None) -> str | None:
-        if value is not None and not value.strip():
-            raise ValueError("Substantive text cannot be empty")
+        if value is not None and (not value.strip() or value.strip().startswith("REPLACE_WITH_")):
+            raise ValueError("Substantive text cannot be empty or a template placeholder")
         return value
 
     @field_validator("why_existing_operations_do_not_fit")
