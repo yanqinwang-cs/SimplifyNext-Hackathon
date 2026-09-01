@@ -1,4 +1,5 @@
 import json
+import platform
 import subprocess
 from dataclasses import replace
 from pathlib import Path
@@ -17,6 +18,7 @@ from experiments.contract_assurance.report import coverage_ledger, deterministic
 from experiments.contract_assurance.snapshot import fingerprint, verify_snapshot, verify_snapshot_against_contract, write_public_snapshot, write_snapshot
 from experiments.contract_assurance.snapshot import validate_public_package
 from experiments.contract_assurance.audit import audit_public_package
+from experiments.contract_assurance.blind.isolation import run_isolated_worker
 from experiments.contract_assurance.taxonomy import FailureCode
 from investigator.services.contracts import NextActionResponse
 from investigator.services.contracts import RevisionResponse
@@ -172,6 +174,22 @@ def test_record_batch_persists_exact_outputs_and_status(tmp_path: Path):
     assert json.loads((destination / "evaluations.json").read_text())[0]["raw_output"] == "not-json"
     manifest = json.loads((destination / "batch_manifest.json").read_text())
     assert manifest["blind_status"] == "NOT_BLIND" and manifest["evaluation_count"] == 1
+
+
+def test_isolated_worker_streams_input_to_worker(tmp_path: Path):
+    if platform.system() != "Darwin":
+        __import__("pytest").skip("Seatbelt isolation is macOS-specific")
+    completed = run_isolated_worker(
+        ["/bin/sh", "-c", "read value; printf '%s' \"$value\""],
+        repo_root=Path(__file__).resolve().parents[1],
+        package_dir=tmp_path / "package",
+        output_dir=tmp_path / "output",
+        input_text="streamed-package\n",
+    )
+    if completed.returncode == 71 and "sandbox_apply: Operation not permitted" in completed.stderr:
+        __import__("pytest").skip("managed runner denies sandbox_apply")
+    assert completed.returncode == 0
+    assert completed.stdout == "streamed-package"
 
 
 def test_report_summary_counts_failures():
