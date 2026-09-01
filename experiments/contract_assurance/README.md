@@ -8,6 +8,8 @@ The stable taxonomy is documented in `docs/schema-contracts.md`. Generated outpu
 
 Worker instructions live under `blind/`. The harness does not claim blindness merely because a prompt says so; `BlindBatchAudit.qualifies_as_blind` requires recorded isolation evidence.
 
+On macOS, `blind.isolation.run_isolated_worker` provides a Seatbelt launcher that denies reads from the repository while permitting the frozen public package and a dedicated output directory. A batch must record both the launcher invocation and a successful denied-read probe before setting `repository_access_disabled=true`; otherwise it remains `NOT_BLIND`.
+
 Evolution records belong under `evolution/` and are never rewritten when a contract changes.
 
 ## Offline cycle

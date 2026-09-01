@@ -22,11 +22,12 @@ class BlindBatchAudit:
     repository_access_disabled: bool
     implementation_access_available: bool
     contamination_risks: tuple[str, ...] = ()
+    isolation_evidence: tuple[str, ...] = ()
 
     @property
     def qualifies_as_blind(self) -> bool:
         disclosed_paths = tuple(path for path in self.provided_files if _disclosed_implementation_path(path))
-        return self.repository_access_disabled and not self.implementation_access_available and not self.contamination_risks and not disclosed_paths
+        return self.repository_access_disabled and not self.implementation_access_available and not self.contamination_risks and not disclosed_paths and bool(self.isolation_evidence)
 
     def manifest(self) -> dict[str, Any]:
         return {**asdict(self), "qualifies_as_blind": self.qualifies_as_blind}

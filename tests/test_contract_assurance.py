@@ -119,16 +119,16 @@ def test_blind_batch_audit_verifies_exact_package_and_isolation(tmp_path: Path):
     spec = contract_registry()["NextActionResponse"]
     path = write_public_snapshot(spec, tmp_path, prompt="Return JSON", case_input={"case": "public"}, template=valid_action(), commit="abc")
     package = json.loads(path.read_text())
-    audit = BlindBatchAudit("worker", spec.name, __import__("experiments.contract_assurance.snapshot", fromlist=["fingerprint"]).fingerprint(package), (path.name,), True, False)
+    audit = BlindBatchAudit("worker", spec.name, __import__("experiments.contract_assurance.snapshot", fromlist=["fingerprint"]).fingerprint(package), (path.name,), True, False, isolation_evidence=("repository read denied probe",))
     assert audit_batch_package(path, audit) == {"accepted": True, "issues": []}
-    assert "batch package hash mismatch" in audit_batch_package(path, BlindBatchAudit("worker", spec.name, "stale", (path.name,), True, False))["issues"]
+    assert "batch package hash mismatch" in audit_batch_package(path, BlindBatchAudit("worker", spec.name, "stale", (path.name,), True, False, isolation_evidence=("repository read denied probe",)))["issues"]
     disclosed = BlindBatchAudit("worker", spec.name, __import__("experiments.contract_assurance.snapshot", fromlist=["fingerprint"]).fingerprint(package), ("package.json", "src/investigator/services/contracts.py"), True, False)
     assert not disclosed.qualifies_as_blind
     assert "implementation or repository paths" in audit_batch_package(path, disclosed)["issues"][-2]
 
 
 def test_record_batch_persists_exact_outputs_and_status(tmp_path: Path):
-    audit = BlindBatchAudit("worker", "NextActionResponse", "package-hash", ("package.json",), False, True, ("shared filesystem",))
+    audit = BlindBatchAudit("worker", "NextActionResponse", "package-hash", ("package.json",), False, True, contamination_risks=("shared filesystem",))
     result = evaluate_raw("not-json", NextActionResponse)
     destination = record_batch(tmp_path, audit, [result])
     assert json.loads((destination / "evaluations.json").read_text())[0]["raw_output"] == "not-json"
@@ -169,7 +169,7 @@ def test_not_blind_batches_are_excluded_from_statistics():
     qualified.details["worker_id"] = "blind"
     contaminated = evaluate_raw("", NextActionResponse)
     contaminated.details["worker_id"] = "contaminated"
-    audits = [BlindBatchAudit("blind", "NextActionResponse", "a", ("package",), True, False), BlindBatchAudit("contaminated", "NextActionResponse", "b", ("repo",), False, True)]
+    audits = [BlindBatchAudit("blind", "NextActionResponse", "a", ("package",), True, False, isolation_evidence=("probe",)), BlindBatchAudit("contaminated", "NextActionResponse", "b", ("repo",), False, True)]
     result = summarize_blind([qualified, contaminated], audits)
     assert result["total"] == 1 and result["accepted"] == 1 and result["excluded_not_blind"] == 1
 
@@ -179,7 +179,7 @@ def test_blind_role_summaries_are_separate_and_filtered():
     producer.details.update({"worker_id": "p", "role": "producer"})
     adversary = evaluate_raw("", NextActionResponse)
     adversary.details.update({"worker_id": "a", "role": "adversary"})
-    audits = [BlindBatchAudit("p", "NextActionResponse", "p", ("package",), True, False), BlindBatchAudit("a", "NextActionResponse", "a", ("package",), True, False)]
+    audits = [BlindBatchAudit("p", "NextActionResponse", "p", ("package",), True, False, isolation_evidence=("probe",)), BlindBatchAudit("a", "NextActionResponse", "a", ("package",), True, False, isolation_evidence=("probe",))]
     by_role = summarize_blind_by_role([producer, adversary], audits)
     assert by_role["producer"]["accepted"] == 1 and by_role["adversary"]["failure_codes"] == {"S0": 1}
 
@@ -354,7 +354,8 @@ def test_fixture_manifest_is_reproducible_and_blind_audit_is_strict(tmp_path: Pa
     path = write_fixture_manifest(tmp_path / "fixtures.json", "NextActionResponse", valid_action(), ("selected_action_id",))
     payload = json.loads(path.read_text())
     assert {item["name"] for item in payload["mutations"]} >= {"empty", "remove_selected_action_id", "unexpected_field"}
-    assert BlindBatchAudit("w1", "NextActionResponse", "abc", ("package.json",), True, False).qualifies_as_blind
+    assert BlindBatchAudit("w1", "NextActionResponse", "abc", ("package.json",), True, False, isolation_evidence=("probe",)).qualifies_as_blind
+    assert not BlindBatchAudit("w1", "NextActionResponse", "abc", ("package.json",), True, False).qualifies_as_blind
     assert not BlindBatchAudit("w2", "NextActionResponse", "abc", ("repo",), False, True).qualifies_as_blind
 
 
