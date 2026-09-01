@@ -11,5 +11,5 @@
   "expected_reclassifications": ["incomplete report evidence -> visible clean lint status"],
   "unexpected_regressions": ["none observed"],
   "before_after_compliance": {"deterministic_cases": [428, 428], "unexpected_outcomes": [0, 0]},
-  "commit": "pending"
+  "commit": "704f305"
 }
