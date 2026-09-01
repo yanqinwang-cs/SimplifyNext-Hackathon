@@ -27,7 +27,13 @@ def decision(payload: dict):
 
 
 def exhausted_stop(ids=("U1",)) -> dict:
-    return {"assessment": "frontier exhausted", "operation": "stop_unresolved", "reason": "No useful frontier remains", "reopening_conditions": "new evidence", "important_unresolved_ids": list(ids), "review_context": {"global_frontier_assessed": True, "local_frontier_exhausted": True, "active_unresolved_ids": list(ids)}}
+    return {"assessment": "frontier exhausted", "operation": "stop_unresolved", "reason": "No useful frontier remains", "reopening_conditions": "new evidence", "important_unresolved_ids": list(ids)}
+
+
+def trusted_context(**overrides) -> StewardReviewContext:
+    values = {"global_frontier_assessed": True, "local_frontier_exhausted": True, "active_unresolved_ids": ["U1"]}
+    values.update(overrides)
+    return StewardReviewContext(**values)
 
 
 def test_investigator_operations_are_narrow_and_local() -> None:
@@ -66,6 +72,11 @@ def test_steward_branches_forbid_irrelevant_and_tool_fields() -> None:
             decision({**payload, "tool_id": "T1"})
     with pytest.raises(ValidationError):
         decision({"assessment": "x", "reason": "r", "operation": "keep_focus", "destination_node_id": "P1"})
+    with pytest.raises(ValidationError):
+        decision({**exhausted_stop(), "review_context": {}})
+    coordinator = GraphInvestigationCoordinator(graph(), InvestigationFocus(node_id="H1"))
+    with pytest.raises(ValueError):
+        coordinator.review_with_steward(decision({"assessment": "same", "reason": "r", "operation": "keep_focus"}), review_context=trusted_context())
 
 
 def test_archive_current_focus_requires_explicit_active_redirect() -> None:
@@ -87,10 +98,12 @@ def test_archive_current_focus_requires_explicit_active_redirect() -> None:
 def test_stop_unresolved_requires_structural_exhaustion() -> None:
     coordinator = GraphInvestigationCoordinator(graph(), InvestigationFocus(node_id="H1"))
     base = exhausted_stop()
-    for change in [{"review_context": {"global_frontier_assessed": False, "local_frontier_exhausted": True}}, {"review_context": {"global_frontier_assessed": True, "local_frontier_exhausted": True, "neglected_candidate_node_ids": ["H2"]}}, {"review_context": {"global_frontier_assessed": True, "local_frontier_exhausted": True, "obvious_useful_region_remains": True}}, {"review_context": {"global_frontier_assessed": True, "local_frontier_exhausted": True, "available_action_ids": ["A1"], "materially_usable_action_ids": ["A1"]}}, {"review_context": {"global_frontier_assessed": True, "local_frontier_exhausted": False}}]:
+    for context in [trusted_context(global_frontier_assessed=False), trusted_context(neglected_candidate_node_ids=["H2"]), trusted_context(obvious_useful_region_remains=True), trusted_context(available_action_ids=["A1"], materially_usable_action_ids=["A1"]), trusted_context(local_frontier_exhausted=False)]:
         with pytest.raises((ValidationError, ValueError)):
-            coordinator.review_with_steward(decision({**base, **change}))
-    coordinator.review_with_steward(decision(base))
+            coordinator.review_with_steward(decision(base), review_context=context)
+    with pytest.raises(ValueError):
+        coordinator.review_with_steward(decision(base))
+    coordinator.review_with_steward(decision(base), review_context=trusted_context())
     assert coordinator.stopped
     with pytest.raises(ValueError):
         coordinator.review_with_steward(decision({"assessment": "x", "reason": "r", "operation": "archive", "target_node_id": "P1"}))
@@ -100,10 +113,13 @@ def test_stop_rejects_invalid_uncertainties_and_features_are_structural() -> Non
     coordinator = GraphInvestigationCoordinator(graph(), InvestigationFocus(node_id="H1"))
     for identifier in ["missing", "P1"]:
         with pytest.raises(ValueError):
-            coordinator.review_with_steward(decision(exhausted_stop((identifier,))))
+            coordinator.review_with_steward(decision(exhausted_stop((identifier,))), review_context=trusted_context(active_unresolved_ids=[identifier]))
     coordinator.graph.archive_node("U1")
     with pytest.raises(ValueError):
-        coordinator.review_with_steward(decision(exhausted_stop()))
+        coordinator.review_with_steward(decision(exhausted_stop()), review_context=trusted_context())
+    coordinator = GraphInvestigationCoordinator(graph(), InvestigationFocus(node_id="H1"))
+    with pytest.raises(ValueError):
+        coordinator.review_with_steward(decision(exhausted_stop()), review_context=trusted_context(active_unresolved_ids=[]))
     focus = InvestigationFocus(node_id="H1").moved_to("H1.1", ["H1.1"]).moved_to("H2", ["H2"]).moved_to("H1", ["H1"])
     indicators = tunnel_vision_indicators(graph(), focus)
     assert indicators.same_root_steps == 1 and indicators.current_specialization_depth == 0
@@ -112,3 +128,9 @@ def test_stop_rejects_invalid_uncertainties_and_features_are_structural() -> Non
     direct = direct_evidence_profile(graph(), {"P1"})
     assert direct.direct_count == 1 and direct.unique_evidence_ids == ["E1"]
     assert direct_evidence_profile(graph(), {"H1"}).direct_count == 0
+    conflict_graph = graph()
+    conflict_graph.add_node(GraphNode(id="E2", node_type="evidence", statement="E2", metadata={"source_id": "s2"}))
+    conflict_graph.add_edge(GraphEdge(id="E2_CONFLICTS_P1", source_id="E2", target_id="P1", relation=EdgeRelation.CONFLICTS, strength=EdgeStrength.DIRECT))
+    conflict_graph.add_edge(GraphEdge(id="P1_CONFLICTS_H1", source_id="P1", target_id="H1", relation=EdgeRelation.CONFLICTS, strength=EdgeStrength.DIRECT))
+    conflict = direct_evidence_profile(conflict_graph, {"P1", "H1"}, EdgeRelation.CONFLICTS)
+    assert conflict.direct_count == 1 and conflict.unique_evidence_ids == ["E2"]
