@@ -11,5 +11,5 @@
   "expected_reclassifications": ["canonical seed unresolved placeholder: accepted -> S4"],
   "unexpected_regressions": ["none observed"],
   "before_after_compliance": {"deterministic_cases": [423, 424], "unexpected_outcomes": [0, 0]},
-  "commit": "pending"
+  "commit": "2d1d5c6"
 }
