@@ -660,6 +660,17 @@ def test_revision_operation_preflight_rejects_unknown_reference():
     assert not result.accepted and result.code is FailureCode.S3
 
 
+def test_revision_combined_unknown_references_reach_operation_preflight():
+    from experiments.contract_assurance.runner import _revision_state
+    from experiments.contract_assurance.mutations import mutations
+
+    root = Path(__file__).resolve().parents[1]
+    sample = json.loads((root / "experiments/contract_assurance/fixtures/RevisionResponse.json").read_text(encoding="utf-8"))["canonical"]
+    mutation = next(item for item in mutations(sample, contract="RevisionResponse") if item.name == "unknown_hypothesis_and_uncertainty_references")
+    result = evaluate_revision(mutation.raw_output, _revision_state(root))
+    assert not result.accepted and result.code is FailureCode.S3 and result.stage == "operation_preflight"
+
+
 def test_new_uncertainty_id_must_match_declared_owner():
     with __import__("pytest").raises(ValueError, match="must belong"):
         NewUncertainty(id="H2:U1", hypothesis_id="H1", description="A new uncertainty.", basis_evidence_ids=["E1"])
