@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-018",
+  "contract": "All registered contracts",
+  "discovery_source": "assurance completion audit",
+  "baseline_failure": {"raw_output": "runner did not execute prompt/schema/template lint", "observed_code": "unverified gate", "intended_code": "clean lint gate"},
+  "classification": "S4",
+  "legitimate_semantic_need": "Prompt, schema, and canonical template drift must fail the same deterministic cycle that produces compliance reports.",
+  "why_existing_contract_insufficient": "Lint helper tests alone did not prove that the production assurance runner enforced lint before fixture evaluation.",
+  "implementation_change": "Run registered prompt/schema/template lint at the start of every deterministic cycle and persist its clean status in the report.",
+  "tests_added": ["runner report requires clean prompt_lint status"],
+  "expected_reclassifications": ["unverified lint gate -> clean enforced gate"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [428, 428], "unexpected_outcomes": [0, 0]},
+  "commit": "pending"
+}

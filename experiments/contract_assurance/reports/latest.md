@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T01:29:38.558639+00:00
+- Generated: 2026-09-01T01:31:53.898135+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -35,6 +35,7 @@
 ## Changes made
 
 - Deterministic fixtures evaluated through registered production-path adapters.
+- Registered prompt/schema/template lint runs as a deterministic gate.
 - Qualified blind manifests and output metrics aggregated without admitting NOT_BLIND results.
 
 ## Regressions

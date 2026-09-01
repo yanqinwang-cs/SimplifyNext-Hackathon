@@ -237,6 +237,7 @@ def test_coverage_ledger_deduplicates_failure_signatures_with_counts():
 def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     report = run_deterministic(Path(__file__).resolve().parents[1], tmp_path, "abc")
     assert report["blind_results_included"] is False
+    assert report["prompt_lint"] == {"status": "clean", "issues": []}
     assert report["deterministic_failure_rate"]["confidence"] == 0.95
     assert 0 <= report["deterministic_failure_rate"]["upper_failure_rate"] <= 1
     assert report["deterministic_correctness"]["valid_pass_rate"] == 1.0

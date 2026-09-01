@@ -19,6 +19,9 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
     package_issues = verify_committed_packages(root)
     if package_issues:
         raise ValueError("Frozen public package verification failed: " + "; ".join(package_issues))
+    prompt_lint = _lint_registered_prompts(root)
+    if prompt_lint["issues"]:
+        raise ValueError("Prompt/schema/template lint failed: " + "; ".join(prompt_lint["issues"]))
     results = []
     fixture_dir = root / "experiments/contract_assurance/fixtures"
     revision_state = _revision_state(root)
@@ -52,10 +55,27 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
     summary["unexpected_rejects"] = sum((not item.accepted) and item.details.get("intended_code") == "valid" for item in results)
     blind = blind_compliance_summary(root)
     limitations = ["S6 reasoning and semantic quality are not assessed by deterministic schema assurance.", "SmokeResponse is schema-sampled offline; its live Bedrock path is excluded from this offline cycle."]
-    report = {"inventory": inventory(root, commit), "deterministic": summary, "deterministic_failure_rate": failure_rate_statistics(results), "deterministic_correctness": deterministic_correctness(results), "deterministic_correctness_by_contract": deterministic_correctness_by_contract(results), "deterministic_by_contract": summarize_by_contract(results), "coverage_ledger": coverage_ledger(results), "blind_results_included": False, "blind_compliance": blind, "human_review_required": summary.get("s5_candidates", 0) > 0, "semantic_limitations": limitations, "changes_made": ["Deterministic fixtures evaluated through registered production-path adapters.", "Qualified blind manifests and output metrics aggregated without admitting NOT_BLIND results."], "regressions": {"unexpected_accepts": summary["unexpected_accepts"], "unexpected_rejects": summary["unexpected_rejects"], "status": "clean" if not summary["unexpected_accepts"] and not summary["unexpected_rejects"] else "regressions detected"}, "remaining_risks": ["S6 reasoning and semantic quality require a separate semantic checker.", "SmokeResponse live Bedrock execution remains excluded by the no-AWS constraint.", "Historical NOT_BLIND batches remain excluded from blind compliance statistics."]}
+    report = {"inventory": inventory(root, commit), "prompt_lint": prompt_lint, "deterministic": summary, "deterministic_failure_rate": failure_rate_statistics(results), "deterministic_correctness": deterministic_correctness(results), "deterministic_correctness_by_contract": deterministic_correctness_by_contract(results), "deterministic_by_contract": summarize_by_contract(results), "coverage_ledger": coverage_ledger(results), "blind_results_included": False, "blind_compliance": blind, "human_review_required": summary.get("s5_candidates", 0) > 0, "semantic_limitations": limitations, "changes_made": ["Deterministic fixtures evaluated through registered production-path adapters.", "Registered prompt/schema/template lint runs as a deterministic gate.", "Qualified blind manifests and output metrics aggregated without admitting NOT_BLIND results."], "regressions": {"unexpected_accepts": summary["unexpected_accepts"], "unexpected_rejects": summary["unexpected_rejects"], "status": "clean" if not summary["unexpected_accepts"] and not summary["unexpected_rejects"] else "regressions detected"}, "remaining_risks": ["S6 reasoning and semantic quality require a separate semantic checker.", "SmokeResponse live Bedrock execution remains excluded by the no-AWS constraint.", "Historical NOT_BLIND batches remain excluded from blind compliance statistics."]}
     write_history(output_dir, report)
     (output_dir / "inventory.json").write_text(json.dumps(report["inventory"], indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
     return report
+
+
+def _lint_registered_prompts(root: Path) -> dict[str, Any]:
+    issues: list[str] = []
+    fixture_dir = root / "experiments/contract_assurance/fixtures"
+    for name, spec in contract_registry().items():
+        prompt = "\n".join((root / source).read_text(encoding="utf-8") for source in spec.prompt_sources if (root / source).is_file())
+        template = None
+        fixture_path = fixture_dir / f"{name}.json"
+        if fixture_path.is_file():
+            try:
+                template = json.loads(fixture_path.read_text(encoding="utf-8")).get("canonical")
+            except (OSError, json.JSONDecodeError):
+                issues.append(f"{name}: unreadable canonical fixture")
+        for issue in lint_contract(spec, prompt=prompt, template=template):
+            issues.append(f"{name}: {issue.message}")
+    return {"status": "clean" if not issues else "failed", "issues": issues}
 
 
 def blind_compliance_summary(root: Path) -> dict[str, Any]:
