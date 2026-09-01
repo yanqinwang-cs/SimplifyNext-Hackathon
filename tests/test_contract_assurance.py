@@ -241,6 +241,8 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     assert report["blind_results_included"] is False
     assert report["prompt_lint"] == {"status": "clean", "issues": []}
     assert "## Prompt/schema/template lint" in render_markdown(report)
+    assert "## Contract provenance" in render_markdown(report)
+    assert "| Contract | Production path | Schema hash | Prompt hash(es) | Template hash |" in render_markdown(report)
     assert report["deterministic_failure_rate"]["confidence"] == 0.95
     assert 0 <= report["deterministic_failure_rate"]["upper_failure_rate"] <= 1
     assert report["deterministic_correctness"]["valid_pass_rate"] == 1.0

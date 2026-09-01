@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T01:50:06.858588+00:00
+- Generated: 2026-09-01T01:52:06.393708+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -95,3 +95,15 @@
 | `NextStepResponse` | 58 | 3 | 55 |
 | `RevisionResponse` | 109 | 11 | 98 |
 | `SmokeResponse` | 28 | 1 | 27 |
+
+## Contract provenance
+
+| Contract | Production path | Schema hash | Prompt hash(es) | Template hash |
+| --- | --- | --- | --- | --- |
+| `InitialExpansionResponse` | InvestigationService.start_case(seed) -> environment.build_seeded_initial_state | `3ab84fb21b95fbb73d063a580acd3f51ec5299a5657a7a6ea62d6b61e696b7c2` | src/investigator/environments/case_01_prompts.py: db8d5fb1b0f793ac73f616331e3bf27737803e78360af972ab68431455507dce | `7dfaac579095ea06e47e6f90acf99ce4aa5703d41cc5961941410a94ce1327c7` |
+| `InitialResponse` | InvestigationService.start_case -> environment.build_initial_state | `0bf2d70051b0216d9f2cefa9432cf13b87ad214e2e0e13d710686fa4103978a2` | src/investigator/environments/case_01_prompts.py: db8d5fb1b0f793ac73f616331e3bf27737803e78360af972ab68431455507dce | `1074a99932e73cc8a356d8c73c93ca3717757e1ebf86930076f5d355a5143a91` |
+| `ModelScreenHypothesisResponse` | ExperimentRunner.run -> ModelClient.call | `f2224a7d45a3c36db7990ef4095c4ba27da435a44a6b8a3fbbe1c5cd0bf54cdc` | experiments/model_screen/prompt.py: bef58f26e2983f7740ec4f450c74685d27a54750ccb58a5ebb96027affa9c0ce | `b8966bcd51627de2fb956b7b51d633622d371faab42dbaf1492617b90f09add4` |
+| `NextActionResponse` | InvestigationService.propose_next_action -> availability preflight | `2ee01b9e0a44aa5ea0159022f89f32b407b9f1bdd33c88f8914b62244611a300` | src/investigator/environments/case_01_prompts.py: db8d5fb1b0f793ac73f616331e3bf27737803e78360af972ab68431455507dce | `a26dd84ceed8aed26a8ba78d1e4c6a5d33d192a1051c777285ab09bbfc33cec5` |
+| `NextStepResponse` | Defined LLM-facing union; no current production caller | `f0186ca2f50494c9a630a22fe3bdc890a942cb2607bbe1d15d23957dcf668f29` | none | `2d2dd7902ecb2f042fbf318a8a98b11ba75c1125586fcc024c80373eae176113` |
+| `RevisionResponse` | InvestigationService.propose_revision -> apply_revision | `56906e23079db421c3704a1465b15ff9c008cbde48b2b4d5776f4c4c1e59a455` | src/investigator/environments/case_01_prompts.py: db8d5fb1b0f793ac73f616331e3bf27737803e78360af972ab68431455507dce | `2ef32d075192816a26ddba52189c1efdcbadc4ba7a6f9aeeeba09b87866fafc6` |
+| `SmokeResponse` | BedrockModelClient.call (manual smoke script; excluded from offline runs) | `fc008e3ce54e1de048758174b829e39bd4c47b13edbd2574f60044ecce9e9f22` | scripts/smoke_bedrock.py: 5248e4bdee0d861bb8e5440e8fafc5708749bd084f88c5b67b274a336bfaa89b | `5575ae1c4f02063d00c02afe7bf4137684215f5dabb64eefebb44f98e90ff156` |

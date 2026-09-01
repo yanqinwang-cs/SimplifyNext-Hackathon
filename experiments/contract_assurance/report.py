@@ -143,6 +143,12 @@ def render_markdown(report: dict) -> str:
     if by_contract:
         lines += ["", "## By contract", "", "| Contract | Total | Accepted | Rejected |", "| --- | ---: | ---: | ---: |"]
         lines.extend(f"| `{contract}` | {data.get('total', 0)} | {data.get('accepted', 0)} | {data.get('rejected', 0)} |" for contract, data in sorted(by_contract.items()))
+    inventory_contracts = report.get("inventory", {}).get("contracts", [])
+    if inventory_contracts:
+        lines += ["", "## Contract provenance", "", "| Contract | Production path | Schema hash | Prompt hash(es) | Template hash |", "| --- | --- | --- | --- | --- |"]
+        for contract in sorted(inventory_contracts, key=lambda item: item.get("name", "")):
+            prompt_hashes = ", ".join(f"{source}: {value}" for source, value in sorted(contract.get("prompt_hashes", {}).items())) or "none"
+            lines.append(f"| `{contract.get('name', '')}` | {contract.get('production_path', 'unknown')} | `{contract.get('schema_hash', 'unknown')}` | {prompt_hashes} | `{contract.get('template_hash', 'unknown')}` |")
     return "\n".join(lines) + "\n"
 
 
