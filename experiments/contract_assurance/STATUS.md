@@ -8,4 +8,4 @@
 - Pending human decisions: none
 - Latest worker evidence: qualified isolated producer/adversary pairs cover Initial/S3, NextAction/S0, NextStep/S4, SmokeResponse/S4, ModelScreen/S1, and Revision/S4. InitialExpansionResponse’s four recorded batches are excluded because their package hash predates the current frozen package; all twelve remaining qualified batches carry Seatbelt launcher and denied-read probe evidence under ignored `experiments/contract_assurance/results/2026-09-01-isolated-*/`.
 - Next queued work: extend referential and cross-field mutation combinations; live SmokeResponse Bedrock execution remains intentionally excluded by the no-AWS constraint
-- Last checkpoint: `510ae8b` (`Refresh reports with blind coverage gaps`); current cycle revalidates status provenance and assurance-only execution.
+- Last checkpoint: `a81fe98` (`Reject canonical unresolved placeholders`); current cycle revalidates status provenance and assurance-only execution.

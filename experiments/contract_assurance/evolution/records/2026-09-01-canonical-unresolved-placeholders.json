@@ -11,5 +11,5 @@
   "expected_reclassifications": ["canonical unresolved placeholders: accepted -> S4"],
   "unexpected_regressions": ["none observed"],
   "before_after_compliance": {"deterministic_cases": [421, 423], "unexpected_outcomes": [0, 0]},
-  "commit": "pending"
+  "commit": "a81fe98"
 }
