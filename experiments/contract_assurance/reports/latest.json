@@ -64,7 +64,6 @@
         "evaluations": 2,
         "excluded_not_blind": 1,
         "failure_codes": {
-          "S1": 2,
           "S4": 1
         },
         "qualified": 2,
@@ -110,7 +109,7 @@
         "excluded_not_blind": 4,
         "failure_codes": {
           "S0": 1,
-          "S1": 2,
+          "S1": 1,
           "S3": 2,
           "S4": 3
         },
@@ -125,9 +124,7 @@
         "batches": 10,
         "evaluations": 7,
         "excluded_not_blind": 3,
-        "failure_codes": {
-          "S1": 1
-        },
+        "failure_codes": {},
         "qualified": 7,
         "recorded_accepted": 8,
         "recorded_evaluations": 9,
@@ -141,7 +138,7 @@
     "qualified_evaluations": 14,
     "qualified_failure_codes": {
       "S0": 1,
-      "S1": 3,
+      "S1": 1,
       "S3": 2,
       "S4": 3
     },
@@ -452,7 +449,7 @@
     "total": 416,
     "upper_failure_rate": 0.9667486562144427
   },
-  "generated_at": "2026-09-01T00:42:51.428463+00:00",
+  "generated_at": "2026-09-01T00:43:52.979571+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -674,7 +671,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "db2ae2b",
+    "git_commit": "715305d",
     "unregistered_response_classes": []
   },
   "semantic_limitations": [
