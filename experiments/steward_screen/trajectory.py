@@ -1,0 +1,168 @@
+"""Offline, fixture-driven sequential Steward evaluator.
+
+This module deliberately has no model or AWS dependency.  Producers receive only
+the public observation and return one raw decision at a time.
+"""
+from __future__ import annotations
+
+from copy import deepcopy
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Protocol
+
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
+
+from investigator.graph import CaseGraph, EdgeRelation, GraphStatus
+from investigator.roles import GraphInvestigationCoordinator, InvestigationFocus, StewardDecision, StewardReviewContext
+from experiments.steward_screen.prompt import build_prompt
+
+
+class StewardObservation(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid", frozen=True)
+    observation_id: str
+    description: str
+    graph: CaseGraph
+    focus: InvestigationFocus
+    participants: list[Any] = Field(default_factory=list)
+    review_context: StewardReviewContext | None = None
+
+
+class IssueKind(str, Enum):
+    STALE_ACTIVE = "STALE_ACTIVE"
+    RELEVANT_ARCHIVED = "RELEVANT_ARCHIVED"
+    NEGLECTED_ACTIVE = "NEGLECTED_ACTIVE"
+    OVER_SPECIFIC_FOCUS = "OVER_SPECIFIC_FOCUS"
+    CURRENT_FOCUS_STALE = "CURRENT_FOCUS_STALE"
+
+
+class TerminalMode(str, Enum):
+    QUIESCENCE = "QUIESCENCE"
+    STOP_UNRESOLVED = "STOP_UNRESOLVED"
+
+
+class StewardIssue(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    issue_id: str
+    kind: IssueKind
+    target_node_id: str
+    parent_node_id: str | None = None
+    allowed_destination_node_ids: list[str] = Field(default_factory=list)
+    depends_on_issue_ids: list[str] = Field(default_factory=list)
+
+
+class TrajectoryFixture(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+    fixture_id: str
+    description: str
+    graph: CaseGraph
+    focus: InvestigationFocus
+    participants: list[Any] = Field(default_factory=list)
+    review_context: StewardReviewContext | None = None
+    issues: list[StewardIssue] = Field(default_factory=list)
+    must_remain_active_node_ids: set[str] = Field(default_factory=set)
+    must_remain_archived_node_ids: set[str] = Field(default_factory=set)
+    terminal_mode: TerminalMode = TerminalMode.QUIESCENCE
+    step_cap: int = 8
+
+    @model_validator(mode="after")
+    def validate_fixture(self) -> "TrajectoryFixture":
+        ids = set(self.graph.nodes)
+        if not self.issues and self.terminal_mode is TerminalMode.STOP_UNRESOLVED and self.review_context is None:
+            raise ValueError("STOP_UNRESOLVED fixtures require trusted review context")
+        if not {self.focus.node_id, *self.must_remain_active_node_ids, *self.must_remain_archived_node_ids} <= ids:
+            raise ValueError("fixture references an unknown node")
+        issue_ids = {i.issue_id for i in self.issues}
+        if len(issue_ids) != len(self.issues) or any(set(i.depends_on_issue_ids) - issue_ids for i in self.issues):
+            raise ValueError("issue IDs or dependencies are invalid")
+        for issue in self.issues:
+            if issue.target_node_id not in ids or set(issue.allowed_destination_node_ids) - ids:
+                raise ValueError("issue references an unknown node")
+            node = self.graph.nodes[issue.target_node_id]
+            if issue.kind is IssueKind.STALE_ACTIVE and node.status is not GraphStatus.ACTIVE: raise ValueError("STALE_ACTIVE must start active")
+            if issue.kind is IssueKind.RELEVANT_ARCHIVED and node.status is not GraphStatus.ARCHIVED: raise ValueError("RELEVANT_ARCHIVED must start archived")
+            if issue.kind in {IssueKind.OVER_SPECIFIC_FOCUS, IssueKind.CURRENT_FOCUS_STALE} and self.focus.node_id != issue.target_node_id: raise ValueError("focus issue must target current focus")
+            if issue.kind is IssueKind.OVER_SPECIFIC_FOCUS:
+                if issue.parent_node_id not in ids or self.graph.nodes[issue.parent_node_id].status is not GraphStatus.ACTIVE or not any(e.source_id == issue.target_node_id and e.target_id == issue.parent_node_id and e.relation is EdgeRelation.SPECIALIZES for e in self.graph.edges.values()):
+                    raise ValueError("invalid immediate SPECIALIZES parent")
+            if issue.kind is IssueKind.CURRENT_FOCUS_STALE and (not issue.allowed_destination_node_ids or issue.target_node_id in issue.allowed_destination_node_ids):
+                raise ValueError("current-focus issue needs distinct destinations")
+        # dependency graph must be acyclic
+        def visit(x: str, path: set[str]) -> None:
+            if x in path: raise ValueError("issue dependency cycle")
+            for dep in next(i for i in self.issues if i.issue_id == x).depends_on_issue_ids: visit(dep, path | {x})
+        for i in self.issues: visit(i.issue_id, set())
+        if self.terminal_mode is TerminalMode.STOP_UNRESOLVED and self.review_context is None: raise ValueError("trusted review context required")
+        return self
+
+    def observation(self, graph: CaseGraph | None = None, focus: InvestigationFocus | None = None) -> StewardObservation:
+        return StewardObservation(observation_id=self.fixture_id, description=self.description, graph=graph or self.graph, focus=focus or self.focus, participants=self.participants, review_context=self.review_context)
+
+
+class Producer(Protocol):
+    def __call__(self, prompt: str) -> Any: ...
+
+
+class ScriptedProducer:
+    def __init__(self, outputs: list[Any]): self.outputs, self.index = outputs, 0
+    def __call__(self, prompt: str) -> Any:
+        if self.index >= len(self.outputs): return None
+        output = self.outputs[self.index]; self.index += 1; return output
+
+
+FAILURE_CODES = {"SCHEMA_FAILURE", "NULL_OR_NO_DECISION", "MULTIPLE_OPERATIONS_RETURNED", "INVENTED_IDENTIFIER", "ILLEGAL_SHIFT", "ILLEGAL_REACTIVATE", "BAD_GENERALIZATION", "ILLEGAL_ARCHIVE", "HARMFUL_ARCHIVE", "HARMFUL_REACTIVATION", "PREMATURE_STOP", "STALE_KEEP_LOOP", "NO_PROGRESS_LOOP", "OSCILLATION", "STEP_CAP_WITH_PENDING_ISSUES"}
+_ADAPTER = TypeAdapter(StewardDecision)
+
+
+def _resolved(issue: StewardIssue, c: GraphInvestigationCoordinator) -> bool:
+    n = c.graph.nodes[issue.target_node_id]
+    if issue.kind is IssueKind.STALE_ACTIVE: return n.status is GraphStatus.ARCHIVED
+    if issue.kind is IssueKind.RELEVANT_ARCHIVED: return n.status is GraphStatus.ACTIVE
+    if issue.kind is IssueKind.NEGLECTED_ACTIVE: return n.status is GraphStatus.ACTIVE and c.focus.node_id == n.id
+    if issue.kind is IssueKind.OVER_SPECIFIC_FOCUS: return n.status is GraphStatus.ACTIVE and c.focus.node_id == issue.parent_node_id
+    return n.status is GraphStatus.ARCHIVED and c.focus.node_id in issue.allowed_destination_node_ids
+
+
+def _fingerprint(c: GraphInvestigationCoordinator, issues: list[StewardIssue]) -> tuple:
+    return (c.focus.node_id, tuple(sorted((n.id, n.status.value) for n in c.graph.nodes.values())), c.stopped, tuple((i.issue_id, _resolved(i, c)) for i in issues))
+
+
+@dataclass
+class TrajectoryResult:
+    steps: list[dict] = field(default_factory=list)
+    failures: list[str] = field(default_factory=list)
+    termination: str = "step_cap"
+
+
+def run_fixture(fixture: TrajectoryFixture, producer: Producer) -> TrajectoryResult:
+    c = GraphInvestigationCoordinator(deepcopy(fixture.graph), fixture.focus.model_copy(deep=True)); result = TrajectoryResult(); seen = {_fingerprint(c, fixture.issues)}; unchanged_keep = 0; no_progress = 0
+    for step in range(1, fixture.step_cap + 1):
+        obs = fixture.observation(c.graph, c.focus); raw = producer(build_prompt(obs))
+        if raw is None or raw == "": result.failures.append("NULL_OR_NO_DECISION"); result.termination = "failure"; break
+        if isinstance(raw, list): result.failures.append("MULTIPLE_OPERATIONS_RETURNED"); result.termination = "failure"; break
+        try: decision = _ADAPTER.validate_python(raw)
+        except Exception: result.failures.append("SCHEMA_FAILURE"); result.termination = "failure"; break
+        before = _fingerprint(c, fixture.issues); before_states = {i.issue_id: _resolved(i, c) for i in fixture.issues}
+        try: c.review_with_steward(decision, review_context=obs.review_context)
+        except ValueError as exc:
+            msg = str(exc); code = "INVENTED_IDENTIFIER" if "Unknown graph node" in msg else ("ILLEGAL_SHIFT" if decision.operation == "shift_focus" else "ILLEGAL_REACTIVATE" if decision.operation == "reactivate" else "BAD_GENERALIZATION" if decision.operation == "generalize" else "PREMATURE_STOP" if decision.operation == "stop_unresolved" else "ILLEGAL_ARCHIVE")
+            result.failures.append(code); result.termination = "failure"; break
+        after = _fingerprint(c, fixture.issues); after_states = {i.issue_id: _resolved(i, c) for i in fixture.issues}; resolved = [k for k,v in after_states.items() if v and not before_states[k]]
+        harmful = decision.operation == "archive" and decision.target_node_id in fixture.must_remain_active_node_ids
+        if harmful: result.failures.append("HARMFUL_ARCHIVE")
+        cls = "PROGRESS" if resolved and not harmful else ("NEUTRAL" if not harmful else "HARMFUL")
+        result.steps.append({"step": step, "operation": decision.operation, "classification": cls, "before": before, "after": after, "resolved": resolved, "remaining": [i.issue_id for i in fixture.issues if not after_states[i.issue_id]]})
+        if c.stopped and any(not value for value in after_states.values()):
+            result.failures.append("PREMATURE_STOP")
+        if c.stopped:
+            result.termination = "stopped" if not [i for i in fixture.issues if not after_states[i.issue_id]] and fixture.terminal_mode is TerminalMode.STOP_UNRESOLVED else "failure"; break
+        if not resolved: no_progress += 1
+        else: no_progress = 0
+        if decision.operation == "keep_focus" and not resolved: unchanged_keep += 1
+        else: unchanged_keep = 0
+        if unchanged_keep >= 2: result.failures.append("STALE_KEEP_LOOP"); result.termination = "failure"; break
+        if no_progress >= 3: result.failures.append("NO_PROGRESS_LOOP"); result.termination = "failure"; break
+        if after in seen and not resolved: result.failures.append("OSCILLATION"); result.termination = "failure"; break
+        seen.add(after)
+        if all(after_states.values()) and fixture.terminal_mode is TerminalMode.QUIESCENCE: result.termination = "quiescent"; break
+    if result.termination == "step_cap" and any(not _resolved(i, c) for i in fixture.issues): result.failures.append("STEP_CAP_WITH_PENDING_ISSUES")
+    return result
