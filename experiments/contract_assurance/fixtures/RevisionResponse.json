@@ -426,7 +426,7 @@
     {
       "intended_code": "S4",
       "name": "uncertainty_owner_mismatch",
-      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"description\": \"A new uncertainty.\", \"hypothesis_id\": \"H2\", \"id\": \"H1:U1\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"E1\"], \"description\": \"A new uncertainty.\", \"hypothesis_id\": \"H1\", \"id\": \"H2:U1\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
     {
       "intended_code": "S3",

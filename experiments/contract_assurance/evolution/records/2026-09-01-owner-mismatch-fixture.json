@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-016",
+  "contract": "RevisionResponse",
+  "discovery_source": "referential fixture specificity audit",
+  "baseline_failure": {"raw_output": "owner mismatch fixture also used a duplicate ID", "observed_code": "S4", "intended_code": "S4"},
+  "classification": "S4",
+  "legitimate_semantic_need": "A new uncertainty ID must identify the same hypothesis named by hypothesis_id.",
+  "why_existing_contract_insufficient": "The prior owner-mismatch fixture used H1:U1 for H2, conflating ownership validation with duplicate-ID validation.",
+  "implementation_change": "Use a distinct H2:U1 identifier and direct validator regression coverage to isolate the ownership rule.",
+  "tests_added": ["distinct revision owner-mismatch fixture", "NewUncertainty owner validator regression assertion"],
+  "expected_reclassifications": ["owner-mismatch fixture remains S4 with isolated validator coverage"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [428, 428], "unexpected_outcomes": [0, 0]},
+  "commit": "pending"
+}
