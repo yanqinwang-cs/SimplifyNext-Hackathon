@@ -320,6 +320,13 @@
       "evaluations": 17,
       "rejected": 2
     },
+    "producer_compliance_rolling_window": {
+      "accepted": 9,
+      "compliance_rate": 0.9,
+      "evaluations": 10,
+      "rejected": 1,
+      "window_size": 10
+    },
     "qualified_accepted": 17,
     "qualified_batches": 34,
     "qualified_evaluations": 34,
@@ -750,7 +757,7 @@
     "total": 482,
     "upper_failure_rate": 0.9455654330684751
   },
-  "generated_at": "2026-09-01T03:09:56.038647+00:00",
+  "generated_at": "2026-09-01T03:11:32.709815+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -1101,7 +1108,7 @@
         "symbol": "ExperimentRunner.run"
       }
     ],
-    "git_commit": "6842fb0",
+    "git_commit": "63e0ae3",
     "unregistered_response_classes": []
   },
   "prompt_lint": {
