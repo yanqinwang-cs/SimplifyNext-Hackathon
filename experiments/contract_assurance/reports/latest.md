@@ -1,20 +1,20 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T01:18:29.009617+00:00
+- Generated: 2026-09-01T01:20:34.853810+00:00
 - Contracts: 7
 
 | Metric | Count |
 | --- | ---: |
-| Total evaluations | 426 |
+| Total evaluations | 428 |
 | Accepted | 21 |
-| Rejected | 405 |
+| Rejected | 407 |
 | Unexpected accepts | 0 |
 | Unexpected rejects | 0 |
 | S5 candidates | 0 |
 | S6 limitations | 0 |
 
 - Human review required for S5 candidates: `False`
-- Observed deterministic failure rate: `0.9507`; upper 95% bound: `0.9675` (compliance statistic, not reasoning confidence).
+- Observed deterministic failure rate: `0.9509`; upper 95% bound: `0.9677` (compliance statistic, not reasoning confidence).
 - Valid-fixture pass rate: `1.0000`; invalid-fixture rejection rate: `1.0000`.
 ## Failure codes
 
@@ -22,13 +22,13 @@
 - `S1`: 112
 - `S2`: 56
 - `S3`: 22
-- `S4`: 75
+- `S4`: 77
 
 ## Production-path stages
 
 - `availability`: 3
 - `operation_preflight`: 18
-- `schema`: 256
+- `schema`: 258
 - `serialization`: 140
 - `state_operation_preflight`: 9
 
@@ -87,5 +87,5 @@
 | `ModelScreenHypothesisResponse` | 38 | 2 | 36 |
 | `NextActionResponse` | 44 | 1 | 43 |
 | `NextStepResponse` | 58 | 3 | 55 |
-| `RevisionResponse` | 106 | 11 | 95 |
+| `RevisionResponse` | 108 | 11 | 97 |
 | `SmokeResponse` | 28 | 1 | 27 |

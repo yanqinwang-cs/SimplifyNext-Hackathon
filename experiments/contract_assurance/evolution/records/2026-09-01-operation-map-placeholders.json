@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-015",
+  "contract": "RevisionResponse",
+  "discovery_source": "operation-reason map placeholder coverage audit",
+  "baseline_failure": {"raw_output": "canonical placeholder accepted in why-existing-operations map", "observed_code": "accepted", "intended_code": "S4"},
+  "classification": "S4",
+  "legitimate_semantic_need": "Every explanatory operation-reason map entry must be substantive rather than copied template prose.",
+  "why_existing_contract_insufficient": "Transition validators had canonical-placeholder protection for scalar text but the map path lacked deterministic fixtures.",
+  "implementation_change": "Exercise canonical placeholder values in hypothesis and uncertainty operation-reason maps.",
+  "tests_added": ["canonical hypothesis operation-reason map fixture", "canonical uncertainty operation-reason map fixture"],
+  "expected_reclassifications": ["canonical operation-map placeholders: accepted -> S4"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [426, 428], "unexpected_outcomes": [0, 0]},
+  "commit": "pending"
+}
