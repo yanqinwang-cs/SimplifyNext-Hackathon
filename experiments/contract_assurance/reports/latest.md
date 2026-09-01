@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T00:37:47.220253+00:00
+- Generated: 2026-09-01T00:39:53.082743+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -14,6 +14,7 @@
 | S6 limitations | 0 |
 
 - Human review required for S5 candidates: `False`
+- Observed deterministic failure rate: `0.9495`; upper 95% bound: `0.9667` (compliance statistic, not reasoning confidence).
 ## Failure codes
 
 - `S0`: 140

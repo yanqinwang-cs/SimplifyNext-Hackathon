@@ -342,7 +342,14 @@
       "total": 28
     }
   },
-  "generated_at": "2026-09-01T00:37:47.220253+00:00",
+  "deterministic_failure_rate": {
+    "confidence": 0.95,
+    "failures": 395,
+    "observed_failure_rate": 0.9495192307692307,
+    "total": 416,
+    "upper_failure_rate": 0.9667486562144427
+  },
+  "generated_at": "2026-09-01T00:39:53.082743+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -564,7 +571,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "11208d5",
+    "git_commit": "a1ed629",
     "unregistered_response_classes": []
   },
   "semantic_limitations": [
