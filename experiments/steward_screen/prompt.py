@@ -6,6 +6,64 @@ from investigator.steward.features import region_health, tunnel_vision_indicator
 from experiments.steward_screen.models import StewardScenario
 
 
+_OUTPUT_CONTRACT = """Return exactly one JSON object matching exactly one of these branch schemas:
+
+KEEP_FOCUS
+{
+  "operation": "keep_focus",
+  "assessment": "Brief case-specific assessment of the current focus.",
+  "reason": "Brief case-specific reason to keep the current focus."
+}
+
+SHIFT_FOCUS
+{
+  "operation": "shift_focus",
+  "assessment": "Brief case-specific assessment of the current focus.",
+  "reason": "Brief case-specific reason for shifting focus.",
+  "destination_node_id": "EXACT_EXISTING_NODE_ID"
+}
+
+GENERALIZE
+{
+  "operation": "generalize",
+  "assessment": "Brief case-specific assessment of the current focus.",
+  "reason": "Brief case-specific reason for generalizing.",
+  "target_node_id": "EXACT_EXISTING_NODE_ID"
+}
+
+ARCHIVE
+{
+  "operation": "archive",
+  "assessment": "Brief case-specific assessment of the target.",
+  "reason": "Brief case-specific reason for archiving.",
+  "target_node_id": "EXACT_EXISTING_NODE_ID",
+  "destination_node_id": "EXACT_EXISTING_NODE_ID_OR_NULL"
+}
+
+REACTIVATE
+{
+  "operation": "reactivate",
+  "assessment": "Brief case-specific assessment of the archived target.",
+  "reason": "Brief case-specific reason for reactivating it.",
+  "target_node_id": "EXACT_EXISTING_NODE_ID"
+}
+
+STOP_UNRESOLVED
+{
+  "operation": "stop_unresolved",
+  "assessment": "Brief case-specific assessment of why no useful frontier remains.",
+  "reason": "Brief case-specific reason for stopping unresolved.",
+  "important_unresolved_ids": ["EXACT_EXISTING_UNCERTAINTY_ID"],
+  "reopening_conditions": "Concrete condition for reopening the investigation."
+}
+
+Use exactly the field names shown and the exact lowercase operation values shown. Do not use "decision" instead of "operation" or "rationale" instead of "assessment" or "reason". Do not rename fields, add fields outside the selected branch schema, return alternatives, wrap the JSON in markdown/code fences, return commentary outside the JSON, or return chain-of-thought.
+
+Every CaseGraph object ID must be an exact existing ID from the supplied case state. Prompt references may be rendered as {{P1}}, but an output identifier must contain the raw stable ID "P1" without braces; do not invent IDs or include {{...}} in output identifier values. For ARCHIVE, destination_node_id may be null when allowed by the production schema, but archiving the current focus requires an explicit different ACTIVE destination. STOP_UNRESOLVED is valid only when trusted external frontier context supports it.
+
+The assessment and reason must be grounded in the supplied case state and explain why the selected operation is appropriate. Brief case-specific justification is sufficient; do not provide long reasoning."""
+
+
 def _ref(identifier: str) -> str:
     return "{{" + identifier + "}}"
 
@@ -35,5 +93,5 @@ def build_prompt(scenario: StewardScenario) -> str:
     ]
     if scenario.review_context is not None:
         sections.append("<TRUSTED_FRONTIER>\n" + json.dumps(scenario.review_context.model_dump(mode="json"), sort_keys=True) + "\nThis is trusted external structural input. Do not author or modify it.\n</TRUSTED_FRONTIER>")
-    sections.extend(["<DYNAMIC_SCENARIO>\n" + scenario.description + "\n</DYNAMIC_SCENARIO>", "<OUTPUT_CONTRACT>\nReturn one JSON object using only KEEP_FOCUS, SHIFT_FOCUS, GENERALIZE, ARCHIVE, REACTIVATE, or STOP_UNRESOLVED and the fields allowed by that branch. Do not return alternatives or chain-of-thought.\n</OUTPUT_CONTRACT>"])
+    sections.extend(["<DYNAMIC_SCENARIO>\n" + scenario.description + "\n</DYNAMIC_SCENARIO>", "<OUTPUT_CONTRACT>\n" + _OUTPUT_CONTRACT + "\n</OUTPUT_CONTRACT>"])
     return "\n\n".join(sections)
