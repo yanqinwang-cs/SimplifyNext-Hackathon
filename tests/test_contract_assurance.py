@@ -267,6 +267,10 @@ def test_other_transition_operation_reasons_must_be_substantive():
     value = {"hypothesis_id": "H1", "transition": "other", "reason": "A reason.", "requested_operation_name": "reframe", "requested_effect": "Change framing.", "why_existing_operations_do_not_fit": {"keep": ""}}
     result = evaluate_raw(json.dumps(value), HypothesisTransition)
     assert result.code is FailureCode.S4
+    value["why_existing_operations_do_not_fit"] = {"keep": "REPLACE_WITH_REASON"}
+    assert evaluate_raw(json.dumps(value), HypothesisTransition).code is FailureCode.S4
+    uncertainty = {"uncertainty_id": "H1:U1", "transition": "other", "reason": "Need more", "requested_operation_name": "merge", "requested_effect": "Combine issues.", "why_existing_operations_do_not_fit": {"REPLACE_WITH_OPERATION": "It does not fit."}}
+    assert evaluate_raw(json.dumps(uncertainty), UncertaintyTransition).code is FailureCode.S4
 
 
 def test_model_screen_hypothesis_text_must_be_substantive():

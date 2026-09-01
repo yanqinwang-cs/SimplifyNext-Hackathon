@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-010",
+  "contract": "RevisionResponse",
+  "discovery_source": "deterministic nested operation-reason placeholder fixtures",
+  "baseline_failure": {"raw_output": "why_existing_operations_do_not_fit accepted REPLACE_WITH_ key/value sentinels", "observed_code": "accepted", "intended_code": "S4"},
+  "classification": "S4",
+  "legitimate_semantic_need": "Operation explanations must identify real existing operations and substantive reasons.",
+  "why_existing_contract_insufficient": "Nested map validation rejected blank keys and values but did not reject template sentinels.",
+  "implementation_change": "Reject REPLACE_WITH_ placeholders in hypothesis and uncertainty operation-reason map keys and values.",
+  "tests_added": ["placeholder hypothesis operation-reason fixture", "placeholder uncertainty operation-reason fixture", "nested operation-reason placeholder regression assertions"],
+  "expected_reclassifications": ["nested operation-reason placeholders: accepted -> S4"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [414, 416], "unexpected_outcomes": [0, 0]},
+  "commit": "ad04827"
+}

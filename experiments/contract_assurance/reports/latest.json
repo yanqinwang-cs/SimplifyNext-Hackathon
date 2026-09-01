@@ -217,7 +217,7 @@
     "RevisionResponse|S4|operation_preflight|Duplicate hypothesis ID in revision: 'H1'": 1,
     "RevisionResponse|S4|operation_preflight|Duplicate hypothesis ID in revision: 'H2'": 1,
     "RevisionResponse|S4|operation_preflight|Duplicate uncertainty ID in revision: 'H1:U1'": 1,
-    "RevisionResponse|S4|schema|1 validation error for RevisionResponse": 18,
+    "RevisionResponse|S4|schema|1 validation error for RevisionResponse": 20,
     "SmokeResponse|S0|serialization|Expecting ',' delimiter: line 1 column 15 (char 14)": 1,
     "SmokeResponse|S0|serialization|Expecting property name enclosed in double quotes: line 1 column 2 (char 1)": 2,
     "SmokeResponse|S0|serialization|Expecting value: line 1 column 1 (char 0)": 4,
@@ -238,12 +238,12 @@
       "S1": 112,
       "S2": 56,
       "S3": 22,
-      "S4": 63
+      "S4": 65
     },
-    "rejected": 393,
+    "rejected": 395,
     "s5_candidates": 0,
     "s6_limitations": 0,
-    "total": 414,
+    "total": 416,
     "unexpected_accepts": 0,
     "unexpected_rejects": 0
   },
@@ -322,12 +322,12 @@
         "S1": 26,
         "S2": 9,
         "S3": 14,
-        "S4": 22
+        "S4": 24
       },
-      "rejected": 91,
+      "rejected": 93,
       "s5_candidates": 0,
       "s6_limitations": 0,
-      "total": 102
+      "total": 104
     },
     "SmokeResponse": {
       "accepted": 1,
@@ -342,7 +342,7 @@
       "total": 28
     }
   },
-  "generated_at": "2026-09-01T00:29:23.728929+00:00",
+  "generated_at": "2026-09-01T00:32:29.267181+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -564,7 +564,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "0e570a9",
+    "git_commit": "ad04827",
     "unregistered_response_classes": []
   },
   "semantic_limitations": [
