@@ -164,8 +164,9 @@ class IssueState(str, Enum):
     RESOLVED = "RESOLVED"
 
 
-def issue_states(issues: list[StewardIssue], c: GraphInvestigationCoordinator) -> dict[str, IssueState]:
+def issue_states(issues: list[StewardIssue], c: GraphInvestigationCoordinator, resolved_ids: set[str] | None = None) -> dict[str, IssueState]:
     resolved = {i.issue_id: _resolved(i, c) for i in issues}
+    if resolved_ids: resolved.update({identifier: True for identifier in resolved_ids})
     return {i.issue_id: IssueState.BLOCKED if any(not resolved[d] for d in i.depends_on_issue_ids) else IssueState.RESOLVED if resolved[i.issue_id] else IssueState.ACTIONABLE for i in issues}
 
 
@@ -178,7 +179,7 @@ def _parse_raw(raw: Any) -> Any:
 
 
 def run_fixture(fixture: TrajectoryFixture, producer: Producer) -> TrajectoryResult:
-    c = GraphInvestigationCoordinator(deepcopy(fixture.graph), fixture.focus.model_copy(deep=True)); result = TrajectoryResult(); seen = {_fingerprint(c, fixture.issues)}; unchanged_keep = 0; no_progress = 0
+    c = GraphInvestigationCoordinator(deepcopy(fixture.graph), fixture.focus.model_copy(deep=True)); result = TrajectoryResult(); resolved_ids: set[str] = set(); seen = {_fingerprint(c, fixture.issues)}; unchanged_keep = 0; no_progress = 0
     def add_failure(code: str) -> None:
         if code not in result.failures: result.failures.append(code)
     for step in range(1, fixture.step_cap + 1):
@@ -188,7 +189,7 @@ def run_fixture(fixture: TrajectoryFixture, producer: Producer) -> TrajectoryRes
         try: decision = _ADAPTER.validate_python(_parse_raw(raw))
         except ValueError as exc:
             result.failures.append("MULTIPLE_OPERATIONS_RETURNED" if "Extra data" in str(exc) else "SCHEMA_FAILURE"); result.termination = "failure"; break
-        before = _fingerprint(c, fixture.issues); before_statuses = issue_states(fixture.issues, c); before_states = {k: v is IssueState.RESOLVED for k,v in before_statuses.items()}
+        before = _fingerprint(c, fixture.issues); before_statuses = issue_states(fixture.issues, c, resolved_ids); before_states = {k: v is IssueState.RESOLVED for k,v in before_statuses.items()}
         try:
             if decision.operation == "reactivate" and c.graph.nodes.get(decision.target_node_id) is not None and c.graph.nodes[decision.target_node_id].status is not GraphStatus.ARCHIVED:
                 raise ValueError("REACTIVATE target must be archived")
@@ -196,9 +197,9 @@ def run_fixture(fixture: TrajectoryFixture, producer: Producer) -> TrajectoryRes
         except ValueError as exc:
             msg = str(exc); code = "INVENTED_IDENTIFIER" if "Unknown graph node" in msg else ("ILLEGAL_SHIFT" if decision.operation == "shift_focus" else "ILLEGAL_REACTIVATE" if decision.operation == "reactivate" else "BAD_GENERALIZATION" if decision.operation == "generalize" else "PREMATURE_STOP" if decision.operation == "stop_unresolved" else "ILLEGAL_ARCHIVE")
             result.failures.append(code); result.termination = "failure"; break
-        after = _fingerprint(c, fixture.issues); after_statuses = issue_states(fixture.issues, c); after_states = {k: v is IssueState.RESOLVED for k,v in after_statuses.items()}; resolved = [k for k,v in after_states.items() if v and not before_states[k]]
-        harmful_archive = any(c.graph.nodes[n].status is GraphStatus.ARCHIVED for n in fixture.must_remain_active_node_ids) or any(i.kind in {IssueKind.NEGLECTED_ACTIVE, IssueKind.OVER_SPECIFIC_FOCUS} and not after_states[i.issue_id] and c.graph.nodes[i.target_node_id].status is GraphStatus.ARCHIVED for i in fixture.issues)
-        harmful_reactivation = any(c.graph.nodes[n].status is GraphStatus.ACTIVE for n in fixture.must_remain_archived_node_ids)
+        after_statuses = issue_states(fixture.issues, c, resolved_ids); after_states = {k: v is IssueState.RESOLVED for k,v in after_statuses.items()}; resolved = [k for k,v in after_states.items() if v and not before_states[k]]; resolved_ids.update(resolved); after = _fingerprint(c, fixture.issues)
+        harmful_archive = decision.operation == "archive" and (getattr(decision, "target_node_id", None) in fixture.must_remain_active_node_ids or any(i.kind in {IssueKind.NEGLECTED_ACTIVE, IssueKind.OVER_SPECIFIC_FOCUS} and i.target_node_id == decision.target_node_id and not after_states[i.issue_id] for i in fixture.issues))
+        harmful_reactivation = decision.operation == "reactivate" and getattr(decision, "target_node_id", None) in fixture.must_remain_archived_node_ids
         harmful = harmful_archive or harmful_reactivation
         if harmful_archive: result.failures.append("HARMFUL_ARCHIVE")
         if harmful_reactivation: result.failures.append("HARMFUL_REACTIVATION")

@@ -51,7 +51,7 @@ def test_dependency_states_progress_blocked_actionable_resolved():
 
 
 def test_harmful_archive_and_premature_stop_are_visible():
-    issues = [StewardIssue(issue_id="a", kind=IssueKind.NEGLECTED_ACTIVE, target_node_id="H2")]
+    issues = [StewardIssue(issue_id="a", kind=IssueKind.RELEVANT_ARCHIVED, target_node_id="H3")]
     harmful = run_fixture(fixture(issues, must_remain_active_node_ids={"H2"}), ScriptedProducer([d("archive", target_node_id="H2")]))
     assert "HARMFUL_ARCHIVE" in harmful.failures
     context = StewardReviewContext(global_frontier_assessed=True, local_frontier_exhausted=True, active_unresolved_ids=["U1"])
@@ -84,7 +84,7 @@ def test_raw_and_fenced_json_use_production_normalization():
 
 
 def test_must_remain_archived_and_derived_protection():
-    f = fixture([StewardIssue(issue_id="a", kind=IssueKind.RELEVANT_ARCHIVED, target_node_id="H3")], must_remain_archived_node_ids={"H3"})
+    f = fixture([StewardIssue(issue_id="a", kind=IssueKind.STALE_ACTIVE, target_node_id="H1")], must_remain_archived_node_ids={"H3"})
     result = run_fixture(f, ScriptedProducer([d("reactivate", target_node_id="H3")]))
     assert "HARMFUL_REACTIVATION" in result.failures
     parent = node("H1")
