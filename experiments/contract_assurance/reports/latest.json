@@ -1,5 +1,10 @@
 {
   "blind_compliance": {
+    "adversary_resistance": {
+      "accepted_outputs_semantics_unassessed": 2,
+      "correctly_rejected": 15,
+      "evaluations": 17
+    },
     "batches": 41,
     "by_contract": {
       "InitialExpansionResponse": {
@@ -728,7 +733,7 @@
     "total": 477,
     "upper_failure_rate": 0.9485470142820811
   },
-  "generated_at": "2026-09-01T02:51:51.059688+00:00",
+  "generated_at": "2026-09-01T02:54:20.465870+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -1079,7 +1084,7 @@
         "symbol": "ExperimentRunner.run"
       }
     ],
-    "git_commit": "8785971",
+    "git_commit": "7cc09fa",
     "unregistered_response_classes": []
   },
   "prompt_lint": {
