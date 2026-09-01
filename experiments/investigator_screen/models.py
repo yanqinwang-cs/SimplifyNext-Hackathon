@@ -36,3 +36,10 @@ class InvestigatorScreenResult:
     next_step_type: str | None = None
     update_operations: list[str] = field(default_factory=list)
     raw_output: Any | None = None
+    manual_review_flags: list[str] = field(default_factory=list)
+
+    @property
+    def outcome(self) -> str:
+        if not self.semantic_pass:
+            return "FAIL"
+        return "NEEDS_MANUAL_REVIEW" if self.manual_review_flags else "PASS"

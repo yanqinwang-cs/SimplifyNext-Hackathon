@@ -79,6 +79,8 @@ def _result_fields(result: Any) -> dict[str, Any]:
         "semantic_pass": result.semantic_pass,
         "failure_categories": result.failure_categories,
         "diagnostics": result.diagnostics,
+        "manual_review_flags": result.manual_review_flags,
+        "outcome": result.outcome,
         "next_step_type": result.next_step_type,
         "update_operations": result.update_operations,
     }
