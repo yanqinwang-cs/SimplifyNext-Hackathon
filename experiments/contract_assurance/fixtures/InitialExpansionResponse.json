@@ -333,8 +333,18 @@
     },
     {
       "intended_code": "S2",
-      "name": "wrong_namespace_seed_analysis_evidence",
+      "name": "wrong_namespace_seed_analysis_supported_by",
       "raw_output": "{\"competing_hypotheses\": [{\"conflicted_by\": [], \"contrasted_hypothesis_id\": \"H1\", \"id\": \"H2\", \"material_difference\": \"It proposes a different cause.\", \"parent_id\": null, \"relationship\": \"competing_root\", \"specificity_basis_evidence_ids\": [], \"statement\": \"A materially different explanation.\", \"status\": \"active\", \"supported_by\": [\"E2\"], \"unresolved\": [\"Which account is better supported?\"]}], \"expected_information_value\": \"The result can distinguish explanations.\", \"seed_analysis\": {\"conflicted_by\": [], \"specificity_basis_evidence_ids\": [], \"supported_by\": [\"H1\"], \"unresolved\": [\"What remains uncertain?\"]}, \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
+    },
+    {
+      "intended_code": "S2",
+      "name": "wrong_namespace_seed_analysis_conflicted_by",
+      "raw_output": "{\"competing_hypotheses\": [{\"conflicted_by\": [], \"contrasted_hypothesis_id\": \"H1\", \"id\": \"H2\", \"material_difference\": \"It proposes a different cause.\", \"parent_id\": null, \"relationship\": \"competing_root\", \"specificity_basis_evidence_ids\": [], \"statement\": \"A materially different explanation.\", \"status\": \"active\", \"supported_by\": [\"E2\"], \"unresolved\": [\"Which account is better supported?\"]}], \"expected_information_value\": \"The result can distinguish explanations.\", \"seed_analysis\": {\"conflicted_by\": [\"H1\"], \"specificity_basis_evidence_ids\": [], \"supported_by\": [\"E1\"], \"unresolved\": [\"What remains uncertain?\"]}, \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
+    },
+    {
+      "intended_code": "S2",
+      "name": "wrong_namespace_seed_analysis_specificity_basis_evidence_ids",
+      "raw_output": "{\"competing_hypotheses\": [{\"conflicted_by\": [], \"contrasted_hypothesis_id\": \"H1\", \"id\": \"H2\", \"material_difference\": \"It proposes a different cause.\", \"parent_id\": null, \"relationship\": \"competing_root\", \"specificity_basis_evidence_ids\": [], \"statement\": \"A materially different explanation.\", \"status\": \"active\", \"supported_by\": [\"E2\"], \"unresolved\": [\"Which account is better supported?\"]}], \"expected_information_value\": \"The result can distinguish explanations.\", \"seed_analysis\": {\"conflicted_by\": [], \"specificity_basis_evidence_ids\": [\"H1\"], \"supported_by\": [\"E1\"], \"unresolved\": [\"What remains uncertain?\"]}, \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
     },
     {
       "intended_code": "S4",
