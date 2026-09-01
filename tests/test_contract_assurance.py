@@ -4,7 +4,7 @@ import subprocess
 from dataclasses import replace
 from pathlib import Path
 
-from experiments.contract_assurance.evaluate import evaluate_raw
+from experiments.contract_assurance.evaluate import Evaluation, evaluate_raw
 from experiments.contract_assurance.evaluate import evaluate_initial, evaluate_next_action, evaluate_revision, persist_evaluations
 from experiments.contract_assurance.inventory import assert_complete_inventory, assert_inventory_paths, discover_response_classes, render_inventory_markdown, unregistered_response_classes, write_inventory_markdown
 from experiments.contract_assurance.audit import BlindBatchAudit, audit_batch_package, record_batch
@@ -19,6 +19,7 @@ from experiments.contract_assurance.snapshot import fingerprint, verify_snapshot
 from experiments.contract_assurance.snapshot import validate_public_package
 from experiments.contract_assurance.audit import audit_public_package
 from experiments.contract_assurance.blind.isolation import run_isolated_worker
+from experiments.contract_assurance.blind.execute import run_blind_batch
 from experiments.contract_assurance.taxonomy import FailureCode
 from investigator.services.contracts import NextActionResponse
 from investigator.services.contracts import RevisionResponse
@@ -190,6 +191,25 @@ def test_isolated_worker_streams_input_to_worker(tmp_path: Path):
         __import__("pytest").skip("managed runner denies sandbox_apply")
     assert completed.returncode == 0
     assert completed.stdout == "streamed-package"
+
+
+def test_run_blind_batch_streams_package_and_records_worker_metadata(tmp_path: Path, monkeypatch):
+    package = tmp_path / "package.json"
+    package.write_text(json.dumps({"contract": "NextActionResponse"}), encoding="utf-8")
+
+    seen = {}
+
+    def fake_worker(command, **kwargs):
+        seen.update(kwargs)
+        return subprocess.CompletedProcess(command, 0, stdout='{}', stderr='')
+
+    monkeypatch.setattr("experiments.contract_assurance.blind.execute.run_isolated_worker", fake_worker)
+    audit = BlindBatchAudit("isolated-producer-test", "NextActionResponse", "hash", (package.name,), True, False, isolation_evidence=("probe",))
+    destination = run_blind_batch(package, tmp_path / "batch", command=("worker",), repo_root=tmp_path, package_dir=tmp_path, audit=audit, evaluate=lambda output: Evaluation(True, raw_output=output))
+    assert seen["input_text"] == package.read_text(encoding="utf-8")
+    manifest = json.loads((destination / "batch_manifest.json").read_text())
+    assert manifest["blind_status"] == "BLIND"
+    assert json.loads((destination / "evaluations.json").read_text())[0]["details"]["worker_returncode"] == 0
 
 
 def test_report_summary_counts_failures():
