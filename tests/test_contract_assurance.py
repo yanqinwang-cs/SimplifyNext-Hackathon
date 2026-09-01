@@ -505,6 +505,12 @@ def test_fixture_manifest_is_reproducible_and_blind_audit_is_strict(tmp_path: Pa
     assert not BlindBatchAudit("w2", "NextActionResponse", "abc", ("repo",), False, True).qualifies_as_blind
 
 
+def test_blind_audit_manifest_preserves_input_family_with_safe_legacy_default():
+    audit = BlindBatchAudit("w1", "NextActionResponse", "abc", ("package.json",), True, False, isolation_evidence=("probe",), input_family="single-case")
+    assert audit.manifest()["input_family"] == "single-case"
+    assert BlindBatchAudit("w2", "NextActionResponse", "abc", ("package.json",), True, False, isolation_evidence=("probe",), input_family=" ").manifest()["input_family"] == "unspecified"
+
+
 def test_blind_role_instructions_exist_without_validator_details():
     root = Path(__file__).resolve().parents[1] / "experiments/contract_assurance/blind"
     producer = (root / "producer.md").read_text()

@@ -23,6 +23,7 @@ class BlindBatchAudit:
     implementation_access_available: bool
     contamination_risks: tuple[str, ...] = ()
     isolation_evidence: tuple[str, ...] = ()
+    input_family: str = "unspecified"
 
     @property
     def qualifies_as_blind(self) -> bool:
@@ -30,7 +31,8 @@ class BlindBatchAudit:
         return self.repository_access_disabled and not self.implementation_access_available and not self.contamination_risks and not disclosed_paths and bool(self.isolation_evidence)
 
     def manifest(self) -> dict[str, Any]:
-        return {**asdict(self), "qualifies_as_blind": self.qualifies_as_blind}
+        family = self.input_family.strip() or "unspecified"
+        return {**asdict(self), "input_family": family, "qualifies_as_blind": self.qualifies_as_blind}
 
 
 def audit_public_package(package: dict[str, Any]) -> dict[str, Any]:
