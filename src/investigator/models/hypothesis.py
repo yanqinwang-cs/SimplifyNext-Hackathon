@@ -1,5 +1,18 @@
 from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+
+_CANONICAL_PLACEHOLDERS = {
+    "The uncertainty this enquiry addresses.",
+    "How the result could change the explanation space.",
+    "Why this enquiry is useful now.",
+    "How the evidence changed the state.",
+}
+
+
+def _is_placeholder(value: str) -> bool:
+    normalized = value.strip()
+    return normalized.startswith("REPLACE_WITH_") or normalized in _CANONICAL_PLACEHOLDERS
 from investigator.models.identifiers import EvidenceId, HypothesisId, UncertaintyId
 
 
@@ -85,14 +98,14 @@ class HypothesisTransition(BaseModel):
     @field_validator("reason", "requested_operation_name", "requested_effect")
     @classmethod
     def substantive_text(cls, value: str | None) -> str | None:
-        if value is not None and (not value.strip() or value.strip().startswith("REPLACE_WITH_")):
+        if value is not None and (not value.strip() or _is_placeholder(value)):
             raise ValueError("Substantive text cannot be empty or a template placeholder")
         return value
 
     @field_validator("why_existing_operations_do_not_fit")
     @classmethod
     def substantive_operation_reasons(cls, value: dict[str, str] | None) -> dict[str, str] | None:
-        if value is not None and any(not key.strip() or not text.strip() or key.strip().startswith("REPLACE_WITH_") or text.strip().startswith("REPLACE_WITH_") for key, text in value.items()):
+        if value is not None and any(not key.strip() or not text.strip() or _is_placeholder(key) or _is_placeholder(text) for key, text in value.items()):
             raise ValueError("Substantive text cannot be empty or a template placeholder")
         return value
 
@@ -132,14 +145,14 @@ class UncertaintyTransition(BaseModel):
     @field_validator("reason", "new_description", "requested_operation_name", "requested_effect")
     @classmethod
     def substantive_text(cls, value: str | None) -> str | None:
-        if value is not None and (not value.strip() or value.strip().startswith("REPLACE_WITH_")):
+        if value is not None and (not value.strip() or _is_placeholder(value)):
             raise ValueError("Substantive text cannot be empty or a template placeholder")
         return value
 
     @field_validator("why_existing_operations_do_not_fit")
     @classmethod
     def substantive_operation_reasons(cls, value: dict[str, str] | None) -> dict[str, str] | None:
-        if value is not None and any(not key.strip() or not text.strip() or key.strip().startswith("REPLACE_WITH_") or text.strip().startswith("REPLACE_WITH_") for key, text in value.items()):
+        if value is not None and any(not key.strip() or not text.strip() or _is_placeholder(key) or _is_placeholder(text) for key, text in value.items()):
             raise ValueError("Substantive text cannot be empty or a template placeholder")
         return value
 

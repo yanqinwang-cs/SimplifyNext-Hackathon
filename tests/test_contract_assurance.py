@@ -306,6 +306,13 @@ def test_revision_allows_only_one_transition_per_entity():
     assert result.code is FailureCode.S4
 
 
+def test_revision_transition_reasons_reject_canonical_placeholder_prose():
+    with __import__("pytest").raises(ValueError):
+        HypothesisTransition(hypothesis_id="H1", transition="keep", reason="How the evidence changed the state.")
+    with __import__("pytest").raises(ValueError):
+        UncertaintyTransition(uncertainty_id="H1:U1", transition="keep", reason="How the evidence changed the state.")
+
+
 def test_other_transition_operation_reasons_must_be_substantive():
     value = {"hypothesis_id": "H1", "transition": "other", "reason": "A reason.", "requested_operation_name": "reframe", "requested_effect": "Change framing.", "why_existing_operations_do_not_fit": {"keep": ""}}
     result = evaluate_raw(json.dumps(value), HypothesisTransition)

@@ -255,6 +255,11 @@
     },
     {
       "intended_code": "S4",
+      "name": "canonical_hypothesis_transition_reason",
+      "raw_output": "{\"hypothesis_updates\": [{\"hypothesis_id\": \"H1\", \"reason\": \"How the evidence changed the state.\", \"transition\": \"keep\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S4",
       "name": "empty_uncertainty_transition_reason",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"\", \"transition\": \"keep\", \"uncertainty_id\": \"H1:U1\"}]}"
     },
@@ -262,6 +267,11 @@
       "intended_code": "S4",
       "name": "placeholder_uncertainty_transition_reason",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"REPLACE_WITH_REASON\", \"transition\": \"keep\", \"uncertainty_id\": \"H1:U1\"}]}"
+    },
+    {
+      "intended_code": "S4",
+      "name": "canonical_uncertainty_transition_reason",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": [{\"reason\": \"How the evidence changed the state.\", \"transition\": \"keep\", \"uncertainty_id\": \"H1:U1\"}]}"
     },
     {
       "intended_code": "valid",
