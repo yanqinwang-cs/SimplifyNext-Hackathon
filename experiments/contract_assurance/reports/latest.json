@@ -502,7 +502,7 @@
     "total": 428,
     "upper_failure_rate": 0.9676873921473405
   },
-  "generated_at": "2026-09-01T01:26:26.703704+00:00",
+  "generated_at": "2026-09-01T01:29:38.558639+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -602,7 +602,7 @@
           "Case1ControlledEnvironment.initial_prompt"
         ],
         "prompt_hashes": {
-          "src/investigator/environments/case_01_prompts.py": "d9ce0a5b96dc3fe05550c6266aa1bc2087ec004937f4171d293ff7c4df96e6df"
+          "src/investigator/environments/case_01_prompts.py": "db8d5fb1b0f793ac73f616331e3bf27737803e78360af972ab68431455507dce"
         },
         "prompt_sources": [
           "src/investigator/environments/case_01_prompts.py"
@@ -643,7 +643,7 @@
           "Case1ControlledEnvironment.initial_expansion_prompt"
         ],
         "prompt_hashes": {
-          "src/investigator/environments/case_01_prompts.py": "d9ce0a5b96dc3fe05550c6266aa1bc2087ec004937f4171d293ff7c4df96e6df"
+          "src/investigator/environments/case_01_prompts.py": "db8d5fb1b0f793ac73f616331e3bf27737803e78360af972ab68431455507dce"
         },
         "prompt_sources": [
           "src/investigator/environments/case_01_prompts.py"
@@ -683,7 +683,7 @@
           "Case1ControlledEnvironment.next_action_prompt"
         ],
         "prompt_hashes": {
-          "src/investigator/environments/case_01_prompts.py": "d9ce0a5b96dc3fe05550c6266aa1bc2087ec004937f4171d293ff7c4df96e6df"
+          "src/investigator/environments/case_01_prompts.py": "db8d5fb1b0f793ac73f616331e3bf27737803e78360af972ab68431455507dce"
         },
         "prompt_sources": [
           "src/investigator/environments/case_01_prompts.py"
@@ -724,7 +724,7 @@
           "Case1ControlledEnvironment.revision_prompt"
         ],
         "prompt_hashes": {
-          "src/investigator/environments/case_01_prompts.py": "d9ce0a5b96dc3fe05550c6266aa1bc2087ec004937f4171d293ff7c4df96e6df"
+          "src/investigator/environments/case_01_prompts.py": "db8d5fb1b0f793ac73f616331e3bf27737803e78360af972ab68431455507dce"
         },
         "prompt_sources": [
           "src/investigator/environments/case_01_prompts.py"
@@ -808,7 +808,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "cc6cdbf",
+    "git_commit": "8f9c5d5",
     "unregistered_response_classes": []
   },
   "regressions": {
