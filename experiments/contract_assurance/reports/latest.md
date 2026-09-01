@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T00:46:39.105272+00:00
+- Generated: 2026-09-01T00:48:49.935064+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -31,6 +31,23 @@
 - `schema`: 246
 - `serialization`: 140
 - `state_operation_preflight`: 9
+
+## Changes made
+
+- Deterministic fixtures evaluated through registered production-path adapters.
+- Qualified blind manifests and output metrics aggregated without admitting NOT_BLIND results.
+
+## Regressions
+
+- `status`: clean
+- `unexpected_accepts`: 0
+- `unexpected_rejects`: 0
+
+## Remaining risks
+
+- S6 reasoning and semantic quality require a separate semantic checker.
+- SmokeResponse live Bedrock execution remains excluded by the no-AWS constraint.
+- Historical NOT_BLIND batches remain excluded from blind compliance statistics.
 
 ## Blind compliance
 

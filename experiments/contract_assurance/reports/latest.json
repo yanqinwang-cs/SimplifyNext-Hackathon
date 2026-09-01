@@ -153,6 +153,10 @@
     "status": "NOT_BLIND"
   },
   "blind_results_included": false,
+  "changes_made": [
+    "Deterministic fixtures evaluated through registered production-path adapters.",
+    "Qualified blind manifests and output metrics aggregated without admitting NOT_BLIND results."
+  ],
   "coverage_ledger": {
     "InitialExpansionResponse|S0|serialization|Expecting ',' delimiter: line 1 column 767 (char 766)": 1,
     "InitialExpansionResponse|S0|serialization|Expecting property name enclosed in double quotes: line 1 column 2 (char 1)": 2,
@@ -497,7 +501,7 @@
     "total": 416,
     "upper_failure_rate": 0.9667486562144427
   },
-  "generated_at": "2026-09-01T00:46:39.105272+00:00",
+  "generated_at": "2026-09-01T00:48:49.935064+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -719,9 +723,19 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "6579a4c",
+    "git_commit": "a9073e1",
     "unregistered_response_classes": []
   },
+  "regressions": {
+    "status": "clean",
+    "unexpected_accepts": 0,
+    "unexpected_rejects": 0
+  },
+  "remaining_risks": [
+    "S6 reasoning and semantic quality require a separate semantic checker.",
+    "SmokeResponse live Bedrock execution remains excluded by the no-AWS constraint.",
+    "Historical NOT_BLIND batches remain excluded from blind compliance statistics."
+  ],
   "semantic_limitations": [
     "S6 reasoning and semantic quality are not assessed by deterministic schema assurance.",
     "SmokeResponse is schema-sampled offline; its live Bedrock path is excluded from this offline cycle."
