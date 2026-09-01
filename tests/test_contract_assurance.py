@@ -267,6 +267,9 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     since_change = report["blind_compliance"]["producer_compliance_since_latest_contract_change"]
     assert since_change["basis"] == "current frozen package hash"
     assert since_change["evaluations"] == since_change["accepted"] + since_change["rejected"]
+    by_contract = report["blind_compliance"]["producer_compliance_by_contract"]
+    assert set(by_contract) == set(contract_registry())
+    assert "Qualified producer contract" in render_markdown(report)
     assert report["deterministic"]["total"] > 0
     assert report["deterministic"]["total"] >= 35
     assert report["deterministic_by_contract"]["StewardDecisionResponse"]["stage_counts"]["coordinator"] == 15

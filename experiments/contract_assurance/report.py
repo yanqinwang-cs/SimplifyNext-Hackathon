@@ -142,6 +142,9 @@ def render_markdown(report: dict) -> str:
         if blind.get("by_input_family"):
             lines += ["", "| Qualified producer input family | Batches | Qualified | Evaluations | Accepted | Rejected |", "| --- | ---: | ---: | ---: | ---: | ---: |"]
             lines.extend(f"| `{family}` | {data.get('batches', 0)} | {data.get('qualified', 0)} | {data.get('evaluations', 0)} | {data.get('accepted', 0)} | {data.get('rejected', 0)} |" for family, data in sorted(blind["by_input_family"].items()))
+        if blind.get("producer_compliance_by_contract"):
+            lines += ["", "| Qualified producer contract | Evaluations | Accepted | Rejected | Compliance |", "| --- | ---: | ---: | ---: | ---: |"]
+            lines.extend(f"| `{contract}` | {data.get('evaluations', 0)} | {data.get('accepted', 0)} | {data.get('rejected', 0)} | {data.get('compliance_rate', 0):.4f} |" for contract, data in sorted(blind["producer_compliance_by_contract"].items()))
         if blind.get("qualified_failure_codes"):
             lines.append(f"- Qualified blind failure codes: `{blind['qualified_failure_codes']}`")
         if blind.get("qualified_output_metrics"):
