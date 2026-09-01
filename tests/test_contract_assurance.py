@@ -412,6 +412,7 @@ def test_all_committed_public_packages_match_registered_contracts():
         assert contract in registry
         assert verify_snapshot_against_contract(payload, registry[contract]) == [], path.name
     assert verify_committed_packages(Path(__file__).resolve().parents[1]) == []
+    assert {path.stem for path in packages.glob("*.json")} == set(registry)
 
 
 def test_evolution_records_require_semantic_and_regression_evidence():

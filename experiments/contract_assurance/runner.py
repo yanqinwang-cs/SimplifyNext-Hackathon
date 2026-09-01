@@ -140,7 +140,13 @@ def verify_committed_packages(root: Path) -> list[str]:
     package_dir = root / "experiments/contract_assurance/blind/packages"
     registry = contract_registry()
     issues: list[str] = []
-    for path in sorted(package_dir.glob("*.json")):
+    paths = sorted(package_dir.glob("*.json"))
+    package_names = {path.stem for path in paths}
+    for missing in sorted(set(registry) - package_names):
+        issues.append(f"missing blind package adapter: {missing}.json")
+    for extra in sorted(package_names - set(registry)):
+        issues.append(f"blind package has no registered contract: {extra}.json")
+    for path in paths:
         payload = json.loads(path.read_text(encoding="utf-8"))
         spec = registry.get(payload.get("manifest", {}).get("contract"))
         if spec is None:
