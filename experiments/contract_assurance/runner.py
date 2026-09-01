@@ -99,18 +99,18 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
                 except (OSError, json.JSONDecodeError):
                     evaluations = []
                 if isinstance(evaluations, list):
-                    codes = {str(item.get("code")) for item in evaluations if isinstance(item, dict) and item.get("code")}
-                    for code in sorted(codes):
-                        count = sum(1 for item in evaluations if isinstance(item, dict) and item.get("code") == code)
-                        by_role[role]["failure_codes"][code] = by_role[role]["failure_codes"].get(code, 0) + count
-                        for contract in contracts:
-                            by_contract[contract]["failure_codes"][code] = by_contract[contract]["failure_codes"].get(code, 0) + count
                     recorded_accepted = sum(bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
                     recorded_rejected = sum(not bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
                     by_role[role]["recorded_evaluations"] += len(evaluations)
                     by_role[role]["recorded_accepted"] += recorded_accepted
                     by_role[role]["recorded_rejected"] += recorded_rejected
                     if is_qualified:
+                        codes = {str(item.get("code")) for item in evaluations if isinstance(item, dict) and item.get("code")}
+                        for code in sorted(codes):
+                            count = sum(1 for item in evaluations if isinstance(item, dict) and item.get("code") == code)
+                            by_role[role]["failure_codes"][code] = by_role[role]["failure_codes"].get(code, 0) + count
+                            for contract in contracts:
+                                by_contract[contract]["failure_codes"][code] = by_contract[contract]["failure_codes"].get(code, 0) + count
                         by_role[role]["evaluations"] += len(evaluations)
                         by_role[role]["accepted"] += recorded_accepted
                         by_role[role]["rejected"] += recorded_rejected

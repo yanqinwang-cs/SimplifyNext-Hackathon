@@ -239,13 +239,14 @@ def test_blind_compliance_scans_nested_batches_and_records_outcomes(tmp_path: Pa
         "audits": [{"contract": "NextActionResponse", "qualifies_as_blind": False, "worker_id": "producer-1"}],
     }), encoding="utf-8")
     (batch / "evaluations.json").write_text(json.dumps([
-        {"accepted": True}, {"accepted": False},
+        {"accepted": True, "code": None}, {"accepted": False, "code": "S0"},
     ]), encoding="utf-8")
     summary = blind_compliance_summary(tmp_path)
     assert summary["batches"] == 1 and summary["excluded_not_blind"] == 1
     assert summary["by_role"]["producer"]["recorded_evaluations"] == 2
     assert summary["by_role"]["producer"]["recorded_accepted"] == 1
     assert summary["by_role"]["producer"]["recorded_rejected"] == 1
+    assert summary["qualified_failure_codes"] == {}
 
     direct = tmp_path / "experiments/contract_assurance/results/direct/adversary"
     direct.mkdir(parents=True)
@@ -253,6 +254,9 @@ def test_blind_compliance_scans_nested_batches_and_records_outcomes(tmp_path: Pa
         "blind_status": "BLIND", "worker_id": "isolated-adversary-1", "contract": "NextActionResponse",
         "qualifies_as_blind": True,
     }), encoding="utf-8")
+    (direct / "evaluations.json").write_text(json.dumps([{"accepted": False, "code": "S1"}]), encoding="utf-8")
+    summary = blind_compliance_summary(tmp_path)
+    assert summary["qualified_failure_codes"] == {"S1": 1}
     (direct / "evaluations.json").write_text(json.dumps([{"accepted": False}]), encoding="utf-8")
     summary = blind_compliance_summary(tmp_path)
     assert summary["qualified_batches"] == 1
