@@ -34,6 +34,11 @@ def first_move_is_acceptable(operation: str, case: MultipleValidCase) -> bool:
     return operation in case.acceptable_operations
 
 
+def multiple_valid_cases() -> list[MultipleValidCase]:
+    """Evaluator-only acceptance metadata for genuinely order-independent work."""
+    return [MultipleValidCase("SEQ_A", frozenset({"archive", "reactivate"}))]
+
+
 def _fingerprint(coordinator: GraphInvestigationCoordinator) -> tuple:
     return (coordinator.focus.node_id, tuple(sorted((node.id, node.status.value) for node in coordinator.graph.nodes.values())), coordinator.stopped)
 

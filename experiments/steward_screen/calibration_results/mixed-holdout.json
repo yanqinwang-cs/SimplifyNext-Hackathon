@@ -1,0 +1,36 @@
+{
+  "scenarios": 1,
+  "step_cap": 4,
+  "terminated_stopped": 0,
+  "terminated_clear_failure": 0,
+  "terminated_step_cap": 0,
+  "illegal_operation": 0,
+  "no_progress_loop": 0,
+  "oscillation": 0,
+  "steps": [
+    3
+  ],
+  "details": [
+    {
+      "scenario_id": "SEQ_A",
+      "operations": [
+        "reactivate",
+        "archive",
+        "keep_focus"
+      ],
+      "failures": [],
+      "termination": "quiescent"
+    }
+  ],
+  "multiple_valid": [
+    {
+      "scenario_id": "SEQ_A",
+      "acceptable_first_operations": [
+        "archive",
+        "reactivate"
+      ],
+      "producer_operation": "reactivate",
+      "accepted": true
+    }
+  ]
+}
