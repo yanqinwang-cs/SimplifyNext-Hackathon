@@ -53,3 +53,13 @@ def test_malformed_output_is_recorded_as_schema_failure() -> None:
     assert result.error_category == "schema_parse"
     assert result.raw_model_output == "not json"
     assert not result.schema_valid
+
+
+def test_steward_prompt_uses_neutral_ordered_ontology_and_references() -> None:
+    prompt = build_prompt(all_scenarios()[0])
+    for section in ["<ROLE>", "<INVESTIGATIVE_PURPOSE>", "<OBJECT_LEGEND>", "<RELATION_LEGEND>", "<POLICY_CONTEXT>", "<POLICY_DISCIPLINE>", "<STEWARD_OPERATIONS>", "<AUTHORITY_BOUNDARY>", "<CASE_PARTICIPANTS>", "<CASEGRAPH>", "<CURRENT_FOCUS>", "<FOCUS_HISTORY>", "<DETERMINISTIC_FEATURES>", "<OUTPUT_CONTRACT>"]:
+        assert section in prompt
+    assert "{{PERSON1}}" in prompt and "{{PERSON2}}" in prompt
+    assert "{{H1}}" in prompt and "{{E1}}" in prompt and "{{R1.1}}" in prompt
+    assert "determine guilt" not in prompt.lower()
+    assert "choose an exact enquiry or tool" in prompt
