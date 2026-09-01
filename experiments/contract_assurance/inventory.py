@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .registry import ContractSpec, contract_registry
+from investigator.schema_fingerprint import schema_fingerprint
 
 
 DYNAMIC_STRUCTURED_BOUNDARIES = (
@@ -99,7 +100,7 @@ def inventory(root: Path, commit: str = "unknown") -> dict[str, Any]:
                 template_hash = hashlib.sha256(json.dumps(template_payload.get("canonical"), sort_keys=True).encode()).hexdigest()
             except (OSError, json.JSONDecodeError):
                 template_hash = None
-        entries.append({**asdict(spec), "schema": spec.schema.__name__, "schema_hash": hashlib.sha256(json.dumps(spec.schema.model_json_schema(), sort_keys=True).encode()).hexdigest(), "source_hash": source_hash, "prompt_hashes": prompt_hashes, "template_source": str(template_path.relative_to(root)), "template_hash": template_hash})
+        entries.append({**asdict(spec), "schema": spec.schema.__name__, "schema_hash": schema_fingerprint(spec.schema.model_json_schema()), "source_hash": source_hash, "prompt_hashes": prompt_hashes, "template_source": str(template_path.relative_to(root)), "template_hash": template_hash})
     return {"git_commit": commit, "contracts": entries, "dynamic_structured_boundaries": list(DYNAMIC_STRUCTURED_BOUNDARIES), "discovered_response_classes": discover_response_classes(root), "unregistered_response_classes": unregistered_response_classes(root)}
 
 
