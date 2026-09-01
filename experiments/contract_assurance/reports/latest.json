@@ -573,7 +573,7 @@
     "StewardDecisionResponse|S4|coordinator_preflight|Archiving current focus requires destination_node_id": 1,
     "StewardDecisionResponse|S4|coordinator_preflight|No existing ancestor to generalize from 'H1'": 1,
     "StewardDecisionResponse|S4|coordinator_preflight|STOP_UNRESOLVED requires trusted review_context": 2,
-    "StewardDecisionResponse|S4|coordinator_preflight|Unknown graph node ID: 'H9'": 3
+    "StewardDecisionResponse|S4|coordinator_preflight|Unknown graph node ID: 'H9'": 4
   },
   "deterministic": {
     "accepted": 36,
@@ -582,21 +582,21 @@
       "S1": 125,
       "S2": 64,
       "S3": 24,
-      "S4": 89
+      "S4": 90
     },
-    "rejected": 458,
+    "rejected": 459,
     "s5_candidates": 0,
     "s6_limitations": 0,
     "stage_counts": {
       "availability": 3,
       "coordinator": 15,
-      "coordinator_preflight": 7,
+      "coordinator_preflight": 8,
       "operation_preflight": 20,
       "schema": 284,
       "serialization": 156,
       "state_operation_preflight": 9
     },
-    "total": 494,
+    "total": 495,
     "unexpected_accepts": 0,
     "unexpected_rejects": 0
   },
@@ -747,25 +747,25 @@
       "failure_codes": {
         "S0": 16,
         "S1": 13,
-        "S4": 7
+        "S4": 8
       },
-      "rejected": 36,
+      "rejected": 37,
       "s5_candidates": 0,
       "s6_limitations": 0,
       "stage_counts": {
         "coordinator": 15,
-        "coordinator_preflight": 7,
+        "coordinator_preflight": 8,
         "schema": 13,
         "serialization": 16
       },
-      "total": 51,
+      "total": 52,
       "unexpected_accepts": 0,
       "unexpected_rejects": 0
     }
   },
   "deterministic_correctness": {
-    "invalid_fixtures": 458,
-    "invalid_rejected": 458,
+    "invalid_fixtures": 459,
+    "invalid_rejected": 459,
     "invalid_rejection_rate": 1.0,
     "valid_accepted": 36,
     "valid_fixtures": 36,
@@ -829,8 +829,8 @@
       "valid_pass_rate": 1.0
     },
     "StewardDecisionResponse": {
-      "invalid_fixtures": 36,
-      "invalid_rejected": 36,
+      "invalid_fixtures": 37,
+      "invalid_rejected": 37,
       "invalid_rejection_rate": 1.0,
       "valid_accepted": 15,
       "valid_fixtures": 15,
@@ -839,12 +839,12 @@
   },
   "deterministic_failure_rate": {
     "confidence": 0.95,
-    "failures": 458,
-    "observed_failure_rate": 0.9271255060728745,
-    "total": 494,
-    "upper_failure_rate": 0.9468994786739552
+    "failures": 459,
+    "observed_failure_rate": 0.9272727272727272,
+    "total": 495,
+    "upper_failure_rate": 0.947007703135798
   },
-  "generated_at": "2026-09-01T04:24:10.169643+00:00",
+  "generated_at": "2026-09-01T04:26:10.852850+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -1195,7 +1195,7 @@
         "symbol": "ExperimentRunner.run"
       }
     ],
-    "git_commit": "7895823",
+    "git_commit": "f55196c",
     "unregistered_response_classes": []
   },
   "prompt_lint": {

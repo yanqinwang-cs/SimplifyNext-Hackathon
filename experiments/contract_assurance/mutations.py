@@ -189,6 +189,8 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         ):
             intended_code = "valid" if name in {"shift_focus_to_current_node", "reactivate_active_target"} else "S4"
             result.append(Mutation(name, intended_code, json.dumps(payload, sort_keys=True)))
+        mixed_reference_placeholder = {"assessment": "REPLACE_WITH_ASSESSMENT", "reason": "The branch has no remaining value.", "operation": "archive", "target_node_id": "H9"}
+        result.append(Mutation("mixed_archive_target_placeholder_assessment", "S4", json.dumps(mixed_reference_placeholder, sort_keys=True)))
     text_fields = [field for field, item in value.items() if isinstance(item, str)]
     if text_fields:
         placeholder = copy.deepcopy(value)

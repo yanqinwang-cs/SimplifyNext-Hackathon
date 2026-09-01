@@ -198,6 +198,11 @@
     },
     {
       "intended_code": "S4",
+      "name": "mixed_archive_target_placeholder_assessment",
+      "raw_output": "{\"assessment\": \"REPLACE_WITH_ASSESSMENT\", \"operation\": \"archive\", \"reason\": \"The branch has no remaining value.\", \"target_node_id\": \"H9\"}"
+    },
+    {
+      "intended_code": "S4",
       "name": "placeholder_text",
       "raw_output": "{\"assessment\": \"The current focus remains useful.\", \"operation\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\", \"reason\": \"The supplied frontier evidence supports retaining focus.\"}"
     }
