@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T03:47:42.854303+00:00
+- Generated: 2026-09-01T03:49:00.200271+00:00
 - Contracts: 8
 
 | Metric | Count |
@@ -63,6 +63,7 @@
 - Batches: 45
 - Qualified batches: 34
 - Excluded as NOT_BLIND: 11
+- Malformed manifests excluded: 4
 
 | Blind contract | Batches | Qualified | Excluded |
 | --- | ---: | ---: | ---: |
