@@ -146,6 +146,9 @@ def render_markdown(report: dict) -> str:
             lines.append(f"- Qualified blind output metrics: placeholder copies `{metrics.get('placeholder_copy', 0)}`, fenced outputs `{metrics.get('fence_usage', 0)}`, average length `{metrics.get('average_output_chars', 0):.1f}` characters.")
         if blind.get("coverage_gaps"):
             lines.append(f"- Blind coverage gaps requiring fresh batches: `{', '.join(blind['coverage_gaps'])}`")
+        resistance = blind.get("adversary_resistance")
+        if resistance:
+            lines.append(f"- Adversary resistance: `{resistance.get('correctly_rejected', 0)}` correctly rejected; `{resistance.get('accepted_outputs_semantics_unassessed', 0)}` accepted with semantics unassessed outside deterministic enforceability.")
     limitations = report.get("semantic_limitations", [])
     if limitations:
         lines += ["", "## Assurance limitations", ""]
