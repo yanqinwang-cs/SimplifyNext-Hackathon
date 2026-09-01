@@ -10,3 +10,5 @@ data/cases/*.tmp
 runs/
 experiments/contract_assurance/results/
 experiments/**/results/**
+experiments/contract_assurance/reports/history/
+.codex/
