@@ -139,6 +139,9 @@ def render_markdown(report: dict) -> str:
         if blind.get("by_role"):
             lines += ["", "| Blind role | Batches | Qualified evaluations | Accepted | Rejected |", "| --- | ---: | ---: | ---: | ---: |"]
             lines.extend(f"| `{role}` | {data.get('batches', 0)} | {data.get('evaluations', 0)} | {data.get('accepted', 0)} | {data.get('rejected', 0)} |" for role, data in sorted(blind["by_role"].items()))
+        if blind.get("by_input_family"):
+            lines += ["", "| Qualified producer input family | Batches | Qualified | Evaluations | Accepted | Rejected |", "| --- | ---: | ---: | ---: | ---: | ---: |"]
+            lines.extend(f"| `{family}` | {data.get('batches', 0)} | {data.get('qualified', 0)} | {data.get('evaluations', 0)} | {data.get('accepted', 0)} | {data.get('rejected', 0)} |" for family, data in sorted(blind["by_input_family"].items()))
         if blind.get("qualified_failure_codes"):
             lines.append(f"- Qualified blind failure codes: `{blind['qualified_failure_codes']}`")
         if blind.get("qualified_output_metrics"):

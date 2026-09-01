@@ -273,6 +273,8 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     assert report["human_review_required"] is False
     assert report["blind_compliance"]["by_contract"]
     assert report["blind_compliance"]["by_contract_role"]
+    assert report["blind_compliance"]["by_input_family"]
+    assert "Qualified producer input family" in render_markdown(report)
     assert "| Blind contract/role | Batches | Qualified | Excluded | Evaluations | Accepted | Rejected |" in render_markdown(report)
     assert (tmp_path / "inventory.json").exists()
     assert (tmp_path / "latest.json").exists()
