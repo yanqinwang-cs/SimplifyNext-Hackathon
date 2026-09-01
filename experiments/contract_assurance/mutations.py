@@ -427,6 +427,10 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         empty_question = copy.deepcopy(value)
         empty_question["competing_hypotheses"][0]["unresolved"] = [""]
         result.append(Mutation("empty_expansion_unresolved_question", "S4", json.dumps(empty_question, sort_keys=True)))
+        for field in ("supported_by", "conflicted_by", "specificity_basis_evidence_ids"):
+            wrong_namespace = copy.deepcopy(value)
+            wrong_namespace["competing_hypotheses"][0][field] = ["H1"]
+            result.append(Mutation(f"wrong_namespace_expansion_{field}", "S2", json.dumps(wrong_namespace, sort_keys=True)))
         unsupported = copy.deepcopy(value)
         unsupported["competing_hypotheses"][0]["relationship"] = "related"
         result.append(Mutation("unsupported_relationship", "S2", json.dumps(unsupported, sort_keys=True)))
