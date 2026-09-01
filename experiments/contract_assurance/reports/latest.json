@@ -342,7 +342,7 @@
       "total": 28
     }
   },
-  "generated_at": "2026-09-01T00:36:38.913755+00:00",
+  "generated_at": "2026-09-01T00:37:47.220253+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -564,7 +564,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "97975e0",
+    "git_commit": "11208d5",
     "unregistered_response_classes": []
   },
   "semantic_limitations": [
