@@ -208,6 +208,11 @@
       "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"A2\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"It is available now.\"}"
     },
     {
+      "intended_code": "S4",
+      "name": "unavailable_action_and_placeholder_context",
+      "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"A2\", \"target_uncertainty\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\", \"why_this_action_now\": \"It is available now.\"}"
+    },
+    {
       "intended_code": "S2",
       "name": "wrong_namespace_and_placeholder_action_context",
       "raw_output": "{\"expected_information_value\": \"It may distinguish explanations.\", \"selected_action_id\": \"H1\", \"target_uncertainty\": \"REPLACE_WITH_SUBSTANTIVE_TEXT\", \"why_this_action_now\": \"It is available now.\"}"
