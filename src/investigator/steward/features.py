@@ -44,7 +44,7 @@ class TunnelVisionIndicators(BaseModel):
 
 def direct_evidence_profile(graph: CaseGraph, node_ids: set[str], relation: EdgeRelation = EdgeRelation.SUPPORTS) -> EvidenceProfile:
     """Count direct evidence edges only; no mediated or recursive support is inferred."""
-    edges = [edge for edge in graph.edges.values() if edge.status.value == "active" and edge.relation is relation and edge.target_id in node_ids]
+    edges = [edge for edge in graph.edges.values() if edge.status.value == "active" and edge.relation is relation and edge.target_id in node_ids and graph.nodes[edge.source_id].node_type is GraphNodeType.EVIDENCE]
     counts = Counter(edge.strength for edge in edges)
     evidence_ids = sorted({edge.source_id for edge in edges if graph.nodes[edge.source_id].node_type is GraphNodeType.EVIDENCE})
     sources = sorted({graph.nodes[item].metadata["source_id"] for item in evidence_ids if "source_id" in graph.nodes[item].metadata})

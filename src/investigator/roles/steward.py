@@ -67,7 +67,6 @@ class ReactivateDecision(_DecisionBase):
 class StopUnresolvedDecision(_DecisionBase):
     operation: Literal["stop_unresolved"] = "stop_unresolved"
     important_unresolved_ids: list[str] = Field(min_length=1)
-    review_context: StewardReviewContext
     reopening_conditions: str
 
 

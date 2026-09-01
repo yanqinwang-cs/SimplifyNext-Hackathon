@@ -2,7 +2,7 @@ from investigator.graph import CaseGraph, GraphNodeType, GraphStatus
 from investigator.roles.focus import InvestigationFocus, investigator_region
 from investigator.roles.history import GraphHistory
 from investigator.roles.investigator import InvestigatorOperation, InvestigatorUpdate
-from investigator.roles.steward import ArchiveDecision, GeneralizeDecision, ReactivateDecision, ShiftFocusDecision, StopUnresolvedDecision, StewardDecision
+from investigator.roles.steward import ArchiveDecision, GeneralizeDecision, ReactivateDecision, ShiftFocusDecision, StopUnresolvedDecision, StewardDecision, StewardReviewContext
 
 
 class GraphInvestigationCoordinator:
@@ -27,9 +27,11 @@ class GraphInvestigationCoordinator:
             self._move_focus(update.focus_node_id, update.reason, self._permitted_ids())
         self.history.append(self.graph, self.focus, update.reason)
 
-    def review_with_steward(self, decision: StewardDecision) -> None:
+    def review_with_steward(self, decision: StewardDecision, review_context: StewardReviewContext | None = None) -> None:
         if self.stopped:
             raise ValueError("Coordinator is stopped")
+        if decision.operation != "stop_unresolved" and review_context is not None:
+            raise ValueError("review_context is valid only for STOP_UNRESOLVED")
         if decision.operation == "keep_focus":
             pass
         elif isinstance(decision, ShiftFocusDecision):
@@ -47,7 +49,9 @@ class GraphInvestigationCoordinator:
         elif isinstance(decision, ReactivateDecision):
             self.graph.reactivate_node(decision.target_node_id, decision.reason)
         elif isinstance(decision, StopUnresolvedDecision):
-            self._stop_unresolved(decision)
+            if review_context is None:
+                raise ValueError("STOP_UNRESOLVED requires trusted review_context")
+            self._stop_unresolved(decision, review_context)
         self.history.append(self.graph, self.focus, decision.reason)
 
     def _apply_local_node(self, update: InvestigatorUpdate) -> None:
@@ -77,8 +81,7 @@ class GraphInvestigationCoordinator:
         else:
             self.graph.archive_node(target.id, decision.reason)
 
-    def _stop_unresolved(self, decision: StopUnresolvedDecision) -> None:
-        context = decision.review_context
+    def _stop_unresolved(self, decision: StopUnresolvedDecision, context: StewardReviewContext) -> None:
         if not context.global_frontier_assessed:
             raise ValueError("STOP_UNRESOLVED requires an assessed global frontier")
         if context.neglected_candidate_node_ids or context.obvious_useful_region_remains:
@@ -91,6 +94,8 @@ class GraphInvestigationCoordinator:
             node = self._require_node(self.graph, identifier)
             if node.node_type is not GraphNodeType.UNCERTAINTY or node.status is not GraphStatus.ACTIVE:
                 raise ValueError("STOP_UNRESOLVED IDs must identify active uncertainty nodes")
+            if identifier not in context.active_unresolved_ids:
+                raise ValueError("STOP_UNRESOLVED IDs must be listed by trusted active_unresolved_ids")
         self.stopped = True
 
     def _permitted_ids(self) -> set[str]:
