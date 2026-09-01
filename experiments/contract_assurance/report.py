@@ -107,6 +107,14 @@ def render_markdown(report: dict) -> str:
     if summary.get("stage_counts"):
         lines += ["", "## Production-path stages", ""]
         lines.extend(f"- `{stage}`: {count}" for stage, count in sorted(summary["stage_counts"].items()))
+    for heading, key in (("Changes made", "changes_made"), ("Regressions", "regressions"), ("Remaining risks", "remaining_risks")):
+        value = report.get(key)
+        if value:
+            lines += ["", f"## {heading}", ""]
+            if isinstance(value, dict):
+                lines.extend(f"- `{name}`: {detail}" for name, detail in sorted(value.items()))
+            else:
+                lines.extend(f"- {item}" for item in value)
     blind = report.get("blind_compliance")
     if blind:
         lines += ["", "## Blind compliance", "", f"- Status: `{blind.get('status', 'NOT_BLIND')}`", f"- Batches: {blind.get('batches', 0)}", f"- Qualified batches: {blind.get('qualified_batches', 0)}", f"- Excluded as NOT_BLIND: {blind.get('excluded_not_blind', 0)}"]

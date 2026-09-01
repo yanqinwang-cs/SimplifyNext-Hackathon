@@ -217,6 +217,8 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     assert 0 <= report["deterministic_failure_rate"]["upper_failure_rate"] <= 1
     assert report["deterministic_correctness"]["valid_pass_rate"] == 1.0
     assert report["deterministic_correctness"]["invalid_rejection_rate"] == 1.0
+    assert report["regressions"]["status"] == "clean"
+    assert report["changes_made"] and report["remaining_risks"]
     assert report["blind_compliance"]["qualified_failure_codes"]
     assert report["blind_compliance"]["qualified_output_metrics"]["outputs"] == report["blind_compliance"]["qualified_evaluations"]
     assert report["deterministic"]["total"] > 0
