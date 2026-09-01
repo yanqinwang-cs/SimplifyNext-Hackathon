@@ -494,6 +494,11 @@
       "raw_output": "{\"hypothesis_updates\": [{\"add_supporting_evidence_ids\": [\"E999\"], \"hypothesis_id\": \"H1\", \"reason\": \"A reason.\", \"transition\": \"keep\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     },
     {
+      "intended_code": "S4",
+      "name": "unknown_evidence_and_empty_update_reason",
+      "raw_output": "{\"hypothesis_updates\": [{\"add_supporting_evidence_ids\": [\"E999\"], \"hypothesis_id\": \"H1\", \"reason\": \"\", \"transition\": \"keep\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
       "intended_code": "S2",
       "name": "source_id_in_evidence_reference",
       "raw_output": "{\"hypothesis_updates\": [{\"add_supporting_evidence_ids\": [\"case_01_visible\"], \"hypothesis_id\": \"H1\", \"reason\": \"A reason.\", \"transition\": \"keep\"}], \"new_hypotheses\": [], \"new_uncertainties\": [], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
