@@ -8,4 +8,4 @@
 - Pending human decisions: none
 - Latest worker evidence: fourteen qualified isolated producer/adversary batches cover all seven registered contracts, including fresh InitialExpansionResponse producer and adversary batches with current package hashes; all carry Seatbelt launcher and denied-read probe evidence under ignored `experiments/contract_assurance/results/2026-09-01-isolated-*/`.
 - Next queued work: extend referential and cross-field mutation combinations; live SmokeResponse Bedrock execution remains intentionally excluded by the no-AWS constraint
-- Last checkpoint: `8f9c5d5` (`Fix revision prompt placeholder drift`); current cycle revalidates status provenance and assurance-only execution.
+- Last checkpoint: `12768f6` (`Enforce lint in deterministic runner`); current cycle revalidates status provenance and assurance-only execution.
