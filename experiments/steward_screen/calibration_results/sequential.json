@@ -1,0 +1,1860 @@
+{
+  "scenarios": 12,
+  "step_cap": 4,
+  "terminated_stopped": 1,
+  "terminated_clear_failure": 0,
+  "terminated_step_cap": 11,
+  "illegal_operation": 0,
+  "no_progress_loop": 11,
+  "oscillation": 0,
+  "steps": [
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    1,
+    4
+  ],
+  "details": [
+    {
+      "scenario_id": "K1",
+      "steps": [
+        {
+          "step": 1,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "E1",
+                "active"
+              ],
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "E1",
+                "active"
+              ],
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 2,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "E1",
+                "active"
+              ],
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "E1",
+                "active"
+              ],
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 3,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "E1",
+                "active"
+              ],
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "E1",
+                "active"
+              ],
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 4,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "E1",
+                "active"
+              ],
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "E1",
+                "active"
+              ],
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        }
+      ],
+      "failures": [
+        "NO_PROGRESS_LOOP"
+      ],
+      "termination": "step_cap"
+    },
+    {
+      "scenario_id": "K2",
+      "steps": [
+        {
+          "step": 1,
+          "operation": "generalize",
+          "before": [
+            "H1.1",
+            [
+              [
+                "E2",
+                "active"
+              ],
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ],
+              [
+                "U2",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "E2",
+                "active"
+              ],
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ],
+              [
+                "U2",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 2,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "E2",
+                "active"
+              ],
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ],
+              [
+                "U2",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "E2",
+                "active"
+              ],
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ],
+              [
+                "U2",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 3,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "E2",
+                "active"
+              ],
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ],
+              [
+                "U2",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "E2",
+                "active"
+              ],
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ],
+              [
+                "U2",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 4,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "E2",
+                "active"
+              ],
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ],
+              [
+                "U2",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "E2",
+                "active"
+              ],
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ],
+              [
+                "U2",
+                "active"
+              ]
+            ],
+            false
+          ]
+        }
+      ],
+      "failures": [
+        "NO_PROGRESS_LOOP"
+      ],
+      "termination": "step_cap"
+    },
+    {
+      "scenario_id": "S1",
+      "steps": [
+        {
+          "step": 1,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 2,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 3,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 4,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        }
+      ],
+      "failures": [
+        "NO_PROGRESS_LOOP"
+      ],
+      "termination": "step_cap"
+    },
+    {
+      "scenario_id": "S2",
+      "steps": [
+        {
+          "step": 1,
+          "operation": "shift_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "U2",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H2",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "U2",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 2,
+          "operation": "archive",
+          "before": [
+            "H2",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "U2",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H2",
+            [
+              [
+                "H1",
+                "archived"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "U2",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 3,
+          "operation": "keep_focus",
+          "before": [
+            "H2",
+            [
+              [
+                "H1",
+                "archived"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "U2",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H2",
+            [
+              [
+                "H1",
+                "archived"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "U2",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 4,
+          "operation": "keep_focus",
+          "before": [
+            "H2",
+            [
+              [
+                "H1",
+                "archived"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "U2",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H2",
+            [
+              [
+                "H1",
+                "archived"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "U2",
+                "active"
+              ]
+            ],
+            false
+          ]
+        }
+      ],
+      "failures": [
+        "NO_PROGRESS_LOOP"
+      ],
+      "termination": "step_cap"
+    },
+    {
+      "scenario_id": "G1",
+      "steps": [
+        {
+          "step": 1,
+          "operation": "generalize",
+          "before": [
+            "H1.1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 2,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 3,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 4,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        }
+      ],
+      "failures": [
+        "NO_PROGRESS_LOOP"
+      ],
+      "termination": "step_cap"
+    },
+    {
+      "scenario_id": "G2",
+      "steps": [
+        {
+          "step": 1,
+          "operation": "generalize",
+          "before": [
+            "H1.1.1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ],
+              [
+                "H1.1.1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1.1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ],
+              [
+                "H1.1.1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 2,
+          "operation": "generalize",
+          "before": [
+            "H1.1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ],
+              [
+                "H1.1.1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ],
+              [
+                "H1.1.1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 3,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ],
+              [
+                "H1.1.1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ],
+              [
+                "H1.1.1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 4,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ],
+              [
+                "H1.1.1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H1.1",
+                "active"
+              ],
+              [
+                "H1.1.1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        }
+      ],
+      "failures": [
+        "NO_PROGRESS_LOOP"
+      ],
+      "termination": "step_cap"
+    },
+    {
+      "scenario_id": "A1",
+      "steps": [
+        {
+          "step": 1,
+          "operation": "archive",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "archived"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 2,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "archived"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "archived"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 3,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "archived"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "archived"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 4,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "archived"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "archived"
+              ]
+            ],
+            false
+          ]
+        }
+      ],
+      "failures": [
+        "NO_PROGRESS_LOOP"
+      ],
+      "termination": "step_cap"
+    },
+    {
+      "scenario_id": "A2",
+      "steps": [
+        {
+          "step": 1,
+          "operation": "archive",
+          "before": [
+            "P2",
+            [
+              [
+                "P1",
+                "active"
+              ],
+              [
+                "P2",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "P2",
+            [
+              [
+                "P1",
+                "archived"
+              ],
+              [
+                "P2",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 2,
+          "operation": "keep_focus",
+          "before": [
+            "P2",
+            [
+              [
+                "P1",
+                "archived"
+              ],
+              [
+                "P2",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "P2",
+            [
+              [
+                "P1",
+                "archived"
+              ],
+              [
+                "P2",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 3,
+          "operation": "keep_focus",
+          "before": [
+            "P2",
+            [
+              [
+                "P1",
+                "archived"
+              ],
+              [
+                "P2",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "P2",
+            [
+              [
+                "P1",
+                "archived"
+              ],
+              [
+                "P2",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 4,
+          "operation": "keep_focus",
+          "before": [
+            "P2",
+            [
+              [
+                "P1",
+                "archived"
+              ],
+              [
+                "P2",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "P2",
+            [
+              [
+                "P1",
+                "archived"
+              ],
+              [
+                "P2",
+                "active"
+              ]
+            ],
+            false
+          ]
+        }
+      ],
+      "failures": [
+        "NO_PROGRESS_LOOP"
+      ],
+      "termination": "step_cap"
+    },
+    {
+      "scenario_id": "R1",
+      "steps": [
+        {
+          "step": 1,
+          "operation": "reactivate",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "archived"
+              ],
+              [
+                "P1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 2,
+          "operation": "shift_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H2",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 3,
+          "operation": "archive",
+          "before": [
+            "H2",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H2",
+            [
+              [
+                "H1",
+                "archived"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 4,
+          "operation": "keep_focus",
+          "before": [
+            "H2",
+            [
+              [
+                "H1",
+                "archived"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H2",
+            [
+              [
+                "H1",
+                "archived"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        }
+      ],
+      "failures": [
+        "NO_PROGRESS_LOOP"
+      ],
+      "termination": "step_cap"
+    },
+    {
+      "scenario_id": "R2",
+      "steps": [
+        {
+          "step": 1,
+          "operation": "reactivate",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "P2",
+                "archived"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "P2",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 2,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "P2",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "P2",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 3,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "P2",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "P2",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 4,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "P2",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "P2",
+                "active"
+              ]
+            ],
+            false
+          ]
+        }
+      ],
+      "failures": [
+        "NO_PROGRESS_LOOP"
+      ],
+      "termination": "step_cap"
+    },
+    {
+      "scenario_id": "T1",
+      "steps": [
+        {
+          "step": 1,
+          "operation": "stop_unresolved",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            true
+          ]
+        }
+      ],
+      "failures": [],
+      "termination": "stopped"
+    },
+    {
+      "scenario_id": "T2",
+      "steps": [
+        {
+          "step": 1,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 2,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 3,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        },
+        {
+          "step": 4,
+          "operation": "keep_focus",
+          "before": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ],
+          "after": [
+            "H1",
+            [
+              [
+                "H1",
+                "active"
+              ],
+              [
+                "H2",
+                "active"
+              ],
+              [
+                "P1",
+                "active"
+              ],
+              [
+                "U1",
+                "active"
+              ]
+            ],
+            false
+          ]
+        }
+      ],
+      "failures": [
+        "NO_PROGRESS_LOOP"
+      ],
+      "termination": "step_cap"
+    }
+  ]
+}

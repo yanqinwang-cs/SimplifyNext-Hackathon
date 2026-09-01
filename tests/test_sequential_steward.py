@@ -1,5 +1,5 @@
 from experiments.steward_screen.scenarios import all_scenarios, expanded_scenarios
-from experiments.steward_screen.sequential import MultipleValidCase, first_move_is_acceptable, run_trajectory
+from experiments.steward_screen.sequential import MultipleValidCase, first_move_is_acceptable, run_trajectory, summarize_trajectories
 
 
 def test_sequential_runner_emits_one_operation_and_recomputes_state() -> None:
@@ -25,3 +25,10 @@ def test_multiple_valid_case_accepts_any_declared_legal_first_move() -> None:
     assert first_move_is_acceptable("archive", case)
     assert first_move_is_acceptable("reactivate", case)
     assert not first_move_is_acceptable("stop_unresolved", case)
+
+
+def test_trajectory_summary_reports_progress_failures_separately() -> None:
+    summary = summarize_trajectories(all_scenarios()[:2], max_steps=2)
+    assert summary["scenarios"] == 2
+    assert summary["no_progress_loop"] >= 1
+    assert len(summary["details"]) == 2
