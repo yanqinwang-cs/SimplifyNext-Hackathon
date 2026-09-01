@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T03:07:26.263832+00:00
+- Generated: 2026-09-01T03:09:56.038647+00:00
 - Contracts: 8
 
 | Metric | Count |
@@ -98,6 +98,10 @@
 | --- | ---: | ---: | ---: | ---: |
 | `adversary` | 22 | 17 | 2 | 15 |
 | `producer` | 21 | 17 | 15 | 2 |
+
+| Qualified producer input family | Batches | Qualified | Evaluations | Accepted | Rejected |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `unspecified` | 21 | 17 | 17 | 15 | 2 |
 - Qualified blind failure codes: `{'S0': 1, 'S1': 2, 'S3': 5, 'S4': 9}`
 - Qualified blind output metrics: placeholder copies `2`, fenced outputs `0`, average length `449.3` characters.
 - Producer compliance: `15/17` accepted (`0.8824`) across qualified producer evaluations.

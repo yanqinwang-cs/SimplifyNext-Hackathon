@@ -270,6 +270,15 @@
         }
       }
     },
+    "by_input_family": {
+      "unspecified": {
+        "accepted": 15,
+        "batches": 21,
+        "evaluations": 17,
+        "qualified": 17,
+        "rejected": 2
+      }
+    },
     "by_role": {
       "adversary": {
         "accepted": 2,
@@ -741,7 +750,7 @@
     "total": 482,
     "upper_failure_rate": 0.9455654330684751
   },
-  "generated_at": "2026-09-01T03:07:26.263832+00:00",
+  "generated_at": "2026-09-01T03:09:56.038647+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -1092,7 +1101,7 @@
         "symbol": "ExperimentRunner.run"
       }
     ],
-    "git_commit": "6869cef",
+    "git_commit": "6842fb0",
     "unregistered_response_classes": []
   },
   "prompt_lint": {
