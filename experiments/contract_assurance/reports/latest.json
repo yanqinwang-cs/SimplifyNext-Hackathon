@@ -838,7 +838,7 @@
     "total": 482,
     "upper_failure_rate": 0.9455654330684751
   },
-  "generated_at": "2026-09-01T03:14:12.328753+00:00",
+  "generated_at": "2026-09-01T03:15:09.934646+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -1189,7 +1189,7 @@
         "symbol": "ExperimentRunner.run"
       }
     ],
-    "git_commit": "HEAD",
+    "git_commit": "9c2bd27f2a9e0f793f8ba8a8854df4d559639950",
     "unregistered_response_classes": []
   },
   "prompt_lint": {
