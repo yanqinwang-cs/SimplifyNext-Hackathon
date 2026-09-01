@@ -8,24 +8,32 @@ from investigator.models.identifiers import Case1ActionId, EvidenceId, Hypothesi
 from investigator.state.case_state import CaseState
 
 
+_CANONICAL_PLACEHOLDERS = {
+    "The uncertainty this enquiry addresses.",
+    "How the result could change the explanation space.",
+    "Why this enquiry is useful now.",
+    "How the evidence changed the state.",
+}
+
+
 def _reject_placeholder(value: str | None) -> str | None:
     if value is None:
         return value
     normalized = value.strip()
     if not normalized:
         raise ValueError("Substantive text cannot be empty")
-    if normalized.startswith("REPLACE_WITH_") or normalized in {
-        "The uncertainty this enquiry addresses.",
-        "How the result could change the explanation space.",
-        "Why this enquiry is useful now.",
-        "How the evidence changed the state.",
-    }:
+    if normalized.startswith("REPLACE_WITH_") or normalized in _CANONICAL_PLACEHOLDERS:
         raise ValueError("Template placeholder is not valid model output")
     return value
 
 
 def _reject_empty_items(values: list[str]) -> list[str]:
-    if any(not value.strip() or value.strip().startswith("REPLACE_WITH_") for value in values):
+    if any(
+        not value.strip()
+        or value.strip().startswith("REPLACE_WITH_")
+        or value.strip() in _CANONICAL_PLACEHOLDERS
+        for value in values
+    ):
         raise ValueError("Substantive text cannot be empty or a template placeholder")
     return values
 

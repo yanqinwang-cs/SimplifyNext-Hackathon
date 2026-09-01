@@ -304,6 +304,11 @@
       "raw_output": "{\"expected_information_value\": \"The result can distinguish explanations.\", \"hypotheses\": [{\"conflicted_by\": [], \"id\": \"H1\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A broad explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"REPLACE_WITH_UNRESOLVED_QUESTION\"]}], \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
     },
     {
+      "intended_code": "S4",
+      "name": "canonical_placeholder_initial_unresolved_question",
+      "raw_output": "{\"expected_information_value\": \"The result can distinguish explanations.\", \"hypotheses\": [{\"conflicted_by\": [], \"id\": \"H1\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A broad explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"The uncertainty this enquiry addresses.\"]}], \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
+    },
+    {
       "intended_code": "S2",
       "name": "wrong_namespace_initial_supported_by",
       "raw_output": "{\"expected_information_value\": \"The result can distinguish explanations.\", \"hypotheses\": [{\"conflicted_by\": [], \"id\": \"H1\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A broad explanation.\", \"status\": \"active\", \"supported_by\": [\"H1\"], \"unresolved\": [\"What evidence would distinguish alternatives?\"]}], \"selected_action_id\": \"A1\", \"target_uncertainty\": \"Whether the claimed event occurred.\", \"why_this_action_now\": \"This enquiry is available and relevant.\"}"
