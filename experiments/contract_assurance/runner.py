@@ -62,7 +62,8 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
     excluded = 0
     qualified = 0
     qualified_evaluations = qualified_accepted = qualified_rejected = 0
-    by_role = {"producer": {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "recorded_evaluations": 0, "recorded_accepted": 0, "recorded_rejected": 0, "evaluations": 0, "accepted": 0, "rejected": 0}, "adversary": {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "recorded_evaluations": 0, "recorded_accepted": 0, "recorded_rejected": 0, "evaluations": 0, "accepted": 0, "rejected": 0}}
+    role_template = {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "recorded_evaluations": 0, "recorded_accepted": 0, "recorded_rejected": 0, "evaluations": 0, "accepted": 0, "rejected": 0, "failure_codes": {}}
+    by_role = {"producer": {**role_template, "failure_codes": {}}, "adversary": {**role_template, "failure_codes": {}}}
     by_contract: dict[str, dict[str, int]] = {}
     for path in sorted((root / "experiments/contract_assurance/results").glob("**/batch_manifest.json")):
         try:
@@ -81,7 +82,7 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
         excluded += int(not is_qualified)
         contracts = {str(item.get("contract", "unknown")) for item in audits}
         for contract in contracts:
-            stats = by_contract.setdefault(contract, {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "recorded_evaluations": 0, "recorded_accepted": 0, "recorded_rejected": 0, "evaluations": 0, "accepted": 0, "rejected": 0})
+            stats = by_contract.setdefault(contract, {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "recorded_evaluations": 0, "recorded_accepted": 0, "recorded_rejected": 0, "evaluations": 0, "accepted": 0, "rejected": 0, "failure_codes": {}})
             stats["batches"] += 1
             stats["qualified"] += int(is_qualified)
             stats["excluded_not_blind"] += int(not is_qualified)
@@ -98,6 +99,12 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
                 except (OSError, json.JSONDecodeError):
                     evaluations = []
                 if isinstance(evaluations, list):
+                    codes = {str(item.get("code")) for item in evaluations if isinstance(item, dict) and item.get("code")}
+                    for code in sorted(codes):
+                        count = sum(1 for item in evaluations if isinstance(item, dict) and item.get("code") == code)
+                        by_role[role]["failure_codes"][code] = by_role[role]["failure_codes"].get(code, 0) + count
+                        for contract in contracts:
+                            by_contract[contract]["failure_codes"][code] = by_contract[contract]["failure_codes"].get(code, 0) + count
                     recorded_accepted = sum(bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
                     recorded_rejected = sum(not bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
                     by_role[role]["recorded_evaluations"] += len(evaluations)
@@ -118,7 +125,8 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
                             by_contract[contract]["evaluations"] += len(evaluations)
                             by_contract[contract]["accepted"] += recorded_accepted
                             by_contract[contract]["rejected"] += recorded_rejected
-    return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "qualified_evaluations": qualified_evaluations, "qualified_accepted": qualified_accepted, "qualified_rejected": qualified_rejected, "by_role": by_role, "by_contract": dict(sorted(by_contract.items()))}
+    qualified_failure_codes = {code: sum(data["failure_codes"].get(code, 0) for data in by_role.values()) for code in sorted({code for data in by_role.values() for code in data["failure_codes"]})}
+    return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "qualified_evaluations": qualified_evaluations, "qualified_accepted": qualified_accepted, "qualified_rejected": qualified_rejected, "qualified_failure_codes": qualified_failure_codes, "by_role": by_role, "by_contract": dict(sorted(by_contract.items()))}
 
 
 def _revision_state(root: Path) -> Any:

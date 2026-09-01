@@ -215,6 +215,7 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     assert report["blind_results_included"] is False
     assert report["deterministic_failure_rate"]["confidence"] == 0.95
     assert 0 <= report["deterministic_failure_rate"]["upper_failure_rate"] <= 1
+    assert report["blind_compliance"]["qualified_failure_codes"]
     assert report["deterministic"]["total"] > 0
     assert report["deterministic"]["total"] >= 35
     assert "unexpected_accepts" in report["deterministic"] and "unexpected_rejects" in report["deterministic"]
