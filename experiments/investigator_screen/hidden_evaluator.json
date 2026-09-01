@@ -1,0 +1,321 @@
+{
+  "INV1": {
+    "description": "Two released submissions contain the same unusual intermediate error.",
+    "required": [
+      {
+        "kind": "node_created",
+        "basis": [
+          "NODE_STATEMENT:E1:7x = 21",
+          "NODE_STATEMENT:E2:7x = 21"
+        ],
+        "values": [
+          "proposition"
+        ]
+      },
+      {
+        "kind": "derived_from",
+        "basis": [
+          "NODE_STATEMENT:E1:7x = 21",
+          "NODE_STATEMENT:E2:7x = 21"
+        ],
+        "values": [
+          "E1",
+          "E2"
+        ]
+      }
+    ],
+    "forbidden": [],
+    "acceptable_next_steps": [
+      "continue_local",
+      "request_steward_review"
+    ],
+    "public_basis": {
+      "node_created:0": [
+        "NODE_STATEMENT:E1:7x = 21",
+        "NODE_STATEMENT:E2:7x = 21"
+      ],
+      "derived_from:1": [
+        "NODE_STATEMENT:E1:7x = 21",
+        "NODE_STATEMENT:E2:7x = 21"
+      ]
+    }
+  },
+  "INV2": {
+    "description": "The relevant message date is known, but its position relative to the examination session is unresolved.",
+    "required": [
+      {
+        "kind": "node_created",
+        "basis": [
+          "NODE_STATEMENT:P1:before or after the examination session"
+        ],
+        "values": [
+          "uncertainty",
+          "P1"
+        ]
+      }
+    ],
+    "forbidden": [],
+    "acceptable_next_steps": [
+      "continue_local"
+    ],
+    "public_basis": {
+      "node_created:0": [
+        "NODE_STATEMENT:P1:before or after the examination session"
+      ]
+    }
+  },
+  "INV3": {
+    "description": "A timestamped record and a proposition are visible in the same local region.",
+    "required": [
+      {
+        "kind": "edge_created",
+        "basis": [
+          "NODE_STATEMENT:E1:13:55",
+          "NODE_STATEMENT:P1:14:00 examination start"
+        ],
+        "values": [
+          "supports",
+          "E1",
+          "P1"
+        ]
+      }
+    ],
+    "forbidden": [],
+    "acceptable_next_steps": [
+      "continue_local"
+    ],
+    "public_basis": {
+      "edge_created:0": [
+        "NODE_STATEMENT:E1:13:55",
+        "NODE_STATEMENT:P1:14:00 examination start"
+      ]
+    }
+  },
+  "INV4": {
+    "description": "A student statement and system metadata about file timing are inconsistent.",
+    "required": [
+      {
+        "kind": "edge_created",
+        "basis": [
+          "NODE_STATEMENT:E1:before the examination",
+          "NODE_STATEMENT:P1:after the examination"
+        ],
+        "values": [
+          "conflicts",
+          "E1",
+          "P1"
+        ]
+      }
+    ],
+    "forbidden": [],
+    "acceptable_next_steps": [
+      "continue_local"
+    ],
+    "public_basis": {
+      "edge_created:0": [
+        "NODE_STATEMENT:E1:before the examination",
+        "NODE_STATEMENT:P1:after the examination"
+      ]
+    }
+  },
+  "INV5": {
+    "description": "The response contains terminology not used in course materials, but no source identifies where it came from.",
+    "required": [
+      {
+        "kind": "no_unsupported_specificity",
+        "basis": [
+          "NODE_STATEMENT:E1:no source identifies where"
+        ],
+        "values": []
+      }
+    ],
+    "forbidden": [],
+    "acceptable_next_steps": [
+      "continue_local"
+    ],
+    "public_basis": {
+      "no_unsupported_specificity:0": [
+        "NODE_STATEMENT:E1:no source identifies where"
+      ]
+    }
+  },
+  "INV6": {
+    "description": "A source uses the phrase around the exam, and the timing could affect the active claim.",
+    "required": [
+      {
+        "kind": "enquiry",
+        "basis": [
+          "NODE_STATEMENT:E1:around the exam",
+          "AVAILABLE_ENQUIRY:A1:clarify:U1:around the exam"
+        ],
+        "values": [
+          "A1",
+          "U1"
+        ]
+      }
+    ],
+    "forbidden": [],
+    "acceptable_next_steps": [
+      "request_enquiry"
+    ],
+    "public_basis": {
+      "enquiry:0": [
+        "NODE_STATEMENT:E1:around the exam",
+        "AVAILABLE_ENQUIRY:A1:clarify:U1:around the exam"
+      ]
+    }
+  },
+  "INV7": {
+    "description": "A source uses the phrase around the exam, while an independent timestamp places the discussion two days before it.",
+    "required": [],
+    "forbidden": [
+      {
+        "kind": "enquiry",
+        "basis": [
+          "NODE_STATEMENT:E2:two days before the exam",
+          "AVAILABLE_ENQUIRY:A1:clarify:U1:around the exam"
+        ],
+        "values": [
+          "A1",
+          "U1"
+        ]
+      }
+    ],
+    "acceptable_next_steps": [
+      "continue_local",
+      "local_exhausted"
+    ],
+    "public_basis": {}
+  },
+  "INV8": {
+    "description": "Released records show a login interval and an exam interval whose overlap is unresolved.",
+    "required": [
+      {
+        "kind": "enquiry",
+        "basis": [
+          "NODE_STATEMENT:E1:13:52–14:08",
+          "NODE_STATEMENT:E2:14:00–16:00",
+          "AVAILABLE_ENQUIRY:A1:compute:U1:overlap"
+        ],
+        "values": [
+          "A1",
+          "U1"
+        ]
+      }
+    ],
+    "forbidden": [],
+    "acceptable_next_steps": [
+      "request_enquiry"
+    ],
+    "public_basis": {
+      "enquiry:0": [
+        "NODE_STATEMENT:E1:13:52–14:08",
+        "NODE_STATEMENT:E2:14:00–16:00",
+        "AVAILABLE_ENQUIRY:A1:compute:U1:overlap"
+      ]
+    }
+  },
+  "INV9": {
+    "description": "A registered account accessed a document, but the actor is not established.",
+    "required": [
+      {
+        "kind": "enquiry",
+        "basis": [
+          "NODE_STATEMENT:E1:account registered to PERSON1",
+          "NODE_STATEMENT:U1:Who actually performed",
+          "AVAILABLE_ENQUIRY:A1:verify:U1:attribution"
+        ],
+        "values": [
+          "A1",
+          "U1"
+        ]
+      }
+    ],
+    "forbidden": [],
+    "acceptable_next_steps": [
+      "request_enquiry"
+    ],
+    "public_basis": {
+      "enquiry:0": [
+        "NODE_STATEMENT:E1:account registered to PERSON1",
+        "NODE_STATEMENT:U1:Who actually performed",
+        "AVAILABLE_ENQUIRY:A1:verify:U1:attribution"
+      ]
+    }
+  },
+  "INV10": {
+    "description": "Two released drafts share an unusual revision sequence and a separate local question remains.",
+    "required": [
+      {
+        "kind": "grounded_update",
+        "basis": [
+          "NODE_STATEMENT:E1:same unusual revision sequence",
+          "GRAPH_EDGE:E1|supports|H1"
+        ],
+        "values": [
+          "add_proposition"
+        ]
+      }
+    ],
+    "forbidden": [],
+    "acceptable_next_steps": [
+      "continue_local"
+    ],
+    "public_basis": {
+      "grounded_update:0": [
+        "NODE_STATEMENT:E1:same unusual revision sequence",
+        "GRAPH_EDGE:E1|supports|H1"
+      ]
+    }
+  },
+  "INV11": {
+    "description": "A visible proposition would bear on both the focused and competing explanations.",
+    "required": [
+      {
+        "kind": "grounded_update",
+        "basis": [
+          "NODE_STATEMENT:P1:relevant to both explanations",
+          "GRAPH_EDGE:P1|supports|H2"
+        ],
+        "values": [
+          "add_uncertainty"
+        ]
+      }
+    ],
+    "forbidden": [],
+    "acceptable_next_steps": [
+      "request_steward_review"
+    ],
+    "public_basis": {
+      "grounded_update:0": [
+        "NODE_STATEMENT:P1:relevant to both explanations",
+        "GRAPH_EDGE:P1|supports|H2"
+      ]
+    }
+  },
+  "INV12": {
+    "description": "The visible local region has no evidence, unresolved question, or listed enquiry remaining.",
+    "required": [
+      {
+        "kind": "next_step",
+        "basis": [
+          "CURRENT_FOCUS:H1",
+          "CYCLE_STATE:turns_remaining|6"
+        ],
+        "values": [
+          "local_exhausted"
+        ]
+      }
+    ],
+    "forbidden": [],
+    "acceptable_next_steps": [
+      "local_exhausted"
+    ],
+    "public_basis": {
+      "next_step:0": [
+        "CURRENT_FOCUS:H1",
+        "CYCLE_STATE:turns_remaining|6"
+      ]
+    }
+  }
+}

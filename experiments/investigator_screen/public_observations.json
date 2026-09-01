@@ -1,0 +1,788 @@
+{
+  "INV1": {
+    "current_focus": {
+      "node_id": "H1",
+      "recent_node_ids": [],
+      "recent_region_node_ids": [],
+      "reason": "",
+      "step_index": 0
+    },
+    "local_graph": {
+      "case_id": "INV1",
+      "nodes": {
+        "E1": {
+          "id": "E1",
+          "node_type": "evidence",
+          "statement": "Submission A contains unusual intermediate result 7x = 21.",
+          "status": "active",
+          "metadata": {}
+        },
+        "E2": {
+          "id": "E2",
+          "node_type": "evidence",
+          "statement": "Submission B contains the same unusual intermediate result 7x = 21.",
+          "status": "active",
+          "metadata": {}
+        },
+        "H1": {
+          "id": "H1",
+          "node_type": "hypothesis",
+          "statement": "The submissions may share a preparation source.",
+          "status": "active",
+          "metadata": {}
+        }
+      },
+      "edges": {
+        "E1_SUPPORTS_H1": {
+          "id": "E1_SUPPORTS_H1",
+          "source_id": "E1",
+          "target_id": "H1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        },
+        "E2_SUPPORTS_H1": {
+          "id": "E2_SUPPORTS_H1",
+          "source_id": "E2",
+          "target_id": "H1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        }
+      }
+    },
+    "available_enquiries": [],
+    "participants": [],
+    "tenure_turn_count": 0,
+    "max_turns_per_tenure": 6,
+    "turns_remaining": 6,
+    "in_flight_enquiry": null,
+    "recently_released_evidence_ids": []
+  },
+  "INV2": {
+    "current_focus": {
+      "node_id": "P1",
+      "recent_node_ids": [],
+      "recent_region_node_ids": [],
+      "reason": "",
+      "step_index": 0
+    },
+    "local_graph": {
+      "case_id": "INV2",
+      "nodes": {
+        "P1": {
+          "id": "P1",
+          "node_type": "proposition",
+          "statement": "The relevant message was sent on the examination day, but the source does not establish whether it was before or after the examination session.",
+          "status": "active",
+          "metadata": {}
+        },
+        "H1": {
+          "id": "H1",
+          "node_type": "hypothesis",
+          "statement": "The message may explain the observed result.",
+          "status": "active",
+          "metadata": {}
+        }
+      },
+      "edges": {
+        "P1_SUPPORTS_H1": {
+          "id": "P1_SUPPORTS_H1",
+          "source_id": "P1",
+          "target_id": "H1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        }
+      }
+    },
+    "available_enquiries": [],
+    "participants": [],
+    "tenure_turn_count": 0,
+    "max_turns_per_tenure": 6,
+    "turns_remaining": 6,
+    "in_flight_enquiry": null,
+    "recently_released_evidence_ids": []
+  },
+  "INV3": {
+    "current_focus": {
+      "node_id": "H1",
+      "recent_node_ids": [],
+      "recent_region_node_ids": [],
+      "reason": "",
+      "step_index": 0
+    },
+    "local_graph": {
+      "case_id": "INV3",
+      "nodes": {
+        "E1": {
+          "id": "E1",
+          "node_type": "evidence",
+          "statement": "The timestamped system record shows the file was created at 13:55.",
+          "status": "active",
+          "metadata": {}
+        },
+        "P1": {
+          "id": "P1",
+          "node_type": "proposition",
+          "statement": "The file existed before the 14:00 examination start.",
+          "status": "active",
+          "metadata": {}
+        },
+        "H1": {
+          "id": "H1",
+          "node_type": "hypothesis",
+          "statement": "The file may have been prepared earlier.",
+          "status": "active",
+          "metadata": {}
+        }
+      },
+      "edges": {
+        "E1_SUPPORTS_H1": {
+          "id": "E1_SUPPORTS_H1",
+          "source_id": "E1",
+          "target_id": "H1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        },
+        "P1_SUPPORTS_H1": {
+          "id": "P1_SUPPORTS_H1",
+          "source_id": "P1",
+          "target_id": "H1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        }
+      }
+    },
+    "available_enquiries": [],
+    "participants": [],
+    "tenure_turn_count": 0,
+    "max_turns_per_tenure": 6,
+    "turns_remaining": 6,
+    "in_flight_enquiry": null,
+    "recently_released_evidence_ids": []
+  },
+  "INV4": {
+    "current_focus": {
+      "node_id": "H1",
+      "recent_node_ids": [],
+      "recent_region_node_ids": [],
+      "reason": "",
+      "step_index": 0
+    },
+    "local_graph": {
+      "case_id": "INV4",
+      "nodes": {
+        "E1": {
+          "id": "E1",
+          "node_type": "evidence",
+          "statement": "System metadata records the file in the account before the examination.",
+          "status": "active",
+          "metadata": {}
+        },
+        "P1": {
+          "id": "P1",
+          "node_type": "proposition",
+          "statement": "The student states they first obtained the file after the examination.",
+          "status": "active",
+          "metadata": {}
+        },
+        "H1": {
+          "id": "H1",
+          "node_type": "hypothesis",
+          "statement": "The file timing remains under review.",
+          "status": "active",
+          "metadata": {}
+        }
+      },
+      "edges": {
+        "E1_SUPPORTS_H1": {
+          "id": "E1_SUPPORTS_H1",
+          "source_id": "E1",
+          "target_id": "H1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        },
+        "P1_SUPPORTS_H1": {
+          "id": "P1_SUPPORTS_H1",
+          "source_id": "P1",
+          "target_id": "H1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        }
+      }
+    },
+    "available_enquiries": [],
+    "participants": [],
+    "tenure_turn_count": 0,
+    "max_turns_per_tenure": 6,
+    "turns_remaining": 6,
+    "in_flight_enquiry": null,
+    "recently_released_evidence_ids": []
+  },
+  "INV5": {
+    "current_focus": {
+      "node_id": "H1",
+      "recent_node_ids": [],
+      "recent_region_node_ids": [],
+      "reason": "",
+      "step_index": 0
+    },
+    "local_graph": {
+      "case_id": "INV5",
+      "nodes": {
+        "E1": {
+          "id": "E1",
+          "node_type": "evidence",
+          "statement": "The response contains terminology not used in the course materials, but no source identifies where that terminology came from.",
+          "status": "active",
+          "metadata": {}
+        },
+        "H1": {
+          "id": "H1",
+          "node_type": "hypothesis",
+          "statement": "External assistance or another source may explain the terminology.",
+          "status": "active",
+          "metadata": {}
+        }
+      },
+      "edges": {
+        "E1_SUPPORTS_H1": {
+          "id": "E1_SUPPORTS_H1",
+          "source_id": "E1",
+          "target_id": "H1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        }
+      }
+    },
+    "available_enquiries": [],
+    "participants": [],
+    "tenure_turn_count": 0,
+    "max_turns_per_tenure": 6,
+    "turns_remaining": 6,
+    "in_flight_enquiry": null,
+    "recently_released_evidence_ids": []
+  },
+  "INV6": {
+    "current_focus": {
+      "node_id": "P1",
+      "recent_node_ids": [],
+      "recent_region_node_ids": [],
+      "reason": "",
+      "step_index": 0
+    },
+    "local_graph": {
+      "case_id": "INV6",
+      "nodes": {
+        "E1": {
+          "id": "E1",
+          "node_type": "evidence",
+          "statement": "The interviewee said: We discussed it around the exam.",
+          "status": "active",
+          "metadata": {}
+        },
+        "P1": {
+          "id": "P1",
+          "node_type": "proposition",
+          "statement": "The timing of the discussion may affect whether it occurred within the prohibited period.",
+          "status": "active",
+          "metadata": {}
+        },
+        "U1": {
+          "id": "U1",
+          "node_type": "uncertainty",
+          "statement": "Whether the discussion occurred within the prohibited period.",
+          "status": "active",
+          "metadata": {}
+        }
+      },
+      "edges": {
+        "E1_SUPPORTS_P1": {
+          "id": "E1_SUPPORTS_P1",
+          "source_id": "E1",
+          "target_id": "P1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        },
+        "U1_TARGETS_P1": {
+          "id": "U1_TARGETS_P1",
+          "source_id": "U1",
+          "target_id": "P1",
+          "relation": "targets",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        }
+      }
+    },
+    "available_enquiries": [
+      {
+        "action_id": "A1",
+        "kind": "clarify",
+        "description": "Ask what around the exam means relative to the exam start and end.",
+        "addressable_uncertainty_ids": [
+          "U1"
+        ]
+      }
+    ],
+    "participants": [],
+    "tenure_turn_count": 0,
+    "max_turns_per_tenure": 6,
+    "turns_remaining": 6,
+    "in_flight_enquiry": null,
+    "recently_released_evidence_ids": []
+  },
+  "INV7": {
+    "current_focus": {
+      "node_id": "P1",
+      "recent_node_ids": [],
+      "recent_region_node_ids": [],
+      "reason": "",
+      "step_index": 0
+    },
+    "local_graph": {
+      "case_id": "INV7",
+      "nodes": {
+        "E1": {
+          "id": "E1",
+          "node_type": "evidence",
+          "statement": "The interviewee said: We discussed it around the exam.",
+          "status": "active",
+          "metadata": {}
+        },
+        "E2": {
+          "id": "E2",
+          "node_type": "evidence",
+          "statement": "An independently timestamped record places the discussion two days before the exam.",
+          "status": "active",
+          "metadata": {}
+        },
+        "P1": {
+          "id": "P1",
+          "node_type": "proposition",
+          "statement": "The discussion occurred before the prohibited assessment window.",
+          "status": "active",
+          "metadata": {}
+        },
+        "U1": {
+          "id": "U1",
+          "node_type": "uncertainty",
+          "statement": "The exact clock time of the discussion is unclear.",
+          "status": "active",
+          "metadata": {}
+        }
+      },
+      "edges": {
+        "E1_SUPPORTS_P1": {
+          "id": "E1_SUPPORTS_P1",
+          "source_id": "E1",
+          "target_id": "P1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        },
+        "E2_SUPPORTS_P1": {
+          "id": "E2_SUPPORTS_P1",
+          "source_id": "E2",
+          "target_id": "P1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        },
+        "U1_TARGETS_P1": {
+          "id": "U1_TARGETS_P1",
+          "source_id": "U1",
+          "target_id": "P1",
+          "relation": "targets",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        }
+      }
+    },
+    "available_enquiries": [
+      {
+        "action_id": "A1",
+        "kind": "clarify",
+        "description": "Ask what around the exam means relative to the exam start and end.",
+        "addressable_uncertainty_ids": [
+          "U1"
+        ]
+      }
+    ],
+    "participants": [],
+    "tenure_turn_count": 0,
+    "max_turns_per_tenure": 6,
+    "turns_remaining": 6,
+    "in_flight_enquiry": null,
+    "recently_released_evidence_ids": []
+  },
+  "INV8": {
+    "current_focus": {
+      "node_id": "P1",
+      "recent_node_ids": [],
+      "recent_region_node_ids": [],
+      "reason": "",
+      "step_index": 0
+    },
+    "local_graph": {
+      "case_id": "INV8",
+      "nodes": {
+        "E1": {
+          "id": "E1",
+          "node_type": "evidence",
+          "statement": "Login interval: 13:52–14:08.",
+          "status": "active",
+          "metadata": {}
+        },
+        "E2": {
+          "id": "E2",
+          "node_type": "evidence",
+          "statement": "Exam session: 14:00–16:00.",
+          "status": "active",
+          "metadata": {}
+        },
+        "P1": {
+          "id": "P1",
+          "node_type": "proposition",
+          "statement": "The login may have occurred during the examination session.",
+          "status": "active",
+          "metadata": {}
+        },
+        "U1": {
+          "id": "U1",
+          "node_type": "uncertainty",
+          "statement": "Did the login interval overlap the examination session?",
+          "status": "active",
+          "metadata": {}
+        }
+      },
+      "edges": {
+        "E1_SUPPORTS_P1": {
+          "id": "E1_SUPPORTS_P1",
+          "source_id": "E1",
+          "target_id": "P1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        },
+        "E2_SUPPORTS_P1": {
+          "id": "E2_SUPPORTS_P1",
+          "source_id": "E2",
+          "target_id": "P1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        },
+        "U1_TARGETS_P1": {
+          "id": "U1_TARGETS_P1",
+          "source_id": "U1",
+          "target_id": "P1",
+          "relation": "targets",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        }
+      }
+    },
+    "available_enquiries": [
+      {
+        "action_id": "A1",
+        "kind": "compute",
+        "description": "Compute overlap from the released timestamps.",
+        "addressable_uncertainty_ids": [
+          "U1"
+        ]
+      }
+    ],
+    "participants": [],
+    "tenure_turn_count": 0,
+    "max_turns_per_tenure": 6,
+    "turns_remaining": 6,
+    "in_flight_enquiry": null,
+    "recently_released_evidence_ids": []
+  },
+  "INV9": {
+    "current_focus": {
+      "node_id": "P1",
+      "recent_node_ids": [],
+      "recent_region_node_ids": [],
+      "reason": "",
+      "step_index": 0
+    },
+    "local_graph": {
+      "case_id": "INV9",
+      "nodes": {
+        "E1": {
+          "id": "E1",
+          "node_type": "evidence",
+          "statement": "The account registered to PERSON1 accessed the document at 14:03.",
+          "status": "active",
+          "metadata": {}
+        },
+        "P1": {
+          "id": "P1",
+          "node_type": "proposition",
+          "statement": "The document access was performed by PERSON1.",
+          "status": "active",
+          "metadata": {}
+        },
+        "U1": {
+          "id": "U1",
+          "node_type": "uncertainty",
+          "statement": "Who actually performed the account activity?",
+          "status": "active",
+          "metadata": {}
+        }
+      },
+      "edges": {
+        "E1_SUPPORTS_P1": {
+          "id": "E1_SUPPORTS_P1",
+          "source_id": "E1",
+          "target_id": "P1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        },
+        "U1_TARGETS_P1": {
+          "id": "U1_TARGETS_P1",
+          "source_id": "U1",
+          "target_id": "P1",
+          "relation": "targets",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        }
+      }
+    },
+    "available_enquiries": [
+      {
+        "action_id": "A1",
+        "kind": "verify",
+        "description": "Verify attribution or provenance of the account activity.",
+        "addressable_uncertainty_ids": [
+          "U1"
+        ]
+      }
+    ],
+    "participants": [],
+    "tenure_turn_count": 0,
+    "max_turns_per_tenure": 6,
+    "turns_remaining": 6,
+    "in_flight_enquiry": null,
+    "recently_released_evidence_ids": []
+  },
+  "INV10": {
+    "current_focus": {
+      "node_id": "H1",
+      "recent_node_ids": [],
+      "recent_region_node_ids": [],
+      "reason": "",
+      "step_index": 0
+    },
+    "local_graph": {
+      "case_id": "INV10",
+      "nodes": {
+        "E1": {
+          "id": "E1",
+          "node_type": "evidence",
+          "statement": "The two released drafts share the same unusual revision sequence.",
+          "status": "active",
+          "metadata": {}
+        },
+        "H1": {
+          "id": "H1",
+          "node_type": "hypothesis",
+          "statement": "Common preparation may explain the similarity.",
+          "status": "active",
+          "metadata": {}
+        },
+        "U1": {
+          "id": "U1",
+          "node_type": "uncertainty",
+          "statement": "Whether another shared feature is present.",
+          "status": "active",
+          "metadata": {}
+        }
+      },
+      "edges": {
+        "E1_SUPPORTS_H1": {
+          "id": "E1_SUPPORTS_H1",
+          "source_id": "E1",
+          "target_id": "H1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        },
+        "U1_TARGETS_H1": {
+          "id": "U1_TARGETS_H1",
+          "source_id": "U1",
+          "target_id": "H1",
+          "relation": "targets",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        }
+      }
+    },
+    "available_enquiries": [],
+    "participants": [],
+    "tenure_turn_count": 0,
+    "max_turns_per_tenure": 6,
+    "turns_remaining": 6,
+    "in_flight_enquiry": null,
+    "recently_released_evidence_ids": []
+  },
+  "INV11": {
+    "current_focus": {
+      "node_id": "P1",
+      "recent_node_ids": [],
+      "recent_region_node_ids": [],
+      "reason": "",
+      "step_index": 0
+    },
+    "local_graph": {
+      "case_id": "INV11",
+      "nodes": {
+        "E1": {
+          "id": "E1",
+          "node_type": "evidence",
+          "statement": "Both drafts contain the same unusual revision sequence.",
+          "status": "active",
+          "metadata": {}
+        },
+        "P1": {
+          "id": "P1",
+          "node_type": "proposition",
+          "statement": "The unusual sequence is relevant to both explanations.",
+          "status": "active",
+          "metadata": {}
+        },
+        "H1": {
+          "id": "H1",
+          "node_type": "hypothesis",
+          "statement": "Common preparation may explain the sequence.",
+          "status": "active",
+          "metadata": {}
+        },
+        "H2": {
+          "id": "H2",
+          "node_type": "hypothesis",
+          "statement": "Independent work may explain the sequence.",
+          "status": "active",
+          "metadata": {}
+        }
+      },
+      "edges": {
+        "E1_SUPPORTS_P1": {
+          "id": "E1_SUPPORTS_P1",
+          "source_id": "E1",
+          "target_id": "P1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        },
+        "P1_SUPPORTS_H1": {
+          "id": "P1_SUPPORTS_H1",
+          "source_id": "P1",
+          "target_id": "H1",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        },
+        "P1_SUPPORTS_H2": {
+          "id": "P1_SUPPORTS_H2",
+          "source_id": "P1",
+          "target_id": "H2",
+          "relation": "supports",
+          "status": "active",
+          "strength": null,
+          "explanation": null,
+          "metadata": {}
+        }
+      }
+    },
+    "available_enquiries": [],
+    "participants": [],
+    "tenure_turn_count": 0,
+    "max_turns_per_tenure": 6,
+    "turns_remaining": 6,
+    "in_flight_enquiry": null,
+    "recently_released_evidence_ids": []
+  },
+  "INV12": {
+    "current_focus": {
+      "node_id": "H1",
+      "recent_node_ids": [],
+      "recent_region_node_ids": [],
+      "reason": "",
+      "step_index": 0
+    },
+    "local_graph": {
+      "case_id": "INV12",
+      "nodes": {
+        "H1": {
+          "id": "H1",
+          "node_type": "hypothesis",
+          "statement": "The visible explanation has no remaining local question.",
+          "status": "active",
+          "metadata": {}
+        }
+      },
+      "edges": {}
+    },
+    "available_enquiries": [],
+    "participants": [],
+    "tenure_turn_count": 0,
+    "max_turns_per_tenure": 6,
+    "turns_remaining": 6,
+    "in_flight_enquiry": null,
+    "recently_released_evidence_ids": []
+  }
+}
