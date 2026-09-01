@@ -164,6 +164,17 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
             wrong_namespace = copy.deepcopy(value)
             wrong_namespace[field][0] = "H1" if field_value[0].startswith("E") else "E1"
             result.append(Mutation(f"wrong_namespace_{field}", "S2", json.dumps(wrong_namespace, sort_keys=True)))
+    if contract == "StewardDecisionResponse":
+        # These payloads are schema-valid union branches but reference nodes
+        # that are absent from the scenario graph.  They must reach the real
+        # coordinator boundary and be rejected as S4, not be mistaken for S1.
+        for name, payload in (
+            ("unknown_generalize_target", {"assessment": "The local frontier is exhausted.", "reason": "The parent remains viable.", "operation": "generalize", "target_node_id": "H9"}),
+            ("unknown_archive_target", {"assessment": "This branch is no longer useful.", "reason": "No active support remains.", "operation": "archive", "target_node_id": "H9"}),
+            ("unknown_shift_destination", {"assessment": "Another frontier is more useful.", "reason": "The destination is the neglected branch.", "operation": "shift_focus", "destination_node_id": "H9"}),
+            ("unknown_stop_unresolved_id", {"assessment": "The frontier is exhausted.", "reason": "No available enquiry can resolve it.", "operation": "stop_unresolved", "important_unresolved_ids": ["H9"], "reopening_conditions": "New relevant evidence."}),
+        ):
+            result.append(Mutation(name, "S4", json.dumps(payload, sort_keys=True)))
     text_fields = [field for field, item in value.items() if isinstance(item, str)]
     if text_fields:
         placeholder = copy.deepcopy(value)

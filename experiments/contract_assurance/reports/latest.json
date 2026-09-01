@@ -450,7 +450,9 @@
     "StewardDecisionResponse|S0|serialization|Unterminated string starting at: line 1 column 90 (char 89)": 1,
     "StewardDecisionResponse|S1|schema|1 validation error for JsonObject": 4,
     "StewardDecisionResponse|S1|schema|1 validation error for tagged-union[KeepFocusDecision,ShiftFocusDecision,GeneralizeDecision,ArchiveDecision,ReactivateDecision,StopUnresolvedDecision]": 7,
-    "StewardDecisionResponse|S1|schema|2 validation errors for tagged-union[KeepFocusDecision,ShiftFocusDecision,GeneralizeDecision,ArchiveDecision,ReactivateDecision,StopUnresolvedDecision]": 2
+    "StewardDecisionResponse|S1|schema|2 validation errors for tagged-union[KeepFocusDecision,ShiftFocusDecision,GeneralizeDecision,ArchiveDecision,ReactivateDecision,StopUnresolvedDecision]": 2,
+    "StewardDecisionResponse|S4|coordinator_preflight|STOP_UNRESOLVED requires trusted review_context": 1,
+    "StewardDecisionResponse|S4|coordinator_preflight|Unknown graph node ID: 'H9'": 3
   },
   "deterministic": {
     "accepted": 34,
@@ -459,20 +461,21 @@
       "S1": 125,
       "S2": 59,
       "S3": 22,
-      "S4": 77
+      "S4": 81
     },
-    "rejected": 439,
+    "rejected": 443,
     "s5_candidates": 0,
     "s6_limitations": 0,
     "stage_counts": {
       "availability": 3,
       "coordinator": 13,
+      "coordinator_preflight": 4,
       "operation_preflight": 18,
       "schema": 274,
       "serialization": 156,
       "state_operation_preflight": 9
     },
-    "total": 473,
+    "total": 477,
     "unexpected_accepts": 0,
     "unexpected_rejects": 0
   },
@@ -622,24 +625,26 @@
       "accepted": 13,
       "failure_codes": {
         "S0": 16,
-        "S1": 13
+        "S1": 13,
+        "S4": 4
       },
-      "rejected": 29,
+      "rejected": 33,
       "s5_candidates": 0,
       "s6_limitations": 0,
       "stage_counts": {
         "coordinator": 13,
+        "coordinator_preflight": 4,
         "schema": 13,
         "serialization": 16
       },
-      "total": 42,
+      "total": 46,
       "unexpected_accepts": 0,
       "unexpected_rejects": 0
     }
   },
   "deterministic_correctness": {
-    "invalid_fixtures": 439,
-    "invalid_rejected": 439,
+    "invalid_fixtures": 443,
+    "invalid_rejected": 443,
     "invalid_rejection_rate": 1.0,
     "valid_accepted": 34,
     "valid_fixtures": 34,
@@ -703,8 +708,8 @@
       "valid_pass_rate": 1.0
     },
     "StewardDecisionResponse": {
-      "invalid_fixtures": 29,
-      "invalid_rejected": 29,
+      "invalid_fixtures": 33,
+      "invalid_rejected": 33,
       "invalid_rejection_rate": 1.0,
       "valid_accepted": 13,
       "valid_fixtures": 13,
@@ -713,12 +718,12 @@
   },
   "deterministic_failure_rate": {
     "confidence": 0.95,
-    "failures": 439,
-    "observed_failure_rate": 0.9281183932346723,
-    "total": 473,
-    "upper_failure_rate": 0.948108014036082
+    "failures": 443,
+    "observed_failure_rate": 0.9287211740041929,
+    "total": 477,
+    "upper_failure_rate": 0.9485470142820811
   },
-  "generated_at": "2026-09-01T02:23:30.689094+00:00",
+  "generated_at": "2026-09-01T02:27:20.232029+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -1062,7 +1067,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "66b61eb",
+    "git_commit": "c120a6c",
     "unregistered_response_classes": []
   },
   "prompt_lint": {
