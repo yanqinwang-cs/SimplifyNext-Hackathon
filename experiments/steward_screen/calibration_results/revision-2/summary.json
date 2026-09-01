@@ -1,0 +1,93 @@
+{
+  "producer": "luna-simulated",
+  "blind_status": "PARTIAL_BLIND",
+  "blinding_limitations": [
+    "The offline producer is deterministic and has structural access to scenario state; it is not a frontier language model.",
+    "Expected labels are retained by the evaluator only and are not passed to produce()."
+  ],
+  "prompt_hash": "a6b669565a23a658e5eb38e15f71b26ed861f5e5e233378b67c6ff76249a4ad2",
+  "run_kind": "calibration",
+  "runs": 12,
+  "schema_valid": 12,
+  "operation_correct": 9,
+  "identifier_correct": 8,
+  "post_state_correct": 8,
+  "strict_failures": [
+    "K2",
+    "S1",
+    "A2",
+    "T2"
+  ],
+  "calibration_cases": [
+    "A1",
+    "A2",
+    "G1",
+    "G2",
+    "K1",
+    "K2",
+    "R1",
+    "R2",
+    "S1",
+    "S2",
+    "T1",
+    "T2"
+  ],
+  "holdout_cases": [],
+  "holdout_fully_correct": null,
+  "holdout_result": "reserved unseen variants; evaluate separately after prompt freeze",
+  "by_operation": {
+    "keep_focus": {
+      "runs": 2,
+      "fully_correct": 1,
+      "schema_valid": 2,
+      "coordinator_accepted": 2,
+      "failures": [
+        "K2"
+      ]
+    },
+    "shift_focus": {
+      "runs": 3,
+      "fully_correct": 1,
+      "schema_valid": 3,
+      "coordinator_accepted": 3,
+      "failures": [
+        "S1",
+        "T2"
+      ]
+    },
+    "generalize": {
+      "runs": 2,
+      "fully_correct": 2,
+      "schema_valid": 2,
+      "coordinator_accepted": 2,
+      "failures": []
+    },
+    "archive": {
+      "runs": 2,
+      "fully_correct": 1,
+      "schema_valid": 2,
+      "coordinator_accepted": 2,
+      "failures": [
+        "A2"
+      ]
+    },
+    "reactivate": {
+      "runs": 2,
+      "fully_correct": 2,
+      "schema_valid": 2,
+      "coordinator_accepted": 2,
+      "failures": []
+    },
+    "stop_unresolved": {
+      "runs": 1,
+      "fully_correct": 1,
+      "schema_valid": 1,
+      "coordinator_accepted": 1,
+      "failures": []
+    }
+  },
+  "repeated_failure_patterns": [
+    "The structural offline producer prioritizes relevant archived nodes before choosing focus or archive.",
+    "The structural offline producer does not infer a neglected active destination from cross-cutting support alone."
+  ]
+}

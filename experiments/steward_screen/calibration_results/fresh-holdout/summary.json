@@ -1,0 +1,106 @@
+{
+  "producer": "luna-simulated",
+  "blind_status": "PARTIAL_BLIND",
+  "blinding_limitations": [
+    "The offline producer is deterministic and has structural access to scenario state; it is not a frontier language model.",
+    "Expected labels are retained by the evaluator only and are not passed to produce()."
+  ],
+  "prompt_hash": "a6b669565a23a658e5eb38e15f71b26ed861f5e5e233378b67c6ff76249a4ad2",
+  "run_kind": "fresh_holdout",
+  "runs": 12,
+  "schema_valid": 12,
+  "operation_correct": 9,
+  "identifier_correct": 8,
+  "post_state_correct": 8,
+  "strict_failures": [
+    "K2_V2",
+    "S1_V3",
+    "A2_V8",
+    "T2_V12"
+  ],
+  "calibration_cases": [
+    "A1_V7",
+    "A2_V8",
+    "G1_V5",
+    "G2_V6",
+    "K1_V1",
+    "K2_V2",
+    "R1_V9",
+    "R2_V10",
+    "S1_V3",
+    "S2_V4",
+    "T1_V11",
+    "T2_V12"
+  ],
+  "holdout_cases": [
+    "K1_V1",
+    "K2_V2",
+    "S1_V3",
+    "S2_V4",
+    "G1_V5",
+    "G2_V6",
+    "A1_V7",
+    "A2_V8",
+    "R1_V9",
+    "R2_V10",
+    "T1_V11",
+    "T2_V12"
+  ],
+  "holdout_fully_correct": 8,
+  "holdout_result": "frozen prompt evaluated without another revision",
+  "by_operation": {
+    "keep_focus": {
+      "runs": 2,
+      "fully_correct": 1,
+      "schema_valid": 2,
+      "coordinator_accepted": 2,
+      "failures": [
+        "K2_V2"
+      ]
+    },
+    "shift_focus": {
+      "runs": 3,
+      "fully_correct": 1,
+      "schema_valid": 3,
+      "coordinator_accepted": 3,
+      "failures": [
+        "S1_V3",
+        "T2_V12"
+      ]
+    },
+    "generalize": {
+      "runs": 2,
+      "fully_correct": 2,
+      "schema_valid": 2,
+      "coordinator_accepted": 2,
+      "failures": []
+    },
+    "archive": {
+      "runs": 2,
+      "fully_correct": 1,
+      "schema_valid": 2,
+      "coordinator_accepted": 2,
+      "failures": [
+        "A2_V8"
+      ]
+    },
+    "reactivate": {
+      "runs": 2,
+      "fully_correct": 2,
+      "schema_valid": 2,
+      "coordinator_accepted": 2,
+      "failures": []
+    },
+    "stop_unresolved": {
+      "runs": 1,
+      "fully_correct": 1,
+      "schema_valid": 1,
+      "coordinator_accepted": 1,
+      "failures": []
+    }
+  },
+  "repeated_failure_patterns": [
+    "The structural offline producer prioritizes relevant archived nodes before choosing focus or archive.",
+    "The structural offline producer does not infer a neglected active destination from cross-cutting support alone."
+  ]
+}

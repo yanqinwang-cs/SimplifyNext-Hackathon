@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from investigator.graph import CaseGraph, EdgeRelation, EdgeStrength, GraphEdge, GraphNode, GraphNodeType, GraphStatus
 from investigator.roles import InvestigationFocus, StewardReviewContext
 
@@ -43,3 +45,32 @@ def all_scenarios() -> list[StewardScenario]:
         _scenario("T1", "Only active unresolved U1 remains and the trusted frontier review is structurally exhausted.", {"H1": _node("H1", n.HYPOTHESIS, "Open explanation."), "U1": _node("U1", n.UNCERTAINTY, "Unresolved question.")}, [_edge("U1", EdgeRelation.TARGETS, "H1")], "H1", "stop_unresolved", context=_context(), stopped=True),
         _scenario("T2", "The same unresolved question remains, but active P1 supports both H1 and another root and is the neglected useful frontier. The Steward should redirect focus rather than stop.", {"H1": _node("H1", n.HYPOTHESIS, "Open explanation."), "H2": _node("H2", n.HYPOTHESIS, "Another live explanation."), "U1": _node("U1", n.UNCERTAINTY, "Unresolved question."), "P1": _node("P1", n.PROPOSITION, "Neglected useful proposition.")}, [_edge("U1", EdgeRelation.TARGETS, "H1"), _edge("P1", EdgeRelation.SUPPORTS, "H1"), _edge("P1", EdgeRelation.SUPPORTS, "H2")], "H1", "shift_focus", destination="P1"),
     ]
+
+
+def expanded_scenarios() -> list[StewardScenario]:
+    """Return the fixed cases plus ID/topology variants for calibration only."""
+    base = all_scenarios()
+    variants: list[StewardScenario] = []
+    for index, original in enumerate(base, start=1):
+        scenario = deepcopy(original)
+        suffix = str(index + 10)
+        scenario.scenario_id = f"{original.scenario_id}_V{index}"
+        remap = {node_id: f"{node_id}.{suffix}" for node_id in scenario.graph.nodes}
+        scenario.graph = CaseGraph(
+            case_id=scenario.graph.case_id + "_variant",
+            nodes={remap[node_id]: node.model_copy(update={"id": remap[node_id]}) for node_id, node in scenario.graph.nodes.items()},
+            edges={
+                f"{remap[edge.source_id]}_{edge.relation.value.upper()}_{remap[edge.target_id]}": edge.model_copy(update={"id": f"{remap[edge.source_id]}_{edge.relation.value.upper()}_{remap[edge.target_id]}", "source_id": remap[edge.source_id], "target_id": remap[edge.target_id]})
+                for edge in scenario.graph.edges.values()
+            },
+        )
+        scenario.focus = scenario.focus.model_copy(update={"node_id": remap[scenario.focus.node_id], "recent_node_ids": [remap.get(item, item) for item in scenario.focus.recent_node_ids]})
+        scenario.expected_target_node_id = remap.get(scenario.expected_target_node_id, scenario.expected_target_node_id)
+        scenario.expected_destination_node_id = remap.get(scenario.expected_destination_node_id, scenario.expected_destination_node_id)
+        scenario.expected_state.focus_node_id = remap.get(scenario.expected_state.focus_node_id, scenario.expected_state.focus_node_id)
+        scenario.expected_state.archived_node_ids = [remap.get(item, item) for item in scenario.expected_state.archived_node_ids]
+        scenario.expected_state.active_node_ids = [remap.get(item, item) for item in scenario.expected_state.active_node_ids]
+        if scenario.review_context is not None:
+            scenario.review_context.active_unresolved_ids = [remap.get(item, item) for item in scenario.review_context.active_unresolved_ids]
+        variants.append(scenario)
+    return base + variants

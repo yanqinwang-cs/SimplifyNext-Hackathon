@@ -5,7 +5,7 @@ from experiments.steward_screen.models import MODEL_REGISTRY
 from experiments.steward_screen.prompt import build_prompt
 from experiments.steward_screen.report import aggregate
 from experiments.steward_screen.runner import JsonObject, jobs
-from experiments.steward_screen.scenarios import all_scenarios
+from experiments.steward_screen.scenarios import all_scenarios, expanded_scenarios
 
 
 def decision_payload(scenario):
@@ -83,6 +83,22 @@ def test_steward_prompt_exposes_exact_zero_shot_output_contract() -> None:
     assert "<OUTPUT_EXAMPLE>" not in prompt
     for identifier in ("P1", "H1", "E1", "U1", "PERSON1", "R1.1"):
         assert f"{{{{{identifier}}}}}" not in prompt
+
+
+def test_expanded_calibration_set_is_unique_and_covers_all_operations() -> None:
+    scenarios = expanded_scenarios()
+    assert len(scenarios) == 24
+    assert len({scenario.scenario_id for scenario in scenarios}) == 24
+    counts = {operation: sum(item.expected_operation == operation for item in scenarios) for operation in {item.expected_operation for item in scenarios}}
+    assert counts == {"keep_focus": 4, "shift_focus": 6, "generalize": 4, "archive": 4, "reactivate": 4, "stop_unresolved": 2}
+
+
+def test_luna_producer_input_does_not_include_expected_labels() -> None:
+    import inspect
+    from experiments.steward_screen.luna import produce
+    assert "expected_operation" not in inspect.signature(produce).parameters
+    prompt = build_prompt(all_scenarios()[0])
+    assert "expected_operation" not in prompt and "expected_target_node_id" not in prompt
 
 
 def test_steward_prompt_defines_each_operation_with_four_constraints() -> None:
