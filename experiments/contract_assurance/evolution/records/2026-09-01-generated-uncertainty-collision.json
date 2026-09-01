@@ -1,0 +1,15 @@
+{
+  "change_id": "CA-2026-09-01-008",
+  "contract": "RevisionResponse",
+  "discovery_source": "deterministic generated_uncertainty_id_collision fixture",
+  "baseline_failure": {"raw_output": "new hypothesis H2 with unresolved U1 plus explicit new uncertainty H2:U1", "observed_code": "accepted schema, operation collision", "intended_code": "S4"},
+  "classification": "S4",
+  "legitimate_semantic_need": "A revision must not create two records with the same generated uncertainty identifier.",
+  "why_existing_contract_insufficient": "The schema validated each collection independently and the collision only appeared during operation application.",
+  "implementation_change": "Added a deterministic cross-collection collision fixture through the existing revision preflight boundary.",
+  "tests_added": ["generated_uncertainty_id_collision fixture"],
+  "expected_reclassifications": ["generated uncertainty collision: accepted operation -> S4 preflight rejection"],
+  "unexpected_regressions": ["none observed"],
+  "before_after_compliance": {"deterministic_cases": [411, 412], "unexpected_outcomes": [0, 0]},
+  "commit": "4e12144"
+}

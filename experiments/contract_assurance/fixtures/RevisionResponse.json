@@ -500,6 +500,11 @@
     },
     {
       "intended_code": "S4",
+      "name": "generated_uncertainty_id_collision",
+      "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [{\"conflicted_by\": [], \"id\": \"H2\", \"parent_id\": null, \"specificity_basis_evidence_ids\": [], \"statement\": \"A new explanation.\", \"status\": \"active\", \"supported_by\": [\"E1\"], \"unresolved\": [\"A remaining question.\"]}], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"E1\"], \"description\": \"An explicitly added uncertainty.\", \"hypothesis_id\": \"H2\", \"id\": \"H2:U1\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
+    },
+    {
+      "intended_code": "S4",
       "name": "empty_new_uncertainty_description",
       "raw_output": "{\"hypothesis_updates\": [], \"new_hypotheses\": [], \"new_uncertainties\": [{\"basis_evidence_ids\": [\"E1\"], \"description\": \"\", \"hypothesis_id\": \"H1\", \"id\": \"H1:U2\"}], \"revision_rationale\": \"No state change is justified by this release.\", \"uncertainty_updates\": []}"
     }
