@@ -302,6 +302,6 @@
       "source": "src/investigator/services/contracts.py"
     }
   ],
-  "git_commit": "working-tree",
+  "git_commit": "d6e9288",
   "unregistered_response_classes": []
 }
