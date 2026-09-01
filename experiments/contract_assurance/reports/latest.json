@@ -130,6 +130,9 @@
         "rejected": 0
       }
     },
+    "coverage_gaps": [
+      "InitialExpansionResponse"
+    ],
     "excluded_not_blind": 7,
     "qualified_accepted": 6,
     "qualified_batches": 12,
@@ -499,7 +502,7 @@
     "total": 421,
     "upper_failure_rate": 0.9671463460562018
   },
-  "generated_at": "2026-09-01T00:57:32.029461+00:00",
+  "generated_at": "2026-09-01T00:59:43.143731+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -721,7 +724,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "2ff7d4f",
+    "git_commit": "29828d2",
     "unregistered_response_classes": []
   },
   "regressions": {

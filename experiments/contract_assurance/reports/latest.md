@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T00:57:32.029461+00:00
+- Generated: 2026-09-01T00:59:43.143731+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -72,6 +72,7 @@
 | `producer` | 10 | 6 | 6 | 0 |
 - Qualified blind failure codes: `{'S0': 1, 'S1': 1, 'S3': 1, 'S4': 3}`
 - Qualified blind output metrics: placeholder copies `1`, fenced outputs `0`, average length `306.3` characters.
+- Blind coverage gaps requiring fresh batches: `InitialExpansionResponse`
 
 ## Assurance limitations
 
