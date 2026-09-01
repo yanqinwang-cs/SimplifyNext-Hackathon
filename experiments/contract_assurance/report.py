@@ -114,6 +114,9 @@ def render_markdown(report: dict) -> str:
             lines.extend(f"| `{role}` | {data.get('batches', 0)} | {data.get('evaluations', 0)} | {data.get('accepted', 0)} | {data.get('rejected', 0)} |" for role, data in sorted(blind["by_role"].items()))
         if blind.get("qualified_failure_codes"):
             lines.append(f"- Qualified blind failure codes: `{blind['qualified_failure_codes']}`")
+        if blind.get("qualified_output_metrics"):
+            metrics = blind["qualified_output_metrics"]
+            lines.append(f"- Qualified blind output metrics: placeholder copies `{metrics.get('placeholder_copy', 0)}`, fenced outputs `{metrics.get('fence_usage', 0)}`, average length `{metrics.get('average_output_chars', 0):.1f}` characters.")
     limitations = report.get("semantic_limitations", [])
     if limitations:
         lines += ["", "## Assurance limitations", ""]

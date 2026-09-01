@@ -62,6 +62,7 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
     excluded = 0
     qualified = 0
     qualified_evaluations = qualified_accepted = qualified_rejected = 0
+    qualified_output_metrics = {"outputs": 0, "placeholder_copy": 0, "fence_usage": 0, "total_output_chars": 0, "average_output_chars": 0.0}
     role_template = {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "recorded_evaluations": 0, "recorded_accepted": 0, "recorded_rejected": 0, "evaluations": 0, "accepted": 0, "rejected": 0, "failure_codes": {}}
     by_role = {"producer": {**role_template, "failure_codes": {}}, "adversary": {**role_template, "failure_codes": {}}}
     by_contract: dict[str, dict[str, int]] = {}
@@ -105,6 +106,14 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
                     by_role[role]["recorded_accepted"] += recorded_accepted
                     by_role[role]["recorded_rejected"] += recorded_rejected
                     if is_qualified:
+                        for evaluation in evaluations:
+                            if isinstance(evaluation, dict):
+                                raw = evaluation.get("raw_output", "")
+                                raw_text = raw if isinstance(raw, str) else json.dumps(raw, sort_keys=True, default=str)
+                                qualified_output_metrics["outputs"] += 1
+                                qualified_output_metrics["placeholder_copy"] += int("REPLACE_WITH_" in raw_text)
+                                qualified_output_metrics["fence_usage"] += int("```" in raw_text)
+                                qualified_output_metrics["total_output_chars"] += len(raw_text)
                         codes = {str(item.get("code")) for item in evaluations if isinstance(item, dict) and item.get("code")}
                         for code in sorted(codes):
                             count = sum(1 for item in evaluations if isinstance(item, dict) and item.get("code") == code)
@@ -125,8 +134,9 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
                             by_contract[contract]["evaluations"] += len(evaluations)
                             by_contract[contract]["accepted"] += recorded_accepted
                             by_contract[contract]["rejected"] += recorded_rejected
+    qualified_output_metrics["average_output_chars"] = qualified_output_metrics["total_output_chars"] / qualified_output_metrics["outputs"] if qualified_output_metrics["outputs"] else 0.0
     qualified_failure_codes = {code: sum(data["failure_codes"].get(code, 0) for data in by_role.values()) for code in sorted({code for data in by_role.values() for code in data["failure_codes"]})}
-    return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "qualified_evaluations": qualified_evaluations, "qualified_accepted": qualified_accepted, "qualified_rejected": qualified_rejected, "qualified_failure_codes": qualified_failure_codes, "by_role": by_role, "by_contract": dict(sorted(by_contract.items()))}
+    return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "qualified_evaluations": qualified_evaluations, "qualified_accepted": qualified_accepted, "qualified_rejected": qualified_rejected, "qualified_failure_codes": qualified_failure_codes, "qualified_output_metrics": qualified_output_metrics, "by_role": by_role, "by_contract": dict(sorted(by_contract.items()))}
 
 
 def _revision_state(root: Path) -> Any:
