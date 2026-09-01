@@ -75,7 +75,7 @@ def test_live_trace_records_each_call_metadata_and_raw_output(tmp_path, monkeypa
             )
 
     monkeypatch.setattr(sequential_live, "BedrockModelClient", FakeClient)
-    sequential_live.run_live("zai.glm-5", ["SEQ7"], tmp_path)
+    run = sequential_live.run_live("zai.glm-5", ["SEQ7"], tmp_path)
     trace = json.loads((tmp_path / "raw_traces.jsonl").read_text().splitlines()[0])
     assert trace["fixture_id"] == "SEQ7"
     assert trace["calls"][0]["raw_output"]
@@ -84,6 +84,31 @@ def test_live_trace_records_each_call_metadata_and_raw_output(tmp_path, monkeypa
     assert trace["calls"][0]["latency_seconds"] == 0.25
     assert trace["calls"][0]["stop_reason"] == "end_turn"
     assert (tmp_path / "manifest.json").exists()
+    assert Path(run["manifest_path"]).is_absolute()
+    assert Path(run["raw_traces_path"]).is_absolute()
+    assert Path(run["manifest_path"]).exists()
+    assert Path(run["raw_traces_path"]).exists()
+
+
+def test_successful_run_summary_reports_outcome_and_paths(capsys, tmp_path):
+    raw_trace = "SECRET FULL TRACE SHOULD NOT BE PRINTED"
+    run = {
+        "model_name": "fake.model",
+        "fixture_ids": ["SEQ7"],
+        "trajectories": 1,
+        "traces": [{"fixture_id": "SEQ7", "result": {"termination": "quiescent", "failures": []}, "calls": [{"raw_output": raw_trace}]}],
+        "manifest_path": str(tmp_path / "manifest.json"),
+        "raw_traces_path": str(tmp_path / "raw_traces.jsonl"),
+    }
+    print(sequential_live.format_completion_summary(run))
+    output = capsys.readouterr().out
+    assert "Model: fake.model" in output
+    assert "Fixtures: SEQ7" in output
+    assert "Trajectories: 1" in output
+    assert "SEQ7: quiescent — failures=0" in output
+    assert str((tmp_path / "manifest.json").resolve()) in output
+    assert str((tmp_path / "raw_traces.jsonl").resolve()) in output
+    assert raw_trace not in output
 
 
 def test_parse_failure_preserves_raw_output_in_call_trace():

@@ -107,9 +107,31 @@ def run_live(model_name: str, fixture_ids: list[str], output_dir: Path) -> dict[
             error = str(exc)
         traces.append({"run_id": f"{model_name}:{fixture_id}", "model_name": model_name, "invocation_id": spec.invocation_id, "region": spec.region, "fixture_id": fixture_id, "result": result_payload, "failure_stage": failure_stage, "error": error, "calls": producer.calls})
     output_dir.mkdir(parents=True, exist_ok=True)
-    (output_dir / "manifest.json").write_text(json.dumps({**frozen_manifest(), "model_name": model_name}, indent=2, sort_keys=True), encoding="utf-8")
-    (output_dir / "raw_traces.jsonl").write_text("\n".join(json.dumps(t, default=str, sort_keys=True) for t in traces) + "\n", encoding="utf-8")
-    return {"model_name": model_name, "trajectories": len(traces), "traces": traces}
+    manifest_path = (output_dir / "manifest.json").resolve()
+    raw_traces_path = (output_dir / "raw_traces.jsonl").resolve()
+    manifest_path.write_text(json.dumps({**frozen_manifest(), "model_name": model_name}, indent=2, sort_keys=True), encoding="utf-8")
+    raw_traces_path.write_text("\n".join(json.dumps(t, default=str, sort_keys=True) for t in traces) + "\n", encoding="utf-8")
+    return {"model_name": model_name, "fixture_ids": list(fixture_ids), "trajectories": len(traces), "traces": traces, "manifest_path": str(manifest_path), "raw_traces_path": str(raw_traces_path)}
+
+
+def _format_fixture_outcome(trace: dict[str, Any]) -> str:
+    result = trace.get("result") or {}
+    termination = result.get("termination")
+    failures = result.get("failures") or []
+    if termination:
+        return f"{trace['fixture_id']}: {termination.lower()} — failures={len(failures)}"
+    failure_stage = trace.get("failure_stage")
+    error = trace.get("error")
+    details = " ".join(part for part in (f"failure_stage={failure_stage}" if failure_stage else "", f"error={error}" if error else "") if part)
+    return f"{trace['fixture_id']}: {details or 'incomplete'}"
+
+
+def format_completion_summary(run: dict[str, Any]) -> str:
+    fixture_ids = run.get("fixture_ids") or [trace["fixture_id"] for trace in run["traces"]]
+    outcomes = "\n".join(_format_fixture_outcome(trace) for trace in run["traces"])
+    return ("Completed sequential Steward run.\n\n"
+            f"Model: {run['model_name']}\nFixtures: {', '.join(fixture_ids)}\nTrajectories: {run['trajectories']}\n\n"
+            f"{outcomes}\n\nManifest:\n{Path(run['manifest_path']).resolve()}\n\nRaw traces:\n{Path(run['raw_traces_path']).resolve()}")
 
 
 def main() -> None:
@@ -126,14 +148,16 @@ def main() -> None:
     if not selected <= known: parser.error(f"unknown fixtures: {sorted(selected - known)}")
     max_calls = sum(manifest["step_caps"][f] for f in selected) * len(args.models)
     if args.dry_run:
-        print(json.dumps({"models": args.models, "fixtures": sorted(selected), "frozen": manifest, "maximum_possible_calls": max_calls, "output_dir": str(args.output_dir), "aws_calls": 0}, indent=2, sort_keys=True))
+        intended_output_dir = args.output_dir.resolve()
+        print(json.dumps({"models": args.models, "fixtures": sorted(selected), "frozen": manifest, "maximum_possible_calls": max_calls, "output_dir": str(intended_output_dir), "intended_base_output_dir": str(intended_output_dir), "aws_calls": 0}, indent=2, sort_keys=True))
         return
     if not (os.getenv("AWS_PROFILE") or os.getenv("AWS_ACCESS_KEY_ID") or os.getenv("AWS_WEB_IDENTITY_TOKEN_FILE")):
         raise SystemExit("LIVE_BLOCKED_AWS_CONFIGURATION")
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     for model in args.models:
         try:
-            run_live(model, sorted(selected), args.output_dir / run_id / model.replace("/", "_"))
+            run = run_live(model, sorted(selected), args.output_dir / run_id / model.replace("/", "_"))
+            print(format_completion_summary(run))
         except BedrockConfigurationError as exc:
             raise SystemExit(f"provider configuration failure for {model}: {exc}") from exc
 
