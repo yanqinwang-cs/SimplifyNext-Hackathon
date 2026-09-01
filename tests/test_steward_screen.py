@@ -63,3 +63,21 @@ def test_steward_prompt_uses_neutral_ordered_ontology_and_references() -> None:
     assert "{{H1}}" in prompt and "{{E1}}" in prompt and "{{R1.1}}" in prompt
     assert "determine guilt" not in prompt.lower()
     assert "choose an exact enquiry or tool" in prompt
+
+
+def test_steward_prompt_exposes_exact_zero_shot_output_contract() -> None:
+    prompt = build_prompt(all_scenarios()[0])
+    contract = prompt.split("<OUTPUT_CONTRACT>\n", 1)[1].split("\n</OUTPUT_CONTRACT>", 1)[0]
+    for operation in ("keep_focus", "shift_focus", "generalize", "archive", "reactivate", "stop_unresolved"):
+        assert f'"operation": "{operation}"' in contract
+    for field in ("assessment", "reason", "destination_node_id", "target_node_id", "important_unresolved_ids", "reopening_conditions"):
+        assert f'"{field}"' in contract
+    assert '"decision" instead of "operation"' in contract
+    assert '"rationale" instead of "assessment" or "reason"' in contract
+    assert '"operation"' in contract
+    assert "Do not ... markdown/code fences" not in contract
+    assert "markdown/code fences" in contract
+    assert "commentary outside the JSON" in contract
+    assert 'Prompt references may be rendered as {{P1}}' in contract
+    assert 'raw stable ID "P1" without braces' in contract
+    assert "<OUTPUT_EXAMPLE>" not in prompt
