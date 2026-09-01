@@ -86,6 +86,9 @@ def test_inventory_discovers_and_registers_all_response_contracts(tmp_path: Path
     assert_inventory_paths(root)
     assert all(item["source_hash"] for item in __import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root)["contracts"])
     assert all(item["prompt_hashes"] or item["name"] == "NextStepResponse" for item in __import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root)["contracts"])
+    inventory_data = __import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root)
+    assert all(item["template_source"] and item["template_hash"] for item in inventory_data["contracts"])
+    assert all(item["parser_entry_point"] and item["normalization_behavior"] and item["schema_validation"] and item["field_namespace_validation"] and item["referential_validation"] and item["availability_validation"] and item["cross_field_validation"] and item["deterministic_consumer"] and item["raw_output_preserved_on_failure"] for item in inventory_data["contracts"])
     markdown = render_inventory_markdown(__import__("experiments.contract_assurance.inventory", fromlist=["inventory"]).inventory(root))
     assert "LLM-facing contract inventory" in markdown and "InitialResponse" in markdown
     assert write_inventory_markdown(root, tmp_path / "inventory").exists()

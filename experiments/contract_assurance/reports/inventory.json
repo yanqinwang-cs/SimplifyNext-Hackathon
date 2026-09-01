@@ -1,12 +1,18 @@
 {
   "contracts": [
     {
+      "availability_validation": "Production environment boundary when applicable",
       "boundary_stages": [
         "JSON normalization",
         "Pydantic schema validation",
         "raw output retained by caller"
       ],
+      "cross_field_validation": "Pydantic model validators and production consumer",
+      "deterministic_consumer": "Registered production-path adapter",
+      "field_namespace_validation": "Pydantic field, literal, and identifier validation",
       "name": "SmokeResponse",
+      "normalization_behavior": "normalize_json_text; one outer JSON fence only",
+      "parser_entry_point": "investigator.llm.base.parse_model_output",
       "production_path": "BedrockModelClient.call (manual smoke script; excluded from offline runs)",
       "prompt_builders": [
         "scripts.smoke_bedrock.main"
@@ -18,21 +24,33 @@
         "scripts/smoke_bedrock.py"
       ],
       "public": true,
+      "raw_output_preserved_on_failure": true,
+      "referential_validation": "Production adapter/state boundary when applicable",
       "schema": "SmokeResponse",
       "schema_hash": "fc008e3ce54e1de048758174b829e39bd4c47b13edbd2574f60044ecce9e9f22",
+      "schema_validation": "Pydantic model validation",
       "source": "scripts/smoke_bedrock.py",
       "source_hash": "5248e4bdee0d861bb8e5440e8fafc5708749bd084f88c5b67b274a336bfaa89b",
+      "template_hash": "5575ae1c4f02063d00c02afe7bf4137684215f5dabb64eefebb44f98e90ff156",
       "template_placeholders": [
         "REPLACE_WITH_"
-      ]
+      ],
+      "template_source": "experiments/contract_assurance/fixtures/SmokeResponse.json",
+      "usage": "Registered LLM-facing contract"
     },
     {
+      "availability_validation": "Production environment boundary when applicable",
       "boundary_stages": [
         "JSON normalization",
         "Pydantic schema validation",
         "experiment consumer"
       ],
+      "cross_field_validation": "Pydantic model validators and production consumer",
+      "deterministic_consumer": "Registered production-path adapter",
+      "field_namespace_validation": "Pydantic field, literal, and identifier validation",
       "name": "ModelScreenHypothesisResponse",
+      "normalization_behavior": "normalize_json_text; one outer JSON fence only",
+      "parser_entry_point": "investigator.llm.base.parse_model_output",
       "production_path": "ExperimentRunner.run -> ModelClient.call",
       "prompt_builders": [
         "experiments.model_screen.prompt"
@@ -44,15 +62,22 @@
         "experiments/model_screen/prompt.py"
       ],
       "public": true,
+      "raw_output_preserved_on_failure": true,
+      "referential_validation": "Production adapter/state boundary when applicable",
       "schema": "HypothesisResponse",
       "schema_hash": "f2224a7d45a3c36db7990ef4095c4ba27da435a44a6b8a3fbbe1c5cd0bf54cdc",
+      "schema_validation": "Pydantic model validation",
       "source": "experiments/model_screen/schemas.py",
       "source_hash": "d7a34132fe2bf94b7e266c0bace7f181d83ac6dcedfa67c21053be919d96fd21",
+      "template_hash": "b8966bcd51627de2fb956b7b51d633622d371faab42dbaf1492617b90f09add4",
       "template_placeholders": [
         "REPLACE_WITH_"
-      ]
+      ],
+      "template_source": "experiments/contract_assurance/fixtures/ModelScreenHypothesisResponse.json",
+      "usage": "Registered LLM-facing contract"
     },
     {
+      "availability_validation": "Production environment boundary when applicable",
       "boundary_stages": [
         "JSON normalization",
         "Pydantic schema validation",
@@ -60,7 +85,12 @@
         "state construction",
         "raw output retained by service"
       ],
+      "cross_field_validation": "Pydantic model validators and production consumer",
+      "deterministic_consumer": "Registered production-path adapter",
+      "field_namespace_validation": "Pydantic field, literal, and identifier validation",
       "name": "InitialResponse",
+      "normalization_behavior": "normalize_json_text; one outer JSON fence only",
+      "parser_entry_point": "investigator.llm.base.parse_model_output",
       "production_path": "InvestigationService.start_case -> environment.build_initial_state",
       "prompt_builders": [
         "Case1ControlledEnvironment.initial_prompt"
@@ -72,15 +102,22 @@
         "src/investigator/environments/case_01_prompts.py"
       ],
       "public": true,
+      "raw_output_preserved_on_failure": true,
+      "referential_validation": "Production adapter/state boundary when applicable",
       "schema": "InitialResponse",
       "schema_hash": "0bf2d70051b0216d9f2cefa9432cf13b87ad214e2e0e13d710686fa4103978a2",
+      "schema_validation": "Pydantic model validation",
       "source": "src/investigator/services/contracts.py",
       "source_hash": "9d5b572bbeffdfad96ce0f4468ad270e886a302cf1e9e50059402f2386a0037f",
+      "template_hash": "1074a99932e73cc8a356d8c73c93ca3717757e1ebf86930076f5d355a5143a91",
       "template_placeholders": [
         "REPLACE_WITH_"
-      ]
+      ],
+      "template_source": "experiments/contract_assurance/fixtures/InitialResponse.json",
+      "usage": "Registered LLM-facing contract"
     },
     {
+      "availability_validation": "Production environment boundary when applicable",
       "boundary_stages": [
         "JSON normalization",
         "Pydantic schema validation",
@@ -89,7 +126,12 @@
         "seeded state construction",
         "raw output retained by service"
       ],
+      "cross_field_validation": "Pydantic model validators and production consumer",
+      "deterministic_consumer": "Registered production-path adapter",
+      "field_namespace_validation": "Pydantic field, literal, and identifier validation",
       "name": "InitialExpansionResponse",
+      "normalization_behavior": "normalize_json_text; one outer JSON fence only",
+      "parser_entry_point": "investigator.llm.base.parse_model_output",
       "production_path": "InvestigationService.start_case(seed) -> environment.build_seeded_initial_state",
       "prompt_builders": [
         "Case1ControlledEnvironment.initial_expansion_prompt"
@@ -101,15 +143,22 @@
         "src/investigator/environments/case_01_prompts.py"
       ],
       "public": true,
+      "raw_output_preserved_on_failure": true,
+      "referential_validation": "Production adapter/state boundary when applicable",
       "schema": "InitialExpansionResponse",
       "schema_hash": "3ab84fb21b95fbb73d063a580acd3f51ec5299a5657a7a6ea62d6b61e696b7c2",
+      "schema_validation": "Pydantic model validation",
       "source": "src/investigator/services/contracts.py",
       "source_hash": "9d5b572bbeffdfad96ce0f4468ad270e886a302cf1e9e50059402f2386a0037f",
+      "template_hash": "7dfaac579095ea06e47e6f90acf99ce4aa5703d41cc5961941410a94ce1327c7",
       "template_placeholders": [
         "REPLACE_WITH_"
-      ]
+      ],
+      "template_source": "experiments/contract_assurance/fixtures/InitialExpansionResponse.json",
+      "usage": "Registered LLM-facing contract"
     },
     {
+      "availability_validation": "Production environment boundary when applicable",
       "boundary_stages": [
         "JSON normalization",
         "Pydantic schema validation",
@@ -117,7 +166,12 @@
         "environment availability validation",
         "raw output retained by service"
       ],
+      "cross_field_validation": "Pydantic model validators and production consumer",
+      "deterministic_consumer": "Registered production-path adapter",
+      "field_namespace_validation": "Pydantic field, literal, and identifier validation",
       "name": "NextActionResponse",
+      "normalization_behavior": "normalize_json_text; one outer JSON fence only",
+      "parser_entry_point": "investigator.llm.base.parse_model_output",
       "production_path": "InvestigationService.propose_next_action -> availability preflight",
       "prompt_builders": [
         "Case1ControlledEnvironment.next_action_prompt"
@@ -129,15 +183,22 @@
         "src/investigator/environments/case_01_prompts.py"
       ],
       "public": true,
+      "raw_output_preserved_on_failure": true,
+      "referential_validation": "Production adapter/state boundary when applicable",
       "schema": "NextActionResponse",
       "schema_hash": "2ee01b9e0a44aa5ea0159022f89f32b407b9f1bdd33c88f8914b62244611a300",
+      "schema_validation": "Pydantic model validation",
       "source": "src/investigator/services/contracts.py",
       "source_hash": "9d5b572bbeffdfad96ce0f4468ad270e886a302cf1e9e50059402f2386a0037f",
+      "template_hash": "a26dd84ceed8aed26a8ba78d1e4c6a5d33d192a1051c777285ab09bbfc33cec5",
       "template_placeholders": [
         "REPLACE_WITH_"
-      ]
+      ],
+      "template_source": "experiments/contract_assurance/fixtures/NextActionResponse.json",
+      "usage": "Registered LLM-facing contract"
     },
     {
+      "availability_validation": "Production environment boundary when applicable",
       "boundary_stages": [
         "JSON normalization",
         "Pydantic schema validation",
@@ -146,7 +207,12 @@
         "state operation preflight",
         "raw output retained by service"
       ],
+      "cross_field_validation": "Pydantic model validators and production consumer",
+      "deterministic_consumer": "Registered production-path adapter",
+      "field_namespace_validation": "Pydantic field, literal, and identifier validation",
       "name": "RevisionResponse",
+      "normalization_behavior": "normalize_json_text; one outer JSON fence only",
+      "parser_entry_point": "investigator.llm.base.parse_model_output",
       "production_path": "InvestigationService.propose_revision -> apply_revision",
       "prompt_builders": [
         "Case1ControlledEnvironment.revision_prompt"
@@ -158,34 +224,52 @@
         "src/investigator/environments/case_01_prompts.py"
       ],
       "public": true,
+      "raw_output_preserved_on_failure": true,
+      "referential_validation": "Production adapter/state boundary when applicable",
       "schema": "RevisionResponse",
       "schema_hash": "56906e23079db421c3704a1465b15ff9c008cbde48b2b4d5776f4c4c1e59a455",
+      "schema_validation": "Pydantic model validation",
       "source": "src/investigator/services/contracts.py",
       "source_hash": "9d5b572bbeffdfad96ce0f4468ad270e886a302cf1e9e50059402f2386a0037f",
+      "template_hash": "2ef32d075192816a26ddba52189c1efdcbadc4ba7a6f9aeeeba09b87866fafc6",
       "template_placeholders": [
         "REPLACE_WITH_"
-      ]
+      ],
+      "template_source": "experiments/contract_assurance/fixtures/RevisionResponse.json",
+      "usage": "Registered LLM-facing contract"
     },
     {
+      "availability_validation": "Production environment boundary when applicable",
       "boundary_stages": [
         "JSON normalization",
         "Pydantic schema validation",
         "union branch validation",
         "raw output retained by adapter"
       ],
+      "cross_field_validation": "Pydantic model validators and production consumer",
+      "deterministic_consumer": "Registered production-path adapter",
+      "field_namespace_validation": "Pydantic field, literal, and identifier validation",
       "name": "NextStepResponse",
+      "normalization_behavior": "normalize_json_text; one outer JSON fence only",
+      "parser_entry_point": "investigator.llm.base.parse_model_output",
       "production_path": "Defined LLM-facing union; no current production caller",
       "prompt_builders": [],
       "prompt_hashes": {},
       "prompt_sources": [],
       "public": true,
+      "raw_output_preserved_on_failure": true,
+      "referential_validation": "Production adapter/state boundary when applicable",
       "schema": "NextStepResponse",
       "schema_hash": "f0186ca2f50494c9a630a22fe3bdc890a942cb2607bbe1d15d23957dcf668f29",
+      "schema_validation": "Pydantic model validation",
       "source": "src/investigator/services/contracts.py",
       "source_hash": "9d5b572bbeffdfad96ce0f4468ad270e886a302cf1e9e50059402f2386a0037f",
+      "template_hash": "2d2dd7902ecb2f042fbf318a8a98b11ba75c1125586fcc024c80373eae176113",
       "template_placeholders": [
         "REPLACE_WITH_"
-      ]
+      ],
+      "template_source": "experiments/contract_assurance/fixtures/NextStepResponse.json",
+      "usage": "Registered LLM-facing contract"
     }
   ],
   "discovered_response_classes": [
@@ -218,6 +302,6 @@
       "source": "src/investigator/services/contracts.py"
     }
   ],
-  "git_commit": "8783401",
+  "git_commit": "cc6cdbf",
   "unregistered_response_classes": []
 }

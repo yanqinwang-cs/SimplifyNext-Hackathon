@@ -56,7 +56,15 @@ def inventory(root: Path, commit: str = "unknown") -> dict[str, Any]:
         source = root / spec.source
         source_hash = hashlib.sha256(source.read_bytes()).hexdigest() if source.exists() else None
         prompt_hashes = {prompt: hashlib.sha256((root / prompt).read_bytes()).hexdigest() for prompt in spec.prompt_sources if (root / prompt).exists()}
-        entries.append({**asdict(spec), "schema": spec.schema.__name__, "schema_hash": hashlib.sha256(json.dumps(spec.schema.model_json_schema(), sort_keys=True).encode()).hexdigest(), "source_hash": source_hash, "prompt_hashes": prompt_hashes})
+        template_path = root / "experiments/contract_assurance/fixtures" / f"{spec.name}.json"
+        template_hash = None
+        if template_path.exists():
+            try:
+                template_payload = json.loads(template_path.read_text(encoding="utf-8"))
+                template_hash = hashlib.sha256(json.dumps(template_payload.get("canonical"), sort_keys=True).encode()).hexdigest()
+            except (OSError, json.JSONDecodeError):
+                template_hash = None
+        entries.append({**asdict(spec), "schema": spec.schema.__name__, "schema_hash": hashlib.sha256(json.dumps(spec.schema.model_json_schema(), sort_keys=True).encode()).hexdigest(), "source_hash": source_hash, "prompt_hashes": prompt_hashes, "template_source": str(template_path.relative_to(root)), "template_hash": template_hash})
     return {"git_commit": commit, "contracts": entries, "discovered_response_classes": discover_response_classes(root), "unregistered_response_classes": unregistered_response_classes(root)}
 
 

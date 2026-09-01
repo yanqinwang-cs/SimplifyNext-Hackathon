@@ -17,6 +17,16 @@ class ContractSpec:
     public: bool = True
     prompt_sources: tuple[str, ...] = ()
     boundary_stages: tuple[str, ...] = ()
+    parser_entry_point: str = "investigator.llm.base.parse_model_output"
+    normalization_behavior: str = "normalize_json_text; one outer JSON fence only"
+    schema_validation: str = "Pydantic model validation"
+    field_namespace_validation: str = "Pydantic field, literal, and identifier validation"
+    referential_validation: str = "Production adapter/state boundary when applicable"
+    availability_validation: str = "Production environment boundary when applicable"
+    cross_field_validation: str = "Pydantic model validators and production consumer"
+    deterministic_consumer: str = "Registered production-path adapter"
+    raw_output_preserved_on_failure: bool = True
+    usage: str = "Registered LLM-facing contract"
 
 
 CONTRACTS = (
