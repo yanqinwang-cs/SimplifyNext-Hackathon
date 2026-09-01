@@ -4,7 +4,7 @@ from typing import Annotated, Literal, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator, model_validator
 
-from investigator.graph import CaseGraph, GraphNodeType, GraphStatus
+from investigator.graph import CaseGraph, GraphNode, GraphNodeType, GraphStatus
 from investigator.roles.coordinator import GraphInvestigationCoordinator
 from investigator.roles.focus import InvestigationFocus, investigator_region
 from investigator.roles.investigator import INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdate
@@ -197,6 +197,35 @@ class InvestigatorCycleCoordinator:
         region = investigator_region(self.graph, self.focus, depth=1)
         return InvestigatorObservation(current_focus=self.focus.model_copy(deep=True), local_graph=deepcopy(region), available_enquiries=deepcopy(self.available_enquiries), participants=deepcopy(self.participants), tenure_turn_count=self.cycle.tenure_turn_count, max_turns_per_tenure=self.cycle.max_turns_per_tenure, turns_remaining=max(0, self.cycle.max_turns_per_tenure - self.cycle.tenure_turn_count), in_flight_enquiry=deepcopy(self.cycle.in_flight_enquiry), recently_released_evidence_ids=list(self.cycle.recently_released_evidence_ids))
 
+    def set_available_enquiries(self, enquiries: list[AvailableEnquiry]) -> None:
+        """Refresh the trusted action frontier supplied by the environment."""
+        if self.cycle.in_flight_enquiry is not None:
+            raise CycleError(CycleFailureCode.INVALID_ENQUIRY_COMPLETION, "Available enquiries cannot change while an enquiry is in flight")
+        self.available_enquiries = [AvailableEnquiry.model_validate(item) for item in enquiries]
+
+    def ingest_environment_evidence(self, evidence: list[GraphNode]) -> None:
+        """Insert released evidence through the trusted environment boundary."""
+        if self.cycle.status is not CycleStatus.ENQUIRY_IN_FLIGHT:
+            raise CycleError(CycleFailureCode.INVALID_ENQUIRY_COMPLETION, "Environment evidence requires an enquiry in flight")
+        candidate = deepcopy(self.graph)
+        for node in evidence:
+            if node.node_type is not GraphNodeType.EVIDENCE:
+                raise CycleError(CycleFailureCode.INVALID_ENQUIRY_COMPLETION, "Environment releases must be evidence nodes")
+            if node.id in candidate.nodes:
+                raise CycleError(CycleFailureCode.INVALID_ENQUIRY_COMPLETION, f"Environment evidence ID already exists: {node.id!r}")
+            candidate.add_node(deepcopy(node))
+        self.graph = candidate
+
+    def complete_enquiry_with_evidence(self, action_id: str, evidence: list[GraphNode]) -> InvestigatorCycleState:
+        """Atomically ingest trusted evidence and complete the in-flight enquiry."""
+        previous_graph = self.graph
+        try:
+            self.ingest_environment_evidence(evidence)
+            return self.complete_enquiry({"action_id": action_id, "released_evidence_ids": [node.id for node in evidence]})
+        except Exception:
+            self.graph = previous_graph
+            raise
+
     def apply_turn(self, response: InvestigatorTurnResponse | dict) -> InvestigatorCycleState:
         self._require_investigator_active()
         if isinstance(response, dict) and isinstance(response.get("graph_updates"), list) and len(response["graph_updates"]) > 5:
@@ -239,6 +268,8 @@ class InvestigatorCycleCoordinator:
         else:
             self.cycle.status = CycleStatus.AWAITING_STEWARD
             self.cycle.handoff_reason = "LOCAL_EXHAUSTED"
+        # A release is visible in this observation and consumed after this turn.
+        self.cycle.recently_released_evidence_ids = []
         return self.cycle.model_copy(deep=True)
 
     def complete_enquiry(self, completion: EnquiryCompletion | dict) -> InvestigatorCycleState:
