@@ -467,31 +467,33 @@
     "StewardDecisionResponse|S1|schema|1 validation error for JsonObject": 4,
     "StewardDecisionResponse|S1|schema|1 validation error for tagged-union[KeepFocusDecision,ShiftFocusDecision,GeneralizeDecision,ArchiveDecision,ReactivateDecision,StopUnresolvedDecision]": 7,
     "StewardDecisionResponse|S1|schema|2 validation errors for tagged-union[KeepFocusDecision,ShiftFocusDecision,GeneralizeDecision,ArchiveDecision,ReactivateDecision,StopUnresolvedDecision]": 2,
-    "StewardDecisionResponse|S4|coordinator_preflight|STOP_UNRESOLVED requires trusted review_context": 1,
+    "StewardDecisionResponse|S4|coordinator_preflight|Archiving current focus requires destination_node_id": 1,
+    "StewardDecisionResponse|S4|coordinator_preflight|No existing ancestor to generalize from 'H1'": 1,
+    "StewardDecisionResponse|S4|coordinator_preflight|STOP_UNRESOLVED requires trusted review_context": 2,
     "StewardDecisionResponse|S4|coordinator_preflight|Unknown graph node ID: 'H9'": 3
   },
   "deterministic": {
-    "accepted": 34,
+    "accepted": 36,
     "failure_codes": {
       "S0": 156,
       "S1": 125,
       "S2": 59,
       "S3": 22,
-      "S4": 81
+      "S4": 84
     },
-    "rejected": 443,
+    "rejected": 446,
     "s5_candidates": 0,
     "s6_limitations": 0,
     "stage_counts": {
       "availability": 3,
-      "coordinator": 13,
-      "coordinator_preflight": 4,
+      "coordinator": 15,
+      "coordinator_preflight": 7,
       "operation_preflight": 18,
       "schema": 274,
       "serialization": 156,
       "state_operation_preflight": 9
     },
-    "total": 477,
+    "total": 482,
     "unexpected_accepts": 0,
     "unexpected_rejects": 0
   },
@@ -638,32 +640,32 @@
       "unexpected_rejects": 0
     },
     "StewardDecisionResponse": {
-      "accepted": 13,
+      "accepted": 15,
       "failure_codes": {
         "S0": 16,
         "S1": 13,
-        "S4": 4
+        "S4": 7
       },
-      "rejected": 33,
+      "rejected": 36,
       "s5_candidates": 0,
       "s6_limitations": 0,
       "stage_counts": {
-        "coordinator": 13,
-        "coordinator_preflight": 4,
+        "coordinator": 15,
+        "coordinator_preflight": 7,
         "schema": 13,
         "serialization": 16
       },
-      "total": 46,
+      "total": 51,
       "unexpected_accepts": 0,
       "unexpected_rejects": 0
     }
   },
   "deterministic_correctness": {
-    "invalid_fixtures": 443,
-    "invalid_rejected": 443,
+    "invalid_fixtures": 446,
+    "invalid_rejected": 446,
     "invalid_rejection_rate": 1.0,
-    "valid_accepted": 34,
-    "valid_fixtures": 34,
+    "valid_accepted": 36,
+    "valid_fixtures": 36,
     "valid_pass_rate": 1.0
   },
   "deterministic_correctness_by_contract": {
@@ -724,22 +726,22 @@
       "valid_pass_rate": 1.0
     },
     "StewardDecisionResponse": {
-      "invalid_fixtures": 33,
-      "invalid_rejected": 33,
+      "invalid_fixtures": 36,
+      "invalid_rejected": 36,
       "invalid_rejection_rate": 1.0,
-      "valid_accepted": 13,
-      "valid_fixtures": 13,
+      "valid_accepted": 15,
+      "valid_fixtures": 15,
       "valid_pass_rate": 1.0
     }
   },
   "deterministic_failure_rate": {
     "confidence": 0.95,
-    "failures": 443,
-    "observed_failure_rate": 0.9287211740041929,
-    "total": 477,
-    "upper_failure_rate": 0.9485470142820811
+    "failures": 446,
+    "observed_failure_rate": 0.9253112033195021,
+    "total": 482,
+    "upper_failure_rate": 0.9455654330684751
   },
-  "generated_at": "2026-09-01T03:04:13.316338+00:00",
+  "generated_at": "2026-09-01T03:07:26.263832+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -1090,7 +1092,7 @@
         "symbol": "ExperimentRunner.run"
       }
     ],
-    "git_commit": "547b5a4",
+    "git_commit": "6869cef",
     "unregistered_response_classes": []
   },
   "prompt_lint": {
