@@ -20,6 +20,8 @@ manages global focus/status. The trajectory log, rather than the semantic
 graph, records chronology and model outputs. Live runs are capped at three
 Investigator turns per tenure, ten model calls, and twenty orchestration steps.
 
+Each Investigator or Steward turn permits one bounded retry for invalid structured output; both attempts are recorded. A trusted, exhausted Steward may terminate with `STOP_UNRESOLVED` when consequential uncertainty remains, or `READY_FOR_HUMAN_DECISION` when no consequential investigative uncertainty requires more work. The latter is a neutral handoff and never an automated disciplinary judgment.
+
 Validate the fixtures and prompts without AWS:
 
 ```bash

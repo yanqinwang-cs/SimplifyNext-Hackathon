@@ -5,7 +5,7 @@ from investigator.graph import CaseGraph, EdgeRelation, GraphEdge, GraphNode, Gr
 from investigator.roles.focus import InvestigationFocus, investigator_region
 from investigator.roles.history import GraphHistory
 from investigator.roles.investigator import AddConflictCommand, AddDerivationCommand, AddHypothesisCommand, AddPropositionCommand, AddSpecializationCommand, AddSupportCommand, AddUncertaintyCommand, INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdate, MoveFocusCommand
-from investigator.roles.steward import ArchiveDecision, GeneralizeDecision, ReactivateDecision, ShiftFocusDecision, StopUnresolvedDecision, StewardDecision, StewardReviewContext
+from investigator.roles.steward import ArchiveDecision, GeneralizeDecision, ReadyForHumanDecision, ReactivateDecision, ShiftFocusDecision, StopUnresolvedDecision, StewardDecision, StewardReviewContext
 
 
 class GraphInvestigationCoordinator:
@@ -155,8 +155,8 @@ class GraphInvestigationCoordinator:
     def review_with_steward(self, decision: StewardDecision, review_context: StewardReviewContext | None = None) -> None:
         if self.stopped:
             raise ValueError("Coordinator is stopped")
-        if decision.operation != "stop_unresolved" and review_context is not None:
-            raise ValueError("review_context is valid only for STOP_UNRESOLVED")
+        if decision.operation not in {"stop_unresolved", "ready_for_human_decision"} and review_context is not None:
+            raise ValueError("review_context is valid only for terminal Steward decisions")
         if decision.operation == "keep_focus":
             pass
         elif isinstance(decision, ShiftFocusDecision):
@@ -177,6 +177,10 @@ class GraphInvestigationCoordinator:
             if review_context is None:
                 raise ValueError("STOP_UNRESOLVED requires trusted review_context")
             self._stop_unresolved(decision, review_context)
+        elif isinstance(decision, ReadyForHumanDecision):
+            if review_context is None:
+                raise ValueError("READY_FOR_HUMAN_DECISION requires trusted review_context")
+            self._ready_for_human_decision(decision, review_context)
         self.history.append(self.graph, self.focus, decision.reason)
 
     def _permitted_ids(self) -> set[str]:
@@ -220,6 +224,15 @@ class GraphInvestigationCoordinator:
             if identifier not in context.active_unresolved_ids:
                 raise ValueError("STOP_UNRESOLVED IDs must be listed by trusted active_unresolved_ids")
         self.stopped = True
+
+    @staticmethod
+    def _ready_for_human_decision(decision: ReadyForHumanDecision, context: StewardReviewContext) -> None:
+        if not context.global_frontier_assessed:
+            raise ValueError("READY_FOR_HUMAN_DECISION requires an assessed global frontier")
+        if context.materially_usable_action_ids or context.obvious_useful_region_remains:
+            raise ValueError("READY_FOR_HUMAN_DECISION requires an exhausted useful frontier")
+        if decision.remaining_consequential_uncertainty_ids:
+            raise ValueError("READY_FOR_HUMAN_DECISION cannot retain consequential uncertainty IDs")
 
     @staticmethod
     def _require_node(graph: CaseGraph, node_id: str) -> GraphNode:

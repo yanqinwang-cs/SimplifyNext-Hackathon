@@ -288,6 +288,54 @@ def test_runner_applies_non_stop_steward_decision_without_stop_context_argument(
     assert steward_traces[0]["steward_review_context"] is not None
 
 
+def test_runner_retries_invalid_investigator_output_once_and_counts_both_calls():
+    investigator = ScriptedClient(ModelParseError("invalid JSON", raw_output="{bad"), {"graph_updates": [], "next_step": {"type": "local_exhausted", "reason": "The local step is complete."}})
+    result = run_trajectory(fixture_map()["C1"], investigator, ScriptedClient(KeepFocusDecision(assessment="retain", reason="The focus remains useful.")), max_steps=1)
+    trace = result["traces"][0]
+    assert result["model_calls"] == 2 and len(investigator.calls) == 2
+    assert [attempt["attempt"] for attempt in trace["model_attempts"]] == [1, 2]
+    assert trace["model_attempts"][0]["parse_success"] is False and trace["model_attempts"][1]["parse_success"] is True
+    retry_prompt = investigator.calls[1][0]
+    assert "invalid JSON" in retry_prompt and "{bad" in retry_prompt and "EXACT PRODUCTION SCHEMA" in retry_prompt
+    assert "corrected structured response" in retry_prompt
+
+
+def test_runner_retries_invalid_steward_output_once_and_hard_fails_after_second_failure():
+    investigator = ScriptedClient({"graph_updates": [], "next_step": {"type": "local_exhausted", "reason": "The local step is complete."}})
+    steward = ScriptedClient(ModelParseError("bad one", raw_output="one"), ModelParseError("bad two", raw_output="two"))
+    result = run_trajectory(fixture_map()["C1"], investigator, steward, max_steps=2)
+    trace = result["traces"][-1]
+    assert result["termination"] == "FAIL / STEWARD_SCHEMA" and result["model_calls"] == 3
+    assert len(trace["model_attempts"]) == 2 and all(not attempt["parse_success"] for attempt in trace["model_attempts"])
+
+
+def test_runner_does_not_retry_valid_output_or_exceed_budget():
+    valid = {"graph_updates": [], "next_step": {"type": "local_exhausted", "reason": "The local step is complete."}}
+    investigator = ScriptedClient(valid)
+    result = run_trajectory(fixture_map()["C1"], investigator, ScriptedClient(KeepFocusDecision(assessment="retain", reason="The focus remains useful.")), max_steps=1)
+    assert result["model_calls"] == 1 and len(investigator.calls) == 1
+    failing = ScriptedClient(ModelParseError("bad", raw_output="bad"), ModelParseError("would be uncalled", raw_output="bad2"))
+    result = run_trajectory(fixture_map()["C1"], failing, ScriptedClient(KeepFocusDecision(assessment="retain", reason="The focus remains useful.")), max_model_calls=1, max_steps=1)
+    assert result["termination"] == "FAIL / INVESTIGATOR_SCHEMA" and result["model_calls"] == 1 and len(failing.calls) == 1
+
+
+def test_c3_ready_for_human_decision_trajectory_is_neutral_and_terminates():
+    investigator = ScriptedClient(
+        {"graph_updates": [], "next_step": {"type": "request_enquiry", "reason": "The timestamp check can settle the timing boundary.", "action_id": "A2", "target_uncertainty_id": "U1", "expected_information_value": "It can establish whether the discussion preceded the prohibited period."}},
+        {"graph_updates": [{"operation": "add_proposition", "statement": "The discussion occurred before the prohibited period.", "derived_from_node_ids": ["E3"], "reason": "The released timestamp directly grounds this proposition."}, {"operation": "add_conflict", "source_node_id": "P2", "target_node_id": "H1", "reason": "The timestamp is materially incompatible with discussion during the prohibited period."}, {"operation": "move_focus", "focus_node_id": "H1", "reason": "The timing hypothesis is now the local focus."}], "next_step": {"type": "local_exhausted", "reason": "The timing frontier is complete."}},
+        {"graph_updates": [], "next_step": {"type": "local_exhausted", "reason": "The post-archive local frontier is complete."}},
+        {"graph_updates": [], "next_step": {"type": "local_exhausted", "reason": "The remaining local frontier is complete."}},
+    )
+    steward = ScriptedClient(
+        {"operation": "archive", "assessment": "remove resolved question", "reason": "The timing uncertainty no longer needs a live node after the release.", "target_node_id": "U1", "destination_node_id": "H1"},
+        {"operation": "archive", "assessment": "retire refuted hypothesis", "reason": "The released timestamp conflicts with the prohibited-period hypothesis.", "target_node_id": "H1", "destination_node_id": "P1"},
+        {"operation": "ready_for_human_decision", "assessment": "handoff", "reason": "No consequential investigative uncertainty requires another enquiry.", "remaining_consequential_uncertainty_ids": [], "handoff_summary": "The exhausted investigation is ready for human review."},
+    )
+    result = run_trajectory(fixture_map()["C3"], investigator, steward, max_steps=9)
+    assert result["termination"] == "READY_FOR_HUMAN_DECISION"
+    assert result["traces"][-1]["steward_decision"]["operation"] == "ready_for_human_decision"
+
+
 def test_hidden_release_is_not_in_initial_investigator_observation():
     for fixture in all_fixtures():
         environment = Stage1Environment.for_fixture(fixture)
@@ -319,15 +367,16 @@ class ScriptedClient:
 
 def test_runner_records_environment_and_model_trace_and_preserves_failure():
     investigator = ScriptedClient({"graph_updates": [], "next_step": {"type": "request_enquiry", "reason": "Need the source record.", "action_id": "A1", "target_uncertainty_id": "U1", "expected_information_value": "It may resolve the source question."}})
-    steward = ScriptedClient(ModelParseError("bad steward", raw_output="{not-json"))
+    steward = ScriptedClient(ModelParseError("bad steward", raw_output="{not-json"), ModelParseError("bad steward retry", raw_output="still-not-json"))
     result = run_trajectory(fixture_map()["C1"], investigator, steward, max_investigator_turns_per_tenure=1)
     assert result["termination"] == "FAIL / STEWARD_SCHEMA"
     assert result["completed_action_ids"] == ["A1"]
     assert any(trace["actor"] == "environment" and trace["environment_release"] for trace in result["traces"])
     failed = result["traces"][-1]
-    assert failed["raw_model_output"] == "bad steward" or failed["raw_model_output"] == "{not-json"
+    assert failed["raw_model_output"] == "still-not-json"
+    assert [attempt["raw_output"] for attempt in failed["model_attempts"]] == ["{not-json", "still-not-json"]
     assert len(investigator.calls) == 1
-    assert len(steward.calls) == 1
+    assert len(steward.calls) == 2
 
 
 def test_runner_does_not_allow_evidence_creation_by_investigator():

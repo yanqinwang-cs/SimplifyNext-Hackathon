@@ -8,7 +8,7 @@ from investigator.graph import CaseGraph, EdgeStatus, GraphNode, GraphNodeType, 
 from investigator.roles.coordinator import GraphInvestigationCoordinator
 from investigator.roles.focus import InvestigationFocus, investigator_region
 from investigator.roles.investigator import INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdate
-from investigator.roles.steward import StewardDecision, StopUnresolvedDecision, StewardReviewContext
+from investigator.roles.steward import ReadyForHumanDecision, StewardDecision, StopUnresolvedDecision, StewardReviewContext
 
 
 class EnquiryKind(str, Enum):
@@ -144,6 +144,7 @@ class InvestigatorCycleState(BaseModel):
     handoff_reason: str | None = None
     case_revision: int = Field(default=0, ge=0)
     recently_released_evidence_ids: list[str] = Field(default_factory=list)
+    termination_reason: str | None = None
 
 
 class StewardSnapshot(BaseModel):
@@ -338,10 +339,15 @@ class InvestigatorCycleCoordinator:
         self.cycle.case_revision += 1
         if isinstance(parsed, StopUnresolvedDecision):
             self.cycle.status = CycleStatus.STOPPED
+            self.cycle.termination_reason = "STOP_UNRESOLVED"
+        elif isinstance(parsed, ReadyForHumanDecision):
+            self.cycle.status = CycleStatus.STOPPED
+            self.cycle.termination_reason = "READY_FOR_HUMAN_DECISION"
         else:
             self.cycle.status = CycleStatus.LOCAL_ACTIVE
             self.cycle.tenure_turn_count = 0
             self._new_nodes = set()
+            self.cycle.termination_reason = None
         self.cycle.handoff_reason = None
         return self.cycle.model_copy(deep=True)
 

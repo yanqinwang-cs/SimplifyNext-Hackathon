@@ -11,6 +11,7 @@ class StewardOperation(str, Enum):
     ARCHIVE = "archive"
     REACTIVATE = "reactivate"
     STOP_UNRESOLVED = "stop_unresolved"
+    READY_FOR_HUMAN_DECISION = "ready_for_human_decision"
 
 
 class StewardReviewContext(BaseModel):
@@ -70,7 +71,13 @@ class StopUnresolvedDecision(_DecisionBase):
     reopening_conditions: str
 
 
+class ReadyForHumanDecision(_DecisionBase):
+    operation: Literal["ready_for_human_decision"] = "ready_for_human_decision"
+    remaining_consequential_uncertainty_ids: list[str] = Field(default_factory=list)
+    handoff_summary: str
+
+
 StewardDecision: TypeAlias = Annotated[
-    KeepFocusDecision | ShiftFocusDecision | GeneralizeDecision | ArchiveDecision | ReactivateDecision | StopUnresolvedDecision,
+    KeepFocusDecision | ShiftFocusDecision | GeneralizeDecision | ArchiveDecision | ReactivateDecision | StopUnresolvedDecision | ReadyForHumanDecision,
     Field(discriminator="operation"),
 ]

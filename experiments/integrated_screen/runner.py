@@ -26,6 +26,12 @@ MAX_MODEL_CALLS = 10
 MAX_STEPS = 20
 
 
+class _RetryModelParseError(ModelParseError):
+    def __init__(self, message: str, *, attempts: list[dict[str, Any]]) -> None:
+        super().__init__(message, raw_output=attempts[-1].get("raw_output"))
+        self.attempts = attempts
+
+
 def _hash(value: Any) -> str:
     payload = value if isinstance(value, bytes) else json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
     return hashlib.sha256(payload).hexdigest()
@@ -44,6 +50,48 @@ def _graph_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any
         "removed_edge_ids": sorted(set(before_edges) - set(after_edges)),
         "node_status_changes": [{"node_id": identifier, "before": before_nodes[identifier]["status"], "after": after_nodes[identifier]["status"]} for identifier in sorted(set(before_nodes) & set(after_nodes)) if before_nodes[identifier]["status"] != after_nodes[identifier]["status"]],
     }
+
+
+def _schema_json(output_schema: type[Any]) -> str:
+    if hasattr(output_schema, "model_json_schema"):
+        schema = output_schema.model_json_schema()
+    else:
+        schema = TypeAdapter(StewardDecision).json_schema()
+    return json.dumps(schema, indent=2, sort_keys=True)
+
+
+def _retry_prompt(error: Exception, raw_output: Any, schema: type[Any]) -> str:
+    return "\n\n".join([
+        "Your previous response could not be validated against the exact production schema.",
+        f"Validation error:\n{error}",
+        f"Previous raw response:\n{raw_output}",
+        "Return ONLY a corrected structured response using the exact schema below. Preserve the intended reasoning where compatible with the schema. Do not add unrelated investigation work.",
+        "EXACT PRODUCTION SCHEMA:\n" + _schema_json(schema),
+    ])
+
+
+def _call_with_one_retry(client: ModelClient, prompt: str, output_schema: type[Any], remaining_budget: int) -> tuple[ModelCallResult, list[dict[str, Any]], int]:
+    attempts: list[dict[str, Any]] = []
+    calls_used = 0
+    try:
+        call = client.call(prompt, output_schema)
+        calls_used += 1
+        attempts.append({"attempt": 1, "raw_output": call.raw_output, "parse_success": True, "error": None, "input_tokens": call.metadata.input_tokens, "output_tokens": call.metadata.output_tokens, "latency_seconds": call.metadata.latency_seconds})
+        return call, attempts, calls_used
+    except ModelParseError as first_error:
+        calls_used += 1
+        attempts.append({"attempt": 1, "raw_output": first_error.raw_output, "parse_success": False, "error": str(first_error), "input_tokens": None, "output_tokens": None, "latency_seconds": None})
+        if remaining_budget < 2:
+            raise _RetryModelParseError(str(first_error), attempts=attempts) from first_error
+        try:
+            call = client.call(_retry_prompt(first_error, first_error.raw_output, output_schema), output_schema)
+            calls_used += 1
+            attempts.append({"attempt": 2, "raw_output": call.raw_output, "parse_success": True, "error": None, "input_tokens": call.metadata.input_tokens, "output_tokens": call.metadata.output_tokens, "latency_seconds": call.metadata.latency_seconds})
+            return call, attempts, calls_used
+        except ModelParseError as second_error:
+            calls_used += 1
+            attempts.append({"attempt": 2, "raw_output": second_error.raw_output, "parse_success": False, "error": str(second_error), "input_tokens": None, "output_tokens": None, "latency_seconds": None})
+            raise _RetryModelParseError(str(second_error), attempts=attempts) from second_error
 
 
 def live_review_context(coordinator: InvestigatorCycleCoordinator, environment: Stage1Environment) -> StewardReviewContext:
@@ -77,11 +125,11 @@ def run_trajectory(
     termination = None
 
     def trace_base(step: int, actor: str, before: str, before_graph: dict[str, Any]) -> dict[str, Any]:
-        return {"step": step, "actor": actor, "focus_before": coordinator.focus.node_id, "graph_fingerprint_before": before, "available_action_ids_before": [a.action_id for a in environment.current_available_enquiries()], "materially_usable_action_ids_before": environment.materially_usable_action_ids(), "recently_released_evidence_ids": [], "visible_released_evidence_ids": [], "steward_review_context": None, "raw_model_output": None, "parsed_response": None, "graph_delta": {}, "enquiry_requested": None, "environment_release": None, "executed_action_id": None, "completed_action_ids": sorted(environment.completed_action_ids), "steward_decision": None, "focus_after": None, "graph_fingerprint_after": None, "available_action_ids_after": None, "materially_usable_action_ids_after": None, "input_tokens": None, "output_tokens": None, "latency_seconds": None, "failure_category": None, "error": None, "_graph_before": before_graph}
+        return {"step": step, "actor": actor, "focus_before": coordinator.focus.node_id, "graph_fingerprint_before": before, "available_action_ids_before": [a.action_id for a in environment.current_available_enquiries()], "materially_usable_action_ids_before": environment.materially_usable_action_ids(), "recently_released_evidence_ids": [], "visible_released_evidence_ids": [], "steward_review_context": None, "raw_model_output": None, "parsed_response": None, "model_attempts": [], "graph_delta": {}, "enquiry_requested": None, "environment_release": None, "executed_action_id": None, "completed_action_ids": sorted(environment.completed_action_ids), "steward_decision": None, "focus_after": None, "graph_fingerprint_after": None, "available_action_ids_after": None, "materially_usable_action_ids_after": None, "input_tokens": None, "output_tokens": None, "latency_seconds": None, "failure_category": None, "error": None, "_graph_before": before_graph}
 
     for step in range(1, max_steps + 1):
         if coordinator.cycle.status is CycleStatus.STOPPED:
-            termination = "STOP_UNRESOLVED"
+            termination = coordinator.cycle.termination_reason or "STOP_UNRESOLVED"
             break
         before_graph = coordinator.graph.model_dump(mode="json")
         before = _hash(before_graph)
@@ -113,16 +161,17 @@ def run_trajectory(
             prompt = build_investigator_prompt(observation)
             trace["prompt_hash"] = _hash(prompt)
             try:
-                call: ModelCallResult = investigator_client.call(prompt, __import__("investigator.cycle", fromlist=["InvestigatorTurnResponse"]).InvestigatorTurnResponse)
-                model_calls += 1
-                trace.update({"raw_model_output": call.raw_output, "parsed_response": call.parsed.model_dump(mode="json"), "input_tokens": call.metadata.input_tokens, "output_tokens": call.metadata.output_tokens, "latency_seconds": call.metadata.latency_seconds})
+                output_schema = __import__("investigator.cycle", fromlist=["InvestigatorTurnResponse"]).InvestigatorTurnResponse
+                call, attempts, calls_used = _call_with_one_retry(investigator_client, prompt, output_schema, max_model_calls - model_calls)
+                model_calls += calls_used
+                trace.update({"raw_model_output": call.raw_output, "parsed_response": call.parsed.model_dump(mode="json"), "input_tokens": call.metadata.input_tokens, "output_tokens": call.metadata.output_tokens, "latency_seconds": call.metadata.latency_seconds, "model_attempts": attempts})
                 response = call.parsed
                 requested = getattr(response.next_step, "action_id", None)
                 trace["enquiry_requested"] = requested
                 coordinator.apply_turn(response)
-            except ModelParseError as exc:
-                model_calls += 1
-                trace.update({"raw_model_output": exc.raw_output, "failure_category": "INVESTIGATOR_SCHEMA", "error": str(exc)})
+            except _RetryModelParseError as exc:
+                model_calls += len(exc.attempts)
+                trace.update({"raw_model_output": exc.raw_output, "failure_category": "INVESTIGATOR_SCHEMA", "error": str(exc), "model_attempts": exc.attempts})
                 traces.append(trace)
                 termination = "FAIL / INVESTIGATOR_SCHEMA"
                 break
@@ -142,15 +191,15 @@ def run_trajectory(
             prompt = build_steward_prompt(coordinator.steward_snapshot(), context)
             trace["prompt_hash"] = _hash(prompt)
             try:
-                call = steward_client.call(prompt, _StewardDecisionSchema)
-                model_calls += 1
-                trace.update({"raw_model_output": call.raw_output, "parsed_response": call.parsed.model_dump(mode="json"), "input_tokens": call.metadata.input_tokens, "output_tokens": call.metadata.output_tokens, "latency_seconds": call.metadata.latency_seconds})
+                call, attempts, calls_used = _call_with_one_retry(steward_client, prompt, _StewardDecisionSchema, max_model_calls - model_calls)
+                model_calls += calls_used
+                trace.update({"raw_model_output": call.raw_output, "parsed_response": call.parsed.model_dump(mode="json"), "input_tokens": call.metadata.input_tokens, "output_tokens": call.metadata.output_tokens, "latency_seconds": call.metadata.latency_seconds, "model_attempts": attempts})
                 trace["steward_decision"] = call.parsed.model_dump(mode="json")
-                review_context = context if call.parsed.operation == "stop_unresolved" else None
+                review_context = context if call.parsed.operation in {"stop_unresolved", "ready_for_human_decision"} else None
                 coordinator.apply_steward_decision(call.parsed, coordinator.cycle.case_revision, review_context=review_context)
-            except ModelParseError as exc:
-                model_calls += 1
-                trace.update({"raw_model_output": exc.raw_output, "failure_category": "STEWARD_SCHEMA", "error": str(exc)})
+            except _RetryModelParseError as exc:
+                model_calls += len(exc.attempts)
+                trace.update({"raw_model_output": exc.raw_output, "failure_category": "STEWARD_SCHEMA", "error": str(exc), "model_attempts": exc.attempts})
                 traces.append(trace)
                 termination = "FAIL / STEWARD_SCHEMA"
                 break
@@ -176,6 +225,10 @@ def run_trajectory(
 
 
 class _StewardDecisionSchema:
+    @classmethod
+    def model_json_schema(cls):
+        return TypeAdapter(StewardDecision).json_schema()
+
     @classmethod
     def model_validate(cls, value):
         return TypeAdapter(StewardDecision).validate_python(value)

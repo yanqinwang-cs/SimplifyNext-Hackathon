@@ -8,7 +8,7 @@
     "contract": "StewardDecisionResponse",
     "git_commit": "6c483d1",
     "prompt_hash": "6f8c20db1af87b630034a0f494ea0241577dc178f89acf5c9fdc139256fc200e",
-    "schema_hash": "c1d034291a6ea54ed9e0805c81e02ec4d6c81044e24d58acfa80d0fb6492e705",
+    "schema_hash": "3aa032f5e6ad8825bac8ade867d0cf6d2a9d2c5925c558c892a781c88110a997",
     "source": "experiments/steward_screen/runner.py",
     "template_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
   },
@@ -141,6 +141,43 @@
         "title": "ReactivateDecision",
         "type": "object"
       },
+      "ReadyForHumanDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment": {
+            "title": "Assessment",
+            "type": "string"
+          },
+          "handoff_summary": {
+            "title": "Handoff Summary",
+            "type": "string"
+          },
+          "operation": {
+            "const": "ready_for_human_decision",
+            "default": "ready_for_human_decision",
+            "title": "Operation",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "remaining_consequential_uncertainty_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Remaining Consequential Uncertainty Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "assessment",
+          "reason",
+          "handoff_summary"
+        ],
+        "title": "ReadyForHumanDecision",
+        "type": "object"
+      },
       "ShiftFocusDecision": {
         "additionalProperties": false,
         "properties": {
@@ -217,6 +254,7 @@
         "generalize": "#/$defs/GeneralizeDecision",
         "keep_focus": "#/$defs/KeepFocusDecision",
         "reactivate": "#/$defs/ReactivateDecision",
+        "ready_for_human_decision": "#/$defs/ReadyForHumanDecision",
         "shift_focus": "#/$defs/ShiftFocusDecision",
         "stop_unresolved": "#/$defs/StopUnresolvedDecision"
       },
@@ -240,6 +278,9 @@
       },
       {
         "$ref": "#/$defs/StopUnresolvedDecision"
+      },
+      {
+        "$ref": "#/$defs/ReadyForHumanDecision"
       }
     ]
   },
