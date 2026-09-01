@@ -19,8 +19,8 @@ uv run python -m experiments.integrated_screen.runner --dry-run
 ```
 
 The live command accepts `--investigator-model`, `--steward-model`,
-`--fixtures`, and `--output-dir`. It writes `manifest.json` and
-`raw_traces.jsonl` under the selected output directory. Stage 1 does not
+`--fixtures`, and `--output-dir`. It writes immutable `manifest.json`,
+`raw_traces.jsonl`, and per-fixture `trajectory_results.json` artifacts under
+the selected output directory. Stage 1 does not
 establish a disciplinary outcome, replace human judgement, or provide a
 production orchestration architecture.
-

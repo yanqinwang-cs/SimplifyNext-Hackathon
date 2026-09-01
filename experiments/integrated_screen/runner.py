@@ -235,7 +235,7 @@ def main() -> None:
         for result in results:
             for trace in result["traces"]:
                 handle.write(json.dumps({"fixture_id": result["fixture_id"], **trace}, sort_keys=True) + "\n")
-    print(f"Manifest: {output / 'manifest.json'}\nRaw traces: {output / 'raw_traces.jsonl'}")
+    print(f"Manifest: {output / 'manifest.json'}\nRaw traces: {output / 'raw_traces.jsonl'}\nTrajectory results: {output / 'trajectory_results.json'}")
 
 
 if __name__ == "__main__":
