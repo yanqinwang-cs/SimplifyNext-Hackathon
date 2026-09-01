@@ -262,6 +262,12 @@ def test_smoke_response_answer_must_be_substantive():
     assert result.code is FailureCode.S4
 
 
+def test_next_step_conclusion_reason_must_be_substantive():
+    value = {"step_type": "conclusion", "conclusion_hypothesis_id": "H1", "conclusion_reason": ""}
+    result = evaluate_raw(json.dumps(value), NextStepResponse)
+    assert result.code is FailureCode.S4
+
+
 def test_assurance_module_cli_reports_summary(tmp_path: Path):
     root = Path(__file__).resolve().parents[1]
     completed = subprocess.run(["uv", "run", "python", "-m", "experiments.contract_assurance", "--root", str(root), "--output", str(tmp_path), "--commit", "abc"], cwd=root, capture_output=True, text=True, check=True, env={**__import__("os").environ, "UV_CACHE_DIR": "/tmp/codex_uv_contract_assurance"})
