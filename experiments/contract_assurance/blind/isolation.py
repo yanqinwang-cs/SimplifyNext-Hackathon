@@ -28,6 +28,7 @@ def run_isolated_worker(
     package_dir: str | Path,
     output_dir: str | Path,
     timeout: float = 120.0,
+    input_text: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run a worker command with auditable repository-read denial.
 
@@ -45,6 +46,7 @@ def run_isolated_worker(
         ["sandbox-exec", "-p", profile, *command],
         cwd=output_path,
         text=True,
+        input=input_text,
         capture_output=True,
         timeout=timeout,
         check=False,
