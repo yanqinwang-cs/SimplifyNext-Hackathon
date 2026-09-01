@@ -305,6 +305,12 @@
     },
     "coverage_gaps": [],
     "excluded_not_blind": 7,
+    "producer_compliance": {
+      "accepted": 15,
+      "compliance_rate": 0.8823529411764706,
+      "evaluations": 17,
+      "rejected": 2
+    },
     "qualified_accepted": 17,
     "qualified_batches": 34,
     "qualified_evaluations": 34,
@@ -733,7 +739,7 @@
     "total": 477,
     "upper_failure_rate": 0.9485470142820811
   },
-  "generated_at": "2026-09-01T02:54:20.465870+00:00",
+  "generated_at": "2026-09-01T03:04:13.316338+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -1084,7 +1090,7 @@
         "symbol": "ExperimentRunner.run"
       }
     ],
-    "git_commit": "7cc09fa",
+    "git_commit": "547b5a4",
     "unregistered_response_classes": []
   },
   "prompt_lint": {
