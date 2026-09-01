@@ -4,6 +4,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from investigator.graph import CaseGraph
+from investigator.models import CaseParticipant
 from investigator.roles import InvestigationFocus, StewardReviewContext
 
 
@@ -36,6 +37,7 @@ class StewardScenario(BaseModel):
     description: str
     graph: CaseGraph
     focus: InvestigationFocus
+    participants: list[CaseParticipant] = Field(default_factory=lambda: [CaseParticipant(id="PERSON1", contextual_roles=["candidate", "student"], display_label="Candidate 1"), CaseParticipant(id="PERSON2", contextual_roles=["tutor", "staff_member"], display_label="Tutor or staff member")])
     review_context: StewardReviewContext | None = None
     expected_operation: str
     expected_target_node_id: str | None = None

@@ -15,11 +15,12 @@ from investigator.models.hypothesis import (
     TransformationType,
 )
 from investigator.models.source import Source, SourceType
+from investigator.models.participant import CaseParticipant
 from investigator.models.time import ApproximateTime, ExactTime, RelativeTime, TimeRange
 from investigator.models.uncertainty import Uncertainty, UncertaintyKind
 
 __all__ = [
-    "ApproximateTime", "Case", "Claim", "ClaimStatus", "Conflict", "Entity",
+    "ApproximateTime", "Case", "CaseParticipant", "Claim", "ClaimStatus", "Conflict", "Entity",
     "EvidenceItem", "EvidenceKind", "ExactTime", "Hypothesis", "HypothesisOrigin",
     "HypothesisStatus", "HypothesisTransformation", "HypothesisTransition", "HypothesisTransitionType", "RelativeTime", "Source", "UncertaintyTransition", "UncertaintyTransitionType",
     "SourceType", "TimeRange", "TransformationType", "Uncertainty", "UncertaintyKind",
