@@ -1,7 +1,7 @@
 # Status
 
 - Branch: `codex/contract-assurance-goal`
-- Current git commit: `944eb5f`
+- Current git commit: `1de8f49`
 - Baseline commit: `946f799`
 - Active focus: deeper deterministic S2/S4 mutation expansion and complete contract inventory metadata
 - Completed cycle: repository inventory, production operation-preflight checks, mutation/fixture manifests, public-package controls, history report export, seven frozen public packages, package drift gates, baseline reports, and explicit runtime boundary metadata
@@ -9,4 +9,4 @@
 - Pending human decisions: none
 - Latest worker evidence: fourteen qualified isolated producer/adversary batches cover all seven registered contracts, including fresh InitialExpansionResponse producer and adversary batches with current package hashes; all carry Seatbelt launcher and denied-read probe evidence under ignored `experiments/contract_assurance/results/2026-09-01-isolated-*/`.
 - Next queued work: extend referential and cross-field mutation combinations across less-covered response fields; live SmokeResponse Bedrock execution remains intentionally excluded by the no-AWS constraint
-- Last checkpoint: `944eb5f` (`Record verified mutation report`); current cycle audits the initial-deliverable checklist and status provenance.
+- Last checkpoint: `1de8f49` (`Render per-contract provenance`); current cycle closes the Markdown report provenance gap and revalidates assurance-only execution.
