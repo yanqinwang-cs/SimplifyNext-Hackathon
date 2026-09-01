@@ -1,0 +1,338 @@
+{
+  "fixtures": [
+    {
+      "fixture_id": "SEQ1",
+      "issues": [
+        {
+          "allowed_destination_node_ids": [],
+          "depends_on_issue_ids": [],
+          "issue_id": "I1",
+          "kind": "STALE_ACTIVE",
+          "parent_node_id": null,
+          "target_node_id": "H2"
+        },
+        {
+          "allowed_destination_node_ids": [],
+          "depends_on_issue_ids": [],
+          "issue_id": "I2",
+          "kind": "NEGLECTED_ACTIVE",
+          "parent_node_id": null,
+          "target_node_id": "H3"
+        }
+      ],
+      "must_remain_active_node_ids": [
+        "H1",
+        "H3"
+      ],
+      "must_remain_archived_node_ids": [],
+      "public_basis": [
+        {
+          "basis_id": "B1",
+          "expected_value": null,
+          "fact": "The Investigator completed a local tenure at H2 and reported LOCAL_EXHAUSTED.",
+          "field": null,
+          "issue_id": "I1",
+          "node_id": null,
+          "relation": null,
+          "source_id": null,
+          "source_kind": "SCENARIO_FACT",
+          "target_id": null
+        },
+        {
+          "basis_id": "B2",
+          "expected_value": null,
+          "fact": null,
+          "field": null,
+          "issue_id": "I2",
+          "node_id": null,
+          "relation": "targets",
+          "source_id": "U3",
+          "source_kind": "GRAPH_EDGE",
+          "target_id": "H3"
+        }
+      ],
+      "terminal_mode": "QUIESCENCE"
+    },
+    {
+      "fixture_id": "SEQ2",
+      "issues": [
+        {
+          "allowed_destination_node_ids": [],
+          "depends_on_issue_ids": [],
+          "issue_id": "I1",
+          "kind": "RELEVANT_ARCHIVED",
+          "parent_node_id": null,
+          "target_node_id": "H2"
+        },
+        {
+          "allowed_destination_node_ids": [],
+          "depends_on_issue_ids": [
+            "I1"
+          ],
+          "issue_id": "I2",
+          "kind": "NEGLECTED_ACTIVE",
+          "parent_node_id": null,
+          "target_node_id": "H2"
+        }
+      ],
+      "must_remain_active_node_ids": [],
+      "must_remain_archived_node_ids": [],
+      "public_basis": [
+        {
+          "basis_id": "B1",
+          "expected_value": null,
+          "fact": null,
+          "field": null,
+          "issue_id": "I1",
+          "node_id": null,
+          "relation": "supports",
+          "source_id": "P1",
+          "source_kind": "GRAPH_EDGE",
+          "target_id": "H2"
+        },
+        {
+          "basis_id": "B2",
+          "expected_value": null,
+          "fact": null,
+          "field": null,
+          "issue_id": "I2",
+          "node_id": null,
+          "relation": "supports",
+          "source_id": "P1",
+          "source_kind": "GRAPH_EDGE",
+          "target_id": "H2"
+        }
+      ],
+      "terminal_mode": "QUIESCENCE"
+    },
+    {
+      "fixture_id": "SEQ3",
+      "issues": [
+        {
+          "allowed_destination_node_ids": [],
+          "depends_on_issue_ids": [],
+          "issue_id": "I1",
+          "kind": "OVER_SPECIFIC_FOCUS",
+          "parent_node_id": "H1",
+          "target_node_id": "H1.1"
+        },
+        {
+          "allowed_destination_node_ids": [],
+          "depends_on_issue_ids": [],
+          "issue_id": "I2",
+          "kind": "NEGLECTED_ACTIVE",
+          "parent_node_id": null,
+          "target_node_id": "H2"
+        }
+      ],
+      "must_remain_active_node_ids": [
+        "H1.1"
+      ],
+      "must_remain_archived_node_ids": [],
+      "public_basis": [
+        {
+          "basis_id": "B1",
+          "expected_value": null,
+          "fact": null,
+          "field": null,
+          "issue_id": "I1",
+          "node_id": null,
+          "relation": "specializes",
+          "source_id": "H1.1",
+          "source_kind": "GRAPH_EDGE",
+          "target_id": "H1"
+        },
+        {
+          "basis_id": "B2",
+          "expected_value": null,
+          "fact": "The specific H1.1 branch has no additional unresolved local question",
+          "field": null,
+          "issue_id": "I1",
+          "node_id": null,
+          "relation": null,
+          "source_id": null,
+          "source_kind": "SCENARIO_FACT",
+          "target_id": null
+        },
+        {
+          "basis_id": "B3",
+          "expected_value": null,
+          "fact": null,
+          "field": null,
+          "issue_id": "I2",
+          "node_id": null,
+          "relation": "targets",
+          "source_id": "U2",
+          "source_kind": "GRAPH_EDGE",
+          "target_id": "H2"
+        }
+      ],
+      "terminal_mode": "QUIESCENCE"
+    },
+    {
+      "fixture_id": "SEQ4",
+      "issues": [
+        {
+          "allowed_destination_node_ids": [
+            "H2"
+          ],
+          "depends_on_issue_ids": [],
+          "issue_id": "I1",
+          "kind": "CURRENT_FOCUS_STALE",
+          "parent_node_id": null,
+          "target_node_id": "H1"
+        }
+      ],
+      "must_remain_active_node_ids": [],
+      "must_remain_archived_node_ids": [],
+      "public_basis": [
+        {
+          "basis_id": "B1",
+          "expected_value": null,
+          "fact": "The Investigator handed off LOCAL_EXHAUSTED at H1",
+          "field": null,
+          "issue_id": "I1",
+          "node_id": null,
+          "relation": null,
+          "source_id": null,
+          "source_kind": "SCENARIO_FACT",
+          "target_id": null
+        },
+        {
+          "basis_id": "B2",
+          "expected_value": null,
+          "fact": null,
+          "field": null,
+          "issue_id": "I1",
+          "node_id": null,
+          "relation": "targets",
+          "source_id": "U2",
+          "source_kind": "GRAPH_EDGE",
+          "target_id": "H2"
+        }
+      ],
+      "terminal_mode": "QUIESCENCE"
+    },
+    {
+      "fixture_id": "SEQ5",
+      "issues": [
+        {
+          "allowed_destination_node_ids": [],
+          "depends_on_issue_ids": [],
+          "issue_id": "I1",
+          "kind": "STALE_ACTIVE",
+          "parent_node_id": null,
+          "target_node_id": "H2"
+        }
+      ],
+      "must_remain_active_node_ids": [
+        "H1"
+      ],
+      "must_remain_archived_node_ids": [],
+      "public_basis": [
+        {
+          "basis_id": "B1",
+          "expected_value": null,
+          "fact": "The Investigator completed a local tenure at H2 and reported LOCAL_EXHAUSTED.",
+          "field": null,
+          "issue_id": "I1",
+          "node_id": null,
+          "relation": null,
+          "source_id": null,
+          "source_kind": "SCENARIO_FACT",
+          "target_id": null
+        }
+      ],
+      "terminal_mode": "QUIESCENCE"
+    },
+    {
+      "fixture_id": "SEQ6",
+      "issues": [],
+      "must_remain_active_node_ids": [],
+      "must_remain_archived_node_ids": [],
+      "public_basis": [],
+      "terminal_mode": "STOP_UNRESOLVED"
+    },
+    {
+      "fixture_id": "SEQ7",
+      "issues": [],
+      "must_remain_active_node_ids": [],
+      "must_remain_archived_node_ids": [],
+      "public_basis": [],
+      "terminal_mode": "QUIESCENCE"
+    },
+    {
+      "fixture_id": "SEQ8",
+      "issues": [
+        {
+          "allowed_destination_node_ids": [],
+          "depends_on_issue_ids": [],
+          "issue_id": "I1",
+          "kind": "STALE_ACTIVE",
+          "parent_node_id": null,
+          "target_node_id": "H2"
+        },
+        {
+          "allowed_destination_node_ids": [],
+          "depends_on_issue_ids": [],
+          "issue_id": "I2",
+          "kind": "RELEVANT_ARCHIVED",
+          "parent_node_id": null,
+          "target_node_id": "H3"
+        },
+        {
+          "allowed_destination_node_ids": [],
+          "depends_on_issue_ids": [
+            "I2"
+          ],
+          "issue_id": "I3",
+          "kind": "NEGLECTED_ACTIVE",
+          "parent_node_id": null,
+          "target_node_id": "H3"
+        }
+      ],
+      "must_remain_active_node_ids": [],
+      "must_remain_archived_node_ids": [],
+      "public_basis": [
+        {
+          "basis_id": "B1",
+          "expected_value": null,
+          "fact": "H2 has a public LOCAL_EXHAUSTED handoff with no new relevant material.",
+          "field": null,
+          "issue_id": "I1",
+          "node_id": null,
+          "relation": null,
+          "source_id": null,
+          "source_kind": "SCENARIO_FACT",
+          "target_id": null
+        },
+        {
+          "basis_id": "B2",
+          "expected_value": null,
+          "fact": null,
+          "field": null,
+          "issue_id": "I2",
+          "node_id": null,
+          "relation": "supports",
+          "source_id": "P3",
+          "source_kind": "GRAPH_EDGE",
+          "target_id": "H3"
+        },
+        {
+          "basis_id": "B3",
+          "expected_value": null,
+          "fact": null,
+          "field": null,
+          "issue_id": "I3",
+          "node_id": null,
+          "relation": "supports",
+          "source_id": "P3",
+          "source_kind": "GRAPH_EDGE",
+          "target_id": "H3"
+        }
+      ],
+      "terminal_mode": "QUIESCENCE"
+    }
+  ],
+  "suite_version": "sequential-v2"
+}

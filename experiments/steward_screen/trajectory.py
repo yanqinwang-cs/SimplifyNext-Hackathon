@@ -6,6 +6,8 @@ the public observation and return one raw decision at a time.
 from __future__ import annotations
 
 from copy import deepcopy
+import hashlib
+import json
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Protocol
@@ -34,6 +36,30 @@ class IssueKind(str, Enum):
     NEGLECTED_ACTIVE = "NEGLECTED_ACTIVE"
     OVER_SPECIFIC_FOCUS = "OVER_SPECIFIC_FOCUS"
     CURRENT_FOCUS_STALE = "CURRENT_FOCUS_STALE"
+
+
+class PublicBasisKind(str, Enum):
+    GRAPH_NODE = "GRAPH_NODE"
+    GRAPH_EDGE = "GRAPH_EDGE"
+    NODE_STATUS = "NODE_STATUS"
+    FOCUS_HISTORY = "FOCUS_HISTORY"
+    REVIEW_CONTEXT = "REVIEW_CONTEXT"
+    SCENARIO_FACT = "SCENARIO_FACT"
+    DETERMINISTIC_FEATURE = "DETERMINISTIC_FEATURE"
+
+
+class PublicBasisRequirement(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    basis_id: str
+    issue_id: str
+    source_kind: PublicBasisKind
+    node_id: str | None = None
+    source_id: str | None = None
+    target_id: str | None = None
+    relation: str | None = None
+    field: str | None = None
+    expected_value: Any | None = None
+    fact: str | None = None
 
 
 class TerminalMode(str, Enum):
@@ -65,6 +91,8 @@ class TrajectoryFixture(BaseModel):
     terminal_mode: TerminalMode = TerminalMode.QUIESCENCE
     step_cap: int = 8
     required_edges: list[tuple[str, str, str]] = Field(default_factory=list)
+    public_basis: list[PublicBasisRequirement] = Field(default_factory=list)
+    basis_audit_required: bool = False
 
     @model_validator(mode="after")
     def validate_fixture(self) -> "TrajectoryFixture":
@@ -80,6 +108,15 @@ class TrajectoryFixture(BaseModel):
         issue_ids = {i.issue_id for i in self.issues}
         if len(issue_ids) != len(self.issues) or any(set(i.depends_on_issue_ids) - issue_ids for i in self.issues):
             raise ValueError("issue IDs or dependencies are invalid")
+        if self.basis_audit_required:
+            basis_ids = {basis.basis_id for basis in self.public_basis}
+            if len(basis_ids) != len(self.public_basis) or any(basis.issue_id not in issue_ids for basis in self.public_basis):
+                raise ValueError("public basis IDs or issue references are invalid")
+            for issue in self.issues:
+                issue_basis = [basis for basis in self.public_basis if basis.issue_id == issue.issue_id]
+                if not issue_basis:
+                    raise ValueError(f"issue {issue.issue_id} has no declared public basis")
+                self._validate_issue_basis(issue, issue_basis)
         for issue in self.issues:
             if issue.target_node_id not in ids or set(issue.allowed_destination_node_ids) - ids:
                 raise ValueError("issue references an unknown node")
@@ -115,12 +152,49 @@ class TrajectoryFixture(BaseModel):
                 if identifier not in ids or self.graph.nodes[identifier].node_type.value != "uncertainty" or self.graph.nodes[identifier].status is not GraphStatus.ACTIVE: raise ValueError("STOP_UNRESOLVED unresolved IDs must be active uncertainties")
         return self
 
+    def _validate_issue_basis(self, issue: StewardIssue, basis: list[PublicBasisRequirement]) -> None:
+        edges = {(edge.source_id, edge.relation.value, edge.target_id) for edge in self.graph.edges.values()}
+        edge_basis = [item for item in basis if item.source_kind is PublicBasisKind.GRAPH_EDGE]
+        for item in edge_basis:
+            if (item.source_id, item.relation, item.target_id) not in edges:
+                raise ValueError(f"public graph-edge basis {item.basis_id} is absent")
+        scenario_basis = [item for item in basis if item.source_kind is PublicBasisKind.SCENARIO_FACT]
+        if any(not item.fact or item.fact not in self.description for item in scenario_basis):
+            raise ValueError(f"scenario-fact basis for {issue.issue_id} is not rendered publicly")
+        if issue.kind is IssueKind.RELEVANT_ARCHIVED and not any(item.source_id == issue.target_node_id or item.target_id == issue.target_node_id for item in edge_basis) and not scenario_basis:
+            raise ValueError("RELEVANT_ARCHIVED requires a visible relevance basis")
+        if issue.kind is IssueKind.NEGLECTED_ACTIVE and not edge_basis and not scenario_basis:
+            raise ValueError("NEGLECTED_ACTIVE requires a visible useful frontier basis")
+        if issue.kind in {IssueKind.STALE_ACTIVE, IssueKind.CURRENT_FOCUS_STALE} and not any("LOCAL_EXHAUSTED" in (item.fact or "") for item in scenario_basis):
+            raise ValueError(f"{issue.kind.value} requires a public LOCAL_EXHAUSTED basis")
+        if issue.kind is IssueKind.CURRENT_FOCUS_STALE and not any(item.source_id != issue.target_node_id and item.target_id for item in edge_basis):
+            raise ValueError("CURRENT_FOCUS_STALE requires a visible useful redirect basis")
+        if issue.kind is IssueKind.OVER_SPECIFIC_FOCUS and not any(item.source_id == issue.target_node_id and item.target_id == issue.parent_node_id and item.relation == EdgeRelation.SPECIALIZES.value for item in edge_basis):
+            raise ValueError("OVER_SPECIFIC_FOCUS requires its visible specialization edge")
+
+    def public_observation_payload(self) -> dict[str, Any]:
+        from investigator.steward.features import region_health, tunnel_vision_indicators
+        return {"description": self.description, "graph": self.graph.model_dump(mode="json"), "focus": self.focus.model_dump(mode="json"), "participants": [item.model_dump(mode="json") for item in self.participants], "review_context": self.review_context.model_dump(mode="json") if self.review_context else None, "deterministic_features": {"region_health": region_health(self.graph, self.focus).model_dump(mode="json"), "tunnel_vision": tunnel_vision_indicators(self.graph, self.focus).model_dump(mode="json")}}
+
+    def public_observation_fingerprint(self) -> str:
+        payload = json.dumps(self.public_observation_payload(), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
     def issues_by_id(self, issue_id: str) -> StewardIssue:
         return next(i for i in self.issues if i.issue_id == issue_id)
 
     def observation(self, graph: CaseGraph | None = None, focus: InvestigationFocus | None = None) -> StewardObservation:
         return StewardObservation(observation_id=self.fixture_id, description=self.description, graph=graph or self.graph, focus=focus or self.focus, participants=self.participants, review_context=self.review_context)
 
+
+def validate_public_observation_distinguishability(fixtures: list[TrajectoryFixture]) -> None:
+    seen: dict[str, tuple[tuple[str, str, str], ...]] = {}
+    for fixture in fixtures:
+        fingerprint = fixture.public_observation_fingerprint()
+        hidden = tuple(sorted((issue.issue_id, issue.kind.value, issue.target_node_id) for issue in fixture.issues))
+        if fingerprint in seen and seen[fingerprint] != hidden:
+            raise ValueError(f"fixtures share a public observation but have different hidden requirements: {fixture.fixture_id}")
+        seen[fingerprint] = hidden
 
 class Producer(Protocol):
     def __call__(self, prompt: str) -> Any: ...

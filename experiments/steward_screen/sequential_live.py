@@ -14,7 +14,7 @@ from pydantic import RootModel, TypeAdapter
 from investigator.llm.bedrock import BedrockConfigurationError, BedrockModelClient
 from investigator.roles import StewardDecision
 from investigator.schema_fingerprint import schema_fingerprint
-from experiments.steward_screen.fresh_fixtures import fresh_fixtures
+from experiments.steward_screen.fresh_fixtures import HISTORICAL_SUITE_HASH, SUITE_VERSION, fresh_fixtures
 from experiments.steward_screen.prompt import build_prompt
 from experiments.steward_screen.trajectory import run_fixture
 
@@ -24,9 +24,9 @@ class JsonObject(RootModel[dict[str, Any]]):
 
 
 EXPECTED = {
-    "fixture_suite_hash": "26ab0dc08c92b2026ccdbd03f0e014d5b28c2e97143afc3f151cf42100bb5c29",
+    "fixture_suite_hash": "4ba630bd9a4717329d102c91365463363ea4deb8f21bebd9f957ed441d8dfba9",
     "schema_hash": "d51e77d4478ddd8d8d67517a3844776acc2809fcb92c99d5d428f419f74b4eae",
-    "evaluator_hash": "9ffef3409661fa51c1705c21491d447f29bd9aec08fb0bca02752e0cbbe1787d",
+    "evaluator_hash": "00ec0dd9415ebe7992b5e4b59a8a0d96a32f060f93906296f0e959c46d20cf06",
 }
 
 
@@ -39,7 +39,10 @@ def frozen_manifest() -> dict[str, Any]:
     fixtures = fresh_fixtures()
     fixture_payload = json.dumps([f.model_dump(mode="json") for f in fixtures], sort_keys=True, separators=(",", ":")).encode()
     return {
+        "suite_version": SUITE_VERSION,
         "fixture_suite_hash": _sha(fixture_payload),
+        "historical_fixture_suite_hash": HISTORICAL_SUITE_HASH,
+        "historical_fixture_status": "INVALID_FOR_MODEL_COMPARISON_AFTER_EPISTEMIC_FIXTURE_AUDIT",
         "schema_hash": schema_fingerprint(TypeAdapter(StewardDecision).json_schema()),
         "historical_schema_hash": EXPECTED["schema_hash"],
         "historical_schema_hash_method": "sha256(json.dumps(StewardDecision.__metadata__, sort_keys=True, default=str).encode())",

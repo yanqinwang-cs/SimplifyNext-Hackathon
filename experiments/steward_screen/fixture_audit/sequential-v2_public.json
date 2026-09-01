@@ -1,0 +1,858 @@
+{
+  "fixtures": [
+    {
+      "description": "The Investigator completed a local tenure at H2 and reported LOCAL_EXHAUSTED. No new relevant material has appeared for H2 since that handoff. H3 has an active unresolved question and has not received recent global attention.",
+      "deterministic_features": {
+        "region_health": {
+          "active": true,
+          "conflict_profile": {
+            "corroborative_count": 0,
+            "direct_count": 0,
+            "indirect_count": 0,
+            "unique_evidence_ids": [],
+            "unique_source_ids": [],
+            "weak_count": 0
+          },
+          "current_specialization_depth": 0,
+          "descendant_count": 0,
+          "direct_evidence_profile": {
+            "corroborative_count": 0,
+            "direct_count": 0,
+            "indirect_count": 0,
+            "unique_evidence_ids": [],
+            "unique_source_ids": [],
+            "weak_count": 0
+          },
+          "focus_node_id": "H1",
+          "node_ids": [
+            "H1",
+            "U1"
+          ],
+          "recent_new_conflict_count": 0,
+          "recent_new_support_count": 0,
+          "recent_visit_count": 0,
+          "shared_dependency_count": 0,
+          "unresolved_ids": [
+            "U1"
+          ]
+        },
+        "tunnel_vision": {
+          "current_specialization_depth": 0,
+          "neglected_candidate_ids": [
+            "H1",
+            "H2",
+            "H3",
+            "U1",
+            "U3"
+          ],
+          "new_conflict_edges_recent": 0,
+          "new_nodes_recent": 0,
+          "new_support_edges_recent": 0,
+          "same_root_steps": 0
+        }
+      },
+      "fixture_id": "SEQ1",
+      "focus": {
+        "node_id": "H1",
+        "reason": "",
+        "recent_node_ids": [],
+        "recent_region_node_ids": [],
+        "step_index": 0
+      },
+      "graph": {
+        "case_id": "SEQ1",
+        "edges": {
+          "U1_TARGETS_H1": {
+            "explanation": null,
+            "id": "U1_TARGETS_H1",
+            "metadata": {},
+            "relation": "targets",
+            "source_id": "U1",
+            "status": "active",
+            "strength": null,
+            "target_id": "H1"
+          },
+          "U3_TARGETS_H3": {
+            "explanation": null,
+            "id": "U3_TARGETS_H3",
+            "metadata": {},
+            "relation": "targets",
+            "source_id": "U3",
+            "status": "active",
+            "strength": null,
+            "target_id": "H3"
+          }
+        },
+        "nodes": {
+          "H1": {
+            "id": "H1",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "Permitted preparation may explain the matching work.",
+            "status": "active"
+          },
+          "H2": {
+            "id": "H2",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "A branch whose local enquiry is complete.",
+            "status": "active"
+          },
+          "H3": {
+            "id": "H3",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "A distinct explanation with an unresolved question.",
+            "status": "active"
+          },
+          "U1": {
+            "id": "U1",
+            "metadata": {},
+            "node_type": "uncertainty",
+            "statement": "Whether the current explanation fits the record.",
+            "status": "active"
+          },
+          "U3": {
+            "id": "U3",
+            "metadata": {},
+            "node_type": "uncertainty",
+            "statement": "Whether the distinct explanation fits the record.",
+            "status": "active"
+          }
+        }
+      },
+      "participants": [],
+      "review_context": null
+    },
+    {
+      "description": "P1 was added after H2 was archived and is now active support for H2.",
+      "deterministic_features": {
+        "region_health": {
+          "active": true,
+          "conflict_profile": {
+            "corroborative_count": 0,
+            "direct_count": 0,
+            "indirect_count": 0,
+            "unique_evidence_ids": [],
+            "unique_source_ids": [],
+            "weak_count": 0
+          },
+          "current_specialization_depth": 0,
+          "descendant_count": 0,
+          "direct_evidence_profile": {
+            "corroborative_count": 0,
+            "direct_count": 0,
+            "indirect_count": 0,
+            "unique_evidence_ids": [],
+            "unique_source_ids": [],
+            "weak_count": 0
+          },
+          "focus_node_id": "H1",
+          "node_ids": [
+            "H1"
+          ],
+          "recent_new_conflict_count": 0,
+          "recent_new_support_count": 0,
+          "recent_visit_count": 0,
+          "shared_dependency_count": 0,
+          "unresolved_ids": []
+        },
+        "tunnel_vision": {
+          "current_specialization_depth": 0,
+          "neglected_candidate_ids": [
+            "H1"
+          ],
+          "new_conflict_edges_recent": 0,
+          "new_nodes_recent": 0,
+          "new_support_edges_recent": 0,
+          "same_root_steps": 0
+        }
+      },
+      "fixture_id": "SEQ2",
+      "focus": {
+        "node_id": "H1",
+        "reason": "",
+        "recent_node_ids": [],
+        "recent_region_node_ids": [],
+        "step_index": 0
+      },
+      "graph": {
+        "case_id": "SEQ2",
+        "edges": {
+          "E1_SUPPORTS_P1": {
+            "explanation": null,
+            "id": "E1_SUPPORTS_P1",
+            "metadata": {},
+            "relation": "supports",
+            "source_id": "E1",
+            "status": "active",
+            "strength": null,
+            "target_id": "P1"
+          },
+          "P1_SUPPORTS_H2": {
+            "explanation": null,
+            "id": "P1_SUPPORTS_H2",
+            "metadata": {},
+            "relation": "supports",
+            "source_id": "P1",
+            "status": "active",
+            "strength": null,
+            "target_id": "H2"
+          }
+        },
+        "nodes": {
+          "E1": {
+            "id": "E1",
+            "metadata": {},
+            "node_type": "evidence",
+            "statement": "A released record supports proposition P1.",
+            "status": "active"
+          },
+          "H1": {
+            "id": "H1",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "The current explanation remains under review.",
+            "status": "active"
+          },
+          "H2": {
+            "id": "H2",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "A previously archived alternative.",
+            "status": "archived"
+          },
+          "P1": {
+            "id": "P1",
+            "metadata": {},
+            "node_type": "proposition",
+            "statement": "Newly released material supports the archived alternative.",
+            "status": "active"
+          }
+        }
+      },
+      "participants": [],
+      "review_context": null
+    },
+    {
+      "description": "The specific H1.1 branch has no additional unresolved local question, while broader H1 remains meaningful. H2 has an active unresolved comparison question.",
+      "deterministic_features": {
+        "region_health": {
+          "active": true,
+          "conflict_profile": {
+            "corroborative_count": 0,
+            "direct_count": 0,
+            "indirect_count": 0,
+            "unique_evidence_ids": [],
+            "unique_source_ids": [],
+            "weak_count": 0
+          },
+          "current_specialization_depth": 1,
+          "descendant_count": 0,
+          "direct_evidence_profile": {
+            "corroborative_count": 0,
+            "direct_count": 0,
+            "indirect_count": 0,
+            "unique_evidence_ids": [],
+            "unique_source_ids": [],
+            "weak_count": 0
+          },
+          "focus_node_id": "H1.1",
+          "node_ids": [
+            "H1",
+            "H1.1"
+          ],
+          "recent_new_conflict_count": 0,
+          "recent_new_support_count": 0,
+          "recent_visit_count": 0,
+          "shared_dependency_count": 0,
+          "unresolved_ids": []
+        },
+        "tunnel_vision": {
+          "current_specialization_depth": 1,
+          "neglected_candidate_ids": [
+            "H1",
+            "H2",
+            "U2"
+          ],
+          "new_conflict_edges_recent": 0,
+          "new_nodes_recent": 0,
+          "new_support_edges_recent": 0,
+          "same_root_steps": 0
+        }
+      },
+      "fixture_id": "SEQ3",
+      "focus": {
+        "node_id": "H1.1",
+        "reason": "",
+        "recent_node_ids": [],
+        "recent_region_node_ids": [],
+        "step_index": 0
+      },
+      "graph": {
+        "case_id": "SEQ3",
+        "edges": {
+          "H1.1_SPECIALIZES_H1": {
+            "explanation": null,
+            "id": "H1.1_SPECIALIZES_H1",
+            "metadata": {},
+            "relation": "specializes",
+            "source_id": "H1.1",
+            "status": "active",
+            "strength": null,
+            "target_id": "H1"
+          },
+          "U2_TARGETS_H2": {
+            "explanation": null,
+            "id": "U2_TARGETS_H2",
+            "metadata": {},
+            "relation": "targets",
+            "source_id": "U2",
+            "status": "active",
+            "strength": null,
+            "target_id": "H2"
+          }
+        },
+        "nodes": {
+          "H1": {
+            "id": "H1",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "The broader explanation remains useful.",
+            "status": "active"
+          },
+          "H1.1": {
+            "id": "H1.1",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "A highly specific version of the broader explanation.",
+            "status": "active"
+          },
+          "H2": {
+            "id": "H2",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "A competing explanation with a live unresolved question.",
+            "status": "active"
+          },
+          "U2": {
+            "id": "U2",
+            "metadata": {},
+            "node_type": "uncertainty",
+            "statement": "Which competing explanation better fits the record?",
+            "status": "active"
+          }
+        }
+      },
+      "participants": [],
+      "review_context": null
+    },
+    {
+      "description": "H1 is the current focus. The Investigator handed off LOCAL_EXHAUSTED at H1; no new relevant material has appeared for H1, and H1 has no remaining active local uncertainty. H2 has a useful active frontier.",
+      "deterministic_features": {
+        "region_health": {
+          "active": true,
+          "conflict_profile": {
+            "corroborative_count": 0,
+            "direct_count": 0,
+            "indirect_count": 0,
+            "unique_evidence_ids": [],
+            "unique_source_ids": [],
+            "weak_count": 0
+          },
+          "current_specialization_depth": 0,
+          "descendant_count": 0,
+          "direct_evidence_profile": {
+            "corroborative_count": 0,
+            "direct_count": 0,
+            "indirect_count": 0,
+            "unique_evidence_ids": [],
+            "unique_source_ids": [],
+            "weak_count": 0
+          },
+          "focus_node_id": "H1",
+          "node_ids": [
+            "H1"
+          ],
+          "recent_new_conflict_count": 0,
+          "recent_new_support_count": 0,
+          "recent_visit_count": 0,
+          "shared_dependency_count": 0,
+          "unresolved_ids": []
+        },
+        "tunnel_vision": {
+          "current_specialization_depth": 0,
+          "neglected_candidate_ids": [
+            "H1",
+            "H2",
+            "U2"
+          ],
+          "new_conflict_edges_recent": 0,
+          "new_nodes_recent": 0,
+          "new_support_edges_recent": 0,
+          "same_root_steps": 0
+        }
+      },
+      "fixture_id": "SEQ4",
+      "focus": {
+        "node_id": "H1",
+        "reason": "",
+        "recent_node_ids": [],
+        "recent_region_node_ids": [],
+        "step_index": 0
+      },
+      "graph": {
+        "case_id": "SEQ4",
+        "edges": {
+          "U2_TARGETS_H2": {
+            "explanation": null,
+            "id": "U2_TARGETS_H2",
+            "metadata": {},
+            "relation": "targets",
+            "source_id": "U2",
+            "status": "active",
+            "strength": null,
+            "target_id": "H2"
+          }
+        },
+        "nodes": {
+          "H1": {
+            "id": "H1",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "The current branch was investigated locally but has no remaining question.",
+            "status": "active"
+          },
+          "H2": {
+            "id": "H2",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "An alternative branch with an active unresolved question.",
+            "status": "active"
+          },
+          "U2": {
+            "id": "U2",
+            "metadata": {},
+            "node_type": "uncertainty",
+            "statement": "Whether the alternative branch explains the observed difference.",
+            "status": "active"
+          }
+        }
+      },
+      "participants": [],
+      "review_context": null
+    },
+    {
+      "description": "H1 is the current focus and still has a consequential active uncertainty. The Investigator completed a local tenure at H2 and reported LOCAL_EXHAUSTED. No new relevant material has appeared for H2 since.",
+      "deterministic_features": {
+        "region_health": {
+          "active": true,
+          "conflict_profile": {
+            "corroborative_count": 0,
+            "direct_count": 0,
+            "indirect_count": 0,
+            "unique_evidence_ids": [],
+            "unique_source_ids": [],
+            "weak_count": 0
+          },
+          "current_specialization_depth": 0,
+          "descendant_count": 0,
+          "direct_evidence_profile": {
+            "corroborative_count": 0,
+            "direct_count": 0,
+            "indirect_count": 0,
+            "unique_evidence_ids": [],
+            "unique_source_ids": [],
+            "weak_count": 0
+          },
+          "focus_node_id": "H1",
+          "node_ids": [
+            "H1",
+            "U1"
+          ],
+          "recent_new_conflict_count": 0,
+          "recent_new_support_count": 0,
+          "recent_visit_count": 0,
+          "shared_dependency_count": 0,
+          "unresolved_ids": [
+            "U1"
+          ]
+        },
+        "tunnel_vision": {
+          "current_specialization_depth": 0,
+          "neglected_candidate_ids": [
+            "H1",
+            "H2",
+            "U1"
+          ],
+          "new_conflict_edges_recent": 0,
+          "new_nodes_recent": 0,
+          "new_support_edges_recent": 0,
+          "same_root_steps": 0
+        }
+      },
+      "fixture_id": "SEQ5",
+      "focus": {
+        "node_id": "H1",
+        "reason": "",
+        "recent_node_ids": [],
+        "recent_region_node_ids": [],
+        "step_index": 0
+      },
+      "graph": {
+        "case_id": "SEQ5",
+        "edges": {
+          "U1_TARGETS_H1": {
+            "explanation": null,
+            "id": "U1_TARGETS_H1",
+            "metadata": {},
+            "relation": "targets",
+            "source_id": "U1",
+            "status": "active",
+            "strength": null,
+            "target_id": "H1"
+          }
+        },
+        "nodes": {
+          "H1": {
+            "id": "H1",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "The current explanation has a consequential unresolved question.",
+            "status": "active"
+          },
+          "H2": {
+            "id": "H2",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "A separate branch whose local enquiry is complete.",
+            "status": "active"
+          },
+          "U1": {
+            "id": "U1",
+            "metadata": {},
+            "node_type": "uncertainty",
+            "statement": "Whether the current explanation fits the new material.",
+            "status": "active"
+          }
+        }
+      },
+      "participants": [],
+      "review_context": null
+    },
+    {
+      "description": "Global frontier has been assessed; local frontier is exhausted; no materially usable action or obvious useful region remains. Consequential uncertainty U1 remains active.",
+      "deterministic_features": {
+        "region_health": {
+          "active": true,
+          "conflict_profile": {
+            "corroborative_count": 0,
+            "direct_count": 0,
+            "indirect_count": 0,
+            "unique_evidence_ids": [],
+            "unique_source_ids": [],
+            "weak_count": 0
+          },
+          "current_specialization_depth": 0,
+          "descendant_count": 0,
+          "direct_evidence_profile": {
+            "corroborative_count": 0,
+            "direct_count": 0,
+            "indirect_count": 0,
+            "unique_evidence_ids": [],
+            "unique_source_ids": [],
+            "weak_count": 0
+          },
+          "focus_node_id": "H1",
+          "node_ids": [
+            "H1",
+            "U1"
+          ],
+          "recent_new_conflict_count": 0,
+          "recent_new_support_count": 0,
+          "recent_visit_count": 0,
+          "shared_dependency_count": 0,
+          "unresolved_ids": [
+            "U1"
+          ]
+        },
+        "tunnel_vision": {
+          "current_specialization_depth": 0,
+          "neglected_candidate_ids": [
+            "H1",
+            "U1"
+          ],
+          "new_conflict_edges_recent": 0,
+          "new_nodes_recent": 0,
+          "new_support_edges_recent": 0,
+          "same_root_steps": 0
+        }
+      },
+      "fixture_id": "SEQ6",
+      "focus": {
+        "node_id": "H1",
+        "reason": "",
+        "recent_node_ids": [],
+        "recent_region_node_ids": [],
+        "step_index": 0
+      },
+      "graph": {
+        "case_id": "SEQ6",
+        "edges": {
+          "U1_TARGETS_H1": {
+            "explanation": null,
+            "id": "U1_TARGETS_H1",
+            "metadata": {},
+            "relation": "targets",
+            "source_id": "U1",
+            "status": "active",
+            "strength": null,
+            "target_id": "H1"
+          }
+        },
+        "nodes": {
+          "H1": {
+            "id": "H1",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "The current explanation remains unresolved.",
+            "status": "active"
+          },
+          "U1": {
+            "id": "U1",
+            "metadata": {},
+            "node_type": "uncertainty",
+            "statement": "Whether the available record is sufficient to resolve the explanation.",
+            "status": "active"
+          }
+        }
+      },
+      "participants": [],
+      "review_context": {
+        "active_unresolved_ids": [
+          "U1"
+        ],
+        "available_action_ids": [],
+        "global_frontier_assessed": true,
+        "local_exhaustion_required": true,
+        "local_frontier_exhausted": true,
+        "materially_usable_action_ids": [],
+        "neglected_candidate_node_ids": [],
+        "obvious_useful_region_remains": false
+      }
+    },
+    {
+      "description": "The current focus remains plausible and no current Steward graph-management issue is visible. The investigation is not thereby concluded.",
+      "deterministic_features": {
+        "region_health": {
+          "active": true,
+          "conflict_profile": {
+            "corroborative_count": 0,
+            "direct_count": 0,
+            "indirect_count": 0,
+            "unique_evidence_ids": [],
+            "unique_source_ids": [],
+            "weak_count": 0
+          },
+          "current_specialization_depth": 0,
+          "descendant_count": 0,
+          "direct_evidence_profile": {
+            "corroborative_count": 0,
+            "direct_count": 0,
+            "indirect_count": 0,
+            "unique_evidence_ids": [],
+            "unique_source_ids": [],
+            "weak_count": 0
+          },
+          "focus_node_id": "H1",
+          "node_ids": [
+            "H1",
+            "U1"
+          ],
+          "recent_new_conflict_count": 0,
+          "recent_new_support_count": 0,
+          "recent_visit_count": 0,
+          "shared_dependency_count": 0,
+          "unresolved_ids": [
+            "U1"
+          ]
+        },
+        "tunnel_vision": {
+          "current_specialization_depth": 0,
+          "neglected_candidate_ids": [
+            "H1",
+            "U1"
+          ],
+          "new_conflict_edges_recent": 0,
+          "new_nodes_recent": 0,
+          "new_support_edges_recent": 0,
+          "same_root_steps": 0
+        }
+      },
+      "fixture_id": "SEQ7",
+      "focus": {
+        "node_id": "H1",
+        "reason": "",
+        "recent_node_ids": [],
+        "recent_region_node_ids": [],
+        "step_index": 0
+      },
+      "graph": {
+        "case_id": "SEQ7",
+        "edges": {
+          "U1_TARGETS_H1": {
+            "explanation": null,
+            "id": "U1_TARGETS_H1",
+            "metadata": {},
+            "relation": "targets",
+            "source_id": "U1",
+            "status": "active",
+            "strength": null,
+            "target_id": "H1"
+          }
+        },
+        "nodes": {
+          "H1": {
+            "id": "H1",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "The current explanation remains a reasonable active focus.",
+            "status": "active"
+          },
+          "U1": {
+            "id": "U1",
+            "metadata": {},
+            "node_type": "uncertainty",
+            "statement": "A question remains open for human review.",
+            "status": "active"
+          }
+        }
+      },
+      "participants": [],
+      "review_context": null
+    },
+    {
+      "description": "H2 has a public LOCAL_EXHAUSTED handoff with no new relevant material. H3 was archived, then newly released proposition P3 became active and supports H3.",
+      "deterministic_features": {
+        "region_health": {
+          "active": true,
+          "conflict_profile": {
+            "corroborative_count": 0,
+            "direct_count": 0,
+            "indirect_count": 0,
+            "unique_evidence_ids": [],
+            "unique_source_ids": [],
+            "weak_count": 0
+          },
+          "current_specialization_depth": 0,
+          "descendant_count": 0,
+          "direct_evidence_profile": {
+            "corroborative_count": 0,
+            "direct_count": 0,
+            "indirect_count": 0,
+            "unique_evidence_ids": [],
+            "unique_source_ids": [],
+            "weak_count": 0
+          },
+          "focus_node_id": "H1",
+          "node_ids": [
+            "H1",
+            "U1"
+          ],
+          "recent_new_conflict_count": 0,
+          "recent_new_support_count": 0,
+          "recent_visit_count": 0,
+          "shared_dependency_count": 0,
+          "unresolved_ids": [
+            "U1"
+          ]
+        },
+        "tunnel_vision": {
+          "current_specialization_depth": 0,
+          "neglected_candidate_ids": [
+            "H1",
+            "H2",
+            "U1"
+          ],
+          "new_conflict_edges_recent": 0,
+          "new_nodes_recent": 0,
+          "new_support_edges_recent": 0,
+          "same_root_steps": 0
+        }
+      },
+      "fixture_id": "SEQ8",
+      "focus": {
+        "node_id": "H1",
+        "reason": "",
+        "recent_node_ids": [],
+        "recent_region_node_ids": [],
+        "step_index": 0
+      },
+      "graph": {
+        "case_id": "SEQ8",
+        "edges": {
+          "P3_SUPPORTS_H3": {
+            "explanation": null,
+            "id": "P3_SUPPORTS_H3",
+            "metadata": {},
+            "relation": "supports",
+            "source_id": "P3",
+            "status": "active",
+            "strength": null,
+            "target_id": "H3"
+          },
+          "U1_TARGETS_H1": {
+            "explanation": null,
+            "id": "U1_TARGETS_H1",
+            "metadata": {},
+            "relation": "targets",
+            "source_id": "U1",
+            "status": "active",
+            "strength": null,
+            "target_id": "H1"
+          }
+        },
+        "nodes": {
+          "H1": {
+            "id": "H1",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "The current explanation has a live unresolved question.",
+            "status": "active"
+          },
+          "H2": {
+            "id": "H2",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "A branch whose local enquiry is complete.",
+            "status": "active"
+          },
+          "H3": {
+            "id": "H3",
+            "metadata": {},
+            "node_type": "hypothesis",
+            "statement": "An archived alternative explanation.",
+            "status": "archived"
+          },
+          "P3": {
+            "id": "P3",
+            "metadata": {},
+            "node_type": "proposition",
+            "statement": "Newly released material supports the archived alternative.",
+            "status": "active"
+          },
+          "U1": {
+            "id": "U1",
+            "metadata": {},
+            "node_type": "uncertainty",
+            "statement": "Whether the current explanation remains adequate.",
+            "status": "active"
+          }
+        }
+      },
+      "participants": [],
+      "review_context": null
+    }
+  ],
+  "suite_version": "sequential-v2"
+}
