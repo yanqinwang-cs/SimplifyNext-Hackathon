@@ -1,5 +1,6 @@
 import json
 import subprocess
+from dataclasses import replace
 from pathlib import Path
 
 from experiments.contract_assurance.evaluate import evaluate_raw
@@ -94,6 +95,15 @@ def test_lint_detects_template_drift():
     assert any("forbidden field" in issue.message for issue in issues)
     assert not any("extra='forbid'" in issue.message for issue in lint_contract(spec))
     assert any("canonical placeholder text" in issue.message for issue in lint_contract(spec, template={"selected_action_id": "A1", "target_uncertainty": "The uncertainty this enquiry addresses."}))
+    assert any("unregistered placeholder sentinel" in issue.message for issue in lint_contract(replace(spec, template_placeholders=()), template={"selected_action_id": "REPLACE_WITH_ACTION"}))
+
+
+def test_lint_detects_nested_required_and_minimum_collection_drift():
+    spec = contract_registry()["InitialResponse"]
+    issues = lint_contract(spec, template={"hypotheses": [], "selected_action_id": "A1", "target_uncertainty": "q", "expected_information_value": "v", "why_this_action_now": "r"})
+    assert any("empty list for non-empty field 'hypotheses'" in issue.message for issue in issues)
+    nested = lint_contract(spec, template={"hypotheses": [{}], "selected_action_id": "A1", "target_uncertainty": "q", "expected_information_value": "v", "why_this_action_now": "r"})
+    assert any("hypotheses[0].id" in issue.message for issue in nested)
 
 
 def test_snapshots_are_hashable_and_public(tmp_path: Path):

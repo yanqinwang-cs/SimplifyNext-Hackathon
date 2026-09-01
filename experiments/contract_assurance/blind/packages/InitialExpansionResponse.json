@@ -18,7 +18,7 @@
     "prompt_hash": "904107cbcd28880f9975a4505dc16a9584cda5c9183211c1056690b6b6f3661a",
     "schema_hash": "3ab84fb21b95fbb73d063a580acd3f51ec5299a5657a7a6ea62d6b61e696b7c2",
     "source": "src/investigator/services/contracts.py",
-    "template_hash": "3553edfc8961b4b497feadb9e983cc3ac61fd6eb4a3044b63a84f5482b9d2711"
+    "template_hash": "3499ca2e05ee693b1c0fcff63beef8dde2c35dfb90b5b27386a6ad9009162ac0"
   },
   "output_schema": {
     "$defs": {
@@ -226,7 +226,25 @@
   },
   "prompt": "Return one JSON object matching the supplied schema for the public seeded case.",
   "template": {
-    "competing_hypotheses": [],
+    "competing_hypotheses": [
+      {
+        "conflicted_by": [],
+        "contrasted_hypothesis_id": "H1",
+        "id": "H2",
+        "material_difference": "REPLACE_WITH_MATERIAL_DIFFERENCE",
+        "parent_id": null,
+        "relationship": "competing_root",
+        "specificity_basis_evidence_ids": [],
+        "statement": "REPLACE_WITH_HYPOTHESIS",
+        "status": "active",
+        "supported_by": [
+          "E2"
+        ],
+        "unresolved": [
+          "REPLACE_WITH_UNRESOLVED_QUESTION"
+        ]
+      }
+    ],
     "expected_information_value": "REPLACE_WITH_EXPECTED_INFORMATION_VALUE",
     "seed_analysis": {
       "conflicted_by": [],

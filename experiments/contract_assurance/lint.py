@@ -24,6 +24,14 @@ def lint_contract(spec: ContractSpec, prompt: str = "", template: Any = None) ->
         issues.extend(LintIssue(spec.name, f"template omits required field {name!r}") for name in sorted(missing))
         values = _strings(template)
         issues.extend(LintIssue(spec.name, f"template contains canonical placeholder text {value!r}") for value in sorted(values & KNOWN_CANONICAL_PLACEHOLDERS))
+        issues.extend(
+            LintIssue(spec.name, f"template contains unregistered placeholder sentinel {value!r}")
+            for value in sorted(values)
+            if value.strip().startswith("REPLACE_WITH_")
+            and not any(value.strip().startswith(prefix) for prefix in spec.template_placeholders)
+        )
+        schema = spec.schema.model_json_schema()
+        issues.extend(_lint_nested_template(spec.name, schema, template, "", schema.get("$defs", {})))
     if "REPLACE_WITH_" in prompt and not any("REPLACE_WITH_" in value for value in spec.template_placeholders):
         issues.append(LintIssue(spec.name, "prompt contains an unregistered placeholder sentinel"))
     return issues
@@ -37,3 +45,30 @@ def _strings(value: Any) -> set[str]:
     if isinstance(value, list):
         return {item for child in value for item in _strings(child)}
     return set()
+
+
+def _lint_nested_template(contract: str, schema: dict[str, Any], template: Any, path: str, definitions: dict[str, Any]) -> list[LintIssue]:
+    """Check required nested fields and non-empty collection examples from JSON schema metadata."""
+    if not isinstance(template, dict):
+        return []
+    reference = schema.get("$ref")
+    if reference and reference.startswith("#/$defs/"):
+        schema = definitions.get(reference.rsplit("/", 1)[-1], schema)
+    properties = schema.get("properties", {})
+    required = set(schema.get("required", ()))
+    issues: list[LintIssue] = []
+    for name in sorted(required - set(template)):
+        location = f"{path}.{name}" if path else name
+        issues.append(LintIssue(contract, f"template omits required field {location!r}"))
+    for name, child in template.items():
+        child_schema = properties.get(name, {})
+        location = f"{path}.{name}" if path else name
+        if isinstance(child, list):
+            if child_schema.get("minItems", 0) and not child:
+                issues.append(LintIssue(contract, f"template uses empty list for non-empty field {location!r}"))
+            item_schema = child_schema.get("items", {})
+            for index, item in enumerate(child):
+                issues.extend(_lint_nested_template(contract, item_schema, item, f"{location}[{index}]", definitions))
+        elif isinstance(child, dict):
+            issues.extend(_lint_nested_template(contract, child_schema, child, location, definitions))
+    return issues
