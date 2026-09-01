@@ -1,6 +1,6 @@
 # Contract assurance report
 
-- Generated: 2026-09-01T00:48:49.935064+00:00
+- Generated: 2026-09-01T00:54:13.237216+00:00
 - Contracts: 7
 
 | Metric | Count |
@@ -53,12 +53,12 @@
 
 - Status: `NOT_BLIND`
 - Batches: 19
-- Qualified batches: 14
-- Excluded as NOT_BLIND: 5
+- Qualified batches: 12
+- Excluded as NOT_BLIND: 7
 
 | Blind contract | Batches | Qualified | Excluded |
 | --- | ---: | ---: | ---: |
-| `InitialExpansionResponse` | 4 | 2 | 2 |
+| `InitialExpansionResponse` | 4 | 0 | 4 |
 | `InitialResponse` | 2 | 2 | 0 |
 | `ModelScreenHypothesisResponse` | 2 | 2 | 0 |
 | `NextActionResponse` | 2 | 2 | 0 |
@@ -68,10 +68,10 @@
 
 | Blind role | Batches | Qualified evaluations | Accepted | Rejected |
 | --- | ---: | ---: | ---: | ---: |
-| `adversary` | 11 | 7 | 0 | 7 |
-| `producer` | 10 | 7 | 7 | 0 |
-- Qualified blind failure codes: `{'S0': 1, 'S1': 1, 'S3': 2, 'S4': 3}`
-- Qualified blind output metrics: placeholder copies `1`, fenced outputs `0`, average length `372.3` characters.
+| `adversary` | 11 | 6 | 0 | 6 |
+| `producer` | 10 | 6 | 6 | 0 |
+- Qualified blind failure codes: `{'S0': 1, 'S1': 1, 'S3': 1, 'S4': 3}`
+- Qualified blind output metrics: placeholder copies `1`, fenced outputs `0`, average length `306.3` characters.
 
 ## Assurance limitations
 
