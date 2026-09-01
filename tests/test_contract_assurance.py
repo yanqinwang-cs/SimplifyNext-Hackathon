@@ -106,12 +106,20 @@ def test_lint_detects_template_drift():
 
 def test_revision_prompt_uses_substantive_template_exemplar():
     from investigator.environments.case_01 import Case1ControlledEnvironment
-    from investigator.environments.case_01_prompts import revision_prompt
+    from investigator.environments.case_01_prompts import initial_expansion_prompt, initial_prompt, next_action_prompt, revision_prompt
     from types import SimpleNamespace
     environment = Case1ControlledEnvironment(Path(__file__).resolve().parents[1] / "experiments/investigation_smoke/case_01/artifacts")
     session = SimpleNamespace(case_state=environment.build_initial_state(InitialResponse.model_validate({"hypotheses": [{"id": "H1", "statement": "A", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["U"], "specificity_basis_evidence_ids": []}], **valid_action()})))
     release = SimpleNamespace(action_id="A1", artifact_id="A1_RELEASE", content="Released evidence.")
     assert "How the evidence changed the state." not in revision_prompt(environment, session, release)
+    prompts = [
+        initial_prompt(environment),
+        initial_expansion_prompt(environment, "A human-seeded explanation."),
+        next_action_prompt(environment, session, environment.available_actions(set())),
+        revision_prompt(environment, session, release),
+    ]
+    canonical = {"The uncertainty this enquiry addresses.", "How the result could change the explanation space.", "Why this enquiry is useful now.", "How the evidence changed the state."}
+    assert all(not any(value in prompt for value in canonical) for prompt in prompts)
 
 
 def test_lint_detects_nested_required_and_minimum_collection_drift():
