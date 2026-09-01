@@ -209,6 +209,10 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         unsupported_step = copy.deepcopy(value)
         unsupported_step["step_type"] = "pause"
         result.append(Mutation("unsupported_step_type", "S2", json.dumps(unsupported_step, sort_keys=True)))
+        unsupported_step_and_action_namespace = copy.deepcopy(value)
+        unsupported_step_and_action_namespace["step_type"] = "pause"
+        unsupported_step_and_action_namespace["selected_action_id"] = "H1"
+        result.append(Mutation("unsupported_step_and_wrong_action_namespace", "S2", json.dumps(unsupported_step_and_action_namespace, sort_keys=True)))
     if contract == "NextStepResponse":
         action_with_conclusion_reason = {
             "step_type": "action",

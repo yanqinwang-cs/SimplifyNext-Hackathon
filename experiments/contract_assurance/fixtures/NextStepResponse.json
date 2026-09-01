@@ -257,6 +257,11 @@
       "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"A1\", \"step_type\": \"pause\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
     },
     {
+      "intended_code": "S2",
+      "name": "unsupported_step_and_wrong_action_namespace",
+      "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": null, \"expected_information_value\": \"The result can distinguish explanations.\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"H1\", \"step_type\": \"pause\", \"target_uncertainty\": \"An open question.\", \"why_this_action_now\": \"This enquiry is available now.\"}"
+    },
+    {
       "intended_code": "S4",
       "name": "action_with_conclusion_reason",
       "raw_output": "{\"conclusion_hypothesis_id\": null, \"conclusion_reason\": \"The current evidence supports this conclusion.\", \"expected_information_value\": \"high\", \"remaining_uncertainty_ids\": [], \"selected_action_id\": \"A1\", \"step_type\": \"action\", \"target_uncertainty\": \"H1:U1\", \"why_this_action_now\": \"This enquiry best distinguishes the live hypotheses.\"}"
