@@ -623,6 +623,9 @@ def mutations(value: dict[str, Any], *, required_fields: tuple[str, ...] = (), c
         empty_statement = copy.deepcopy(value)
         empty_statement["hypotheses"][0]["statement"] = ""
         result.append(Mutation("empty_initial_statement", "S4", json.dumps(empty_statement, sort_keys=True)))
+        unknown_evidence_and_empty_statement = copy.deepcopy(value)
+        unknown_evidence_and_empty_statement["hypotheses"][0].update({"supported_by": ["E999"], "statement": ""})
+        result.append(Mutation("unknown_evidence_and_empty_statement", "S4", json.dumps(unknown_evidence_and_empty_statement, sort_keys=True)))
         placeholder_statement = copy.deepcopy(value)
         placeholder_statement["hypotheses"][0]["statement"] = "REPLACE_WITH_HYPOTHESIS"
         result.append(Mutation("placeholder_initial_statement", "S4", json.dumps(placeholder_statement, sort_keys=True)))
