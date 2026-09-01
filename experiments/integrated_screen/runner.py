@@ -146,7 +146,8 @@ def run_trajectory(
                 model_calls += 1
                 trace.update({"raw_model_output": call.raw_output, "parsed_response": call.parsed.model_dump(mode="json"), "input_tokens": call.metadata.input_tokens, "output_tokens": call.metadata.output_tokens, "latency_seconds": call.metadata.latency_seconds})
                 trace["steward_decision"] = call.parsed.model_dump(mode="json")
-                coordinator.apply_steward_decision(call.parsed, coordinator.cycle.case_revision, review_context=context)
+                review_context = context if call.parsed.operation == "stop_unresolved" else None
+                coordinator.apply_steward_decision(call.parsed, coordinator.cycle.case_revision, review_context=review_context)
             except ModelParseError as exc:
                 model_calls += 1
                 trace.update({"raw_model_output": exc.raw_output, "failure_category": "STEWARD_SCHEMA", "error": str(exc)})

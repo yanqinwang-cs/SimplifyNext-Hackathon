@@ -4,7 +4,7 @@ from typing import Annotated, Literal, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator, model_validator
 
-from investigator.graph import CaseGraph, GraphNode, GraphNodeType, GraphStatus
+from investigator.graph import CaseGraph, EdgeStatus, GraphNode, GraphNodeType, GraphStatus
 from investigator.roles.coordinator import GraphInvestigationCoordinator
 from investigator.roles.focus import InvestigationFocus, investigator_region
 from investigator.roles.investigator import INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdate
@@ -196,9 +196,20 @@ class InvestigatorCycleCoordinator:
 
     def observation(self) -> InvestigatorObservation:
         region = investigator_region(self.graph, self.focus, depth=1)
-        for identifier in self._recent_environment_evidence_ids:
+        retained_ids = set(self._new_nodes)
+        for identifier in tuple(retained_ids):
             if identifier in self.graph.nodes:
-                region.nodes[identifier] = deepcopy(self.graph.nodes[identifier])
+                retained_ids.update(node.id for node in self.graph.neighbors(identifier))
+        retained_ids.update(self._recent_environment_evidence_ids)
+        for identifier in retained_ids:
+            node = self.graph.nodes.get(identifier)
+            if node is not None and node.status is GraphStatus.ACTIVE:
+                region.nodes[identifier] = deepcopy(node)
+        region.edges = {
+            edge_id: deepcopy(edge)
+            for edge_id, edge in self.graph.edges.items()
+            if edge.source_id in region.nodes and edge.target_id in region.nodes and edge.status is EdgeStatus.ACTIVE
+        }
         return InvestigatorObservation(current_focus=self.focus.model_copy(deep=True), local_graph=deepcopy(region), available_enquiries=deepcopy(self.available_enquiries), participants=deepcopy(self.participants), tenure_turn_count=self.cycle.tenure_turn_count, max_turns_per_tenure=self.cycle.max_turns_per_tenure, turns_remaining=max(0, self.cycle.max_turns_per_tenure - self.cycle.tenure_turn_count), in_flight_enquiry=deepcopy(self.cycle.in_flight_enquiry), recently_released_evidence_ids=list(self.cycle.recently_released_evidence_ids))
 
     def set_available_enquiries(self, enquiries: list[AvailableEnquiry]) -> None:

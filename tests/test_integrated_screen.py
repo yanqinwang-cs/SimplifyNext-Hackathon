@@ -249,6 +249,43 @@ def test_prompt_clarifies_material_conflict_semantics():
     prompt = build_investigator_cycle_prompt(InvestigatorCycleCoordinator(deepcopy(fixture_map()["C1"].graph), fixture_map()["C1"].focus).observation())
     assert "CONFLICTS means material incompatibility" in prompt
     assert "reduces an observation's discriminating value" in prompt
+    assert "Do not target an uncertainty with SUPPORTS or CONFLICTS" in prompt
+
+
+def test_uncertainty_relation_endpoints_remain_strict():
+    coordinator = _coordinator_for_creation()
+    for operation in ("add_support", "add_conflict"):
+        with pytest.raises(ValueError):
+            coordinator.apply_investigator_update({"operation": operation, "source_node_id": "P1", "target_node_id": "U1", "reason": "This is not a valid uncertainty relation."})
+
+
+def test_c2_tenure_retains_new_reasoning_and_connected_evidence_after_focus_move():
+    fixture = fixture_map()["C2"]
+    coordinator = InvestigatorCycleCoordinator(deepcopy(fixture.graph), fixture.focus, available_enquiries=fixture.available_enquiries, max_turns_per_tenure=3)
+    coordinator.apply_turn({"graph_updates": [], "next_step": {"type": "request_enquiry", "action_id": "A1", "target_uncertainty_id": "U1", "expected_information_value": "It tests the named tutor explanation.", "reason": "The recorded session is the listed local check."}})
+    coordinator.complete_enquiry_with_evidence("A1", fixture.releases["A1"].evidence)
+    coordinator.apply_turn({"graph_updates": [{"operation": "add_proposition", "statement": "The recorded session did not contain the unfamiliar term.", "derived_from_node_ids": ["E2"], "reason": "The released record directly grounds this proposition."}, {"operation": "add_proposition", "statement": "The named tutor is not supported as the source of the term.", "derived_from_node_ids": ["E2"], "reason": "The same released record supports this narrower explanation."}, {"operation": "add_conflict", "source_node_id": "P2", "target_node_id": "H1.1", "reason": "The record is materially incompatible with the specific tutor-source hypothesis."}, {"operation": "move_focus", "focus_node_id": "U1", "reason": "The remaining uncertainty should be reconsidered."}], "next_step": {"type": "continue_local", "reason": "The retained local evidence supports another bounded step."}})
+    observed_ids = set(coordinator.observation().local_graph.nodes)
+    assert {"E2", "P2", "P3", "H1.1", "U1"} <= observed_ids
+    assert "H2" not in observed_ids
+    graph_before_observation = coordinator.graph.model_dump(mode="json")
+    coordinator.observation()
+    assert coordinator.graph.model_dump(mode="json") == graph_before_observation
+    coordinator.apply_turn({"graph_updates": [], "next_step": {"type": "local_exhausted", "reason": "The local tenure is ready for Steward review."}})
+    coordinator.apply_steward_decision({"operation": "keep_focus", "assessment": "retain", "reason": "The global review keeps the current uncertainty focus."}, coordinator.cycle.case_revision)
+    assert "P2" not in coordinator.observation().local_graph.nodes
+
+
+def test_runner_applies_non_stop_steward_decision_without_stop_context_argument():
+    investigator = ScriptedClient(
+        {"graph_updates": [], "next_step": {"type": "request_enquiry", "reason": "Need the source record.", "action_id": "A1", "target_uncertainty_id": "U1", "expected_information_value": "It tests the named tutor explanation."}},
+        {"graph_updates": [], "next_step": {"type": "local_exhausted", "reason": "The local evidence step is complete."}},
+    )
+    steward = ScriptedClient(KeepFocusDecision(assessment="retain", reason="The current focus remains useful."))
+    result = run_trajectory(fixture_map()["C2"], investigator, steward, max_steps=4)
+    steward_traces = [trace for trace in result["traces"] if trace["actor"] == "steward"]
+    assert steward_traces and steward_traces[0]["failure_category"] is None
+    assert steward_traces[0]["steward_review_context"] is not None
 
 
 def test_hidden_release_is_not_in_initial_investigator_observation():
