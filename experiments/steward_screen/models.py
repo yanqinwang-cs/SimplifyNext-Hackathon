@@ -76,6 +76,14 @@ class ScreenResult(BaseModel):
     retry_count: int = 0
     error_category: str | None = None
     error_message: str | None = None
+    schema_failure_code: str | None = None
+    schema_recoverable: bool = False
+    diagnostic_operation: str | None = None
+    diagnostic_target_node_id: str | None = None
+    diagnostic_destination_node_id: str | None = None
+    diagnostic_operation_correct: bool | None = None
+    diagnostic_identifier_correct: bool | None = None
+    diagnostic_decision_correct: bool | None = None
 
 
 class RunSummary(BaseModel):
