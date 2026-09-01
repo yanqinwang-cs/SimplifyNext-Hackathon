@@ -142,6 +142,13 @@
       "S3": 2,
       "S4": 3
     },
+    "qualified_output_metrics": {
+      "average_output_chars": 372.2857142857143,
+      "fence_usage": 0,
+      "outputs": 14,
+      "placeholder_copy": 1,
+      "total_output_chars": 5212
+    },
     "qualified_rejected": 7,
     "status": "NOT_BLIND"
   },
@@ -449,7 +456,7 @@
     "total": 416,
     "upper_failure_rate": 0.9667486562144427
   },
-  "generated_at": "2026-09-01T00:43:52.979571+00:00",
+  "generated_at": "2026-09-01T00:45:08.460603+00:00",
   "human_review_required": false,
   "inventory": {
     "contracts": [
@@ -671,7 +678,7 @@
         "source": "src/investigator/services/contracts.py"
       }
     ],
-    "git_commit": "715305d",
+    "git_commit": "803c3cb",
     "unregistered_response_classes": []
   },
   "semantic_limitations": [
