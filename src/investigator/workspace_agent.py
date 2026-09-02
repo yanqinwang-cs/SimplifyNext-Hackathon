@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal
+import json
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from investigator.graph import GraphNodeType
 from investigator.llm import ModelClient
@@ -25,6 +26,37 @@ class WorkspaceToolCall(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str
     arguments: dict[str, Any] = Field(default_factory=dict)
+    provider_call_id: str | None = None
+
+
+def normalize_workspace_tool_call(value: dict[str, Any]) -> dict[str, Any]:
+    """Translate supported provider function/tool-use shapes to our small contract."""
+    if not isinstance(value, dict):
+        raise ValueError("Workspace tool call must be an object")
+    provider_call_id = value.get("id")
+    if isinstance(value.get("function"), dict):
+        function = value["function"]
+        name = function.get("name")
+        arguments = function.get("arguments", {})
+    elif value.get("type") == "tool_use" and "name" in value:
+        name = value.get("name")
+        arguments = value.get("input", {})
+    else:
+        name = value.get("name")
+        arguments = value.get("arguments", value.get("input", {}))
+    if not isinstance(name, str) or not name:
+        raise ValueError("Workspace tool call is missing a function name")
+    if isinstance(arguments, str):
+        try:
+            arguments = json.loads(arguments)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Workspace tool call arguments are not valid JSON: {exc.msg}") from exc
+    if not isinstance(arguments, dict):
+        raise ValueError("Workspace tool call arguments must be a JSON object")
+    result = {"name": name, "arguments": arguments}
+    if isinstance(provider_call_id, str):
+        result["provider_call_id"] = provider_call_id
+    return result
 
 
 class WorkspaceTurn(BaseModel):
@@ -33,6 +65,14 @@ class WorkspaceTurn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     response: str | None = None
     tool_calls: list[WorkspaceToolCall] = Field(default_factory=list, max_length=8)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_provider_tool_calls(cls, value: Any) -> Any:
+        if isinstance(value, dict) and isinstance(value.get("tool_calls"), list):
+            value = dict(value)
+            value["tool_calls"] = [normalize_workspace_tool_call(item) for item in value["tool_calls"]]
+        return value
 
 
 @dataclass(frozen=True)
@@ -46,14 +86,7 @@ class WorkspaceToolRequest(BaseModel):
     """Structured boundary for future tools; semantic graph writes are absent by design."""
 
     model_config = ConfigDict(extra="forbid")
-    tool: Literal[
-        "GET_CASE_STATUS", "GET_CASE_SUMMARY", "GET_CURRENT_GRAPH", "GET_CURRENT_FOCUS",
-        "LIST_SOURCES", "READ_SOURCE", "GET_PENDING_REQUEST", "LIST_REQUEST_HISTORY",
-        "LIST_RUNS", "GET_RUN", "GET_LATEST_FAILURE", "GET_LAST_SAFE_STATE", "OPEN_TRACE",
-        "RUN_INVESTIGATION", "PAUSE_INVESTIGATION", "RESUME_INVESTIGATION", "ADD_SOURCE",
-        "FULFIL_REQUEST", "MARK_REQUEST_UNAVAILABLE", "REQUEST_STEWARD_REVIEW",
-        "RECOVER_FROM_SAFE_STATE",
-    ]
+    tool: str
     payload: dict[str, Any] = Field(default_factory=dict)
 
 
