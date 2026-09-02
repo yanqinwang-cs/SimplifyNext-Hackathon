@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator,
 
 from investigator.graph import CaseGraph, EdgeStatus, GraphNode, GraphNodeType, GraphStatus
 from investigator.roles.coordinator import GraphInvestigationCoordinator
-from investigator.roles.focus import InvestigationFocus, investigator_region
+from investigator.roles.focus import InvestigationFocus, active_reasoning_view
 from investigator.roles.investigator import INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdate
 from investigator.roles.steward import HandoffToHumanDecision, StewardDecision, StewardReviewContext
 from investigator.sources import SourceRegistry
@@ -105,6 +105,7 @@ class InvestigatorObservation(BaseModel):
     turns_remaining: int = Field(ge=0)
     in_flight_enquiry: "InFlightEnquiry | None" = None
     recently_released_evidence_ids: list[str] = Field(default_factory=list)
+    active_reasoning_node_ids: list[str] = Field(default_factory=list)
 
 
 class CycleStatus(str, Enum):
@@ -198,22 +199,8 @@ class InvestigatorCycleCoordinator:
         self._recent_environment_evidence_ids: set[str] = set()
 
     def observation(self) -> InvestigatorObservation:
-        region = investigator_region(self.graph, self.focus, depth=1)
-        retained_ids = set(self._new_nodes)
-        for identifier in tuple(retained_ids):
-            if identifier in self.graph.nodes:
-                retained_ids.update(node.id for node in self.graph.neighbors(identifier))
-        retained_ids.update(self._recent_environment_evidence_ids)
-        for identifier in retained_ids:
-            node = self.graph.nodes.get(identifier)
-            if node is not None and node.status is GraphStatus.ACTIVE:
-                region.nodes[identifier] = deepcopy(node)
-        region.edges = {
-            edge_id: deepcopy(edge)
-            for edge_id, edge in self.graph.edges.items()
-            if edge.source_id in region.nodes and edge.target_id in region.nodes and edge.status is EdgeStatus.ACTIVE
-        }
-        return InvestigatorObservation(current_focus=self.focus.model_copy(deep=True), local_graph=deepcopy(region), available_enquiries=deepcopy(self.available_enquiries), participants=deepcopy(self.participants), tenure_turn_count=self.cycle.tenure_turn_count, max_turns_per_tenure=self.cycle.max_turns_per_tenure, turns_remaining=max(0, self.cycle.max_turns_per_tenure - self.cycle.tenure_turn_count), in_flight_enquiry=deepcopy(self.cycle.in_flight_enquiry), recently_released_evidence_ids=list(self.cycle.recently_released_evidence_ids))
+        region = active_reasoning_view(self.graph, self.focus, tenure_node_ids=self._new_nodes | self._recent_environment_evidence_ids)
+        return InvestigatorObservation(current_focus=self.focus.model_copy(deep=True), local_graph=deepcopy(region), available_enquiries=deepcopy(self.available_enquiries), participants=deepcopy(self.participants), tenure_turn_count=self.cycle.tenure_turn_count, max_turns_per_tenure=self.cycle.max_turns_per_tenure, turns_remaining=max(0, self.cycle.max_turns_per_tenure - self.cycle.tenure_turn_count), in_flight_enquiry=deepcopy(self.cycle.in_flight_enquiry), recently_released_evidence_ids=list(self.cycle.recently_released_evidence_ids), active_reasoning_node_ids=sorted(region.nodes))
 
     def set_available_enquiries(self, enquiries: list[AvailableEnquiry]) -> None:
         """Refresh the trusted action frontier supplied by the environment."""

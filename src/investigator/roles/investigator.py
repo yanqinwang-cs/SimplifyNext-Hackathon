@@ -53,7 +53,13 @@ class AddEvidenceCommand(_InvestigatorCommand):
     node_id: str | None = Field(default=None, pattern=r"^E\d+(?:\.\d+)*$")
     local_ref: str | None = Field(default=None, pattern=r"^[A-Za-z][A-Za-z0-9_]*$")
     statement: str
-    source_id: str = Field(min_length=1)
+    source_ids: list[str] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def unique_sources(self) -> "AddEvidenceCommand":
+        if len(self.source_ids) != len(set(self.source_ids)):
+            raise ValueError("source_ids must not contain duplicates")
+        return self
 
 
 class AddHypothesisCommand(_InvestigatorCommand):

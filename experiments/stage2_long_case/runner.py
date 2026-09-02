@@ -68,8 +68,9 @@ def run_trajectory(fixture: Stage2Fixture, investigator: ModelClient, steward: M
             break
         actor = "investigator" if coordinator.cycle.status is CycleStatus.LOCAL_ACTIVE else "steward"
         before = coordinator.graph.model_dump(mode="json")
-        prompt = build_prompt(coordinator.observation(), fixture) if actor == "investigator" else build_steward_prompt(coordinator.steward_snapshot(), _context(coordinator), fixture)
-        trace: dict[str, Any] = {"step": step, "actor": actor, "prompt_hash": _hash(prompt), "raw_model_output": None, "model_attempts": [], "parsed_response": None, "graph_before": before, "failure_category": None, "error": None, "input_tokens": None, "output_tokens": None, "latency_seconds": None}
+        observation = coordinator.observation()
+        prompt = build_prompt(observation, fixture) if actor == "investigator" else build_steward_prompt(coordinator.steward_snapshot(), _context(coordinator), fixture)
+        trace: dict[str, Any] = {"step": step, "actor": actor, "prompt_hash": _hash(prompt), "active_reasoning_node_ids": observation.active_reasoning_node_ids if actor == "investigator" else None, "raw_model_output": None, "model_attempts": [], "parsed_response": None, "graph_before": before, "failure_category": None, "error": None, "input_tokens": None, "output_tokens": None, "latency_seconds": None}
         if sum(item["calls"] for item in usage.values()) >= max_model_calls:
             termination = "BUDGET_EXHAUSTED"
             break
@@ -111,7 +112,7 @@ def run_trajectory(fixture: Stage2Fixture, investigator: ModelClient, steward: M
         trace["focus_after"] = coordinator.focus.model_dump(mode="json")
         traces.append(trace)
     total_calls = sum(item["calls"] for item in usage.values())
-    handoff = next((trace.get("parsed_response") for trace in traces if trace.get("parsed_response", {}).get("operation") == "handoff_to_human"), None)
+    handoff = next((trace.get("parsed_response") for trace in traces if (trace.get("parsed_response") or {}).get("operation") == "handoff_to_human"), None)
     return {"case_id": fixture.case_id, "termination_reason": termination, "model_calls": total_calls, "orchestration_steps": len(traces), "total_input_tokens": sum(item["input_tokens"] for item in usage.values()), "total_output_tokens": sum(item["output_tokens"] for item in usage.values()), "retry_count": sum(max(0, len(trace.get("model_attempts", [])) - 1) for trace in traces), "final_focus": coordinator.focus.model_dump(mode="json"), "final_handoff_present": handoff is not None, "traces": traces, "final_case_state": {"graph": coordinator.graph.model_dump(mode="json"), "focus": coordinator.focus.model_dump(mode="json"), "cycle": coordinator.cycle.model_dump(mode="json")}, "model_usage": usage}
 
 

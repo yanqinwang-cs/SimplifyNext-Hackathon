@@ -92,9 +92,9 @@ class GraphInvestigationCoordinator:
     def _apply_add_evidence(self, graph: CaseGraph, new_nodes: set[str], update: AddEvidenceCommand) -> None:
         if self.source_registry is None:
             raise ValueError("add_evidence requires a visible SourceRegistry")
-        source = self.source_registry.get(update.source_id)
+        sources = [self.source_registry.get(source_id) for source_id in update.source_ids]
         self._require_new_id(graph, update.node_id)
-        graph.add_node(GraphNode(id=update.node_id, node_type=GraphNodeType.EVIDENCE, statement=update.statement, metadata={"source_id": source.source_id, "source_filename": source.filename, "origin": "model_extracted"}))
+        graph.add_node(GraphNode(id=update.node_id, node_type=GraphNodeType.EVIDENCE, statement=update.statement, metadata={"source_ids": [source.source_id for source in sources], "source_filenames": [source.filename for source in sources], "origin": "model_extracted"}))
         new_nodes.add(update.node_id)
 
     @staticmethod

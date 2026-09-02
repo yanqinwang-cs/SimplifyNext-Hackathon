@@ -7,7 +7,8 @@ from experiments.stage2_long_case.fixture import CASE_ID, HIDDEN, fresh_fixtures
 from experiments.stage2_long_case.prompt import build_prompt, build_steward_prompt
 from experiments.stage2_long_case.runner import MAX_MODEL_CALLS, MAX_STEPS, manifest, run_trajectory
 from investigator.cycle import InvestigatorCycleCoordinator, InvestigatorTurnResponse, LocalExhausted
-from investigator.graph import GraphNodeType
+from investigator.graph import CaseGraph, EdgeRelation, GraphEdge, GraphNode, GraphNodeType, make_edge_id
+from investigator.roles.focus import InvestigationFocus, active_reasoning_view
 from investigator.llm import ModelCallMetadata, ModelCallResult
 from investigator.roles.coordinator import GraphInvestigationCoordinator
 from investigator.roles.investigator import AddEvidenceCommand, AddPropositionCommand
@@ -80,10 +81,10 @@ def test_add_evidence_is_source_grounded_and_independent_of_graph_locality():
     coordinator = InvestigatorCycleCoordinator(fixture.graph, fixture.focus, source_registry=fixture.source_registry)
     coordinator.cycle.tenure_turn_count = 0
     coordinator._new_nodes = set()
-    coordinator.apply_turn({"graph_updates": [{"operation": "add_evidence", "local_ref": "eTimeline", "statement": "The timeline records three assessment-time event clusters.", "source_id": "S5", "reason": "This atomic observation is directly stated by the timeline source."}], "next_step": {"type": "local_exhausted", "reason": "The source observation is ready for review."}})
+    coordinator.apply_turn({"graph_updates": [{"operation": "add_evidence", "local_ref": "eTimeline", "statement": "The timeline records three assessment-time event clusters.", "source_ids": ["S5"], "reason": "This atomic observation is directly stated by the timeline source."}], "next_step": {"type": "local_exhausted", "reason": "The source observation is ready for review."}})
     node = coordinator.graph.nodes["E1"]
     assert node.node_type is GraphNodeType.EVIDENCE
-    assert node.metadata == {"source_id": "S5", "source_filename": "deterministic_timeline.md", "origin": "model_extracted"}
+    assert node.metadata == {"source_ids": ["S5"], "source_filenames": ["deterministic_timeline.md"], "origin": "model_extracted"}
     assert node.statement != fixture.source_registry.get("S5").content
 
 
@@ -92,29 +93,48 @@ def test_add_evidence_rejects_unknown_or_hidden_sources_atomically():
     coordinator = InvestigatorCycleCoordinator(fixture.graph, fixture.focus, source_registry=fixture.source_registry)
     for source_id in ("S99", "ground_truth"):
         with pytest.raises(ValueError, match="source"):
-            coordinator.apply_turn({"graph_updates": [{"operation": "add_evidence", "statement": "An observation.", "source_id": source_id, "reason": "Ground this observation."}], "next_step": {"type": "local_exhausted", "reason": "Stop."}})
+            coordinator.apply_turn({"graph_updates": [{"operation": "add_evidence", "statement": "An observation.", "source_ids": [source_id], "reason": "Ground this observation."}], "next_step": {"type": "local_exhausted", "reason": "Stop."}})
     assert set(coordinator.graph.nodes) == {"U1"}
 
 
 def test_same_turn_evidence_local_ref_and_atomic_rollback():
     fixture = fresh_fixtures()[0]
     graph_coordinator = GraphInvestigationCoordinator(fixture.graph, fixture.focus, fixture.source_registry)
-    graph_coordinator.apply_investigator_update(AddEvidenceCommand(local_ref="e1", statement="A source records a session.", source_id="S1", reason="Direct observation."), aliases={})
+    graph_coordinator.apply_investigator_update(AddEvidenceCommand(local_ref="e1", statement="A source records a session.", source_ids=["S1"], reason="Direct observation."), aliases={})
     aliases = {"e1": "E1"}
     graph_coordinator.apply_investigator_update(AddPropositionCommand(local_ref="p1", statement="The record contains a session.", derived_from_node_refs=["e1"], reason="Interpret the observation."), aliases=aliases)
     assert set(graph_coordinator.graph.nodes) == {"U1", "E1", "P1"}
     with pytest.raises(ValueError):
-        graph_coordinator.apply_investigator_update({"operation": "add_evidence", "local_ref": "bad", "statement": "Bad.", "source_id": "S99", "reason": "Invalid source."}, aliases={})
+        graph_coordinator.apply_investigator_update({"operation": "add_evidence", "local_ref": "bad", "statement": "Bad.", "source_ids": ["S99"], "reason": "Invalid source."}, aliases={})
     assert "E2" not in graph_coordinator.graph.nodes
 
 
 def test_source_registry_survives_graph_archive_and_can_be_reread():
     fixture = fresh_fixtures()[0]
     coordinator = InvestigatorCycleCoordinator(fixture.graph, fixture.focus, source_registry=fixture.source_registry)
-    coordinator.apply_turn({"graph_updates": [{"operation": "add_evidence", "statement": "The record contains one observation.", "source_id": "S1", "reason": "Direct observation."}], "next_step": {"type": "local_exhausted", "reason": "Review."}})
+    coordinator.apply_turn({"graph_updates": [{"operation": "add_evidence", "statement": "The record contains one observation.", "source_ids": ["S1"], "reason": "Direct observation."}], "next_step": {"type": "local_exhausted", "reason": "Review."}})
     original = fixture.source_registry.get("S1").content
     coordinator.graph.archive_node("E1", "No longer locally active.")
     assert fixture.source_registry.get("S1").content == original
     reread = GraphInvestigationCoordinator(coordinator.graph, coordinator.focus, fixture.source_registry)
-    reread.apply_investigator_update({"operation": "add_evidence", "statement": "The same source records a distinct second observation.", "source_id": "S1", "reason": "The source contains a materially different observation."})
-    assert reread.graph.nodes["E2"].metadata["source_id"] == "S1"
+    reread.apply_investigator_update({"operation": "add_evidence", "statement": "The same source records a distinct second observation.", "source_ids": ["S1"], "reason": "The source contains a materially different observation."})
+    assert reread.graph.nodes["E2"].metadata["source_ids"] == ["S1"]
+
+
+def test_active_reasoning_view_keeps_ancestry_and_bounded_competitor_but_not_distant_branch():
+    nodes = {identifier: GraphNode(id=identifier, node_type=node_type, statement=identifier) for identifier, node_type in {"E1": GraphNodeType.EVIDENCE, "E2": GraphNodeType.EVIDENCE, "P1": GraphNodeType.PROPOSITION, "H1": GraphNodeType.HYPOTHESIS, "H2": GraphNodeType.HYPOTHESIS, "U1": GraphNodeType.UNCERTAINTY, "E20": GraphNodeType.EVIDENCE, "P20": GraphNodeType.PROPOSITION, "H20": GraphNodeType.HYPOTHESIS}.items()}
+    def edge(source, relation, target):
+        identifier = make_edge_id(source, relation, target)
+        return identifier, GraphEdge(id=identifier, source_id=source, target_id=target, relation=relation)
+    edges = dict([edge("U1", EdgeRelation.TARGETS, "H1"), edge("P1", EdgeRelation.SUPPORTS, "H1"), edge("P1", EdgeRelation.SUPPORTS, "H2"), edge("P1", EdgeRelation.DERIVED_FROM, "E1"), edge("P1", EdgeRelation.DERIVED_FROM, "E2"), edge("P20", EdgeRelation.SUPPORTS, "H20"), edge("P20", EdgeRelation.DERIVED_FROM, "E20")])
+    graph = CaseGraph(case_id="branch", nodes=nodes, edges=edges)
+    view = active_reasoning_view(graph, InvestigationFocus(node_id="U1"))
+    assert {"U1", "H1", "P1", "E1", "E2", "H2"} <= set(view.nodes)
+    assert not {"E20", "P20", "H20"} & set(view.nodes)
+
+
+def test_active_reasoning_view_cap_and_tenure_retention_are_deterministic():
+    nodes = {"U1": GraphNode(id="U1", node_type=GraphNodeType.UNCERTAINTY, statement="focus")}
+    graph = CaseGraph(case_id="cap", nodes=nodes)
+    view = active_reasoning_view(graph, InvestigationFocus(node_id="U1"), tenure_node_ids={"E99"}, max_nodes=1)
+    assert set(view.nodes) == {"U1"}
