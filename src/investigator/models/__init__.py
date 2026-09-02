@@ -3,7 +3,7 @@ from investigator.models.claim import Claim, ClaimStatus
 from investigator.models.conflict import Conflict
 from investigator.models.evidence import EvidenceItem, EvidenceKind
 from investigator.models.entity import Entity
-from investigator.models.evidence_request import EvidenceRequest, EvidenceRequestResponse, EvidenceRequestStatus
+from investigator.models.evidence_request import EvidenceRequest, EvidenceRequestResponse, EvidenceRequestStatus, allocate_evidence_request_id
 from investigator.models.hypothesis import (
     Hypothesis,
     HypothesisOrigin,
@@ -21,7 +21,7 @@ from investigator.models.uncertainty import Uncertainty, UncertaintyKind
 
 __all__ = [
     "ApproximateTime", "Case", "Claim", "ClaimStatus", "Conflict", "Entity",
-    "EvidenceItem", "EvidenceKind", "EvidenceRequest", "EvidenceRequestResponse", "EvidenceRequestStatus", "ExactTime", "Hypothesis", "HypothesisOrigin",
+    "EvidenceItem", "EvidenceKind", "EvidenceRequest", "EvidenceRequestResponse", "EvidenceRequestStatus", "allocate_evidence_request_id", "ExactTime", "Hypothesis", "HypothesisOrigin",
     "HypothesisStatus", "HypothesisTransformation", "HypothesisTransition", "HypothesisTransitionType", "RelativeTime", "Source", "UncertaintyTransition", "UncertaintyTransitionType",
     "SourceType", "TimeRange", "TransformationType", "Uncertainty", "UncertaintyKind",
 ]

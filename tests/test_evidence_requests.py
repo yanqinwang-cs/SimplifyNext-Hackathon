@@ -7,7 +7,7 @@ import pytest
 
 from investigator.cycle import CycleError, CycleFailureCode, CycleStatus, InvestigatorCycleCoordinator
 from investigator.graph import CaseGraph, EdgeRelation, GraphEdge, GraphNode, GraphNodeType
-from investigator.models.evidence_request import EvidenceRequestResponse
+from investigator.models.evidence_request import EvidenceRequest, EvidenceRequestResponse, EvidenceRequestStatus, allocate_evidence_request_id
 from investigator.roles import InvestigationFocus
 from investigator.services.evidence_requests import EvidenceRequestConflict, HumanEvidenceWorkflow
 from investigator.sources import SourceRegistry
@@ -29,6 +29,44 @@ def graph() -> CaseGraph:
 
 def request_payload() -> dict[str, str]:
     return {"type": "request_evidence", "target_uncertainty_id": "U1", "information_sought": "Available records for the assessment period.", "reason": "They may reduce the active uncertainty.", "expected_information_value": "They could distinguish the remaining explanations.",}
+
+
+def historical_request(request_id: str, status: EvidenceRequestStatus) -> EvidenceRequest:
+    return EvidenceRequest(request_id=request_id, status=status, requested_at_revision=0)
+
+
+def test_request_id_allocator_uses_all_history_and_does_not_recycle_gaps() -> None:
+    history = [
+        historical_request("R1", EvidenceRequestStatus.FULFILLED),
+        historical_request("R3", EvidenceRequestStatus.UNAVAILABLE),
+        historical_request("R8", EvidenceRequestStatus.FULFILLED),
+    ]
+    assert allocate_evidence_request_id(history) == "R9"
+
+
+def test_workflow_allocates_after_historical_only_requests_and_survives_reconstruction(tmp_path: Path) -> None:
+    repository = CaseRepository(tmp_path / "cases")
+    workflow = HumanEvidenceWorkflow(repository)
+    state = workflow.ensure_case("case-01")
+    state.evidence_request_history = [
+        historical_request("R1", EvidenceRequestStatus.FULFILLED),
+        historical_request("R2", EvidenceRequestStatus.UNAVAILABLE),
+    ]
+    repository.save(state)
+
+    reconstructed = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
+    request = reconstructed.request_evidence("case-01", request_payload())
+    assert request.request_id == "R3"
+
+
+def test_persist_pending_request_still_rejects_manual_duplicate_id(tmp_path: Path) -> None:
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
+    state = workflow.ensure_case("case-01")
+    state.evidence_request_history = [historical_request("R1", EvidenceRequestStatus.FULFILLED)]
+    workflow.repository.save(state)
+    duplicate = historical_request("R1", EvidenceRequestStatus.PENDING)
+    with pytest.raises(EvidenceRequestConflict, match="Evidence request ID already exists: R1"):
+        workflow.persist_pending_request("case-01", duplicate)
 
 
 def test_request_evidence_is_not_an_action_and_enters_waiting_state() -> None:

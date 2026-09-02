@@ -9,7 +9,7 @@ import pytest
 from investigator.cycle import InvestigatorTurnResponse, TurnSnapshot
 from investigator.llm import ModelCallMetadata, ModelCallResult, ModelParseError
 from investigator.services.evidence_requests import HumanEvidenceWorkflow
-from investigator.models.evidence_request import EvidenceRequest
+from investigator.models.evidence_request import EvidenceRequest, EvidenceRequestStatus
 from investigator.sources import SourceRegistry
 from investigator.services.production_runner import ProductionInvestigationRunner, StewardEnvelope, seed_demo_case
 from investigator.graph import GraphNode, GraphNodeType
@@ -107,6 +107,21 @@ def test_runner_waits_for_human_request_and_preserves_trace_metadata(tmp_path: P
     completed = workflow.respond("case-01", "R1", {"request_id": "R1", "status": "fulfilled"}, [{"display_name": "human-record.txt", "content": "new material"}], expected_case_revision=1)
     assert completed.status.value == "fulfilled"
     assert workflow.repository.load("case-01").evidence == {}
+
+
+def test_production_runner_allocates_after_persisted_historical_request(tmp_path: Path) -> None:
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
+    seed_demo_case(workflow, "case-01")
+    state = workflow.repository.load("case-01")
+    state.evidence_request_history = [EvidenceRequest(request_id="R1", status=EvidenceRequestStatus.FULFILLED, requested_at_revision=0)]
+    workflow.repository.save(state)
+
+    client = SequenceClient([investigator_request()])
+    ProductionInvestigationRunner(workflow, client, seed_demo_sources=False).run("case-01")
+
+    restored = workflow.repository.load("case-01")
+    assert [item.request_id for item in restored.evidence_request_history] == ["R1", "R2"]
+    assert restored.runtime_status == "WAITING_FOR_EVIDENCE"
 
 
 def test_runner_can_resume_after_fulfilment_and_stop_via_steward(tmp_path: Path) -> None:

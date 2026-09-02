@@ -9,6 +9,7 @@ from typing import Any, Callable
 from datetime import datetime, timezone
 
 from investigator.cycle import EvidenceRequest, EvidenceRequestResponse, EvidenceRequestStatus, RequestEvidence, RequestInformation
+from investigator.models.evidence_request import allocate_evidence_request_id
 from investigator.cycle import TurnSnapshot
 from investigator.sources import SourceRegistry
 from investigator.models.source import Source
@@ -239,9 +240,8 @@ class HumanEvidenceWorkflow:
             target = parsed.target_uncertainty_id
             expected_value = parsed.expected_information_value
             reason = parsed.reason
-            number = 1 + max((int(match.group(1)) for item in state.evidence_request_history if (match := re.fullmatch(r"R(\d+)", item.request_id))), default=0)
             request = EvidenceRequest(
-                request_id=f"R{number}",
+                request_id=allocate_evidence_request_id(state.evidence_request_history),
                 target_uncertainty_id=target,
                 information_sought=question or "Additional case information.",
                 reason=reason,

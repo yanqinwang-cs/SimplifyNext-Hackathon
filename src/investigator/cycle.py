@@ -9,7 +9,7 @@ from typing import Annotated, Literal, TypeAlias
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator, model_validator
 
 from investigator.graph import CaseGraph, GraphNodeType, GraphStatus
-from investigator.models.evidence_request import EvidenceRequest, EvidenceRequestResponse, EvidenceRequestStatus
+from investigator.models.evidence_request import EvidenceRequest, EvidenceRequestResponse, EvidenceRequestStatus, allocate_evidence_request_id
 from investigator.models.source import Source
 from investigator.roles.coordinator import GraphInvestigationCoordinator
 from investigator.roles.focus import InvestigationFocus, investigator_region
@@ -321,7 +321,7 @@ class CycleError(ValueError):
 class InvestigatorCycleCoordinator:
     """Deterministic single-writer coordinator for bounded Investigator tenures."""
 
-    def __init__(self, graph: CaseGraph, focus: InvestigationFocus, available_enquiries: list[AvailableEnquiry] | None = None, participants: list[dict[str, object]] | None = None, max_turns_per_tenure: int = 6, review_context: StewardReviewContext | None = None, case_revision: int = 0, full_graph_visibility: bool = False) -> None:
+    def __init__(self, graph: CaseGraph, focus: InvestigationFocus, available_enquiries: list[AvailableEnquiry] | None = None, participants: list[dict[str, object]] | None = None, max_turns_per_tenure: int = 6, review_context: StewardReviewContext | None = None, case_revision: int = 0, full_graph_visibility: bool = False, evidence_request_history: list[EvidenceRequest] | None = None) -> None:
         if max_turns_per_tenure < 1:
             raise ValueError("max_turns_per_tenure must be positive")
         if focus.node_id not in graph.nodes:
@@ -334,7 +334,7 @@ class InvestigatorCycleCoordinator:
         self.available_enquiries = [AvailableEnquiry.model_validate(item) for item in (available_enquiries or [])]
         self.participants = deepcopy(participants or [])
         self.review_context = review_context
-        self.cycle = InvestigatorCycleState(max_turns_per_tenure=max_turns_per_tenure, case_revision=case_revision)
+        self.cycle = InvestigatorCycleState(max_turns_per_tenure=max_turns_per_tenure, case_revision=case_revision, evidence_request_history=[item.model_copy(deep=True) for item in (evidence_request_history or [])])
         self._new_nodes: set[str] = set()
 
     def turn_snapshot(self, visible_sources: list[Source] | None = None, repository_revision: int | None = None) -> TurnSnapshot:
@@ -433,7 +433,7 @@ class InvestigatorCycleCoordinator:
             self.cycle.handoff_reason = None
         elif isinstance(next_step, RequestInformation):
             request = EvidenceRequest(
-                request_id=f"R{len(self.cycle.evidence_request_history) + 1}",
+                request_id=allocate_evidence_request_id(self.cycle.evidence_request_history),
                 target_uncertainty_id=next_step.target_uncertainty_id,
                 information_sought=next_step.question,
                 reason=next_step.reason,
@@ -556,7 +556,7 @@ class InvestigatorCycleCoordinator:
         question = getattr(request, "question", None) or getattr(request, "information_sought", None)
         if not question:
             raise CycleError(CycleFailureCode.INVALID_EVIDENCE_REQUEST, "Human information request requires a question")
-        item = EvidenceRequest(request_id=f"R{len(self.cycle.evidence_request_history) + 1}", target_uncertainty_id=target_uncertainty_id, information_sought=question, reason=getattr(request, "reason", None), expected_information_value=getattr(request, "expected_information_value", None), requested_at_revision=self.cycle.case_revision)
+        item = EvidenceRequest(request_id=allocate_evidence_request_id(self.cycle.evidence_request_history), target_uncertainty_id=target_uncertainty_id, information_sought=question, reason=getattr(request, "reason", None), expected_information_value=getattr(request, "expected_information_value", None), requested_at_revision=self.cycle.case_revision)
         self.cycle.evidence_request = item
         self.cycle.evidence_request_history.append(item.model_copy(deep=True))
         self.cycle.status = CycleStatus.WAITING_FOR_EVIDENCE

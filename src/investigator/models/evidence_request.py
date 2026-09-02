@@ -1,4 +1,5 @@
 from enum import Enum
+import re
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -26,6 +27,19 @@ class EvidenceRequest(BaseModel):
     created_case_revision: int | None = Field(default=None, ge=0)
     fulfilled_case_revision: int | None = Field(default=None, ge=0)
     resumed_run_id: str | None = None
+
+
+def allocate_evidence_request_id(history: list[EvidenceRequest]) -> str:
+    """Allocate the next request identity from all persisted case history."""
+    highest = max(
+        (
+            int(match.group(1))
+            for request in history
+            if (match := re.fullmatch(r"R(\d+)", request.request_id))
+        ),
+        default=0,
+    )
+    return f"R{highest + 1}"
 
 
 class EvidenceRequestSubmission(BaseModel):

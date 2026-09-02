@@ -145,7 +145,7 @@ class ProductionInvestigationRunner:
         run_start_revision = state.revision
         graph = state.reasoning_graph or _initial_graph(case_id)
         focus_id = state.focus_node_id or "U1"
-        coordinator = InvestigatorCycleCoordinator(graph, InvestigationFocus(node_id=focus_id, recent_node_ids=state.focus_recent_node_ids, recent_region_node_ids=state.focus_recent_region_node_ids), case_revision=state.revision, full_graph_visibility=True)
+        coordinator = InvestigatorCycleCoordinator(graph, InvestigationFocus(node_id=focus_id, recent_node_ids=state.focus_recent_node_ids, recent_region_node_ids=state.focus_recent_region_node_ids), case_revision=state.revision, full_graph_visibility=True, evidence_request_history=state.evidence_request_history)
         model_calls = 0
         self.workflow.record_trace(case_id, {"event": "run_started", "step": 0, "actor": "system", "runtime_status": "RUNNING_INVESTIGATOR", "case_revision": coordinator.cycle.case_revision, "run_start_revision": run_start_revision, "latest_safe_revision": run_start_revision})
         for step in range(1, MAX_ORCHESTRATION_STEPS + 1):
