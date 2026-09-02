@@ -7,6 +7,7 @@ from investigator.graph import EdgeStrength
 
 
 class InvestigatorOperation(str, Enum):
+    ADD_EVIDENCE = "add_evidence"
     ADD_PROPOSITION = "add_proposition"
     ADD_HYPOTHESIS = "add_hypothesis"
     ADD_UNCERTAINTY = "add_uncertainty"
@@ -26,6 +27,22 @@ class _InvestigatorCommand(BaseModel):
     def reason_must_be_concrete(cls, value: str) -> str:
         if not value.strip() or "REPLACE_WITH_" in value or "{{" in value:
             raise ValueError("reason must be a non-empty concrete audit rationale")
+        return value
+
+
+class AddEvidenceCommand(_InvestigatorCommand):
+    operation: Literal["add_evidence"] = "add_evidence"
+    node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE)$")
+    statement: str
+    source_ids: list[str] = Field(min_length=1)
+
+    @field_validator("source_ids")
+    @classmethod
+    def source_ids_are_unique(cls, value: list[str]) -> list[str]:
+        if len(value) != len(set(value)):
+            raise ValueError("source_ids must not contain duplicates")
+        if any(not item or not item.startswith("S") for item in value):
+            raise ValueError("source_ids must identify raw SourceRegistry records")
         return value
 
 
@@ -87,7 +104,7 @@ class MoveFocusCommand(_InvestigatorCommand):
 
 
 InvestigatorUpdate: TypeAlias = Annotated[
-    AddPropositionCommand | AddHypothesisCommand | AddUncertaintyCommand |
+    AddEvidenceCommand | AddPropositionCommand | AddHypothesisCommand | AddUncertaintyCommand |
     AddSupportCommand | AddConflictCommand | AddDerivationCommand |
     AddSpecializationCommand | MoveFocusCommand,
     Field(discriminator="operation"),

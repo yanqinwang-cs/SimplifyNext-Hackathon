@@ -4,16 +4,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from investigator.graph.models import EdgeRelation, EdgeStatus, GraphEdge, GraphNode, GraphNodeType, GraphStatus, make_edge_id
-
-
-_COMPATIBLE = {
-    EdgeRelation.SUPPORTS: ({GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}, {GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}),
-    EdgeRelation.CONFLICTS: ({GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}, {GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}),
-    EdgeRelation.SPECIALIZES: ({GraphNodeType.HYPOTHESIS}, {GraphNodeType.HYPOTHESIS}),
-    EdgeRelation.DEPENDS_ON: ({GraphNodeType.HYPOTHESIS, GraphNodeType.PROPOSITION}, {GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}),
-    EdgeRelation.TARGETS: ({GraphNodeType.UNCERTAINTY}, {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}),
-    EdgeRelation.DERIVED_FROM: ({GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}, {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}),
-}
+from investigator.graph.specs import OperationSpecRegistry
 
 
 class CaseGraph(BaseModel):
@@ -35,8 +26,7 @@ class CaseGraph(BaseModel):
                 raise ValueError(f"Graph self-edge is not allowed: {edge.id!r}")
             source = self.nodes[edge.source_id].node_type
             target = self.nodes[edge.target_id].node_type
-            allowed_source, allowed_target = _COMPATIBLE[edge.relation]
-            if source not in allowed_source or target not in allowed_target:
+            if not OperationSpecRegistry.allows(edge.relation, source, target):
                 raise ValueError(f"Invalid endpoint types for {edge.relation.value}: {source.value} -> {target.value}")
         active_parent_by_child: dict[str, str] = {}
         for edge in self.edges.values():

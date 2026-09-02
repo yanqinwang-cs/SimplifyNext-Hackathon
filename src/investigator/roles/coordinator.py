@@ -3,7 +3,7 @@ from copy import deepcopy
 from investigator.graph import CaseGraph, EdgeRelation, GraphEdge, GraphNode, GraphNodeType, GraphStatus, make_edge_id
 from investigator.roles.focus import InvestigationFocus, investigator_region
 from investigator.roles.history import GraphHistory
-from investigator.roles.investigator import AddConflictCommand, AddDerivationCommand, AddHypothesisCommand, AddPropositionCommand, AddSpecializationCommand, AddSupportCommand, AddUncertaintyCommand, INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdate, MoveFocusCommand
+from investigator.roles.investigator import AddConflictCommand, AddDerivationCommand, AddEvidenceCommand, AddHypothesisCommand, AddPropositionCommand, AddSpecializationCommand, AddSupportCommand, AddUncertaintyCommand, INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdate, MoveFocusCommand
 from investigator.roles.steward import ArchiveDecision, GeneralizeDecision, ReactivateDecision, ShiftFocusDecision, StopUnresolvedDecision, StewardDecision, StewardReviewContext
 
 
@@ -26,7 +26,9 @@ class GraphInvestigationCoordinator:
         # Keep newly created IDs available for later local relation commands;
         # provenance edges must not consume that locality allowance.
         new_nodes = set(self._new_nodes)
-        if isinstance(update, AddPropositionCommand):
+        if isinstance(update, AddEvidenceCommand):
+            self._apply_add_evidence(candidate, new_nodes, update)
+        elif isinstance(update, AddPropositionCommand):
             self._apply_add_proposition(candidate, new_nodes, update)
         elif isinstance(update, AddHypothesisCommand):
             self._apply_add_hypothesis(candidate, new_nodes, update)
@@ -44,6 +46,11 @@ class GraphInvestigationCoordinator:
             self.graph = candidate
         self._new_nodes = new_nodes
         self.history.append(self.graph, self.focus, update.reason)
+
+    def _apply_add_evidence(self, graph: CaseGraph, new_nodes: set[str], update: AddEvidenceCommand) -> None:
+        self._require_new_id(graph, update.node_id)
+        graph.add_node(GraphNode(id=update.node_id, node_type=GraphNodeType.EVIDENCE, statement=update.statement, metadata={"source_ids": list(update.source_ids)}))
+        new_nodes.add(update.node_id)
 
     def _apply_add_proposition(self, graph: CaseGraph, new_nodes: set[str], update: AddPropositionCommand) -> None:
         self._require_new_id(graph, update.node_id)
@@ -127,7 +134,19 @@ class GraphInvestigationCoordinator:
         self.history.append(self.graph, self.focus, decision.reason)
 
     def _permitted_ids(self) -> set[str]:
-        return {self.focus.node_id, *(node.id for node in self.graph.neighbors(self.focus.node_id))}
+        return self.legal_node_ids()
+
+    def legal_node_ids(self) -> set[str]:
+        """The single existing-node boundary shared by Investigator view and validators."""
+        return {self.focus.node_id, *(node.id for node in self.graph.neighbors(self.focus.node_id)), *self._new_nodes}
+
+    def active_reasoning_view(self) -> CaseGraph:
+        """Return the exact graph workspace whose IDs are legal for Investigator references."""
+        allowed = self.legal_node_ids()
+        return self.graph.model_copy(update={
+            "nodes": {identifier: self.graph.nodes[identifier] for identifier in allowed},
+            "edges": {identifier: edge for identifier, edge in self.graph.edges.items() if edge.source_id in allowed and edge.target_id in allowed},
+        })
 
     def _move_focus(self, node_id: str, reason: str, permitted: set[str] | None) -> None:
         node = self._require_node(self.graph, node_id)

@@ -1,11 +1,13 @@
 import pytest
+import sys
+import types
 from pydantic import BaseModel
 
 from experiments.gate1.runner import ExperimentRunner
 from experiments.gate1.schemas import ExperimentInput
 from investigator.llm.base import ModelCallMetadata, ModelParseError
 from investigator.llm.base import normalize_json_text
-from investigator.llm.bedrock import BedrockConfigurationError, BedrockModelClient
+from investigator.llm.bedrock import BedrockConfigurationError, BedrockModelClient, CredentialOverride, clear_credential_override, credential_status, set_credential_override
 from investigator.llm.mock import MockModelClient
 
 
@@ -91,3 +93,53 @@ def test_bedrock_adapter_parses_fenced_json_without_network() -> None:
     )
     assert result.parsed.answer == "4"
     assert result.raw_output == '```json\n{"answer": "4"}\n```'
+
+
+def test_bedrock_override_precedence_invalidation_and_clear(monkeypatch) -> None:
+    sessions = []
+
+    class FakeClient:
+        def __init__(self, label):
+            self.label = label
+
+        def converse(self, **kwargs):
+            return {"output": {"message": {"content": [{"text": '{"label": "ok", "count": 4}'}]}}, "usage": {}, "stopReason": "stop"}
+
+    class FakeSession:
+        def __init__(self, **kwargs):
+            sessions.append(kwargs)
+            self.label = kwargs["aws_access_key_id"]
+
+        def client(self, _service):
+            return FakeClient(self.label)
+
+    fake_boto3 = types.SimpleNamespace(
+        Session=FakeSession,
+        client=lambda _service, **kwargs: FakeClient("default-chain"),
+    )
+    monkeypatch.setitem(sys.modules, "boto3", fake_boto3)
+    monkeypatch.setenv("BEDROCK_MODEL_ID", "offline-model")
+    clear_credential_override()
+    client = BedrockModelClient()
+    set_credential_override(CredentialOverride("ACCESS_A", "SECRET_A", "TOKEN_A"))
+    client.call("2 + 2", StructuredOutput)
+    set_credential_override(CredentialOverride("ACCESS_B", "SECRET_B", "TOKEN_B"))
+    client.call("2 + 2", StructuredOutput)
+    clear_credential_override()
+    client.call("2 + 2", StructuredOutput)
+    assert [item["aws_access_key_id"] for item in sessions] == ["ACCESS_A", "ACCESS_B"]
+    assert client.client.label == "default-chain"
+
+
+def test_credential_status_is_non_secret_and_debug_flag(monkeypatch) -> None:
+    set_credential_override(CredentialOverride("TEST_ACCESS_SECRET_123", "TEST_SECRET_SECRET_456", "TEST_TOKEN_SECRET_789"))
+    try:
+        monkeypatch.setenv("SIMPLIFYNEXT_DEBUG_CREDENTIALS", "1")
+        status = credential_status()
+        serialized = str(status)
+        assert status["override_active"] is True
+        assert all(secret not in serialized for secret in ("TEST_ACCESS_SECRET_123", "TEST_SECRET_SECRET_456", "TEST_TOKEN_SECRET_789"))
+        monkeypatch.setenv("SIMPLIFYNEXT_DEBUG_CREDENTIALS", "0")
+        assert not __import__("investigator.llm.bedrock", fromlist=["debug_credentials_enabled"]).debug_credentials_enabled()
+    finally:
+        clear_credential_override()
