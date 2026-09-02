@@ -1,5 +1,8 @@
 import json
 import os
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from threading import RLock
 from time import perf_counter
 from typing import Any
 
@@ -19,6 +22,55 @@ class BedrockConfigurationError(ValueError):
     """Raised when the Bedrock adapter lacks required environment configuration."""
 
 
+@dataclass(frozen=True)
+class CredentialOverride:
+    aws_access_key_id: str
+    aws_secret_access_key: str
+    aws_session_token: str
+    region_name: str | None = None
+
+
+_override_lock = RLock()
+_credential_override: CredentialOverride | None = None
+_credential_generation = 0
+_credential_updated_at: datetime | None = None
+
+
+def debug_credentials_enabled() -> bool:
+    return os.getenv("SIMPLIFYNEXT_DEBUG_CREDENTIALS") == "1"
+
+
+def set_credential_override(override: CredentialOverride) -> None:
+    global _credential_override, _credential_generation, _credential_updated_at
+    with _override_lock:
+        _credential_override = override
+        _credential_generation += 1
+        _credential_updated_at = datetime.now(timezone.utc)
+
+
+def clear_credential_override() -> None:
+    global _credential_override, _credential_generation, _credential_updated_at
+    with _override_lock:
+        _credential_override = None
+        _credential_generation += 1
+        _credential_updated_at = datetime.now(timezone.utc)
+
+
+def credential_status() -> dict[str, object]:
+    with _override_lock:
+        return {
+            "override_active": _credential_override is not None,
+            "credential_source": "ui_override" if _credential_override is not None else "default_aws_credential_chain",
+            "last_updated_at": _credential_updated_at.isoformat() if _credential_updated_at else None,
+            "region": (_credential_override.region_name if _credential_override else os.getenv("AWS_REGION", "us-east-1")),
+        }
+
+
+def _credential_snapshot() -> tuple[CredentialOverride | None, int]:
+    with _override_lock:
+        return _credential_override, _credential_generation
+
+
 class BedrockModelClient:
     """Small adapter for one JSON structured call through Bedrock Converse."""
 
@@ -29,20 +81,14 @@ class BedrockModelClient:
             raise BedrockConfigurationError(
                 "Bedrock model configuration is missing; set BEDROCK_MODEL_ID"
             )
-        if client is None:
-            try:
-                import boto3
-            except ImportError as exc:
-                raise BedrockConfigurationError(
-                    "boto3 is required for BedrockModelClient"
-                ) from exc
-            client = boto3.client("bedrock-runtime", region_name=self.region)
         self.client = client
+        self._injected_client = client is not None
+        self._client_generation: int | None = None
 
     def call(self, input_data: MessageInput, output_schema: type[BaseModel]) -> ModelCallResult:
         messages = self._messages(input_data)
         started = perf_counter()
-        response = self.client.converse(
+        response = self._client_for_call().converse(
             modelId=self.model_id,
             messages=messages,
             inferenceConfig={"temperature": 0},
@@ -67,6 +113,28 @@ class BedrockModelClient:
             finish_reason=stop_reason,
         )
         return ModelCallResult(parsed=parsed, metadata=metadata, raw_output=raw_text)
+
+    def _client_for_call(self) -> Any:
+        if self._injected_client:
+            return self.client
+        override, generation = _credential_snapshot()
+        if self._client_generation != generation:
+            try:
+                import boto3
+            except ImportError as exc:
+                raise BedrockConfigurationError("boto3 is required for BedrockModelClient") from exc
+            if override is None:
+                self.client = boto3.client("bedrock-runtime", region_name=self.region)
+            else:
+                session = boto3.Session(
+                    aws_access_key_id=override.aws_access_key_id,
+                    aws_secret_access_key=override.aws_secret_access_key,
+                    aws_session_token=override.aws_session_token,
+                    region_name=override.region_name or self.region,
+                )
+                self.client = session.client("bedrock-runtime")
+            self._client_generation = generation
+        return self.client
 
     @staticmethod
     def _messages(input_data: MessageInput) -> list[dict[str, Any]]:

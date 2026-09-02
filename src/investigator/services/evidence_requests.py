@@ -1,0 +1,366 @@
+"""Human-facing evidence-request workflow outside the semantic CaseGraph."""
+
+import re
+import json
+import hashlib
+from pathlib import Path
+from threading import RLock
+from typing import Any, Callable
+from datetime import datetime, timezone
+
+from investigator.cycle import EvidenceRequest, EvidenceRequestResponse, EvidenceRequestStatus, RequestEvidence
+from investigator.cycle import TurnSnapshot
+from investigator.sources import SourceRegistry
+from investigator.models.source import Source
+from investigator.state.case_state import CaseState
+from investigator.state.repository import CaseRepository
+
+
+class EvidenceRequestConflict(RuntimeError):
+    pass
+
+
+class CaseSnapshotMismatch(EvidenceRequestConflict):
+    """The canonical repository changed relative to a role-turn baseline."""
+    pass
+
+
+def _state_signature(state: CaseState) -> str:
+    graph = state.reasoning_graph.model_dump(mode="json") if state.reasoning_graph is not None else None
+    payload = {
+        "graph": graph,
+        "focus_node_id": state.focus_node_id,
+        "revision": state.revision,
+        "pending_request": next((item.model_dump(mode="json") for item in reversed(state.evidence_request_history) if item.status is EvidenceRequestStatus.PENDING), None),
+        "sources": {
+            source_id: hashlib.sha256(json.dumps(source.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
+            for source_id, source in sorted(state.sources.items())
+        },
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+
+class HumanEvidenceWorkflow:
+    """Single-pending-request application boundary backed by CaseRepository."""
+
+    def __init__(self, repository: CaseRepository, resume_callback: Callable[[str], None] | None = None, run_callback: Callable[[str, "HumanEvidenceWorkflow"], None] | None = None) -> None:
+        self.repository = repository
+        self.resume_callback = resume_callback
+        self._lock = RLock()
+        self._model_revision_active: set[str] = set()
+        self._in_flight_actor: dict[str, str] = {}
+        self.run_callback = run_callback
+        self._active_runs: dict[str, str] = {}
+
+    def _run_dir(self, case_id: str, run_id: str) -> Path:
+        return self.repository.root / case_id / "runs" / run_id
+
+    def begin_run(self, case_id: str) -> str:
+        run_root = self.repository.root / case_id / "runs"
+        run_root.mkdir(parents=True, exist_ok=True)
+        numbers = [int(match.group(1)) for path in run_root.iterdir() if (match := re.fullmatch(r"run_(\d{6})", path.name))]
+        run_id = f"run_{max(numbers, default=0) + 1:06d}"
+        directory = self._run_dir(case_id, run_id)
+        directory.mkdir(parents=True)
+        started_at = datetime.now(timezone.utc).isoformat()
+        (directory / "run_result.json").write_text(json.dumps({"run_id": run_id, "started_at": started_at, "ended_at": None, "termination_reason": None, "final_runtime_status": "RUNNING_INVESTIGATOR", "model_calls": 0, "correction_retries": 0, "final_error": None, "pending_request_id": None}, indent=2) + "\n", encoding="utf-8")
+        self._active_runs[case_id] = run_id
+        return run_id
+
+    def current_run_id(self, case_id: str) -> str | None:
+        return self._active_runs.get(case_id)
+
+    def finalize_run(self, case_id: str, *, termination_reason: str | None = None, final_error: dict[str, Any] | None = None) -> None:
+        run_id = self._active_runs.pop(case_id, None)
+        if not run_id:
+            return
+        state = self.ensure_case(case_id)
+        path = self._run_dir(case_id, run_id) / "run_result.json"
+        result = json.loads(path.read_text(encoding="utf-8"))
+        result.update({"ended_at": datetime.now(timezone.utc).isoformat(), "termination_reason": termination_reason or state.runtime_status.lower(), "final_runtime_status": state.runtime_status, "final_case_revision": state.revision, "final_error": final_error or state.last_error, "pending_request_id": next((item.request_id for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None)})
+        path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+
+    def record_model_attempt(self, case_id: str, *, correction: bool = False) -> None:
+        run_id = self.current_run_id(case_id)
+        if not run_id:
+            return
+        path = self._run_dir(case_id, run_id) / "run_result.json"
+        result = json.loads(path.read_text(encoding="utf-8"))
+        result["model_calls"] = int(result.get("model_calls") or 0) + 1
+        if correction:
+            result["correction_retries"] = int(result.get("correction_retries") or 0) + 1
+        path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+
+    def start_run(self, case_id: str) -> dict[str, Any]:
+        """Start one backend-owned run through the configured production hook."""
+        with self._lock:
+            state = self.ensure_case(case_id)
+            if state.runtime_status == "FAILED" and state.clean_checkpoint is not None:
+                state = self._restore_clean_checkpoint(state)
+                self.repository.save(state)
+            pending = any(item.status.value == "pending" for item in state.evidence_request_history)
+            if pending or state.runtime_status == "WAITING_FOR_EVIDENCE":
+                raise EvidenceRequestConflict("Resolve the pending human evidence request before running")
+            if state.runtime_status in {"RUNNING_INVESTIGATOR", "RUNNING_STEWARD"} or case_id in self._in_flight_actor:
+                raise EvidenceRequestConflict("Investigation is already running")
+            if state.runtime_status == "STOPPED" or state.case_status != "ACTIVE":
+                raise EvidenceRequestConflict("Stopped or inactive cases cannot be restarted")
+            self.set_runtime(case_id, "RUNNING_INVESTIGATOR", "INVESTIGATOR")
+            self.begin_run(case_id)
+        thread = __import__("threading").Thread(target=self._execute_run, args=(case_id,), daemon=True)
+        thread.start()
+        return self.get_workspace(case_id)
+
+    def _execute_run(self, case_id: str) -> None:
+        try:
+            if self.run_callback is None:
+                raise RuntimeError("No production Investigator/Steward orchestration entrypoint is configured")
+            self.run_callback(case_id, self)
+            state = self.ensure_case(case_id)
+            if state.runtime_status.startswith("RUNNING_"):
+                self.set_runtime(case_id, "IDLE", "NONE")
+        except Exception as exc:
+            category = "ORCHESTRATION_CONFIGURATION_FAILURE" if type(exc).__name__ == "BedrockConfigurationError" else ("CASE_SNAPSHOT_MISMATCH" if isinstance(exc, CaseSnapshotMismatch) else type(exc).__name__)
+            state = self.ensure_case(case_id)
+            self.record_trace(case_id, {"event": "failed", "step": state.last_trace_step, "actor": "system", "runtime_status": "FAILED", "case_revision": state.revision, "current_actor": state.current_actor, "failure_category": category, "error": str(exc)})
+            self.set_runtime(case_id, "FAILED", "NONE", failure_category=category, message=str(exc), step=state.last_trace_step)
+        finally:
+            self.finalize_run(case_id)
+
+    def set_runtime(self, case_id: str, runtime_status: str, actor: str = "NONE", *, failure_category: str | None = None, message: str | None = None, step: int | None = None) -> None:
+        """Persist truthful runtime state; RUNNING is also tracked in-process."""
+        with self._lock:
+            state = self.ensure_case(case_id)
+            state.runtime_status = runtime_status
+            state.current_actor = actor
+            state.last_trace_step = step
+            state.last_error = ({"failure_category": failure_category, "message": message, "actor": actor, "step": step} if runtime_status == "FAILED" else None)
+            state.last_updated_at = datetime.now(timezone.utc)
+            if runtime_status.startswith("RUNNING_"):
+                self._in_flight_actor[case_id] = actor
+            else:
+                self._in_flight_actor.pop(case_id, None)
+            self.repository.save(state)
+
+    def record_trace(self, case_id: str, trace: dict[str, Any]) -> None:
+        with self._lock:
+            state = self.ensure_case(case_id)
+            record = dict(trace)
+            if self.current_run_id(case_id):
+                record.setdefault("run_id", self.current_run_id(case_id))
+                path = self._run_dir(case_id, self.current_run_id(case_id)) / "raw_traces.jsonl"
+                with path.open("a", encoding="utf-8") as handle:
+                    handle.write(json.dumps(record, default=str) + "\n")
+            state.trace_history.append(record)
+            state.last_trace_step = trace.get("step") if isinstance(trace.get("step"), int) else state.last_trace_step
+            state.last_updated_at = datetime.now(timezone.utc)
+            self.repository.save(state)
+
+    def save_reasoning_state(self, case_id: str, graph: Any, focus_node_id: str, case_revision: int | None = None) -> None:
+        with self._lock:
+            state = self.ensure_case(case_id)
+            state.reasoning_graph = graph.model_copy(deep=True)
+            state.focus_node_id = focus_node_id
+            if case_revision is not None:
+                state.revision = case_revision
+            state.last_updated_at = datetime.now(timezone.utc)
+            self.repository.save(state)
+
+    def assert_turn_snapshot_current(self, case_id: str, snapshot: TurnSnapshot) -> None:
+        """Optimistic concurrency gate; never supplies a replacement apply baseline."""
+        state = self.ensure_case(case_id)
+        expected_revision = snapshot.repository_revision if snapshot.repository_revision is not None else snapshot.case_revision
+        if state.revision != expected_revision:
+            raise CaseSnapshotMismatch("Turn snapshot is stale: canonical case revision changed")
+        if state.reasoning_graph is None or state.reasoning_graph.model_dump(mode="json") != snapshot.graph.model_dump(mode="json"):
+            raise CaseSnapshotMismatch("Turn snapshot is stale: canonical graph changed")
+        if state.focus_node_id != snapshot.focus.node_id:
+            raise CaseSnapshotMismatch("Turn snapshot is stale: canonical focus changed")
+        current_sources = self.readable_sources(case_id)
+        current_signatures = {
+            source.id: hashlib.sha256(json.dumps(source.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
+            for source in current_sources
+        }
+        if current_signatures != snapshot.visible_source_signatures:
+            raise CaseSnapshotMismatch("Turn snapshot is stale: readable source registry changed")
+        pending = next((item for item in reversed(state.evidence_request_history) if item.status is EvidenceRequestStatus.PENDING), None)
+        snapshot_pending = snapshot.cycle.evidence_request if snapshot.cycle is not None else None
+        if (pending.model_dump(mode="json") if pending else None) != (snapshot_pending.model_dump(mode="json") if snapshot_pending else None):
+            raise CaseSnapshotMismatch("Turn snapshot is stale: pending request changed")
+
+    def ensure_case(self, case_id: str, title: str = "Business Law Tutorial 5") -> CaseState:
+        if not self.repository.exists(case_id):
+            state = CaseState(case_id=case_id, title=title)
+            self.repository.save(state)
+            return state
+        return self.repository.load(case_id)
+
+    @staticmethod
+    def _restore_clean_checkpoint(state: CaseState) -> CaseState:
+        checkpoint = state.clean_checkpoint or {}
+        if "state" in checkpoint:
+            checkpoint_state = checkpoint["state"]
+            expected_signature = checkpoint.get("signature")
+        else:
+            checkpoint_state = checkpoint
+            expected_signature = None
+        payload = state.model_dump(mode="json")
+        payload.update(checkpoint_state)
+        payload["clean_checkpoint"] = state.clean_checkpoint
+        restored = CaseState.model_validate(payload)
+        if expected_signature is not None and _state_signature(restored) != expected_signature:
+            raise CaseSnapshotMismatch("Clean checkpoint identity does not match restored state")
+        return restored
+
+    def request_evidence(self, case_id: str, step: RequestEvidence | dict, expected_case_revision: int | None = None) -> EvidenceRequest:
+        with self._lock:
+            state = self.ensure_case(case_id)
+            self._check_revision(state, expected_case_revision)
+            if case_id in self._model_revision_active:
+                raise EvidenceRequestConflict("A human request cannot be created while an Investigator revision is active")
+            if any(item.status.value == "pending" for item in state.evidence_request_history):
+                raise EvidenceRequestConflict("Only one pending human evidence request is allowed")
+            parsed = step if isinstance(step, RequestEvidence) else RequestEvidence.model_validate(step)
+            number = 1 + max((int(match.group(1)) for item in state.evidence_request_history if (match := re.fullmatch(r"R(\d+)", item.request_id))), default=0)
+            request = EvidenceRequest(
+                request_id=f"R{number}",
+                target_uncertainty_id=parsed.target_uncertainty_id,
+                information_sought=parsed.information_sought or "Additional case information.",
+                reason=parsed.reason,
+                expected_information_value=parsed.expected_information_value,
+                requested_at_revision=state.revision,
+            )
+            state.evidence_request_history.append(request)
+            state.runtime_status = "WAITING_FOR_EVIDENCE"
+            state.current_actor = "NONE"
+            self._in_flight_actor.pop(case_id, None)
+            state.last_updated_at = datetime.now(timezone.utc)
+            state.revision += 1
+            self.repository.save(state)
+            return request
+
+    def persist_pending_request(self, case_id: str, request: EvidenceRequest) -> EvidenceRequest:
+        """Persist the coordinator's canonical request without reconstructing it."""
+        with self._lock:
+            state = self.ensure_case(case_id)
+            if any(item.status.value == "pending" for item in state.evidence_request_history):
+                raise EvidenceRequestConflict("Only one pending human evidence request is allowed")
+            if any(item.request_id == request.request_id for item in state.evidence_request_history):
+                raise EvidenceRequestConflict(f"Evidence request ID already exists: {request.request_id}")
+            state.evidence_request_history.append(request)
+            state.runtime_status = "WAITING_FOR_EVIDENCE"
+            state.current_actor = "NONE"
+            self._in_flight_actor.pop(case_id, None)
+            state.last_updated_at = datetime.now(timezone.utc)
+            state.revision += 1
+            self.repository.save(state)
+            return request
+
+    def current_pending_request(self, case_id: str) -> EvidenceRequest:
+        state = self.ensure_case(case_id)
+        pending = [item for item in state.evidence_request_history if item.status.value == "pending"]
+        if len(pending) != 1:
+            raise EvidenceRequestConflict(f"Expected exactly one pending evidence request, found {len(pending)}")
+        return pending[0]
+
+    def readable_sources(self, case_id: str) -> list[Source]:
+        """Return the currently admitted raw sources for the next Investigator prompt."""
+        return list(self.ensure_case(case_id).sources.values())
+
+    def respond(self, case_id: str, request_id: str, response: EvidenceRequestResponse | dict, sources: list[dict[str, Any]] | None = None, expected_case_revision: int | None = None) -> EvidenceRequest:
+        with self._lock:
+            state = self.ensure_case(case_id)
+            self._check_revision(state, expected_case_revision)
+            if case_id in self._model_revision_active:
+                raise EvidenceRequestConflict("Human evidence responses are blocked while an Investigator revision is active")
+            pending = next((item for item in state.evidence_request_history if item.request_id == request_id and item.status.value == "pending"), None)
+            if pending is None:
+                raise EvidenceRequestConflict("Request is not the current pending evidence request")
+            parsed = response if isinstance(response, EvidenceRequestResponse) else EvidenceRequestResponse.model_validate(response)
+            if parsed.request_id != request_id:
+                raise EvidenceRequestConflict("Response request_id does not match the URL request ID")
+            submitted = list(sources or [])
+            if parsed.status == "fulfilled" and not submitted:
+                raise ValueError("FULFILLED requires at least one supplied source")
+            if parsed.status == "fulfilled" and len(submitted) != 1:
+                raise ValueError("FULFILLED accepts exactly one supplied source")
+            if parsed.status == "unavailable" and submitted:
+                raise ValueError("UNAVAILABLE cannot include supplied sources")
+            source_ids: list[str] = []
+            if parsed.status == "fulfilled":
+                for source_data in submitted:
+                    source = SourceRegistry.register_raw_source(
+                        state,
+                        str(source_data.get("display_name") or source_data.get("name") or "Supplied source"),
+                        str(source_data.get("content") or ""),
+                        dict(source_data.get("metadata") or {}),
+                    )
+                    source_ids.append(source.id)
+            completed = pending.model_copy(update={"status": EvidenceRequestStatus(parsed.status), "released_source_ids": source_ids, "note": parsed.note})
+            index = state.evidence_request_history.index(pending)
+            state.evidence_request_history[index] = completed
+            state.revision += 1
+            state.runtime_status = "IDLE"
+            state.current_actor = "NONE"
+            state.last_updated_at = datetime.now(timezone.utc)
+            self.repository.save(state)
+        if self.resume_callback:
+            self.resume_callback(case_id)
+        return completed
+
+    def set_model_revision_active(self, case_id: str, active: bool) -> None:
+        with self._lock:
+            if active:
+                self._model_revision_active.add(case_id)
+            else:
+                self._model_revision_active.discard(case_id)
+
+    def get_workspace(self, case_id: str) -> dict[str, Any]:
+        state = self.ensure_case(case_id)
+        pending = next((item for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None)
+        runtime_status = state.runtime_status
+        current_actor = state.current_actor
+        if case_id in self._in_flight_actor:
+            current_actor = self._in_flight_actor[case_id]
+            runtime_status = f"RUNNING_{current_actor}"
+        messages: list[dict[str, Any]] = []
+        if pending:
+            request_payload = pending.model_dump(mode="json") | {"informationSought": pending.information_sought}
+            messages.append({"id": f"request-{pending.request_id}", "role": "simplifynext", "text": "The available material leaves one important question open.", "request": request_payload})
+        pending_payload = (pending.model_dump(mode="json") | {"informationSought": pending.information_sought}) if pending else None
+        runs = self.get_runs(case_id)
+        latest = runs[-1] if runs else None
+        return {"caseId": state.case_id, "caseRevision": state.revision, "title": state.title, "status": runtime_status.lower(), "caseStatus": state.case_status, "runtimeStatus": runtime_status, "currentActor": current_actor, "institutionalStatus": "Investigating" if state.case_status == "ACTIVE" else state.case_status.title(), "currentFocus": pending.information_sought if pending else "Review the current case state.", "messages": messages, "visibleSources": [{"id": source.id, "name": source.name, "sourceType": source.source_type.value, "content": source.content or "", "contentPreview": (source.content or "")[:180]} for source in state.sources.values()], "pendingEvidenceRequest": pending_payload, "lastError": state.last_error, "lastTraceStep": state.last_trace_step, "lastUpdatedAt": state.last_updated_at.isoformat(), "latestRun": latest}
+
+    def get_traces(self, case_id: str) -> list[dict[str, Any]]:
+        return [dict(trace) for trace in self.ensure_case(case_id).trace_history]
+
+    def get_runs(self, case_id: str) -> list[dict[str, Any]]:
+        root = self.repository.root / case_id / "runs"
+        if not root.is_dir():
+            return []
+        runs = []
+        for directory in sorted(root.iterdir()):
+            result = directory / "run_result.json"
+            if result.is_file():
+                try:
+                    payload = json.loads(result.read_text(encoding="utf-8"))
+                except json.JSONDecodeError:
+                    # A run may be initializing on another thread; omit it until
+                    # its first result snapshot is complete.
+                    continue
+                runs.append({key: payload.get(key) for key in ("run_id", "started_at", "ended_at", "termination_reason", "final_runtime_status", "final_error")})
+        return runs
+
+    def raw_trace_path(self, case_id: str, run_id: str) -> Path:
+        if not re.fullmatch(r"run_\d{6}", run_id):
+            raise ValueError("Invalid run ID")
+        path = self._run_dir(case_id, run_id) / "raw_traces.jsonl"
+        if not path.is_file():
+            raise KeyError("Run not found")
+        return path
+
+    @staticmethod
+    def _check_revision(state: CaseState, expected_case_revision: int | None) -> None:
+        if expected_case_revision is not None and expected_case_revision != state.revision:
+            raise EvidenceRequestConflict("The case revision is stale")

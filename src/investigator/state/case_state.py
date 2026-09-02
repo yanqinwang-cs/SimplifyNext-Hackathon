@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+from typing import Any
 from pydantic import BaseModel, Field, model_validator
 from investigator.models.claim import Claim
 from investigator.models.conflict import Conflict
@@ -6,6 +8,8 @@ from investigator.models.entity import Entity
 from investigator.models.hypothesis import Hypothesis, HypothesisTransformation
 from investigator.models.source import Source
 from investigator.models.uncertainty import Uncertainty
+from investigator.models.evidence_request import EvidenceRequest
+from investigator.graph import CaseGraph
 
 
 class CaseState(BaseModel):
@@ -21,6 +25,17 @@ class CaseState(BaseModel):
     uncertainties: dict[str, Uncertainty] = Field(default_factory=dict)
     conflicts: dict[str, Conflict] = Field(default_factory=dict)
     evidence_correction_history: list[dict[str, str | None]] = Field(default_factory=list)
+    evidence_request_history: list[EvidenceRequest] = Field(default_factory=list)
+    case_status: str = "ACTIVE"
+    runtime_status: str = "IDLE"
+    current_actor: str = "NONE"
+    last_error: dict[str, Any] | None = None
+    last_trace_step: int | None = None
+    last_updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    trace_history: list[dict[str, Any]] = Field(default_factory=list)
+    reasoning_graph: CaseGraph | None = None
+    focus_node_id: str | None = None
+    clean_checkpoint: dict[str, Any] | None = None
     revision: int = 0
 
     @model_validator(mode="after")

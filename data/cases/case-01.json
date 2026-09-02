@@ -1,0 +1,2002 @@
+{
+  "case_id": "case-01",
+  "title": "Business Law Tutorial 5",
+  "description": null,
+  "sources": {
+    "S20": {
+      "id": "S20",
+      "name": "blank_tutorial.md",
+      "source_type": "other",
+      "content": "# Blank tutorial\n\nSynthetic blank tutorial materials for the controlled request-driven experiment.\n",
+      "metadata": {
+        "demo_seed": true
+      }
+    },
+    "S21": {
+      "id": "S21",
+      "name": "student_script.md",
+      "source_type": "other",
+      "content": "# Student script\n\nSynthetic student script containing the ordinary submitted tutorial response.\n",
+      "metadata": {
+        "demo_seed": true
+      }
+    },
+    "S22": {
+      "id": "S22",
+      "name": "marker_report.md",
+      "source_type": "other",
+      "content": "# Marker report\n\nSynthetic marker observations about the submitted tutorial work.\n",
+      "metadata": {
+        "demo_seed": true
+      }
+    },
+    "S23": {
+      "id": "S23",
+      "name": "invigilator_report.md",
+      "source_type": "other",
+      "content": "# Invigilator report\n\nSynthetic ordinary observations recorded during the assessment.\n",
+      "metadata": {
+        "demo_seed": true
+      }
+    },
+    "S24": {
+      "id": "S24",
+      "name": "assessment_rules.md",
+      "source_type": "other",
+      "content": "# Assessment rules\n\nSynthetic assessment rules and ordinary permitted conditions.\n",
+      "metadata": {
+        "demo_seed": true
+      }
+    },
+    "S25": {
+      "id": "S25",
+      "name": "assessment_logistics.md",
+      "source_type": "other",
+      "content": "# Assessment logistics\n\nSynthetic timing and location logistics for the assessment.\n",
+      "metadata": {
+        "demo_seed": true
+      }
+    }
+  },
+  "evidence": {},
+  "entities": {},
+  "claims": {},
+  "hypotheses": {},
+  "transformations": [],
+  "uncertainties": {},
+  "conflicts": {},
+  "evidence_correction_history": [],
+  "evidence_request_history": [],
+  "case_status": "ACTIVE",
+  "runtime_status": "FAILED",
+  "current_actor": "NONE",
+  "last_error": {
+    "failure_category": "ModelParseError",
+    "message": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 1 validation error for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch",
+    "actor": "NONE",
+    "step": 1
+  },
+  "last_trace_step": 1,
+  "last_updated_at": "2026-09-02T10:40:46.934094Z",
+  "trace_history": [
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0
+    },
+    {
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "f0d7d01edbcadc2ab041ed0189b64a81fcd69938f9f8be840f2f4343fbbc8d6c",
+      "raw_output": null,
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired",
+      "failure_category": "ClientError"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "ClientError",
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0
+    },
+    {
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "f0d7d01edbcadc2ab041ed0189b64a81fcd69938f9f8be840f2f4343fbbc8d6c",
+      "raw_output": null,
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired",
+      "failure_category": "ClientError"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "ClientError",
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0
+    },
+    {
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "f0d7d01edbcadc2ab041ed0189b64a81fcd69938f9f8be840f2f4343fbbc8d6c",
+      "raw_output": null,
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired",
+      "failure_category": "ClientError"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "ClientError",
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0
+    },
+    {
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "f0d7d01edbcadc2ab041ed0189b64a81fcd69938f9f8be840f2f4343fbbc8d6c",
+      "raw_output": null,
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired",
+      "failure_category": "ClientError"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "ClientError",
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0
+    },
+    {
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "f0d7d01edbcadc2ab041ed0189b64a81fcd69938f9f8be840f2f4343fbbc8d6c",
+      "raw_output": null,
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired",
+      "failure_category": "ClientError"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "ClientError",
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0
+    },
+    {
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "f0d7d01edbcadc2ab041ed0189b64a81fcd69938f9f8be840f2f4343fbbc8d6c",
+      "raw_output": null,
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired",
+      "failure_category": "ClientError"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "ClientError",
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0
+    },
+    {
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "f0d7d01edbcadc2ab041ed0189b64a81fcd69938f9f8be840f2f4343fbbc8d6c",
+      "raw_output": null,
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired",
+      "failure_category": "ClientError"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "ClientError",
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0
+    },
+    {
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "f0d7d01edbcadc2ab041ed0189b64a81fcd69938f9f8be840f2f4343fbbc8d6c",
+      "raw_output": null,
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired",
+      "failure_category": "ClientError"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "ClientError",
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0
+    },
+    {
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "f0d7d01edbcadc2ab041ed0189b64a81fcd69938f9f8be840f2f4343fbbc8d6c",
+      "raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_uncertainty\",\n      \"node_id\": \"U1\",\n      \"reason\": \"Initial assessment of the case record reveals no active propositions, hypotheses, or conflicts. The current focus is on the uncertainty node U1 itself, which queries the state of the case.\",\n      \"statement\": \"The case record is empty of semantic content. No propositions, hypotheses, or evidence nodes have been established.\",\n      \"target_node_id\": \"U1\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"request_evidence\",\n    \"reason\": \"To begin the investigation, the raw source materials must be integrated into the semantic graph. The current local graph is empty, and the available_enquiries list is empty, indicating no active information requests have been made. The first step is to request the raw source content to establish the evidentiary base.\"\n  }\n}\n```",
+      "validation_errors": [
+        "Investigator turn rolled back after graph update failure: Investigator graph reference has an invalid type or status",
+        "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 4 validation errors for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc... the evidentiary base.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc... the evidentiary base.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc... the evidentiary base.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing"
+      ],
+      "initial_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_hypothesis\",\n      \"node_id\": \"H1\",\n      \"reason\": \"Initial hypothesis to structure the investigation of the case context.\",\n      \"statement\": \"The case involves a tutorial assessment where the student submitted a response, and the marker and invigilator have provided reports. The investigation must determine the validity of the student's work and identify any discrepancies.\"\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P1\",\n      \"reason\": \"Derived from the initial hypothesis to establish the scope of the case.\",\n      \"statement\": \"The case is a tutorial assessment involving a student, a marker, and an invigilator.\",\n      \"derived_from_node_ids\": [\n        \"H1\"\n      ]\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P2\",\n      \"reason\": \"Derived from the initial hypothesis to establish the available source material.\",\n      \"statement\": \"The available source material includes a student script, a marker report, an invigilator report, and assessment rules/logistics.\",\n      \"derived_from_node_ids\": [\n        \"H1\"\n      ]\n    },\n    {\n      \"operation\": \"add_uncertainty\",\n      \"node_id\": \"U1\",\n      \"reason\": \"Identifying the unresolved nature of the case based on the current state.\",\n      \"statement\": \"The current case record is in an initial state with no active reasoning nodes or resolved propositions. The specific details of the student's submission, the marker's findings, and the invigilator's observations have not yet been analyzed.\",\n      \"target_node_id\": \"H1\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"continue_local\",\n    \"reason\": \"The case is in its initial state. The next step is to analyze the available source documents to extract specific observations and propositions.\"\n  }\n}\n```",
+      "initial_parsed_response": {
+        "graph_updates": [
+          {
+            "reason": "Initial hypothesis to structure the investigation of the case context.",
+            "operation": "add_hypothesis",
+            "node_id": "H1",
+            "statement": "The case involves a tutorial assessment where the student submitted a response, and the marker and invigilator have provided reports. The investigation must determine the validity of the student's work and identify any discrepancies."
+          },
+          {
+            "reason": "Derived from the initial hypothesis to establish the scope of the case.",
+            "operation": "add_proposition",
+            "node_id": "P1",
+            "statement": "The case is a tutorial assessment involving a student, a marker, and an invigilator.",
+            "derived_from_node_ids": [
+              "H1"
+            ]
+          },
+          {
+            "reason": "Derived from the initial hypothesis to establish the available source material.",
+            "operation": "add_proposition",
+            "node_id": "P2",
+            "statement": "The available source material includes a student script, a marker report, an invigilator report, and assessment rules/logistics.",
+            "derived_from_node_ids": [
+              "H1"
+            ]
+          },
+          {
+            "reason": "Identifying the unresolved nature of the case based on the current state.",
+            "operation": "add_uncertainty",
+            "node_id": "U1",
+            "statement": "The current case record is in an initial state with no active reasoning nodes or resolved propositions. The specific details of the student's submission, the marker's findings, and the invigilator's observations have not yet been analyzed.",
+            "target_node_id": "H1"
+          }
+        ],
+        "next_step": {
+          "reason": "The case is in its initial state. The next step is to analyze the available source documents to extract specific observations and propositions.",
+          "type": "continue_local"
+        }
+      },
+      "error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 4 validation errors for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc... the evidentiary base.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc... the evidentiary base.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc... the evidentiary base.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing",
+      "failure_category": "ModelParseError"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "ModelParseError",
+      "error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 4 validation errors for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc... the evidentiary base.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc... the evidentiary base.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc... the evidentiary base.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "run_id": "run_000001"
+    },
+    {
+      "case_id": "case-01",
+      "event": "investigator_completed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "f0d7d01edbcadc2ab041ed0189b64a81fcd69938f9f8be840f2f4343fbbc8d6c",
+      "raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_hypothesis\",\n      \"node_id\": \"H1\",\n      \"reason\": \"Initial hypothesis to frame the investigation of the case record.\",\n      \"statement\": \"The case record contains unresolved information that requires investigation.\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"continue_local\",\n    \"reason\": \"Initiating investigation of the case record to identify specific unresolved elements.\"\n  }\n}\n```",
+      "validation_errors": [
+        "Investigator turn rolled back after graph update failure: Investigator graph reference has an invalid type or status"
+      ],
+      "initial_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_hypothesis\",\n      \"node_id\": \"H1\",\n      \"reason\": \"Initial hypothesis to structure the investigation of the case context.\",\n      \"statement\": \"The case involves a tutorial assessment where the student submitted a response, and the marker and invigilator have provided reports. The investigation must determine the validity of the student's work and identify any discrepancies.\"\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P1\",\n      \"reason\": \"Derived from the initial hypothesis to establish the scope of the case.\",\n      \"statement\": \"The case is a tutorial assessment involving a student, a marker, and an invigilator.\",\n      \"derived_from_node_ids\": [\n        \"H1\"\n      ]\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P2\",\n      \"reason\": \"Derived from the initial hypothesis to establish the available source material.\",\n      \"statement\": \"The available source material includes a student script, a marker report, an invigilator report, and assessment rules/logistics.\",\n      \"derived_from_node_ids\": [\n        \"H1\"\n      ]\n    },\n    {\n      \"operation\": \"add_uncertainty\",\n      \"node_id\": \"U1\",\n      \"reason\": \"Identifying the unresolved nature of the case based on the current state.\",\n      \"statement\": \"The current case record is in an initial state with no active reasoning nodes or resolved propositions. The specific details of the student's submission, the marker's findings, and the invigilator's observations have not yet been analyzed.\",\n      \"target_node_id\": \"H1\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"continue_local\",\n    \"reason\": \"The case is in its initial state. The next step is to analyze the available source documents to extract specific observations and propositions.\"\n  }\n}\n```",
+      "initial_parsed_response": {
+        "graph_updates": [
+          {
+            "reason": "Initial hypothesis to structure the investigation of the case context.",
+            "operation": "add_hypothesis",
+            "node_id": "H1",
+            "statement": "The case involves a tutorial assessment where the student submitted a response, and the marker and invigilator have provided reports. The investigation must determine the validity of the student's work and identify any discrepancies."
+          },
+          {
+            "reason": "Derived from the initial hypothesis to establish the scope of the case.",
+            "operation": "add_proposition",
+            "node_id": "P1",
+            "statement": "The case is a tutorial assessment involving a student, a marker, and an invigilator.",
+            "derived_from_node_ids": [
+              "H1"
+            ]
+          },
+          {
+            "reason": "Derived from the initial hypothesis to establish the available source material.",
+            "operation": "add_proposition",
+            "node_id": "P2",
+            "statement": "The available source material includes a student script, a marker report, an invigilator report, and assessment rules/logistics.",
+            "derived_from_node_ids": [
+              "H1"
+            ]
+          },
+          {
+            "reason": "Identifying the unresolved nature of the case based on the current state.",
+            "operation": "add_uncertainty",
+            "node_id": "U1",
+            "statement": "The current case record is in an initial state with no active reasoning nodes or resolved propositions. The specific details of the student's submission, the marker's findings, and the invigilator's observations have not yet been analyzed.",
+            "target_node_id": "H1"
+          }
+        ],
+        "next_step": {
+          "reason": "The case is in its initial state. The next step is to analyze the available source documents to extract specific observations and propositions.",
+          "type": "continue_local"
+        }
+      },
+      "initial_operation_error": "Investigator turn rolled back after graph update failure: Investigator graph reference has an invalid type or status",
+      "attempts": 2,
+      "parsed_response": {
+        "graph_updates": [
+          {
+            "reason": "Initial hypothesis to frame the investigation of the case record.",
+            "operation": "add_hypothesis",
+            "node_id": "H1",
+            "statement": "The case record contains unresolved information that requires investigation."
+          }
+        ],
+        "next_step": {
+          "reason": "Initiating investigation of the case record to identify specific unresolved elements.",
+          "type": "continue_local"
+        }
+      },
+      "input_tokens": 4286,
+      "output_tokens": 103,
+      "latency_seconds": 1.6787499169586226,
+      "run_id": "run_000001"
+    },
+    {
+      "case_id": "case-01",
+      "event": "investigator_failed",
+      "step": 2,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 1,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "84698ffaaeba505a4ca38702b8a747761ca44b51af90645eecc967ce191d77b9",
+      "raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P1\",\n      \"statement\": \"The case record contains unresolved information that requires investigation.\",\n      \"derived_from_node_ids\": [\n        \"H1\"\n      ],\n      \"reason\": \"Inferred from the active hypothesis H1 regarding the need for investigation.\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"request_evidence\",\n    \"reason\": \"To resolve the uncertainty U1, I need to examine the available case sources (S20-S25) to identify what specific information is missing or requires investigation.\"\n  }\n}\n```",
+      "initial_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P1\",\n      \"statement\": \"The case record contains unresolved information that requires investigation.\",\n      \"derived_from_node_ids\": [\n        \"H1\"\n      ],\n      \"reason\": \"Deriving the specific investigative focus from the active hypothesis.\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"request_evidence\",\n    \"reason\": \"The current case record is empty of substantive content. The initial uncertainty (U1) requires the raw source materials to be released and processed to establish the case facts.\"\n  }\n}\n```",
+      "initial_schema_error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 3 validation errors for InvestigatorTurnResponse\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc...ablish the case facts.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc...ablish the case facts.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc...ablish the case facts.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing",
+      "validation_errors": [
+        "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 3 validation errors for InvestigatorTurnResponse\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc...ablish the case facts.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc...ablish the case facts.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc...ablish the case facts.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing",
+        "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 3 validation errors for InvestigatorTurnResponse\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc...equires investigation.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc...equires investigation.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc...equires investigation.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing"
+      ],
+      "correction_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P1\",\n      \"statement\": \"The case record contains unresolved information that requires investigation.\",\n      \"derived_from_node_ids\": [\n        \"H1\"\n      ],\n      \"reason\": \"Inferred from the active hypothesis H1 regarding the need for investigation.\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"request_evidence\",\n    \"reason\": \"To resolve the uncertainty U1, I need to examine the available case sources (S20-S25) to identify what specific information is missing or requires investigation.\"\n  }\n}\n```",
+      "correction_schema_error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 3 validation errors for InvestigatorTurnResponse\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc...equires investigation.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc...equires investigation.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc...equires investigation.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing",
+      "error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 3 validation errors for InvestigatorTurnResponse\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc...equires investigation.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc...equires investigation.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc...equires investigation.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing",
+      "failure_category": "ModelParseError",
+      "run_id": "run_000001"
+    },
+    {
+      "event": "failed",
+      "step": 2,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "ModelParseError",
+      "error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 3 validation errors for InvestigatorTurnResponse\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc...equires investigation.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc...equires investigation.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc...equires investigation.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing",
+      "run_id": "run_000001"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "run_id": "run_000002"
+    },
+    {
+      "case_id": "case-01",
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "f0d7d01edbcadc2ab041ed0189b64a81fcd69938f9f8be840f2f4343fbbc8d6c",
+      "raw_output": null,
+      "validation_errors": [
+        "Investigator turn rolled back after graph update failure: Duplicate graph node ID: 'H1'",
+        "Investigator turn rolled back after graph update failure: Duplicate graph node ID: 'H1'"
+      ],
+      "initial_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_hypothesis\",\n      \"node_id\": \"H1\",\n      \"reason\": \"Initial hypothesis to structure the investigation of the case record.\",\n      \"statement\": \"The case record contains unresolved elements that require investigation.\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"continue_local\",\n    \"reason\": \"The current focus is on the uncertainty of the case record. I will now examine the available sources to identify specific unresolved elements.\"\n  }\n}\n```",
+      "initial_parsed_response": {
+        "graph_updates": [
+          {
+            "reason": "Initial hypothesis to structure the investigation of the case record.",
+            "operation": "add_hypothesis",
+            "node_id": "H1",
+            "statement": "The case record contains unresolved elements that require investigation."
+          }
+        ],
+        "next_step": {
+          "reason": "The current focus is on the uncertainty of the case record. I will now examine the available sources to identify specific unresolved elements.",
+          "type": "continue_local"
+        }
+      },
+      "initial_operation_error": "Investigator turn rolled back after graph update failure: Duplicate graph node ID: 'H1'",
+      "correction_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_hypothesis\",\n      \"node_id\": \"H1\",\n      \"reason\": \"Initial hypothesis to frame the investigation of the case materials.\",\n      \"statement\": \"The case involves a standard academic assessment scenario with synthetic materials (S20-S25).\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"continue_local\",\n    \"reason\": \"Initial hypothesis established. Proceeding to analyze the available source documents to identify specific observations and propositions.\"\n  }\n}\n```",
+      "correction_parsed_response": {
+        "graph_updates": [
+          {
+            "reason": "Initial hypothesis to frame the investigation of the case materials.",
+            "operation": "add_hypothesis",
+            "node_id": "H1",
+            "statement": "The case involves a standard academic assessment scenario with synthetic materials (S20-S25)."
+          }
+        ],
+        "next_step": {
+          "reason": "Initial hypothesis established. Proceeding to analyze the available source documents to identify specific observations and propositions.",
+          "type": "continue_local"
+        }
+      },
+      "correction_operation_error": "Investigator turn rolled back after graph update failure: Duplicate graph node ID: 'H1'",
+      "error": "INVESTIGATOR_OPERATION_VALIDATION_FAILURE: Investigator turn rolled back after graph update failure: Duplicate graph node ID: 'H1'",
+      "failure_category": "RuntimeError",
+      "run_id": "run_000002"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "RuntimeError",
+      "error": "INVESTIGATOR_OPERATION_VALIDATION_FAILURE: Investigator turn rolled back after graph update failure: Duplicate graph node ID: 'H1'",
+      "run_id": "run_000002"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "run_id": "run_000003"
+    },
+    {
+      "case_id": "case-01",
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "fabe5913dad36c5a2218696a9d4c9188c9c4dc6f576966e7dd21dd15f5e55bdd",
+      "raw_output": null,
+      "contract_check": {
+        "case_revision": 0,
+        "legal_graph_node_ids": [
+          "U1"
+        ],
+        "visible_source_ids": [
+          "S20",
+          "S21",
+          "S22",
+          "S23",
+          "S24",
+          "S25"
+        ]
+      },
+      "error": "An error occurred (InvalidSignatureException) when calling the Converse operation: The request signature we calculated does not match the signature you provided. Check your AWS Secret Access Key and signing method. Consult the service documentation for details.\n\nThe Canonical String for this request should have been\n'POST\n/model/zai.glm-4.7-flash/converse\n\ncontent-type:application/json\nhost:bedrock-runtime.us-east-1.amazonaws.com\n'\n\nThe String-to-Sign should have been\n'AWS4-HMAC-SHA256\n20260902T084424Z\n20260902/us-east-1/bedrock/aws4_request\n3f360572da31d5745bf45c9f3a8ee0aaa324ca3fdea2825a51349e255748007f'\n",
+      "failure_category": "ClientError",
+      "run_id": "run_000003"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "ClientError",
+      "error": "An error occurred (InvalidSignatureException) when calling the Converse operation: The request signature we calculated does not match the signature you provided. Check your AWS Secret Access Key and signing method. Consult the service documentation for details.\n\nThe Canonical String for this request should have been\n'POST\n/model/zai.glm-4.7-flash/converse\n\ncontent-type:application/json\nhost:bedrock-runtime.us-east-1.amazonaws.com\n'\n\nThe String-to-Sign should have been\n'AWS4-HMAC-SHA256\n20260902T084424Z\n20260902/us-east-1/bedrock/aws4_request\n3f360572da31d5745bf45c9f3a8ee0aaa324ca3fdea2825a51349e255748007f'\n",
+      "run_id": "run_000003"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "run_id": "run_000004"
+    },
+    {
+      "case_id": "case-01",
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "fabe5913dad36c5a2218696a9d4c9188c9c4dc6f576966e7dd21dd15f5e55bdd",
+      "raw_output": null,
+      "contract_check": {
+        "case_revision": 0,
+        "legal_graph_node_ids": [
+          "U1"
+        ],
+        "visible_source_ids": [
+          "S20",
+          "S21",
+          "S22",
+          "S23",
+          "S24",
+          "S25"
+        ]
+      },
+      "error": "An error occurred (InvalidSignatureException) when calling the Converse operation: The request signature we calculated does not match the signature you provided. Check your AWS Secret Access Key and signing method. Consult the service documentation for details.\n\nThe Canonical String for this request should have been\n'POST\n/model/zai.glm-4.7-flash/converse\n\ncontent-type:application/json\nhost:bedrock-runtime.us-east-1.amazonaws.com\n'\n\nThe String-to-Sign should have been\n'AWS4-HMAC-SHA256\n20260902T084550Z\n20260902/us-east-1/bedrock/aws4_request\nc1ce770017eb7b79d90c62559b6c6736d41b2c94f82b28b633cd2ce72520234e'\n",
+      "failure_category": "ClientError",
+      "run_id": "run_000004"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "ClientError",
+      "error": "An error occurred (InvalidSignatureException) when calling the Converse operation: The request signature we calculated does not match the signature you provided. Check your AWS Secret Access Key and signing method. Consult the service documentation for details.\n\nThe Canonical String for this request should have been\n'POST\n/model/zai.glm-4.7-flash/converse\n\ncontent-type:application/json\nhost:bedrock-runtime.us-east-1.amazonaws.com\n'\n\nThe String-to-Sign should have been\n'AWS4-HMAC-SHA256\n20260902T084550Z\n20260902/us-east-1/bedrock/aws4_request\nc1ce770017eb7b79d90c62559b6c6736d41b2c94f82b28b633cd2ce72520234e'\n",
+      "run_id": "run_000004"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "run_id": "run_000005"
+    },
+    {
+      "case_id": "case-01",
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "fabe5913dad36c5a2218696a9d4c9188c9c4dc6f576966e7dd21dd15f5e55bdd",
+      "raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_hypothesis\",\n      \"node_id\": \"H1\",\n      \"reason\": \"Initial hypothesis to structure the investigation of the case record.\",\n      \"statement\": \"The case record is currently empty and requires the initial identification of the case context and available evidence sources.\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"request_evidence\",\n    \"reason\": \"The current local graph is empty. To begin the investigation, I need to access the raw source materials associated with the case to understand the context, the student's submission, and the assessment rules.\"\n  }\n}\n```",
+      "contract_check": {
+        "case_revision": 0,
+        "legal_graph_node_ids": [
+          "U1"
+        ],
+        "visible_source_ids": [
+          "S20",
+          "S21",
+          "S22",
+          "S23",
+          "S24",
+          "S25"
+        ]
+      },
+      "initial_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_hypothesis\",\n      \"node_id\": \"H1\",\n      \"reason\": \"Initial hypothesis to structure the investigation of the case record.\",\n      \"statement\": \"The case record is currently empty and requires the initial identification of the case context and available evidence sources.\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"request_evidence\",\n    \"reason\": \"The current local graph is empty. To begin the investigation, I need to access the raw source materials associated with the case to understand the context, the student's submission, and the assessment rules.\"\n  }\n}\n```",
+      "initial_schema_error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 3 validation errors for InvestigatorTurnResponse\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc... the assessment rules.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc... the assessment rules.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc... the assessment rules.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing",
+      "validation_errors": [
+        "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 3 validation errors for InvestigatorTurnResponse\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc... the assessment rules.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc... the assessment rules.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc... the assessment rules.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing",
+        "Investigator turn rolled back after graph update failure: Duplicate graph node ID: 'H1'"
+      ],
+      "correction_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_hypothesis\",\n      \"node_id\": \"H1\",\n      \"reason\": \"Initial hypothesis to frame the investigation of the case record.\",\n      \"statement\": \"The case record is a synthetic blank tutorial experiment, and the current uncertainty U1 represents the starting point for the investigation.\"\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P1\",\n      \"reason\": \"Derived from the initial hypothesis to establish the context of the case.\",\n      \"statement\": \"The case is a controlled request-driven experiment using synthetic materials.\",\n      \"derived_from_node_ids\": [\n        \"H1\"\n      ]\n    },\n    {\n      \"operation\": \"add_uncertainty\",\n      \"node_id\": \"U1\",\n      \"reason\": \"Identifying the unresolved question that drives the investigation.\",\n      \"statement\": \"What specific information or observations are available in the case sources to address the initial uncertainty?\",\n      \"target_node_id\": \"H1\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"continue_local\",\n    \"reason\": \"The initial hypothesis and proposition have been established. The next step is to review the available case sources to identify specific evidence that can be used to address the uncertainty.\"\n  }\n}\n```",
+      "correction_parsed_response": {
+        "graph_updates": [
+          {
+            "reason": "Initial hypothesis to frame the investigation of the case record.",
+            "operation": "add_hypothesis",
+            "node_id": "H1",
+            "statement": "The case record is a synthetic blank tutorial experiment, and the current uncertainty U1 represents the starting point for the investigation."
+          },
+          {
+            "reason": "Derived from the initial hypothesis to establish the context of the case.",
+            "operation": "add_proposition",
+            "node_id": "P1",
+            "statement": "The case is a controlled request-driven experiment using synthetic materials.",
+            "derived_from_node_ids": [
+              "H1"
+            ]
+          },
+          {
+            "reason": "Identifying the unresolved question that drives the investigation.",
+            "operation": "add_uncertainty",
+            "node_id": "U1",
+            "statement": "What specific information or observations are available in the case sources to address the initial uncertainty?",
+            "target_node_id": "H1"
+          }
+        ],
+        "next_step": {
+          "reason": "The initial hypothesis and proposition have been established. The next step is to review the available case sources to identify specific evidence that can be used to address the uncertainty.",
+          "type": "continue_local"
+        }
+      },
+      "correction_operation_error": "Investigator turn rolled back after graph update failure: Duplicate graph node ID: 'H1'",
+      "error": "INVESTIGATOR_OPERATION_VALIDATION_FAILURE: Investigator turn rolled back after graph update failure: Duplicate graph node ID: 'H1'",
+      "failure_category": "RuntimeError",
+      "run_id": "run_000005"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "RuntimeError",
+      "error": "INVESTIGATOR_OPERATION_VALIDATION_FAILURE: Investigator turn rolled back after graph update failure: Duplicate graph node ID: 'H1'",
+      "run_id": "run_000005"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "run_id": "run_000006"
+    },
+    {
+      "case_id": "case-01",
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "d1141d727cb5a5d6400002152598cf893e23b39218cd2b53b06eadfeb0eb92e1",
+      "raw_output": null,
+      "contract_check": {
+        "case_revision": 0,
+        "legal_graph_node_ids": [
+          "U1"
+        ],
+        "visible_source_ids": [
+          "S20",
+          "S21",
+          "S22",
+          "S23",
+          "S24",
+          "S25"
+        ]
+      },
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired",
+      "failure_category": "ClientError",
+      "run_id": "run_000006"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "ClientError",
+      "error": "An error occurred (ExpiredTokenException) when calling the Converse operation: The security token included in the request is expired",
+      "run_id": "run_000006"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "run_id": "run_000007"
+    },
+    {
+      "case_id": "case-01",
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "d1141d727cb5a5d6400002152598cf893e23b39218cd2b53b06eadfeb0eb92e1",
+      "raw_output": null,
+      "contract_check": {
+        "case_revision": 0,
+        "legal_graph_node_ids": [
+          "U1"
+        ],
+        "visible_source_ids": [
+          "S20",
+          "S21",
+          "S22",
+          "S23",
+          "S24",
+          "S25"
+        ]
+      },
+      "validation_errors": [
+        "Investigator turn rolled back after graph update failure: Unknown graph node ID: 'S21'",
+        "Investigator turn rolled back after graph update failure: Unknown graph node ID: 'S21'"
+      ],
+      "initial_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P1\",\n      \"statement\": \"The submitted tutorial response (S21) is a synthetic blank tutorial response.\",\n      \"reason\": \"The Student script (S21) is explicitly identified as a 'synthetic student script containing the ordinary submitted tutorial response'.\",\n      \"derived_from_node_ids\": [\n        \"S21\"\n      ]\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P2\",\n      \"statement\": \"The marker report (S22) contains synthetic observations about the submitted tutorial work.\",\n      \"reason\": \"The Marker report (S22) is explicitly identified as containing 'synthetic marker observations about the submitted tutorial work'.\",\n      \"derived_from_node_ids\": [\n        \"S22\"\n      ]\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P3\",\n      \"statement\": \"The invigilator report (S23) contains synthetic ordinary observations recorded during the assessment.\",\n      \"reason\": \"The Invigilator report (S23) is explicitly identified as containing 'synthetic ordinary observations recorded during the assessment'.\",\n      \"derived_from_node_ids\": [\n        \"S23\"\n      ]\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P4\",\n      \"statement\": \"The assessment rules (S24) define synthetic assessment rules and ordinary permitted conditions.\",\n      \"reason\": \"The Assessment rules (S24) are explicitly identified as 'synthetic assessment rules and ordinary permitted conditions'.\",\n      \"derived_from_node_ids\": [\n        \"S24\"\n      ]\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P5\",\n      \"statement\": \"The assessment logistics (S25) define synthetic timing and location logistics for the assessment.\",\n      \"reason\": \"The Assessment logistics (S25) are explicitly identified as 'synthetic timing and location logistics for the assessment'.\",\n      \"derived_from_node_ids\": [\n        \"S25\"\n      ]\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"continue_local\",\n    \"reason\": \"Initial source propositions have been established. The case context is now populated with the available source materials.\"\n  }\n}\n```",
+      "initial_parsed_response": {
+        "graph_updates": [
+          {
+            "reason": "The Student script (S21) is explicitly identified as a 'synthetic student script containing the ordinary submitted tutorial response'.",
+            "operation": "add_proposition",
+            "node_id": "P1",
+            "statement": "The submitted tutorial response (S21) is a synthetic blank tutorial response.",
+            "derived_from_node_ids": [
+              "S21"
+            ]
+          },
+          {
+            "reason": "The Marker report (S22) is explicitly identified as containing 'synthetic marker observations about the submitted tutorial work'.",
+            "operation": "add_proposition",
+            "node_id": "P2",
+            "statement": "The marker report (S22) contains synthetic observations about the submitted tutorial work.",
+            "derived_from_node_ids": [
+              "S22"
+            ]
+          },
+          {
+            "reason": "The Invigilator report (S23) is explicitly identified as containing 'synthetic ordinary observations recorded during the assessment'.",
+            "operation": "add_proposition",
+            "node_id": "P3",
+            "statement": "The invigilator report (S23) contains synthetic ordinary observations recorded during the assessment.",
+            "derived_from_node_ids": [
+              "S23"
+            ]
+          },
+          {
+            "reason": "The Assessment rules (S24) are explicitly identified as 'synthetic assessment rules and ordinary permitted conditions'.",
+            "operation": "add_proposition",
+            "node_id": "P4",
+            "statement": "The assessment rules (S24) define synthetic assessment rules and ordinary permitted conditions.",
+            "derived_from_node_ids": [
+              "S24"
+            ]
+          },
+          {
+            "reason": "The Assessment logistics (S25) are explicitly identified as 'synthetic timing and location logistics for the assessment'.",
+            "operation": "add_proposition",
+            "node_id": "P5",
+            "statement": "The assessment logistics (S25) define synthetic timing and location logistics for the assessment.",
+            "derived_from_node_ids": [
+              "S25"
+            ]
+          }
+        ],
+        "next_step": {
+          "reason": "Initial source propositions have been established. The case context is now populated with the available source materials.",
+          "type": "continue_local"
+        }
+      },
+      "initial_operation_error": "Investigator turn rolled back after graph update failure: Unknown graph node ID: 'S21'",
+      "correction_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P1\",\n      \"statement\": \"The student submitted a tutorial response (S21).\",\n      \"derived_from_node_ids\": [\n        \"S21\"\n      ],\n      \"reason\": \"Establish the existence of the student's submitted work.\"\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P2\",\n      \"statement\": \"The marker provided observations about the submitted work (S22).\",\n      \"derived_from_node_ids\": [\n        \"S22\"\n      ],\n      \"reason\": \"Establish the existence of the marker's report.\"\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P3\",\n      \"statement\": \"The invigilator recorded observations during the assessment (S23).\",\n      \"derived_from_node_ids\": [\n        \"S23\"\n      ],\n      \"reason\": \"Establish the existence of the invigilator's report.\"\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P4\",\n      \"statement\": \"The assessment was conducted under specific rules (S24).\",\n      \"derived_from_node_ids\": [\n        \"S24\"\n      ],\n      \"reason\": \"Establish the existence of the assessment rules.\"\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P5\",\n      \"statement\": \"The assessment had specific timing and location logistics (S25).\",\n      \"derived_from_node_ids\": [\n        \"S25\"\n      ],\n      \"reason\": \"Establish the existence of the assessment logistics.\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"request_open\",\n    \"reason\": \"The current local graph contains only the raw source propositions. To determine what remains unresolved, I need to understand the specific claims or observations made in the marker and invigilator reports, and the rules governing the assessment.\"\n  }\n}\n```",
+      "correction_parsed_response": {
+        "graph_updates": [
+          {
+            "reason": "Establish the existence of the student's submitted work.",
+            "operation": "add_proposition",
+            "node_id": "P1",
+            "statement": "The student submitted a tutorial response (S21).",
+            "derived_from_node_ids": [
+              "S21"
+            ]
+          },
+          {
+            "reason": "Establish the existence of the marker's report.",
+            "operation": "add_proposition",
+            "node_id": "P2",
+            "statement": "The marker provided observations about the submitted work (S22).",
+            "derived_from_node_ids": [
+              "S22"
+            ]
+          },
+          {
+            "reason": "Establish the existence of the invigilator's report.",
+            "operation": "add_proposition",
+            "node_id": "P3",
+            "statement": "The invigilator recorded observations during the assessment (S23).",
+            "derived_from_node_ids": [
+              "S23"
+            ]
+          },
+          {
+            "reason": "Establish the existence of the assessment rules.",
+            "operation": "add_proposition",
+            "node_id": "P4",
+            "statement": "The assessment was conducted under specific rules (S24).",
+            "derived_from_node_ids": [
+              "S24"
+            ]
+          },
+          {
+            "reason": "Establish the existence of the assessment logistics.",
+            "operation": "add_proposition",
+            "node_id": "P5",
+            "statement": "The assessment had specific timing and location logistics (S25).",
+            "derived_from_node_ids": [
+              "S25"
+            ]
+          }
+        ],
+        "next_step": {
+          "reason": "The current local graph contains only the raw source propositions. To determine what remains unresolved, I need to understand the specific claims or observations made in the marker and invigilator reports, and the rules governing the assessment.",
+          "type": "request_open",
+          "information_sought": null
+        }
+      },
+      "correction_operation_error": "Investigator turn rolled back after graph update failure: Unknown graph node ID: 'S21'",
+      "error": "INVESTIGATOR_OPERATION_VALIDATION_FAILURE: Investigator turn rolled back after graph update failure: Unknown graph node ID: 'S21'",
+      "failure_category": "RuntimeError",
+      "run_id": "run_000007"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "RuntimeError",
+      "error": "INVESTIGATOR_OPERATION_VALIDATION_FAILURE: Investigator turn rolled back after graph update failure: Unknown graph node ID: 'S21'",
+      "run_id": "run_000007"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "run_id": "run_000008"
+    },
+    {
+      "case_id": "case-01",
+      "event": "investigator_completed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "38f7d3224c43187a7f8fee7fb1e48b6406627e7722abb9280f65fce17f65eb5e",
+      "raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_evidence\",\n      \"node_id\": \"E1\",\n      \"statement\": \"The assessment is a tutorial exercise.\",\n      \"source_ids\": [\n        \"S24\"\n      ],\n      \"reason\": \"Establish the nature of the activity from the rules.\"\n    },\n    {\n      \"operation\": \"add_evidence\",\n      \"node_id\": \"E2\",\n      \"statement\": \"The student submitted a script in response to the tutorial.\",\n      \"source_ids\": [\n        \"S21\"\n      ],\n      \"reason\": \"Identify the student's action from the script.\"\n    },\n    {\n      \"operation\": \"add_evidence\",\n      \"node_id\": \"E3\",\n      \"statement\": \"The marker observed the student's submission and recorded a report.\",\n      \"source_ids\": [\n        \"S22\"\n      ],\n      \"reason\": \"Identify the marker's observation from the report.\"\n    },\n    {\n      \"operation\": \"add_evidence\",\n      \"node_id\": \"E4\",\n      \"statement\": \"The invigilator recorded ordinary observations during the assessment.\",\n      \"source_ids\": [\n        \"S23\"\n      ],\n      \"reason\": \"Identify the invigilator's observation from the report.\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"continue_local\",\n    \"reason\": \"Initial evidence from the case sources has been recorded. The next step is to formulate propositions based on this evidence.\"\n  }\n}\n```",
+      "contract_check": {
+        "case_revision": 0,
+        "legal_graph_node_ids": [
+          "U1"
+        ],
+        "visible_source_ids": [
+          "S20",
+          "S21",
+          "S22",
+          "S23",
+          "S24",
+          "S25"
+        ]
+      },
+      "attempts": 1,
+      "parsed_response": {
+        "graph_updates": [
+          {
+            "reason": "Establish the nature of the activity from the rules.",
+            "operation": "add_evidence",
+            "node_id": "E1",
+            "statement": "The assessment is a tutorial exercise.",
+            "source_ids": [
+              "S24"
+            ]
+          },
+          {
+            "reason": "Identify the student's action from the script.",
+            "operation": "add_evidence",
+            "node_id": "E2",
+            "statement": "The student submitted a script in response to the tutorial.",
+            "source_ids": [
+              "S21"
+            ]
+          },
+          {
+            "reason": "Identify the marker's observation from the report.",
+            "operation": "add_evidence",
+            "node_id": "E3",
+            "statement": "The marker observed the student's submission and recorded a report.",
+            "source_ids": [
+              "S22"
+            ]
+          },
+          {
+            "reason": "Identify the invigilator's observation from the report.",
+            "operation": "add_evidence",
+            "node_id": "E4",
+            "statement": "The invigilator recorded ordinary observations during the assessment.",
+            "source_ids": [
+              "S23"
+            ]
+          }
+        ],
+        "next_step": {
+          "reason": "Initial evidence from the case sources has been recorded. The next step is to formulate propositions based on this evidence.",
+          "type": "continue_local"
+        }
+      },
+      "input_tokens": 5844,
+      "output_tokens": 323,
+      "latency_seconds": 3.615783209039364,
+      "run_id": "run_000008"
+    },
+    {
+      "case_id": "case-01",
+      "event": "investigator_completed",
+      "step": 2,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 1,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "5704b47e7809a6ce81edc7b5b494e92ee9a3ccba900de862a3f34dc2cc2ebbe7",
+      "raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P1\",\n      \"statement\": \"The tutorial exercise was conducted under standard assessment conditions.\",\n      \"derived_from_node_ids\": [\n        \"E1\",\n        \"E4\"\n      ],\n      \"reason\": \"E1 establishes the activity is a tutorial exercise, and E4 establishes the invigilator recorded ordinary observations during the assessment, implying standard conditions were in place.\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"continue_local\",\n    \"reason\": \"The foundational context of the assessment (E1, E4) and the submission (E2) has been established. The next logical step is to examine the specific observations recorded by the marker (E3) to determine if any anomalies or specific details require further investigation.\"\n  }\n}\n```",
+      "contract_check": {
+        "case_revision": 1,
+        "legal_graph_node_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "U1"
+        ],
+        "visible_source_ids": [
+          "S20",
+          "S21",
+          "S22",
+          "S23",
+          "S24",
+          "S25"
+        ]
+      },
+      "initial_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P1\",\n      \"statement\": \"The student's submission is the subject of the marker's report.\",\n      \"derived_from_node_ids\": [\n        \"E2\",\n        \"E3\"\n      ],\n      \"reason\": \"Inference: The marker report (E3) observes the student's submission (E2).\"\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P2\",\n      \"statement\": \"The assessment environment was monitored by an invigilator.\",\n      \"derived_from_node_ids\": [\n        \"E4\"\n      ],\n      \"reason\": \"Inference: The invigilator report (E4) records observations during the assessment.\"\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P3\",\n      \"statement\": \"The tutorial exercise was conducted under standard assessment conditions.\",\n      \"derived_from_node_ids\": [\n        \"E1\",\n        \"E4\"\n      ],\n      \"reason\": \"Inference: The assessment is a tutorial exercise (E1) and was monitored (E4).\"\n    },\n    {\n      \"operation\": \"add_uncertainty\",\n      \"node_id\": \"U2\",\n      \"statement\": \"What specific observations or anomalies did the marker or invigilator record?\",\n      \"target_node_id\": \"P1\",\n      \"reason\": \"The current record (E3, E4) confirms the existence of reports but does not specify their content. This is a consequential question for understanding the case context.\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"request_evidence\",\n    \"reason\": \"The current local graph is built from the available evidence nodes. To proceed, we need the specific content of the marker and invigilator reports to resolve the uncertainty regarding what was observed.\"\n  }\n}\n```",
+      "initial_schema_error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 3 validation errors for InvestigatorTurnResponse\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc...ing what was observed.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc...ing what was observed.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc...ing what was observed.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing",
+      "validation_errors": [
+        "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 3 validation errors for InvestigatorTurnResponse\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc...ing what was observed.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc...ing what was observed.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc...ing what was observed.'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing"
+      ],
+      "attempts": 2,
+      "parsed_response": {
+        "graph_updates": [
+          {
+            "reason": "E1 establishes the activity is a tutorial exercise, and E4 establishes the invigilator recorded ordinary observations during the assessment, implying standard conditions were in place.",
+            "operation": "add_proposition",
+            "node_id": "P1",
+            "statement": "The tutorial exercise was conducted under standard assessment conditions.",
+            "derived_from_node_ids": [
+              "E1",
+              "E4"
+            ]
+          }
+        ],
+        "next_step": {
+          "reason": "The foundational context of the assessment (E1, E4) and the submission (E2) has been established. The next logical step is to examine the specific observations recorded by the marker (E3) to determine if any anomalies or specific details require further investigation.",
+          "type": "continue_local"
+        }
+      },
+      "input_tokens": 6084,
+      "output_tokens": 185,
+      "latency_seconds": 1.5317172500072047,
+      "run_id": "run_000008"
+    },
+    {
+      "case_id": "case-01",
+      "event": "investigator_completed",
+      "step": 3,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 2,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "af25267ae9e79ecdca390816ba16d3a3a8f687ebf2d79680e96c125d0b9799ad",
+      "raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P2\",\n      \"statement\": \"The student's submission is a script intended for the tutorial exercise.\",\n      \"derived_from_node_ids\": [\n        \"E2\"\n      ],\n      \"reason\": \"E2 states the student submitted a script in response to the tutorial. This infers the script is the intended response material for the activity.\"\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P3\",\n      \"statement\": \"The marker's report is based on the student's submitted script.\",\n      \"derived_from_node_ids\": [\n        \"E2\",\n        \"E3\"\n      ],\n      \"reason\": \"E2 establishes the student submitted a script. E3 states the marker observed the student's submission and recorded a report. This infers the report content is derived from the submitted script.\"\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P4\",\n      \"statement\": \"The invigilator's observations were recorded during the assessment.\",\n      \"derived_from_node_ids\": [\n        \"E4\"\n      ],\n      \"reason\": \"E4 states the invigilator recorded ordinary observations during the assessment. This infers the observations are contemporaneous records of the assessment event.\"\n    },\n    {\n      \"operation\": \"add_proposition\",\n      \"node_id\": \"P5\",\n      \"statement\": \"The tutorial exercise was conducted under standard assessment conditions.\",\n      \"derived_from_node_ids\": [\n        \"E1\",\n        \"E4\"\n      ],\n      \"reason\": \"E1 establishes the activity is a tutorial exercise. E4 establishes the invigilator recorded ordinary observations during the assessment, implying standard conditions were in place.\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"continue_local\",\n    \"reason\": \"Inferred propositions P2, P3, P4, and P5 have been added to the local graph based on the current evidence. The local reasoning frontier is active.\"\n  }\n}\n```",
+      "contract_check": {
+        "case_revision": 2,
+        "legal_graph_node_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "P1",
+          "U1"
+        ],
+        "visible_source_ids": [
+          "S20",
+          "S21",
+          "S22",
+          "S23",
+          "S24",
+          "S25"
+        ]
+      },
+      "attempts": 1,
+      "parsed_response": {
+        "graph_updates": [
+          {
+            "reason": "E2 states the student submitted a script in response to the tutorial. This infers the script is the intended response material for the activity.",
+            "operation": "add_proposition",
+            "node_id": "P2",
+            "statement": "The student's submission is a script intended for the tutorial exercise.",
+            "derived_from_node_ids": [
+              "E2"
+            ]
+          },
+          {
+            "reason": "E2 establishes the student submitted a script. E3 states the marker observed the student's submission and recorded a report. This infers the report content is derived from the submitted script.",
+            "operation": "add_proposition",
+            "node_id": "P3",
+            "statement": "The marker's report is based on the student's submitted script.",
+            "derived_from_node_ids": [
+              "E2",
+              "E3"
+            ]
+          },
+          {
+            "reason": "E4 states the invigilator recorded ordinary observations during the assessment. This infers the observations are contemporaneous records of the assessment event.",
+            "operation": "add_proposition",
+            "node_id": "P4",
+            "statement": "The invigilator's observations were recorded during the assessment.",
+            "derived_from_node_ids": [
+              "E4"
+            ]
+          },
+          {
+            "reason": "E1 establishes the activity is a tutorial exercise. E4 establishes the invigilator recorded ordinary observations during the assessment, implying standard conditions were in place.",
+            "operation": "add_proposition",
+            "node_id": "P5",
+            "statement": "The tutorial exercise was conducted under standard assessment conditions.",
+            "derived_from_node_ids": [
+              "E1",
+              "E4"
+            ]
+          }
+        ],
+        "next_step": {
+          "reason": "Inferred propositions P2, P3, P4, and P5 have been added to the local graph based on the current evidence. The local reasoning frontier is active.",
+          "type": "continue_local"
+        }
+      },
+      "input_tokens": 6287,
+      "output_tokens": 444,
+      "latency_seconds": 3.144865582988132,
+      "run_id": "run_000008"
+    },
+    {
+      "case_id": "case-01",
+      "event": "investigator_failed",
+      "step": 4,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 3,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "aa21bd4c28c04ca9dd310716bb8acf8b40972904f1cdbcf47844dd746c9dc514",
+      "raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_uncertainty\",\n      \"node_id\": \"U2\",\n      \"statement\": \"The specific content of the student's script and the marker's report is not visible in the current case record.\",\n      \"target_node_id\": \"U1\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"request_evidence\",\n    \"reason\": \"The current local graph consists of foundational propositions about the existence of the script, marker report, and invigilator observations. The substantive content of these records (the script text and the marker's observations) is required to determine if the submission was appropriate or if any misconduct occurred. Without this content, the investigation cannot proceed beyond the procedural record.\"\n  }\n}\n```",
+      "contract_check": {
+        "case_revision": 3,
+        "legal_graph_node_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "P1",
+          "P2",
+          "P3",
+          "P4",
+          "P5",
+          "U1"
+        ],
+        "visible_source_ids": [
+          "S20",
+          "S21",
+          "S22",
+          "S23",
+          "S24",
+          "S25"
+        ]
+      },
+      "initial_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_uncertainty\",\n      \"node_id\": \"U2\",\n      \"statement\": \"The specific content of the student's script and the marker's report is not visible in the current case record.\",\n      \"target_node_id\": \"U1\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"request_evidence\",\n    \"reason\": \"The current local graph (E1-E4) establishes the procedural context of the assessment (tutorial, submission, observation) but does not contain the substantive content of the student's work or the marker's findings. To proceed with any substantive analysis or hypothesis generation, the content of the student script (S21) and the marker report (S22) is required.\"\n  }\n}\n```",
+      "initial_schema_error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 5 validation errors for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.reason\n  Field required [type=missing, input_value={'operation': 'add_uncert... 'target_node_id': 'U1'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc...ort (S22) is required.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc...ort (S22) is required.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc...ort (S22) is required.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing",
+      "validation_errors": [
+        "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 5 validation errors for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.reason\n  Field required [type=missing, input_value={'operation': 'add_uncert... 'target_node_id': 'U1'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc...ort (S22) is required.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc...ort (S22) is required.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc...ort (S22) is required.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing",
+        "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 5 validation errors for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.reason\n  Field required [type=missing, input_value={'operation': 'add_uncert... 'target_node_id': 'U1'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc...the procedural record.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc...the procedural record.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc...the procedural record.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing"
+      ],
+      "correction_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_uncertainty\",\n      \"node_id\": \"U2\",\n      \"statement\": \"The specific content of the student's script and the marker's report is not visible in the current case record.\",\n      \"target_node_id\": \"U1\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"request_evidence\",\n    \"reason\": \"The current local graph consists of foundational propositions about the existence of the script, marker report, and invigilator observations. The substantive content of these records (the script text and the marker's observations) is required to determine if the submission was appropriate or if any misconduct occurred. Without this content, the investigation cannot proceed beyond the procedural record.\"\n  }\n}\n```",
+      "correction_schema_error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 5 validation errors for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.reason\n  Field required [type=missing, input_value={'operation': 'add_uncert... 'target_node_id': 'U1'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc...the procedural record.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc...the procedural record.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc...the procedural record.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing",
+      "error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 5 validation errors for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.reason\n  Field required [type=missing, input_value={'operation': 'add_uncert... 'target_node_id': 'U1'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc...the procedural record.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc...the procedural record.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc...the procedural record.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing",
+      "failure_category": "ModelParseError",
+      "run_id": "run_000008"
+    },
+    {
+      "event": "failed",
+      "step": 4,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "ModelParseError",
+      "error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 5 validation errors for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.reason\n  Field required [type=missing, input_value={'operation': 'add_uncert... 'target_node_id': 'U1'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch\nnext_step.request_evidence.target_uncertainty_id\n  Field required [type=missing, input_value={'type': 'request_evidenc...the procedural record.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.information_sought\n  Field required [type=missing, input_value={'type': 'request_evidenc...the procedural record.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nnext_step.request_evidence.expected_information_value\n  Field required [type=missing, input_value={'type': 'request_evidenc...the procedural record.\"}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing",
+      "run_id": "run_000008"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "run_id": "run_000009"
+    },
+    {
+      "case_id": "case-01",
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_hash": "38f7d3224c43187a7f8fee7fb1e48b6406627e7722abb9280f65fce17f65eb5e",
+      "raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_uncertainty\",\n      \"node_id\": \"U2\",\n      \"reason\": \"The current case record is empty. The initial uncertainty U1 is a placeholder. A specific, actionable uncertainty regarding the case facts must be established to guide the investigation.\",\n      \"statement\": \"What specific facts or observations are available in the case sources to ground the investigation?\",\n      \"target_node_id\": \"U1\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"request_open\",\n    \"reason\": \"The local graph is empty and no specific uncertainty has been identified. The investigator requires the raw source content to begin the process of extracting evidence and formulating propositions.\"\n  }\n}\n```",
+      "contract_check": {
+        "case_revision": 0,
+        "legal_graph_node_ids": [
+          "U1"
+        ],
+        "visible_source_ids": [
+          "S20",
+          "S21",
+          "S22",
+          "S23",
+          "S24",
+          "S25"
+        ]
+      },
+      "validation_errors": [
+        "Investigator turn rolled back after graph update failure: Duplicate graph node ID: 'E1'",
+        "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 1 validation error for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch"
+      ],
+      "initial_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_evidence\",\n      \"node_id\": \"E1\",\n      \"statement\": \"The assessment is a tutorial exercise.\",\n      \"source_ids\": [\n        \"S24\"\n      ],\n      \"reason\": \"Establish the nature of the activity from the rules.\"\n    },\n    {\n      \"operation\": \"add_evidence\",\n      \"node_id\": \"E2\",\n      \"statement\": \"The student submitted a script in response to the tutorial.\",\n      \"source_ids\": [\n        \"S21\"\n      ],\n      \"reason\": \"Identify the student's action from the script.\"\n    },\n    {\n      \"operation\": \"add_evidence\",\n      \"node_id\": \"E3\",\n      \"statement\": \"The marker observed the student's work and produced a report.\",\n      \"source_ids\": [\n        \"S22\"\n      ],\n      \"reason\": \"Identify the marker's observation from the report.\"\n    },\n    {\n      \"operation\": \"add_evidence\",\n      \"node_id\": \"E4\",\n      \"statement\": \"The invigilator recorded ordinary observations during the assessment.\",\n      \"source_ids\": [\n        \"S23\"\n      ],\n      \"reason\": \"Identify the invigilator's observation from the report.\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"continue_local\",\n    \"reason\": \"Initial evidence from the case sources has been recorded. The next step is to infer propositions and identify the focus of the investigation.\"\n  }\n}\n```",
+      "initial_parsed_response": {
+        "graph_updates": [
+          {
+            "reason": "Establish the nature of the activity from the rules.",
+            "operation": "add_evidence",
+            "node_id": "E1",
+            "statement": "The assessment is a tutorial exercise.",
+            "source_ids": [
+              "S24"
+            ]
+          },
+          {
+            "reason": "Identify the student's action from the script.",
+            "operation": "add_evidence",
+            "node_id": "E2",
+            "statement": "The student submitted a script in response to the tutorial.",
+            "source_ids": [
+              "S21"
+            ]
+          },
+          {
+            "reason": "Identify the marker's observation from the report.",
+            "operation": "add_evidence",
+            "node_id": "E3",
+            "statement": "The marker observed the student's work and produced a report.",
+            "source_ids": [
+              "S22"
+            ]
+          },
+          {
+            "reason": "Identify the invigilator's observation from the report.",
+            "operation": "add_evidence",
+            "node_id": "E4",
+            "statement": "The invigilator recorded ordinary observations during the assessment.",
+            "source_ids": [
+              "S23"
+            ]
+          }
+        ],
+        "next_step": {
+          "reason": "Initial evidence from the case sources has been recorded. The next step is to infer propositions and identify the focus of the investigation.",
+          "type": "continue_local"
+        }
+      },
+      "initial_operation_error": "Investigator turn rolled back after graph update failure: Duplicate graph node ID: 'E1'",
+      "correction_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_uncertainty\",\n      \"node_id\": \"U2\",\n      \"reason\": \"The current case record is empty. The initial uncertainty U1 is a placeholder. A specific, actionable uncertainty regarding the case facts must be established to guide the investigation.\",\n      \"statement\": \"What specific facts or observations are available in the case sources to ground the investigation?\",\n      \"target_node_id\": \"U1\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"request_open\",\n    \"reason\": \"The local graph is empty and no specific uncertainty has been identified. The investigator requires the raw source content to begin the process of extracting evidence and formulating propositions.\"\n  }\n}\n```",
+      "correction_schema_error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 1 validation error for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch",
+      "error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 1 validation error for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch",
+      "failure_category": "ModelParseError",
+      "run_id": "run_000009"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "ModelParseError",
+      "error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 1 validation error for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch",
+      "run_id": "run_000009"
+    },
+    {
+      "event": "run_started",
+      "step": 0,
+      "actor": "system",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "run_id": "run_000010"
+    },
+    {
+      "case_id": "case-01",
+      "event": "investigator_failed",
+      "step": 1,
+      "actor": "investigator",
+      "runtime_status": "RUNNING_INVESTIGATOR",
+      "case_revision": 0,
+      "snapshot_case_revision": 0,
+      "snapshot_graph_node_ids": [
+        "E1",
+        "E2",
+        "E3",
+        "E4",
+        "H1",
+        "P1",
+        "P2",
+        "P3",
+        "P4",
+        "P5",
+        "U1"
+      ],
+      "active_reasoning_node_ids": [
+        "U1"
+      ],
+      "legal_graph_node_ids": [
+        "U1"
+      ],
+      "visible_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "prompt_source_ids": [
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24",
+        "S25"
+      ],
+      "snapshot_hash": "27dad4cf739fa5d14721eda2b0bc5082d14a618d269453f4eef6589b1235a102",
+      "prompt_hash": "38f7d3224c43187a7f8fee7fb1e48b6406627e7722abb9280f65fce17f65eb5e",
+      "raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_uncertainty\",\n      \"node_id\": \"U2\",\n      \"reason\": \"The current case record is empty of semantic content. The initial uncertainty U1 is a placeholder. A substantive investigation requires identifying the specific case context and available evidence sources.\",\n      \"statement\": \"What is the specific case context and what evidence is available?\",\n      \"target_node_id\": \"U1\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"request_open\",\n    \"reason\": \"The local graph is empty. The initial uncertainty U1 is a placeholder. A substantive investigation requires identifying the specific case context and available evidence sources. The current focus is on the initial state of the case record.\"\n  }\n}\n```",
+      "contract_check": {
+        "case_revision": 0,
+        "snapshot_graph_node_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "H1",
+          "P1",
+          "P2",
+          "P3",
+          "P4",
+          "P5",
+          "U1"
+        ],
+        "observation_graph_node_ids": [
+          "U1"
+        ],
+        "legal_graph_node_ids": [
+          "U1"
+        ],
+        "active_reasoning_node_ids": [
+          "U1"
+        ],
+        "visible_source_ids": [
+          "S20",
+          "S21",
+          "S22",
+          "S23",
+          "S24",
+          "S25"
+        ]
+      },
+      "validation_errors": [
+        "Investigator turn rolled back after graph update failure: Duplicate graph node ID: 'E1'",
+        "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 1 validation error for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch"
+      ],
+      "initial_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_evidence\",\n      \"node_id\": \"E1\",\n      \"statement\": \"The assessment is a tutorial exercise.\",\n      \"source_ids\": [\n        \"S24\"\n      ],\n      \"reason\": \"Establish the nature of the activity from the rules.\"\n    },\n    {\n      \"operation\": \"add_evidence\",\n      \"node_id\": \"E2\",\n      \"statement\": \"The student submitted a script in response to the tutorial.\",\n      \"source_ids\": [\n        \"S21\"\n      ],\n      \"reason\": \"Identify the student's action from the script.\"\n    },\n    {\n      \"operation\": \"add_evidence\",\n      \"node_id\": \"E3\",\n      \"statement\": \"The marker observed the student's submission and recorded a report.\",\n      \"source_ids\": [\n        \"S22\"\n      ],\n      \"reason\": \"Identify the marker's observation from the report.\"\n    },\n    {\n      \"operation\": \"add_evidence\",\n      \"node_id\": \"E4\",\n      \"statement\": \"The invigilator recorded ordinary observations during the assessment.\",\n      \"source_ids\": [\n        \"S23\"\n      ],\n      \"reason\": \"Identify the invigilator's observation from the report.\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"continue_local\",\n    \"reason\": \"Initial evidence from the case sources has been recorded. The current focus is on the general case record. The next step is to analyze the content of the marker and invigilator reports to identify specific observations relevant to the student's work.\"\n  }\n}\n```",
+      "initial_parsed_response": {
+        "graph_updates": [
+          {
+            "reason": "Establish the nature of the activity from the rules.",
+            "operation": "add_evidence",
+            "node_id": "E1",
+            "statement": "The assessment is a tutorial exercise.",
+            "source_ids": [
+              "S24"
+            ]
+          },
+          {
+            "reason": "Identify the student's action from the script.",
+            "operation": "add_evidence",
+            "node_id": "E2",
+            "statement": "The student submitted a script in response to the tutorial.",
+            "source_ids": [
+              "S21"
+            ]
+          },
+          {
+            "reason": "Identify the marker's observation from the report.",
+            "operation": "add_evidence",
+            "node_id": "E3",
+            "statement": "The marker observed the student's submission and recorded a report.",
+            "source_ids": [
+              "S22"
+            ]
+          },
+          {
+            "reason": "Identify the invigilator's observation from the report.",
+            "operation": "add_evidence",
+            "node_id": "E4",
+            "statement": "The invigilator recorded ordinary observations during the assessment.",
+            "source_ids": [
+              "S23"
+            ]
+          }
+        ],
+        "next_step": {
+          "reason": "Initial evidence from the case sources has been recorded. The current focus is on the general case record. The next step is to analyze the content of the marker and invigilator reports to identify specific observations relevant to the student's work.",
+          "type": "continue_local"
+        }
+      },
+      "initial_operation_error": "Investigator turn rolled back after graph update failure: Duplicate graph node ID: 'E1'",
+      "correction_raw_output": "```json\n{\n  \"graph_updates\": [\n    {\n      \"operation\": \"add_uncertainty\",\n      \"node_id\": \"U2\",\n      \"reason\": \"The current case record is empty of semantic content. The initial uncertainty U1 is a placeholder. A substantive investigation requires identifying the specific case context and available evidence sources.\",\n      \"statement\": \"What is the specific case context and what evidence is available?\",\n      \"target_node_id\": \"U1\"\n    }\n  ],\n  \"next_step\": {\n    \"type\": \"request_open\",\n    \"reason\": \"The local graph is empty. The initial uncertainty U1 is a placeholder. A substantive investigation requires identifying the specific case context and available evidence sources. The current focus is on the initial state of the case record.\"\n  }\n}\n```",
+      "correction_schema_error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 1 validation error for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch",
+      "error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 1 validation error for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch",
+      "failure_category": "ModelParseError",
+      "run_id": "run_000010"
+    },
+    {
+      "event": "failed",
+      "step": 1,
+      "actor": "system",
+      "runtime_status": "FAILED",
+      "case_revision": 0,
+      "current_actor": "INVESTIGATOR",
+      "failure_category": "ModelParseError",
+      "error": "Bedrock returned invalid structured output for InvestigatorTurnResponse: Could not parse model output as InvestigatorTurnResponse: 1 validation error for InvestigatorTurnResponse\ngraph_updates.0.add_uncertainty.target_node_id\n  String should match pattern '^(?:E\\d+(?:\\.\\d+)*|A\\d+_RELEASE|P\\d+(?:\\.\\d+)*|H\\d+(?:\\.\\d+)*)$' [type=string_pattern_mismatch, input_value='U1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch",
+      "run_id": "run_000010"
+    }
+  ],
+  "reasoning_graph": {
+    "case_id": "case-01",
+    "nodes": {
+      "U1": {
+        "id": "U1",
+        "node_type": "uncertainty",
+        "statement": "What remains unresolved in the current case record?",
+        "status": "active",
+        "metadata": {}
+      },
+      "H1": {
+        "id": "H1",
+        "node_type": "hypothesis",
+        "statement": "The case record contains unresolved information that requires investigation.",
+        "status": "active",
+        "metadata": {}
+      },
+      "E1": {
+        "id": "E1",
+        "node_type": "evidence",
+        "statement": "The assessment is a tutorial exercise.",
+        "status": "active",
+        "metadata": {
+          "source_ids": [
+            "S24"
+          ]
+        }
+      },
+      "E2": {
+        "id": "E2",
+        "node_type": "evidence",
+        "statement": "The student submitted a script in response to the tutorial.",
+        "status": "active",
+        "metadata": {
+          "source_ids": [
+            "S21"
+          ]
+        }
+      },
+      "E3": {
+        "id": "E3",
+        "node_type": "evidence",
+        "statement": "The marker observed the student's submission and recorded a report.",
+        "status": "active",
+        "metadata": {
+          "source_ids": [
+            "S22"
+          ]
+        }
+      },
+      "E4": {
+        "id": "E4",
+        "node_type": "evidence",
+        "statement": "The invigilator recorded ordinary observations during the assessment.",
+        "status": "active",
+        "metadata": {
+          "source_ids": [
+            "S23"
+          ]
+        }
+      },
+      "P1": {
+        "id": "P1",
+        "node_type": "proposition",
+        "statement": "The tutorial exercise was conducted under standard assessment conditions.",
+        "status": "active",
+        "metadata": {}
+      },
+      "P2": {
+        "id": "P2",
+        "node_type": "proposition",
+        "statement": "The student's submission is a script intended for the tutorial exercise.",
+        "status": "active",
+        "metadata": {}
+      },
+      "P3": {
+        "id": "P3",
+        "node_type": "proposition",
+        "statement": "The marker's report is based on the student's submitted script.",
+        "status": "active",
+        "metadata": {}
+      },
+      "P4": {
+        "id": "P4",
+        "node_type": "proposition",
+        "statement": "The invigilator's observations were recorded during the assessment.",
+        "status": "active",
+        "metadata": {}
+      },
+      "P5": {
+        "id": "P5",
+        "node_type": "proposition",
+        "statement": "The tutorial exercise was conducted under standard assessment conditions.",
+        "status": "active",
+        "metadata": {}
+      }
+    },
+    "edges": {
+      "P1_DERIVED_FROM_E1": {
+        "id": "P1_DERIVED_FROM_E1",
+        "source_id": "P1",
+        "target_id": "E1",
+        "relation": "derived_from",
+        "status": "active",
+        "strength": null,
+        "explanation": "E1 establishes the activity is a tutorial exercise, and E4 establishes the invigilator recorded ordinary observations during the assessment, implying standard conditions were in place.",
+        "metadata": {}
+      },
+      "P1_DERIVED_FROM_E4": {
+        "id": "P1_DERIVED_FROM_E4",
+        "source_id": "P1",
+        "target_id": "E4",
+        "relation": "derived_from",
+        "status": "active",
+        "strength": null,
+        "explanation": "E1 establishes the activity is a tutorial exercise, and E4 establishes the invigilator recorded ordinary observations during the assessment, implying standard conditions were in place.",
+        "metadata": {}
+      },
+      "P2_DERIVED_FROM_E2": {
+        "id": "P2_DERIVED_FROM_E2",
+        "source_id": "P2",
+        "target_id": "E2",
+        "relation": "derived_from",
+        "status": "active",
+        "strength": null,
+        "explanation": "E2 states the student submitted a script in response to the tutorial. This infers the script is the intended response material for the activity.",
+        "metadata": {}
+      },
+      "P3_DERIVED_FROM_E2": {
+        "id": "P3_DERIVED_FROM_E2",
+        "source_id": "P3",
+        "target_id": "E2",
+        "relation": "derived_from",
+        "status": "active",
+        "strength": null,
+        "explanation": "E2 establishes the student submitted a script. E3 states the marker observed the student's submission and recorded a report. This infers the report content is derived from the submitted script.",
+        "metadata": {}
+      },
+      "P3_DERIVED_FROM_E3": {
+        "id": "P3_DERIVED_FROM_E3",
+        "source_id": "P3",
+        "target_id": "E3",
+        "relation": "derived_from",
+        "status": "active",
+        "strength": null,
+        "explanation": "E2 establishes the student submitted a script. E3 states the marker observed the student's submission and recorded a report. This infers the report content is derived from the submitted script.",
+        "metadata": {}
+      },
+      "P4_DERIVED_FROM_E4": {
+        "id": "P4_DERIVED_FROM_E4",
+        "source_id": "P4",
+        "target_id": "E4",
+        "relation": "derived_from",
+        "status": "active",
+        "strength": null,
+        "explanation": "E4 states the invigilator recorded ordinary observations during the assessment. This infers the observations are contemporaneous records of the assessment event.",
+        "metadata": {}
+      },
+      "P5_DERIVED_FROM_E1": {
+        "id": "P5_DERIVED_FROM_E1",
+        "source_id": "P5",
+        "target_id": "E1",
+        "relation": "derived_from",
+        "status": "active",
+        "strength": null,
+        "explanation": "E1 establishes the activity is a tutorial exercise. E4 establishes the invigilator recorded ordinary observations during the assessment, implying standard conditions were in place.",
+        "metadata": {}
+      },
+      "P5_DERIVED_FROM_E4": {
+        "id": "P5_DERIVED_FROM_E4",
+        "source_id": "P5",
+        "target_id": "E4",
+        "relation": "derived_from",
+        "status": "active",
+        "strength": null,
+        "explanation": "E1 establishes the activity is a tutorial exercise. E4 establishes the invigilator recorded ordinary observations during the assessment, implying standard conditions were in place.",
+        "metadata": {}
+      }
+    }
+  },
+  "focus_node_id": "U1",
+  "clean_checkpoint": null,
+  "revision": 0
+}
