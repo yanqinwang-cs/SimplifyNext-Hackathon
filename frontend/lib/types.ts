@@ -34,6 +34,22 @@ export interface RunSummary {
   termination_reason?: string | null;
   final_runtime_status?: string;
   final_error?: { failure_category?: string; message?: string } | null;
+  outcome_type?: string;
+  originating_actor?: string;
+  start_revision?: number;
+  final_committed_revision?: number;
+  pending_request_id?: string | null;
+  request_text?: string | null;
+  trace_path?: string | null;
+}
+
+export interface WorkspaceEvent {
+  event_id: string;
+  type: string;
+  human_summary: string;
+  created_at?: string;
+  run_id?: string | null;
+  request_id?: string | null;
 }
 
 export interface AwsCredentialStatus {
@@ -70,6 +86,7 @@ export interface CaseWorkspaceState {
   requestHistory?: EvidenceRequest[];
   runs?: RunSummary[];
   chatHistory?: { role: string; text: string }[];
+  workspaceEvents?: WorkspaceEvent[];
 }
 
 export interface WorkspaceChatResponse {

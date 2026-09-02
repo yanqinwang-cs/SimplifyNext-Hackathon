@@ -27,7 +27,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 self._write(200, credential_status())
             return
         if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "workspace":
-            self._write(200, self.workflow.get_workspace(parts[2]) | {"chatHistory": self.workflow.ensure_case(parts[2]).workspace_chat_history})
+            self._write(200, self.workflow.get_workspace(parts[2]) | {"chatHistory": self.workspace_agent.chat_history(parts[2])})
             return
         if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "traces":
             self._write(200, {"caseId": parts[2], "traces": self.workflow.get_traces(parts[2])})
@@ -37,8 +37,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             return
         if len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "runs" and parts[5] == "raw-traces":
             try:
-                path = self.workflow.raw_trace_path(parts[2], parts[4])
-                body = path.read_bytes()
+                body = self.workflow.sanitized_raw_trace(parts[2], parts[4])
                 self.send_response(200)
                 self.send_header("Content-Type", "application/x-ndjson")
                 self.send_header("Content-Disposition", 'inline; filename="raw_traces.jsonl"')

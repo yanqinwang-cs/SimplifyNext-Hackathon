@@ -51,11 +51,13 @@ class HumanEvidenceWorkflow:
         self._in_flight_actor: dict[str, str] = {}
         self.run_callback = run_callback
         self._active_runs: dict[str, str] = {}
+        self._workspace_events: dict[str, list[dict[str, Any]]] = {}
+        self._event_sequence = 0
 
     def _run_dir(self, case_id: str, run_id: str) -> Path:
         return self.repository.root / case_id / "runs" / run_id
 
-    def begin_run(self, case_id: str) -> str:
+    def begin_run(self, case_id: str, start_revision: int | None = None) -> str:
         run_root = self.repository.root / case_id / "runs"
         run_root.mkdir(parents=True, exist_ok=True)
         numbers = [int(match.group(1)) for path in run_root.iterdir() if (match := re.fullmatch(r"run_(\d{6})", path.name))]
@@ -63,7 +65,7 @@ class HumanEvidenceWorkflow:
         directory = self._run_dir(case_id, run_id)
         directory.mkdir(parents=True)
         started_at = datetime.now(timezone.utc).isoformat()
-        (directory / "run_result.json").write_text(json.dumps({"run_id": run_id, "started_at": started_at, "ended_at": None, "termination_reason": None, "final_runtime_status": "RUNNING_INVESTIGATOR", "model_calls": 0, "correction_retries": 0, "final_error": None, "pending_request_id": None}, indent=2) + "\n", encoding="utf-8")
+        (directory / "run_result.json").write_text(json.dumps({"run_id": run_id, "started_at": started_at, "ended_at": None, "termination_reason": None, "final_runtime_status": "RUNNING_INVESTIGATOR", "outcome_type": "RUNNING", "originating_actor": "INVESTIGATOR", "start_revision": start_revision, "final_committed_revision": start_revision, "model_calls": 0, "correction_retries": 0, "final_error": None, "pending_request_id": None, "trace_path": f"/api/cases/{case_id}/runs/{run_id}/raw-traces"}, indent=2) + "\n", encoding="utf-8")
         self._active_runs[case_id] = run_id
         return run_id
 
@@ -77,7 +79,9 @@ class HumanEvidenceWorkflow:
         state = self.ensure_case(case_id)
         path = self._run_dir(case_id, run_id) / "run_result.json"
         result = json.loads(path.read_text(encoding="utf-8"))
-        result.update({"ended_at": datetime.now(timezone.utc).isoformat(), "termination_reason": termination_reason or state.runtime_status.lower(), "final_runtime_status": state.runtime_status, "final_case_revision": state.revision, "final_error": final_error or state.last_error, "pending_request_id": next((item.request_id for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None)})
+        pending = next((item for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None)
+        outcome = "WAITING_FOR_EVIDENCE" if pending else {"IDLE": "COMPLETED", "STOPPED": "STOPPED", "FAILED": "FAILED"}.get(state.runtime_status, state.runtime_status)
+        result.update({"ended_at": datetime.now(timezone.utc).isoformat(), "termination_reason": termination_reason or state.runtime_status.lower(), "final_runtime_status": state.runtime_status, "outcome_type": outcome, "final_case_revision": state.revision, "final_committed_revision": state.revision, "final_error": final_error or state.last_error, "pending_request_id": pending.request_id if pending else None, "request_text": pending.information_sought if pending else None})
         path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
 
     def record_model_attempt(self, case_id: str, *, correction: bool = False) -> None:
@@ -103,7 +107,8 @@ class HumanEvidenceWorkflow:
             if state.runtime_status == "STOPPED" or state.case_status != "ACTIVE":
                 raise EvidenceRequestConflict("Stopped or inactive cases cannot be restarted")
             self.set_runtime(case_id, "RUNNING_INVESTIGATOR", "INVESTIGATOR")
-            self.begin_run(case_id)
+            run_id = self.begin_run(case_id, state.revision)
+            self.record_workspace_event(case_id, {"type": "run_started", "run_id": run_id, "runtime_status": "RUNNING_INVESTIGATOR", "case_revision": state.revision, "human_summary": f"Investigation run {run_id} started from the current verified case state."})
         thread = __import__("threading").Thread(target=self._execute_run, args=(case_id,), daemon=True)
         thread.start()
         return self.get_workspace(case_id)
@@ -116,11 +121,15 @@ class HumanEvidenceWorkflow:
             state = self.ensure_case(case_id)
             if state.runtime_status.startswith("RUNNING_"):
                 self.set_runtime(case_id, "IDLE", "NONE")
+                self.record_workspace_event(case_id, {"type": "run_completed", "run_id": self.current_run_id(case_id), "runtime_status": "IDLE", "case_revision": state.revision, "human_summary": "The investigation run completed successfully."})
+            elif state.runtime_status == "STOPPED":
+                self.record_workspace_event(case_id, {"type": "run_stopped", "run_id": self.current_run_id(case_id), "runtime_status": "STOPPED", "case_revision": state.revision, "human_summary": "The investigation run was stopped."})
         except Exception as exc:
             category = "ORCHESTRATION_CONFIGURATION_FAILURE" if type(exc).__name__ == "BedrockConfigurationError" else ("CASE_SNAPSHOT_MISMATCH" if isinstance(exc, CaseSnapshotMismatch) else type(exc).__name__)
             state = self.ensure_case(case_id)
             self.record_trace(case_id, {"event": "failed", "step": state.last_trace_step, "actor": "system", "runtime_status": "FAILED", "case_revision": state.revision, "current_actor": state.current_actor, "failure_category": category, "error": str(exc)})
             self.set_runtime(case_id, "FAILED", "NONE", failure_category=category, message=str(exc), step=state.last_trace_step)
+            self.record_workspace_event(case_id, {"type": "run_failed", "run_id": self.current_run_id(case_id), "runtime_status": "FAILED", "case_revision": state.revision, "human_summary": "The investigation run failed. No later model step was started."})
         finally:
             self.finalize_run(case_id)
 
@@ -237,6 +246,7 @@ class HumanEvidenceWorkflow:
             state.last_updated_at = datetime.now(timezone.utc)
             state.revision += 1
             self.repository.save(state)
+            self.record_workspace_event(case_id, {"type": "request_created", "run_id": request.originating_run_id, "request_id": request.request_id, "runtime_status": "WAITING_FOR_EVIDENCE", "case_revision": state.revision, "human_summary": f"The Investigator requested: {request.information_sought}"})
             return request
 
     def persist_pending_request(self, case_id: str, request: EvidenceRequest) -> EvidenceRequest:
@@ -259,6 +269,7 @@ class HumanEvidenceWorkflow:
             state.last_updated_at = datetime.now(timezone.utc)
             state.revision += 1
             self.repository.save(state)
+            self.record_workspace_event(case_id, {"type": "request_created", "run_id": request.originating_run_id, "request_id": request.request_id, "runtime_status": "WAITING_FOR_EVIDENCE", "case_revision": state.revision, "human_summary": f"The Investigator requested: {request.information_sought}"})
             return request
 
     def current_pending_request(self, case_id: str) -> EvidenceRequest:
@@ -310,6 +321,7 @@ class HumanEvidenceWorkflow:
             state.last_updated_at = datetime.now(timezone.utc)
             self.repository.save(state)
         self.record_trace(case_id, {"event": "evidence_request_resolved", "request_id": request_id, "status": completed.status.value, "released_source_ids": list(completed.released_source_ids), "fulfilled_case_revision": completed.fulfilled_case_revision, "actor": "human"})
+        self.record_workspace_event(case_id, {"type": "request_resolved", "request_id": request_id, "run_id": completed.originating_run_id, "runtime_status": "IDLE", "case_revision": completed.fulfilled_case_revision, "human_summary": f"Human evidence request {request_id} was marked {completed.status.value}."})
         if self.resume_callback:
             self.resume_callback(case_id)
             resumed_run_id = self.current_run_id(case_id)
@@ -345,7 +357,16 @@ class HumanEvidenceWorkflow:
         pending_payload = (pending.model_dump(mode="json") | {"informationSought": pending.information_sought}) if pending else None
         runs = self.get_runs(case_id)
         latest = runs[-1] if runs else None
-        return {"caseId": state.case_id, "caseRevision": state.revision, "title": state.title, "status": runtime_status.lower(), "caseStatus": state.case_status, "runtimeStatus": runtime_status, "currentActor": current_actor, "institutionalStatus": "Investigating" if state.case_status == "ACTIVE" else state.case_status.title(), "currentFocus": pending.information_sought if pending else "Review the current case state.", "messages": messages, "chatHistory": list(state.workspace_chat_history), "workspaceTurns": list(state.workspace_turn_history), "visibleSources": [{"id": source.id, "name": source.name, "sourceType": source.source_type.value, "content": source.content or "", "contentPreview": (source.content or "")[:180]} for source in state.sources.values()], "pendingEvidenceRequest": pending_payload, "requestHistory": [item.model_dump(mode="json") for item in state.evidence_request_history], "runs": runs, "lastError": state.last_error, "lastTraceStep": state.last_trace_step, "lastUpdatedAt": state.last_updated_at.isoformat(), "latestRun": latest}
+        return {"caseId": state.case_id, "caseRevision": state.revision, "title": state.title, "status": runtime_status.lower(), "caseStatus": state.case_status, "runtimeStatus": runtime_status, "currentActor": current_actor, "institutionalStatus": "Investigating" if state.case_status == "ACTIVE" else state.case_status.title(), "currentFocus": pending.information_sought if pending else "Review the current case state.", "messages": messages, "chatHistory": [], "workspaceTurns": [], "workspaceEvents": self.workspace_events(case_id), "visibleSources": [{"id": source.id, "name": source.name, "sourceType": source.source_type.value, "content": source.content or "", "contentPreview": (source.content or "")[:180]} for source in state.sources.values()], "pendingEvidenceRequest": pending_payload, "requestHistory": [item.model_dump(mode="json") for item in state.evidence_request_history], "runs": runs, "lastError": state.last_error, "lastTraceStep": state.last_trace_step, "lastUpdatedAt": state.last_updated_at.isoformat(), "latestRun": latest}
+
+    def record_workspace_event(self, case_id: str, event: dict[str, Any]) -> dict[str, Any]:
+        self._event_sequence += 1
+        record = {"event_id": f"workspace_event_{self._event_sequence:06d}", "created_at": datetime.now(timezone.utc).isoformat(), **event}
+        self._workspace_events.setdefault(case_id, []).append(record)
+        return record
+
+    def workspace_events(self, case_id: str) -> list[dict[str, Any]]:
+        return [dict(event) for event in self._workspace_events.get(case_id, [])]
 
     def get_traces(self, case_id: str) -> list[dict[str, Any]]:
         return [dict(trace) for trace in self.ensure_case(case_id).trace_history]
@@ -364,7 +385,7 @@ class HumanEvidenceWorkflow:
                     # A run may be initializing on another thread; omit it until
                     # its first result snapshot is complete.
                     continue
-                runs.append({key: payload.get(key) for key in ("run_id", "started_at", "ended_at", "termination_reason", "final_runtime_status", "final_error")})
+                runs.append({key: payload.get(key) for key in ("run_id", "started_at", "ended_at", "termination_reason", "final_runtime_status", "outcome_type", "originating_actor", "start_revision", "final_committed_revision", "final_error", "pending_request_id", "request_text", "trace_path")})
         return runs
 
     def raw_trace_path(self, case_id: str, run_id: str) -> Path:
@@ -374,6 +395,28 @@ class HumanEvidenceWorkflow:
         if not path.is_file():
             raise KeyError("Run not found")
         return path
+
+    def sanitized_raw_trace(self, case_id: str, run_id: str) -> bytes:
+        """Return the exact trace records with credential-like fields redacted."""
+        path = self.raw_trace_path(case_id, run_id)
+        sensitive = ("access_key", "secret", "session_token", "authorization", "credential")
+
+        def scrub(value: Any, key: str = "") -> Any:
+            if any(term in key.lower() for term in sensitive):
+                return "[REDACTED]"
+            if isinstance(value, dict):
+                return {name: scrub(item, name) for name, item in value.items()}
+            if isinstance(value, list):
+                return [scrub(item, key) for item in value]
+            return value
+
+        lines = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            try:
+                lines.append(json.dumps(scrub(json.loads(line)), default=str))
+            except json.JSONDecodeError:
+                lines.append(line)
+        return ("\n".join(lines) + ("\n" if lines else "")).encode("utf-8")
 
     @staticmethod
     def _check_revision(state: CaseState, expected_case_revision: int | None) -> None:

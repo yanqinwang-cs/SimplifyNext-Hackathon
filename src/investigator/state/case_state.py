@@ -33,8 +33,6 @@ class CaseState(BaseModel):
     last_trace_step: int | None = None
     last_updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     trace_history: list[dict[str, Any]] = Field(default_factory=list)
-    workspace_chat_history: list[dict[str, str]] = Field(default_factory=list)
-    workspace_turn_history: list[dict[str, Any]] = Field(default_factory=list)
     reasoning_graph: CaseGraph | None = None
     focus_node_id: str | None = None
     focus_recent_node_ids: list[str] = Field(default_factory=list)

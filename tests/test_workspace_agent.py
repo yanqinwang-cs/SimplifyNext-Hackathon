@@ -3,7 +3,7 @@ from investigator.llm import ModelCallMetadata, ModelNativeCall, ModelTextBlock,
 from investigator.services.evidence_requests import HumanEvidenceWorkflow
 from investigator.state.case_state import CaseState
 from investigator.state.repository import CaseRepository
-from investigator.workspace_agent import WorkspaceAgent, WorkspaceChatRequest, WorkspaceToolAuthorizationError
+from investigator.workspace_agent import WorkspaceAgent, WorkspaceChatRequest, WorkspaceSessionStore, WorkspaceToolAuthorizationError
 
 
 class FakeWorkspaceClient:
@@ -122,3 +122,25 @@ def test_workspace_failure_is_queryable_separately(tmp_path):
     result = WorkspaceAgent(workflow, client).chat("case-01", "why?")
     assert len(client.calls) == 2
     assert "latest Workspace turn failed" in result.response
+
+
+def test_workspace_sends_full_session_history_to_followup(tmp_path):
+    workflow = make_workflow(tmp_path)
+    workflow.run_callback = lambda case_id, service: None
+    client = FakeWorkspaceClient([text_response("Would you like me to run the investigation?"), tool_response("RUN_INVESTIGATION"), text_response("Run started.")])
+    agent = WorkspaceAgent(workflow, client)
+    agent.chat("case-01", "run the investigation")
+    agent.chat("case-01", "yes")
+    assert len(client.calls) == 3
+    followup_messages = client.calls[1][0]
+    assert [message["text"] for message in followup_messages if message.get("role") == "user"][-2:] == ["run the investigation", "yes"]
+    assert any(message.get("text") == "Would you like me to run the investigation?" for message in followup_messages)
+
+
+def test_workspace_session_store_resets_without_affecting_case_state(tmp_path):
+    workflow = make_workflow(tmp_path)
+    store = WorkspaceSessionStore()
+    WorkspaceAgent(workflow, FakeWorkspaceClient([text_response("hello")]), store).chat("case-01", "hello")
+    assert store.session("case-01")["chat_history"]
+    assert WorkspaceSessionStore().session("case-01")["chat_history"] == []
+    assert workflow.ensure_case("case-01").reasoning_graph is not None
