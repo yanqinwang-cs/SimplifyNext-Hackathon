@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { applyAwsCredentials, clearAwsCredentials, getAwsCredentialStatus, getWorkspace, markUnavailable, provideEvidence, runInvestigation, sendWorkspaceMessage } from "../lib/case-service";
 import type { AwsCredentialStatus, CaseWorkspaceState, EvidenceRequest, WorkspaceMessage } from "../lib/types";
 
@@ -62,6 +62,7 @@ export default function Home() {
   const [credentialApplying, setCredentialApplying] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
   const [chatSending, setChatSending] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const request = useMemo(() => workspace?.messages.find((message) => message.request)?.request, [workspace]);
   const runtime = workspace ? runtimeCopy(workspace.runtimeStatus) : null;
 
@@ -72,6 +73,10 @@ export default function Home() {
   useEffect(() => {
     getAwsCredentialStatus().then(setAwsStatus).catch(() => setAwsStatus(null));
   }, []);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [workspace?.chatHistory?.length]);
 
   useEffect(() => {
     if (!workspace || !workspace.runtimeStatus.startsWith("RUNNING_")) return;
@@ -143,7 +148,7 @@ export default function Home() {
         {workspace.messages.map((message) => <div key={message.id} className={`flex gap-3 rounded-xl border bg-white p-4 ${message.role === "simplifynext" ? "border-blue-200 shadow-sm" : "border-slate-200"}`}><Avatar role={message.role}/><div className="min-w-0 flex-1"><div className="mb-1 flex items-center gap-2"><span className="font-bold text-slate-900">{message.role === "simplifynext" ? "SimplifyNext Assistant" : "Investigator"}</span>{message.timestamp && <span className="text-xs text-slate-500">{message.timestamp}</span>}</div>{message.text && <p className="text-sm leading-6 text-slate-700">{message.text}</p>}{message.request && <div className="mt-4"><RequestCard request={message.request} disabled={workspace.runtimeStatus !== "WAITING_FOR_EVIDENCE"} onEvidence={() => setDialog("evidence")} onUnavailable={() => setDialog("unavailable")} /></div>}</div></div>)}
       </section>
 
-      <section className="mt-5 rounded-xl border border-blue-100 bg-white p-4" aria-label="Workspace chat"><div className="mb-3 font-bold text-slate-900">Workspace assistant</div>{(!workspace.chatHistory || workspace.chatHistory.length === 0) && <p className="mb-3 text-sm leading-6 text-slate-600">SimplifyNext assists academic-integrity investigations by organising evidence, competing explanations, unresolved questions, and an auditable history. It does not decide guilt or make disciplinary decisions.</p>}<div className="mb-3 flex flex-wrap gap-2">{["Explain the current case", "What happened in the latest run?", "Show the evidence and history"].map((suggestion) => <button key={suggestion} onClick={() => setChatMessage(suggestion)} className="rounded-full border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-800 hover:bg-blue-50">{suggestion}</button>)}</div>{workspace.chatHistory?.map((item, index) => <div key={`${item.role}-${index}`} className={`mb-2 rounded-lg p-3 text-sm ${item.role === "human" ? "ml-8 bg-slate-50 text-slate-700" : "mr-8 bg-blue-50 text-slate-800"}`}>{item.text}</div>)}<div className="flex items-center gap-3 rounded-lg border border-slate-300 p-2"><input value={chatMessage} onChange={(event) => setChatMessage(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void sendMessage(); }} placeholder="Ask about the case or investigation…" className="min-w-0 flex-1 px-1 text-sm outline-none"/><button disabled={chatSending || !chatMessage.trim()} onClick={() => void sendMessage()} className="rounded-md bg-blue-700 px-3 py-2 text-sm font-bold text-white disabled:opacity-50">{chatSending ? "Sending…" : "Send"}</button></div></section>
+      <section className="mt-5 rounded-xl border border-blue-100 bg-white p-4" aria-label="Workspace chat"><div className="mb-3 font-bold text-slate-900">Workspace assistant</div><div className="mb-3 flex flex-wrap gap-2">{["Explain the current case", "What happened in the latest run?", "Show the evidence and history"].map((suggestion) => <button key={suggestion} onClick={() => setChatMessage(suggestion)} className="rounded-full border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-800 hover:bg-blue-50">{suggestion}</button>)}</div><div className="max-h-[calc(100vh-24rem)] min-h-24 overflow-y-auto overscroll-contain pr-1">{(!workspace.chatHistory || workspace.chatHistory.length === 0) && <p className="mb-3 text-sm leading-6 text-slate-600">SimplifyNext assists academic-integrity investigations by organising evidence, competing explanations, unresolved questions, and an auditable history. It does not decide guilt or make disciplinary decisions.</p>}{workspace.chatHistory?.map((item, index) => <div key={`${item.role}-${index}`} className={`mb-2 min-w-0 whitespace-pre-wrap break-words rounded-lg p-3 text-sm ${item.role === "human" ? "ml-8 bg-slate-50 text-slate-700" : "mr-8 bg-blue-50 text-slate-800"}`}>{item.text}</div>)}<div ref={chatEndRef} /></div><div className="mt-3 flex items-center gap-3 rounded-lg border border-slate-300 p-2"><input value={chatMessage} onChange={(event) => setChatMessage(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void sendMessage(); }} placeholder="Ask about the case or investigation…" className="min-w-0 flex-1 px-1 text-sm outline-none"/><button disabled={chatSending || !chatMessage.trim()} onClick={() => void sendMessage()} className="rounded-md bg-blue-700 px-3 py-2 text-sm font-bold text-white disabled:opacity-50">{chatSending ? "Sending…" : "Send"}</button></div></section>
     </div>
 
     {dialog === "evidence" && request && <DialogShell title="Provide evidence" onClose={() => setDialog(null)}><p className="mb-4 rounded-lg bg-slate-50 p-3 text-sm leading-6 text-slate-700"><strong>Requested information</strong><br/>{request.informationSought}</p><label className="mb-4 block text-sm font-semibold text-slate-800">Evidence<input type="file" onChange={(event) => setFile(event.target.files?.[0] ?? null)} className="mt-2 block w-full rounded-lg border border-slate-300 p-2 text-sm"/></label><label className="block text-sm font-semibold text-slate-800">Optional note<textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} className="mt-2 block w-full rounded-lg border border-slate-300 p-2 text-sm"/></label><div className="mt-6 flex justify-end gap-3"><button onClick={() => setDialog(null)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Cancel</button><button onClick={submitEvidence} className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-bold text-white hover:bg-blue-800">Add evidence</button></div></DialogShell>}

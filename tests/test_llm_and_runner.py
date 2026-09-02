@@ -95,6 +95,35 @@ def test_bedrock_adapter_parses_fenced_json_without_network() -> None:
     assert result.raw_output == '```json\n{"answer": "4"}\n```'
 
 
+def test_bedrock_native_tool_schema_uses_json_tagged_union() -> None:
+    seen = {}
+
+    class FakeBedrock:
+        def converse(self, **kwargs):
+            seen.update(kwargs)
+            return {"output": {"message": {"content": [{"text": "done"}]}}, "usage": {}, "stopReason": "end_turn"}
+
+    BedrockModelClient(model_id="test-model", client=FakeBedrock()).call_native(
+        "run", [{"name": "RUN_INVESTIGATION", "description": "run", "inputSchema": {"type": "object", "properties": {}, "required": []}}]
+    )
+    tool_spec = seen["toolConfig"]["tools"][0]["toolSpec"]
+    assert set(tool_spec["inputSchema"]) == {"json"}
+    assert tool_spec["inputSchema"]["json"]["type"] == "object"
+
+
+def test_bedrock_native_tool_schema_preserves_required_fields() -> None:
+    schema = {"type": "object", "properties": {"source_id": {"type": "string"}}, "required": ["source_id"], "additionalProperties": False}
+    tool = BedrockModelClient._tool_spec({"name": "READ_SOURCE", "inputSchema": schema})
+    assert tool["inputSchema"] == {"json": schema}
+
+
+def test_bedrock_native_tool_schema_preserves_optional_fields_and_avoids_double_wrap() -> None:
+    schema = {"type": "object", "properties": {"note": {"type": "string"}}, "additionalProperties": False}
+    assert BedrockModelClient._tool_spec({"name": "FULFIL_REQUEST", "inputSchema": schema})["inputSchema"] == {"json": schema}
+    wrapped = {"json": schema}
+    assert BedrockModelClient._tool_spec({"name": "FULFIL_REQUEST", "inputSchema": wrapped})["inputSchema"] == wrapped
+
+
 def test_bedrock_override_precedence_invalidation_and_clear(monkeypatch) -> None:
     sessions = []
 

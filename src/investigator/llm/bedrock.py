@@ -122,7 +122,7 @@ class BedrockModelClient:
         started = perf_counter()
         request: dict[str, Any] = {"modelId": self.model_id, "messages": self._native_messages(input_data), "inferenceConfig": {"temperature": 0}}
         if tools:
-            request["toolConfig"] = {"tools": [{"toolSpec": tool} for tool in tools]}
+            request["toolConfig"] = {"tools": [{"toolSpec": self._tool_spec(tool)} for tool in tools]}
         response = self._client_for_call().converse(**request)
         blocks = response.get("output", {}).get("message", {}).get("content", [])
         text_blocks: list[ModelTextBlock] = []
@@ -185,3 +185,12 @@ class BedrockModelClient:
                 content.append({"toolResult": {"toolUseId": message.get("call_id", ""), "content": [{"text": json.dumps(message.get("result", {}), default=str)}]}})
             result.append({"role": "assistant" if role == "assistant" else "user", "content": content or [{"text": ""}]})
         return result
+
+    @staticmethod
+    def _tool_spec(tool: dict[str, Any]) -> dict[str, Any]:
+        """Translate the provider-neutral tool shape to Converse's tagged schema union."""
+        spec = dict(tool)
+        schema = spec.get("inputSchema", {})
+        if not isinstance(schema, dict) or "json" not in schema:
+            spec["inputSchema"] = {"json": schema}
+        return spec
