@@ -69,4 +69,11 @@ export interface CaseWorkspaceState {
   latestRun?: RunSummary | null;
   requestHistory?: EvidenceRequest[];
   runs?: RunSummary[];
+  chatHistory?: { role: string; text: string }[];
+}
+
+export interface WorkspaceChatResponse {
+  response: string;
+  actions: string[];
+  recovery: boolean;
 }

@@ -1,4 +1,4 @@
-import type { AwsCredentialStatus, CaseWorkspaceState, RunSummary, TraceEntry } from "./types";
+import type { AwsCredentialStatus, CaseWorkspaceState, RunSummary, TraceEntry, WorkspaceChatResponse } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
@@ -24,6 +24,10 @@ export async function getRuns(caseId: string): Promise<RunSummary[]> {
 
 export function runInvestigation(caseId: string): Promise<CaseWorkspaceState> {
   return request<CaseWorkspaceState>(`/api/cases/${encodeURIComponent(caseId)}/run`, { method: "POST", body: "{}" });
+}
+
+export function sendWorkspaceMessage(caseId: string, message: string): Promise<WorkspaceChatResponse> {
+  return request<WorkspaceChatResponse>(`/api/cases/${encodeURIComponent(caseId)}/workspace/chat`, { method: "POST", body: JSON.stringify({ message }) });
 }
 
 export async function provideEvidence(caseId: string, requestId: string, caseRevision: number | undefined, file: File | null, note: string) {

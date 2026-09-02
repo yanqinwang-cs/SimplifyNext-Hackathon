@@ -10,10 +10,12 @@ from investigator.services.evidence_requests import EvidenceRequestConflict, Hum
 from investigator.services.production_runner import default_production_run
 from investigator.llm.bedrock import CredentialOverride, clear_credential_override, credential_status, debug_credentials_enabled, set_credential_override
 from investigator.state.repository import CaseRepository
+from investigator.workspace_agent import WorkspaceAgent, WorkspaceChatRequest
 
 
 class InvestigatorApiHandler(BaseHTTPRequestHandler):
     workflow: HumanEvidenceWorkflow
+    workspace_agent: WorkspaceAgent
 
     def do_GET(self) -> None:
         parts = self._parts()
@@ -24,7 +26,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 self._write(200, credential_status())
             return
         if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "workspace":
-            self._write(200, self.workflow.get_workspace(parts[2]))
+            self._write(200, self.workflow.get_workspace(parts[2]) | {"chatHistory": self.workflow.ensure_case(parts[2]).workspace_chat_history})
             return
         if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "traces":
             self._write(200, {"caseId": parts[2], "traces": self.workflow.get_traces(parts[2])})
@@ -57,6 +59,14 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parts = self._parts()
+        if len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3:5] == ["workspace", "chat"]:
+            try:
+                payload = WorkspaceChatRequest.model_validate(self._read_json())
+                result = self.workspace_agent.chat(parts[2], payload.message)
+                self._write(200, {"response": result.response, "actions": result.actions, "recovery": result.recovery})
+            except (ValueError, EvidenceRequestConflict) as exc:
+                self._write(422, {"error": str(exc)})
+            return
         if parts == ["api", "debug", "aws-credentials"]:
             if not debug_credentials_enabled():
                 self._write(404, {"error": "Debug credential endpoints are disabled"})
@@ -130,6 +140,7 @@ def create_server(repository_root: str | Path = "data/cases", host: str = "127.0
     workflow = HumanEvidenceWorkflow(CaseRepository(repository_root), run_callback=run_callback or default_production_run)
     workflow.resume_callback = lambda case_id: workflow.start_run(case_id)
     InvestigatorApiHandler.workflow = workflow
+    InvestigatorApiHandler.workspace_agent = WorkspaceAgent(workflow)
     return ThreadingHTTPServer((host, port), InvestigatorApiHandler)
 
 
