@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from os.path import realpath
 import subprocess
 import time
 from datetime import datetime, timezone
@@ -158,11 +159,18 @@ def main() -> None:
         (out / "run_result.json").write_text(json.dumps({k: v for k, v in result.items() if k not in {"traces", "final_case_state", "model_usage"}}, indent=2, default=str) + "\n")
         (out / "final_case_state.json").write_text(json.dumps(result["final_case_state"], indent=2) + "\n")
         (out / "model_usage.json").write_text(json.dumps(result["model_usage"], indent=2) + "\n")
-        handoff = next((trace["parsed_response"] for trace in result["traces"] if trace.get("parsed_response", {}).get("operation") == "handoff_to_human"), None)
+        handoff = next((trace["parsed_response"] for trace in result["traces"] if (trace.get("parsed_response") or {}).get("operation") == "handoff_to_human"), None)
         if handoff:
             (out / "final_handoff.json").write_text(json.dumps(handoff, indent=2) + "\n")
             result["trace_paths"]["final_handoff"] = "final_handoff.json"
             (out / "run_result.json").write_text(json.dumps({k: v for k, v in result.items() if k not in {"traces", "final_case_state", "model_usage"}}, indent=2, default=str) + "\n")
+        print("FINAL OUTPUT LOCATION")
+        print(f"RUN RESULT: file://{realpath(out / 'run_result.json')}")
+        print(f"RAW TRACES: file://{realpath(out / 'raw_traces.jsonl')}")
+        print(f"FINAL CASE STATE: file://{realpath(out / 'final_case_state.json')}")
+        if handoff:
+            print(f"FINAL HANDOFF: file://{realpath(out / 'final_handoff.json')}")
+        print(f"RUN DIRECTORY: file://{realpath(out)}")
         print(json.dumps({"run_id": run_id, "status": result["evaluation"]["status"], "model_calls": result["model_calls"]}, indent=2))
 
 
