@@ -1,7 +1,7 @@
 from collections.abc import Mapping, Sequence
 from typing import Any, Protocol, TypeVar
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 T = TypeVar("T", bound=BaseModel)
 MessageInput = str | Sequence[Mapping[str, Any]]
@@ -42,9 +42,30 @@ class ModelCallResult(BaseModel):
     raw_output: Any | None = None
 
 
+class ModelTextBlock(BaseModel):
+    text: str
+
+
+class ModelToolUse(BaseModel):
+    call_id: str
+    name: str
+    arguments: dict[str, Any]
+
+
+class ModelNativeCall(BaseModel):
+    """Provider-neutral conversational response after adapter translation."""
+    text_blocks: list[ModelTextBlock] = Field(default_factory=list)
+    tool_uses: list[ModelToolUse] = Field(default_factory=list)
+    metadata: ModelCallMetadata
+    raw_output: Any | None = None
+
+
 class ModelClient(Protocol):
     def call(self, input_data: MessageInput, output_schema: type[T]) -> ModelCallResult:
         """Make one structured call and return its validated result."""
+
+    def call_native(self, input_data: MessageInput, tools: list[dict[str, Any]]) -> ModelNativeCall:
+        """Make one conversational call with provider-native tool use."""
 
 
 def parse_model_output(raw_output: Any, output_schema: type[T]) -> T:

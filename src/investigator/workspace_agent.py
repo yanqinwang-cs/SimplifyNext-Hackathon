@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-import json
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from investigator.graph import GraphNodeType
-from investigator.llm import ModelClient
-from investigator.models.source import Source
+from investigator.llm import ModelClient, ModelToolUse
 from investigator.services.evidence_requests import EvidenceRequestConflict, HumanEvidenceWorkflow
 from investigator.sources import SourceRegistry
 from investigator.model_registry import MODEL_REGISTRY
@@ -20,59 +18,6 @@ from investigator.state.case_state import CaseState
 class WorkspaceChatRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     message: str = Field(min_length=1)
-
-
-class WorkspaceToolCall(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    name: str
-    arguments: dict[str, Any] = Field(default_factory=dict)
-    provider_call_id: str | None = None
-
-
-def normalize_workspace_tool_call(value: dict[str, Any]) -> dict[str, Any]:
-    """Translate supported provider function/tool-use shapes to our small contract."""
-    if not isinstance(value, dict):
-        raise ValueError("Workspace tool call must be an object")
-    provider_call_id = value.get("id")
-    if isinstance(value.get("function"), dict):
-        function = value["function"]
-        name = function.get("name")
-        arguments = function.get("arguments", {})
-    elif value.get("type") == "tool_use" and "name" in value:
-        name = value.get("name")
-        arguments = value.get("input", {})
-    else:
-        name = value.get("name")
-        arguments = value.get("arguments", value.get("input", {}))
-    if not isinstance(name, str) or not name:
-        raise ValueError("Workspace tool call is missing a function name")
-    if isinstance(arguments, str):
-        try:
-            arguments = json.loads(arguments)
-        except json.JSONDecodeError as exc:
-            raise ValueError(f"Workspace tool call arguments are not valid JSON: {exc.msg}") from exc
-    if not isinstance(arguments, dict):
-        raise ValueError("Workspace tool call arguments must be a JSON object")
-    result = {"name": name, "arguments": arguments}
-    if isinstance(provider_call_id, str):
-        result["provider_call_id"] = provider_call_id
-    return result
-
-
-class WorkspaceTurn(BaseModel):
-    """Small model envelope: tool calls are structured; the final reply is prose."""
-
-    model_config = ConfigDict(extra="forbid")
-    response: str | None = None
-    tool_calls: list[WorkspaceToolCall] = Field(default_factory=list, max_length=8)
-
-    @model_validator(mode="before")
-    @classmethod
-    def normalize_provider_tool_calls(cls, value: Any) -> Any:
-        if isinstance(value, dict) and isinstance(value.get("tool_calls"), list):
-            value = dict(value)
-            value["tool_calls"] = [normalize_workspace_tool_call(item) for item in value["tool_calls"]]
-        return value
 
 
 @dataclass(frozen=True)
@@ -90,6 +35,46 @@ class WorkspaceToolRequest(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict)
 
 
+class _NoArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class _ReadSourceArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source_id: str
+
+
+class _RunArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    run_id: str
+
+
+class _EvidenceArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    request_id: str
+    case_revision: int | None = None
+    sources: list[dict[str, Any]] = Field(default_factory=list)
+    note: str | None = None
+
+
+class _SourceArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    display_name: str
+    content: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+_TOOL_ARGUMENTS: dict[str, type[BaseModel]] = {
+    name: _NoArguments for name in (
+        "GET_CASE_STATUS", "GET_CASE_SUMMARY", "GET_CURRENT_GRAPH", "GET_CURRENT_FOCUS",
+        "LIST_SOURCES", "GET_PENDING_REQUEST", "LIST_REQUEST_HISTORY", "LIST_RUNS",
+        "GET_LATEST_FAILURE", "GET_LATEST_WORKSPACE_FAILURE", "GET_LAST_SAFE_STATE", "OPEN_TRACE", "RUN_INVESTIGATION",
+        "PAUSE_INVESTIGATION", "RESUME_INVESTIGATION", "REQUEST_STEWARD_REVIEW", "RECOVER_FROM_SAFE_STATE", "RESET_TO_CLEAN_BASELINE",
+    )
+}
+_TOOL_ARGUMENTS.update({"READ_SOURCE": _ReadSourceArguments, "GET_RUN": _RunArguments, "FULFIL_REQUEST": _EvidenceArguments, "MARK_REQUEST_UNAVAILABLE": _EvidenceArguments, "ADD_SOURCE": _SourceArguments})
+
+
 class WorkspaceToolAuthorizationError(PermissionError):
     pass
 
@@ -104,12 +89,12 @@ class WorkspaceAgent:
     READ_TOOLS = frozenset({
         "GET_CASE_STATUS", "GET_CASE_SUMMARY", "GET_CURRENT_GRAPH", "GET_CURRENT_FOCUS",
         "LIST_SOURCES", "READ_SOURCE", "GET_PENDING_REQUEST", "LIST_REQUEST_HISTORY",
-        "LIST_RUNS", "GET_RUN", "GET_LATEST_FAILURE", "GET_LAST_SAFE_STATE", "OPEN_TRACE",
+        "LIST_RUNS", "GET_RUN", "GET_LATEST_FAILURE", "GET_LATEST_WORKSPACE_FAILURE", "GET_LAST_SAFE_STATE", "OPEN_TRACE",
     })
     ACTION_TOOLS = frozenset({
         "RUN_INVESTIGATION", "PAUSE_INVESTIGATION", "RESUME_INVESTIGATION", "ADD_SOURCE",
         "FULFIL_REQUEST", "MARK_REQUEST_UNAVAILABLE", "REQUEST_STEWARD_REVIEW",
-        "RECOVER_FROM_SAFE_STATE",
+        "RECOVER_FROM_SAFE_STATE", "RESET_TO_CLEAN_BASELINE",
     })
     FORBIDDEN_TOOLS = frozenset({
         "add_evidence", "add_proposition", "add_hypothesis", "add_uncertainty", "supports",
@@ -126,6 +111,10 @@ class WorkspaceAgent:
         request = request if isinstance(request, WorkspaceToolRequest) else WorkspaceToolRequest.model_validate(request)
         if request.tool in self.FORBIDDEN_TOOLS:
             raise WorkspaceToolAuthorizationError(f"Workspace tool is not authorized: {request.tool}")
+        argument_schema = _TOOL_ARGUMENTS.get(request.tool)
+        if argument_schema is None:
+            raise WorkspaceToolAuthorizationError(f"Unknown or unauthorized Workspace tool: {request.tool}")
+        request.payload = argument_schema.model_validate(request.payload).model_dump(exclude_none=True)
         if request.tool in self.READ_TOOLS:
             return self._read_tool(case_id, request)
         if request.tool in self.ACTION_TOOLS:
@@ -141,27 +130,30 @@ class WorkspaceAgent:
             response = "The Workspace assistant is currently unavailable. Case operations remain accessible through the workspace controls."
             self._append_chat(case_id, "workspace", response)
             return WorkspaceChatResponse(response=response)
-        messages: list[dict[str, Any]] = [{"role": "user", "content": [{"text": f"{self.system_prompt()}\n\nUser message:\n{text}"}]}]
+        turn_id = self._begin_workspace_turn(case_id, text)
+        messages: list[dict[str, Any]] = [{"role": "user", "text": f"{self.system_prompt()}\n\nUser message:\n{text}"}]
         try:
             for _ in range(5):
-                call = self.client.call(messages, WorkspaceTurn)
-                turn = call.parsed
-                if not turn.tool_calls:
-                    if not turn.response:
+                call = self.client.call_native(messages, self.tool_specs())
+                self._record_requested_tools(case_id, turn_id, call.tool_uses)
+                if not call.tool_uses:
+                    response = " ".join(block.text for block in call.text_blocks).strip()
+                    if not response:
                         raise RuntimeError("Workspace model returned neither a response nor a tool call")
-                    self._append_chat(case_id, "workspace", turn.response)
-                    return WorkspaceChatResponse(response=turn.response, recovery=self._has_recovery(case_id))
-                for tool_call in turn.tool_calls:
+                    self._finish_workspace_turn(case_id, turn_id, "completed", response)
+                    self._append_chat(case_id, "workspace", response)
+                    return WorkspaceChatResponse(response=response, recovery=self._has_recovery(case_id))
+                messages.append({"role": "assistant", "text": " ".join(block.text for block in call.text_blocks), "tool_uses": [use.model_dump(mode="json") for use in call.tool_uses]})
+                for tool_call in call.tool_uses:
                     result = self.invoke_tool(case_id, {"tool": tool_call.name, "payload": tool_call.arguments})
-                    messages.append({"role": "assistant", "content": [{"text": turn.model_dump_json()}]})
-                    messages.append({"role": "user", "content": [{"text": f"Deterministic tool result for {tool_call.name}: {result}"}]})
+                    messages.append({"role": "tool", "call_id": tool_call.call_id, "result": result})
             raise RuntimeError("Workspace tool loop exceeded the five-round safety bound")
-        except WorkspaceModelUnavailable:
-            raise
-        except WorkspaceToolAuthorizationError:
+        except WorkspaceToolAuthorizationError as exc:
+            self._finish_workspace_turn(case_id, turn_id, "failed", "The requested Workspace operation is not authorized.", type(exc).__name__)
             raise
         except Exception as exc:
             response = "The Workspace assistant could not respond. Case operations remain accessible through the workspace controls."
+            self._finish_workspace_turn(case_id, turn_id, "failed", response, type(exc).__name__)
             self._append_chat(case_id, "workspace", response)
             self._append_chat(case_id, "system", f"Workspace model failure: {type(exc).__name__}: {exc}")
             return WorkspaceChatResponse(response=response)
@@ -175,8 +167,30 @@ class WorkspaceAgent:
             "You may inspect the whole case, but must not create or edit semantic Evidence, Proposition, Hypothesis, or Uncertainty nodes, determine guilt, or make a disciplinary outcome.",
             "Use a deterministic tool whenever the answer depends on current state. Do not guess status, failure cause, source inventory, pending request, safe state, or request/run linkage.",
             "Speak naturally to university investigators and hide internal graph IDs and schema jargon unless audit detail is explicitly requested.",
-            f"Available Workspace tools: {', '.join(tools)}. Return JSON matching WorkspaceTurn; use tool_calls for tools and response for the final natural-language answer.",
+            f"Available Workspace tools: {', '.join(tools)}. Use provider-native tool calls for actions and ordinary natural-language text for the final answer.",
         ))
+
+    def tool_specs(self) -> list[dict[str, Any]]:
+        return [{"name": name, "description": f"Deterministic Workspace operation {name}.", "inputSchema": schema.model_json_schema()} for name, schema in sorted(_TOOL_ARGUMENTS.items()) if name in self.READ_TOOLS or name in self.ACTION_TOOLS]
+
+    def _begin_workspace_turn(self, case_id: str, message: str) -> str:
+        state = self.workflow.ensure_case(case_id)
+        turn_id = f"workspace_{len(state.workspace_turn_history) + 1:06d}"
+        state.workspace_turn_history.append({"workspace_turn_id": turn_id, "user_message": message, "model_status": "running", "requested_tool_names": [], "tool_execution_status": "pending"})
+        self.workflow.repository.save(state)
+        return turn_id
+
+    def _record_requested_tools(self, case_id: str, turn_id: str, uses: list[ModelToolUse]) -> None:
+        state = self.workflow.ensure_case(case_id)
+        record = next(item for item in reversed(state.workspace_turn_history) if item["workspace_turn_id"] == turn_id)
+        record["requested_tool_names"] = [use.name for use in uses]
+        self.workflow.repository.save(state)
+
+    def _finish_workspace_turn(self, case_id: str, turn_id: str, status: str, summary: str, failure_category: str | None = None) -> None:
+        state = self.workflow.ensure_case(case_id)
+        record = next(item for item in reversed(state.workspace_turn_history) if item["workspace_turn_id"] == turn_id)
+        record.update({"model_status": status, "tool_execution_status": "completed" if status == "completed" else "failed", "failure_category": failure_category, "failure_summary": summary})
+        self.workflow.repository.save(state)
 
     def _read_tool(self, case_id: str, request: WorkspaceToolRequest) -> dict[str, Any]:
         state = self.workflow.ensure_case(case_id)
@@ -214,6 +228,9 @@ class WorkspaceAgent:
                 return {"available": False, "human_summary": "No failed run is recorded."}
             recovered = any(item.get("event") == "workspace_recovery" for item in state.trace_history)
             return {"available": True, "failure": failure, "human_summary": "The latest investigation turn failed, but no invalid semantic change was committed. " + ("The Workspace recovered from the previous safe state." if recovered else "The technical details are available in the debug trace.")}
+        if request.tool == "GET_LATEST_WORKSPACE_FAILURE":
+            failure = next((item for item in reversed(state.workspace_turn_history) if item.get("model_status") == "failed"), None)
+            return {"available": failure is not None, "failure": failure, "human_summary": "The latest Workspace turn failed; no semantic graph mutation was performed." if failure else "No failed Workspace turn is recorded."}
         if request.tool == "GET_LAST_SAFE_STATE":
             return {"state": state.clean_checkpoint.get("state") if state.clean_checkpoint else None}
         if request.tool == "OPEN_TRACE":
@@ -244,11 +261,15 @@ class WorkspaceAgent:
             state = self.workflow.ensure_case(case_id)
             if not state.clean_checkpoint:
                 raise EvidenceRequestConflict("No trustworthy safe state is available")
-            restored = self.workflow._restore_clean_checkpoint(state)
-            restored.trace_history.append({"event": "workspace_recovery", "recovery_action": "restored_last_safe_state"})
-            restored.runtime_status = "IDLE"
-            restored.current_actor = "NONE"
-            self.workflow.repository.save(restored)
+            state.trace_history.append({"event": "workspace_recovery", "recovery_action": "retained_current_canonical_state"})
+            state.runtime_status = "IDLE"
+            state.current_actor = "NONE"
+            state.last_error = None
+            self.workflow.repository.save(state)
+            return self.workflow.get_workspace(case_id)
+        if request.tool == "RESET_TO_CLEAN_BASELINE":
+            from investigator.services.production_runner import reset_demo_case
+            reset_demo_case(self.workflow, case_id)
             return self.workflow.get_workspace(case_id)
         raise WorkspaceToolAuthorizationError(request.tool)
 

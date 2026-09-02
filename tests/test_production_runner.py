@@ -145,7 +145,7 @@ def test_workflow_run_creates_separate_audit_artifact(tmp_path: Path) -> None:
     assert result["run_id"] == run["run_id"] and result["final_runtime_status"] == "WAITING_FOR_EVIDENCE"
 
 
-def test_failed_retry_restores_whole_clean_checkpoint_and_new_run(tmp_path: Path) -> None:
+def test_failed_retry_continues_current_canonical_state(tmp_path: Path) -> None:
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     seed_demo_case(workflow, "case-01")
     attempts = []
@@ -156,14 +156,12 @@ def test_failed_retry_restores_whole_clean_checkpoint_and_new_run(tmp_path: Path
         if len(attempts) == 1:
             state.reasoning_graph.add_node(GraphNode(id="H1", node_type=GraphNodeType.HYPOTHESIS, statement="failed-run mutation"))
             SourceRegistry.register_raw_source(state, "post-checkpoint.txt", "stale source")
-            state.evidence_request_history.append(EvidenceRequest(request_id="R1", reason="stale request", requested_at_revision=0))
             active.repository.save(state)
             raise RuntimeError("failed after mutation")
         restored = active.repository.load(case_id)
-        assert "H1" not in restored.reasoning_graph.nodes
-        assert "post-checkpoint.txt" not in {source.name for source in restored.sources.values()}
+        assert "H1" in restored.reasoning_graph.nodes
+        assert "post-checkpoint.txt" in {source.name for source in restored.sources.values()}
         assert len(restored.sources) == 6
-        assert restored.evidence_request_history == []
         active.set_runtime(case_id, "IDLE", "NONE")
 
     workflow.run_callback = callback

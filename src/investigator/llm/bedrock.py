@@ -12,6 +12,9 @@ from investigator.llm.base import (
     MessageInput,
     ModelCallMetadata,
     ModelCallResult,
+    ModelNativeCall,
+    ModelTextBlock,
+    ModelToolUse,
     ModelParseError,
     normalize_json_text,
     parse_model_output,
@@ -114,6 +117,26 @@ class BedrockModelClient:
         )
         return ModelCallResult(parsed=parsed, metadata=metadata, raw_output=raw_text)
 
+    def call_native(self, input_data: MessageInput, tools: list[dict[str, Any]]) -> ModelNativeCall:
+        """Use Bedrock Converse native text/toolUse blocks; no custom response schema."""
+        started = perf_counter()
+        request: dict[str, Any] = {"modelId": self.model_id, "messages": self._native_messages(input_data), "inferenceConfig": {"temperature": 0}}
+        if tools:
+            request["toolConfig"] = {"tools": [{"toolSpec": tool} for tool in tools]}
+        response = self._client_for_call().converse(**request)
+        blocks = response.get("output", {}).get("message", {}).get("content", [])
+        text_blocks: list[ModelTextBlock] = []
+        tool_uses: list[ModelToolUse] = []
+        for block in blocks:
+            if isinstance(block.get("text"), str):
+                text_blocks.append(ModelTextBlock(text=block["text"]))
+            if isinstance(block.get("toolUse"), dict):
+                use = block["toolUse"]
+                tool_uses.append(ModelToolUse(call_id=str(use.get("toolUseId", "")), name=str(use.get("name", "")), arguments=use.get("input", {})))
+        usage = response.get("usage", {})
+        metadata = ModelCallMetadata(provider="bedrock", model=self.model_id, input_tokens=usage.get("inputTokens"), output_tokens=usage.get("outputTokens"), latency_seconds=perf_counter() - started, parse_success=True, finish_reason=response.get("stopReason"))
+        return ModelNativeCall(text_blocks=text_blocks, tool_uses=tool_uses, metadata=metadata, raw_output=response)
+
     def _client_for_call(self) -> Any:
         if self._injected_client:
             return self.client
@@ -141,3 +164,24 @@ class BedrockModelClient:
         if isinstance(input_data, str):
             return [{"role": "user", "content": [{"text": input_data}]}]
         return [dict(message) for message in input_data]
+
+    @staticmethod
+    def _native_messages(input_data: MessageInput) -> list[dict[str, Any]]:
+        if isinstance(input_data, str):
+            return [{"role": "user", "content": [{"text": input_data}]}]
+        result: list[dict[str, Any]] = []
+        for message in input_data:
+            if "content" in message:
+                result.append(dict(message))
+                continue
+            role = str(message.get("role", "user"))
+            content: list[dict[str, Any]] = []
+            if message.get("text"):
+                content.append({"text": str(message["text"])})
+            if role == "assistant":
+                for use in message.get("tool_uses", []):
+                    content.append({"toolUse": {"toolUseId": use["call_id"], "name": use["name"], "input": use["arguments"]}})
+            if role == "tool":
+                content.append({"toolResult": {"toolUseId": message.get("call_id", ""), "content": [{"text": json.dumps(message.get("result", {}), default=str)}]}})
+            result.append({"role": "assistant" if role == "assistant" else "user", "content": content or [{"text": ""}]})
+        return result

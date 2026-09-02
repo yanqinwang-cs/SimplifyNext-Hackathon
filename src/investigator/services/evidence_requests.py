@@ -95,9 +95,6 @@ class HumanEvidenceWorkflow:
         """Start one backend-owned run through the configured production hook."""
         with self._lock:
             state = self.ensure_case(case_id)
-            if state.runtime_status == "FAILED" and state.clean_checkpoint is not None:
-                state = self._restore_clean_checkpoint(state)
-                self.repository.save(state)
             pending = any(item.status.value == "pending" for item in state.evidence_request_history)
             if pending or state.runtime_status == "WAITING_FOR_EVIDENCE":
                 raise EvidenceRequestConflict("Resolve the pending human evidence request before running")
@@ -348,7 +345,7 @@ class HumanEvidenceWorkflow:
         pending_payload = (pending.model_dump(mode="json") | {"informationSought": pending.information_sought}) if pending else None
         runs = self.get_runs(case_id)
         latest = runs[-1] if runs else None
-        return {"caseId": state.case_id, "caseRevision": state.revision, "title": state.title, "status": runtime_status.lower(), "caseStatus": state.case_status, "runtimeStatus": runtime_status, "currentActor": current_actor, "institutionalStatus": "Investigating" if state.case_status == "ACTIVE" else state.case_status.title(), "currentFocus": pending.information_sought if pending else "Review the current case state.", "messages": messages, "chatHistory": list(state.workspace_chat_history), "visibleSources": [{"id": source.id, "name": source.name, "sourceType": source.source_type.value, "content": source.content or "", "contentPreview": (source.content or "")[:180]} for source in state.sources.values()], "pendingEvidenceRequest": pending_payload, "requestHistory": [item.model_dump(mode="json") for item in state.evidence_request_history], "runs": runs, "lastError": state.last_error, "lastTraceStep": state.last_trace_step, "lastUpdatedAt": state.last_updated_at.isoformat(), "latestRun": latest}
+        return {"caseId": state.case_id, "caseRevision": state.revision, "title": state.title, "status": runtime_status.lower(), "caseStatus": state.case_status, "runtimeStatus": runtime_status, "currentActor": current_actor, "institutionalStatus": "Investigating" if state.case_status == "ACTIVE" else state.case_status.title(), "currentFocus": pending.information_sought if pending else "Review the current case state.", "messages": messages, "chatHistory": list(state.workspace_chat_history), "workspaceTurns": list(state.workspace_turn_history), "visibleSources": [{"id": source.id, "name": source.name, "sourceType": source.source_type.value, "content": source.content or "", "contentPreview": (source.content or "")[:180]} for source in state.sources.values()], "pendingEvidenceRequest": pending_payload, "requestHistory": [item.model_dump(mode="json") for item in state.evidence_request_history], "runs": runs, "lastError": state.last_error, "lastTraceStep": state.last_trace_step, "lastUpdatedAt": state.last_updated_at.isoformat(), "latestRun": latest}
 
     def get_traces(self, case_id: str) -> list[dict[str, Any]]:
         return [dict(trace) for trace in self.ensure_case(case_id).trace_history]

@@ -7,6 +7,7 @@ from investigator.llm.base import (
     MessageInput,
     ModelCallMetadata,
     ModelCallResult,
+    ModelNativeCall,
     parse_model_output,
 )
 
@@ -34,3 +35,8 @@ class MockModelClient:
             parse_success=True,
         )
         return ModelCallResult(parsed=parsed, metadata=metadata, raw_output=self.response)
+
+    def call_native(self, input_data: MessageInput, tools: list[dict[str, Any]]) -> ModelNativeCall:
+        if not isinstance(self.response, ModelNativeCall):
+            raise TypeError("MockModelClient native calls require a ModelNativeCall")
+        return self.response
