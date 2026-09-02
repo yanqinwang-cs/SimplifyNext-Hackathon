@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Annotated, Literal, TypeAlias
+from typing import Annotated, Literal, TypeAlias, get_args
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -109,3 +109,42 @@ ProductionStewardDecision: TypeAlias = Annotated[
     KeepFocusDecision | ShiftFocusDecision | GeneralizeDecision | ArchiveDecision | ReactivateDecision | StopUnresolvedDecision | StewardRequestInformationDecision | StewardRequestOpenDecision | StewardRequestEvidenceDecision,
     Field(discriminator="operation"),
 ]
+
+
+def production_steward_operation_values(*, include_legacy: bool = True) -> tuple[str, ...]:
+    """Return operation tags from the live production tagged union."""
+    values: list[str] = []
+    for branch in get_args(get_args(ProductionStewardDecision)[0]):
+        values.extend(get_args(branch.model_fields["operation"].annotation))
+    if not include_legacy:
+        values = [value for value in values if value not in {"request_open", "request_evidence"}]
+    return tuple(values)
+
+
+def render_production_steward_contract() -> str:
+    """Render a compact machine contract directly from production models."""
+    branches = get_args(get_args(ProductionStewardDecision)[0])
+    current = production_steward_operation_values(include_legacy=False)
+    lines = [
+        'TOP-LEVEL DISCRIMINATOR FIELD: exactly "operation".',
+        'DO NOT USE "decision", "action", or "choice" as the output field.',
+        "VALID CURRENT OPERATIONS: " + ", ".join(f'"{value}"' for value in current) + ".",
+        'LEGACY COMPATIBILITY ONLY: "request_open", "request_evidence". Do not prefer these for new output.',
+        "Required fields by operation (all fields not listed as optional are required):",
+    ]
+    for branch in branches:
+        operation = get_args(branch.model_fields["operation"].annotation)[0]
+        if operation in {"request_open", "request_evidence"}:
+            continue
+        required = [name for name, field in branch.model_fields.items() if name != "operation" and field.is_required()]
+        optional = [name for name, field in branch.model_fields.items() if name != "operation" and not field.is_required()]
+        line = f'- "{operation}": required [{", ".join(required)}]'
+        if optional:
+            line += f'; optional [{", ".join(optional)}]'
+        lines.append(line)
+    lines.extend([
+        "Example valid stop_unresolved response:",
+        '{"operation":"stop_unresolved","assessment":"The useful investigative frontier has been exhausted.","reason":"No materially useful enquiry remains based on the current case state.","important_unresolved_ids":["<valid unresolved id>"],"reopening_conditions":"New material evidence or corrected case information."}',
+        'A response such as {"decision":"stop_unresolved",...} is INVALID.',
+    ])
+    return "\n".join(lines)

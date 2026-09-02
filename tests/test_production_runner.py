@@ -123,6 +123,10 @@ def test_runner_can_resume_after_fulfilment_and_stop_via_steward(tmp_path: Path)
     ProductionInvestigationRunner(workflow, second_client).run("case-01")
     state = workflow.repository.load("case-01")
     assert state.runtime_status == "STOPPED"
+    steward_prompt = json.loads(second_client.calls[1][0])["output_contract"]
+    assert 'TOP-LEVEL DISCRIMINATOR FIELD: exactly "operation"' in steward_prompt
+    assert '"operation":"stop_unresolved"' in steward_prompt
+    assert 'DO NOT USE "decision"' in steward_prompt
     assert [trace["actor"] for trace in state.trace_history if trace["event"].endswith("_completed")] == ["investigator", "investigator", "steward"]
     assert state.reasoning_graph is not None and state.focus_node_id == "U1"
 

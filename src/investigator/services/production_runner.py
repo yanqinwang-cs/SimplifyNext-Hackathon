@@ -12,7 +12,7 @@ from investigator.graph import CaseGraph, GraphNode, GraphNodeType
 from investigator.llm import ModelCallResult, ModelClient, ModelParseError
 from investigator.roles import InvestigationFocus
 from investigator.roles.procedure import correction_guidance, render_procedure
-from investigator.roles.steward import ProductionStewardDecision, StewardDecision, StewardReviewContext
+from investigator.roles.steward import ProductionStewardDecision, StewardDecision, StewardReviewContext, render_production_steward_contract
 from investigator.services.evidence_requests import CaseSnapshotMismatch, HumanEvidenceWorkflow
 from investigator.state.case_state import CaseState
 from investigator.sources import SourceRegistry
@@ -163,10 +163,11 @@ class ProductionInvestigationRunner:
         canonical = self.workflow.ensure_case(case_id)
         snapshot = coordinator.turn_snapshot(self.workflow.readable_sources(case_id), repository_revision=canonical.revision)
         self.workflow.assert_turn_snapshot_current(case_id, snapshot)
-        prompt = json.dumps({"role": "Case Steward", "procedure": render_procedure("steward"), "instruction": "Return exactly one JSON StewardDecision.", "graph": snapshot.graph.model_dump(mode="json"), "focus": snapshot.focus.model_dump(mode="json"), "review_context": context.model_dump(mode="json")}, sort_keys=True)
+        steward_contract = render_production_steward_contract()
+        prompt = json.dumps({"role": "Case Steward", "procedure": render_procedure("steward"), "output_contract": steward_contract, "instruction": 'Return exactly one JSON object using the "operation" discriminator; do not use "decision", "action", or "choice".', "graph": snapshot.graph.model_dump(mode="json"), "focus": snapshot.focus.model_dump(mode="json"), "review_context": context.model_dump(mode="json")}, sort_keys=True)
         trace: dict[str, Any] = {"case_id": case_id, "event": "steward_started", "step": step, "actor": "steward", "runtime_status": "RUNNING_STEWARD", "case_revision": coordinator.cycle.case_revision, "run_start_revision": run_start_revision, "turn_start_revision": canonical.revision, "snapshot_case_revision": snapshot.case_revision, "snapshot_graph_node_ids": sorted(snapshot.graph.nodes), "active_reasoning_node_ids": sorted(snapshot.active_reasoning_node_ids), "legal_graph_node_ids": sorted(snapshot.active_reasoning_node_ids), "visible_source_ids": sorted(source.id for source in snapshot.visible_sources), "snapshot_hash": _snapshot_hash(snapshot), "prompt_hash": hashlib.sha256(prompt.encode()).hexdigest(), "raw_output": None}
         try:
-            call = self._call_with_retry(prompt, StewardEnvelope, lambda value: _parse_and_validate_steward(value, coordinator, context, snapshot), trace, "Steward")
+            call = self._call_with_retry(prompt, StewardEnvelope, lambda value: _parse_and_validate_steward(value, coordinator, context, snapshot), trace, "Steward", contract=steward_contract)
         except Exception as exc:
             trace.update({"event": "steward_failed", "error": str(exc), "failure_category": type(exc).__name__})
             trace["final_case_revision"] = self.workflow.ensure_case(case_id).revision
@@ -181,7 +182,7 @@ class ProductionInvestigationRunner:
         if coordinator.cycle.status is CycleStatus.STOPPED:
             self.workflow.set_runtime(case_id, "STOPPED", "NONE")
 
-    def _call_with_retry(self, prompt: str, schema: type, validator, trace: dict[str, Any], role: str) -> ModelCallResult:
+    def _call_with_retry(self, prompt: str, schema: type, validator, trace: dict[str, Any], role: str, *, contract: str | None = None) -> ModelCallResult:
         last_error: Exception | None = None
         for attempt in range(2):
             try:
@@ -198,7 +199,7 @@ class ProductionInvestigationRunner:
                     trace["initial_parsed_response" if attempt == 0 else "correction_parsed_response"] = call.parsed.model_dump(mode="json")
                     trace["initial_operation_error" if attempt == 0 else "correction_operation_error"] = str(exc)
                     if attempt == 0:
-                        prompt += f"\n\nOPERATION VALIDATION FAILED\n{exc}\nPROCEDURAL GUIDANCE: {correction_guidance(exc)}\nReturn one complete replacement {role} response satisfying the exact production schema and current legal state."
+                        prompt += f"\n\nOPERATION VALIDATION FAILED\n{exc}\nPROCEDURAL GUIDANCE: {correction_guidance(exc)}\nPRESERVE THE INTENDED ACTION IF IT REMAINS SEMANTICALLY JUSTIFIED; repair structure and required fields without inventing a new case theory.\nEXACT CURRENT {role.upper()} OUTPUT CONTRACT:\n{contract or 'Use the exact production schema.'}\nReturn one complete replacement {role} response satisfying the exact production schema and current legal state."
                         continue
                     raise RuntimeError(f"{role.upper()}_OPERATION_VALIDATION_FAILURE: {exc}") from exc
                 trace["attempts"] = attempt + 1
@@ -210,7 +211,7 @@ class ProductionInvestigationRunner:
                 trace["initial_schema_error" if attempt == 0 else "correction_schema_error"] = str(exc)
                 trace["validation_errors"] = trace.get("validation_errors", []) + [str(exc)]
                 if attempt == 0:
-                    prompt += f"\nPROCEDURAL GUIDANCE: {correction_guidance(exc)}\nReturn one complete replacement response satisfying the exact production schema."
+                    prompt += f"\nPROCEDURAL GUIDANCE: {correction_guidance(exc)}\nEXACT CURRENT {role.upper()} OUTPUT CONTRACT:\n{contract or 'Use the exact production schema.'}\nReturn one complete replacement response satisfying the exact production schema."
         assert last_error is not None
         raise last_error
 
