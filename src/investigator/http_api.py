@@ -8,9 +8,10 @@ from urllib.parse import unquote, urlparse
 
 from investigator.services.evidence_requests import EvidenceRequestConflict, HumanEvidenceWorkflow
 from investigator.services.production_runner import default_production_run
-from investigator.llm.bedrock import CredentialOverride, clear_credential_override, credential_status, debug_credentials_enabled, set_credential_override
+from investigator.llm.bedrock import BedrockModelClient, CredentialOverride, clear_credential_override, credential_status, debug_credentials_enabled, set_credential_override
 from investigator.state.repository import CaseRepository
-from investigator.workspace_agent import WorkspaceAgent, WorkspaceChatRequest
+from investigator.workspace_agent import WorkspaceAgent, WorkspaceChatRequest, WorkspaceToolAuthorizationError
+from investigator.model_registry import MODEL_REGISTRY
 
 
 class InvestigatorApiHandler(BaseHTTPRequestHandler):
@@ -64,6 +65,8 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 payload = WorkspaceChatRequest.model_validate(self._read_json())
                 result = self.workspace_agent.chat(parts[2], payload.message)
                 self._write(200, {"response": result.response, "actions": result.actions, "recovery": result.recovery})
+            except WorkspaceToolAuthorizationError as exc:
+                self._write(403, {"error": str(exc)})
             except (ValueError, EvidenceRequestConflict) as exc:
                 self._write(422, {"error": str(exc)})
             return
@@ -140,7 +143,8 @@ def create_server(repository_root: str | Path = "data/cases", host: str = "127.0
     workflow = HumanEvidenceWorkflow(CaseRepository(repository_root), run_callback=run_callback or default_production_run)
     workflow.resume_callback = lambda case_id: workflow.start_run(case_id)
     InvestigatorApiHandler.workflow = workflow
-    InvestigatorApiHandler.workspace_agent = WorkspaceAgent(workflow)
+    model = MODEL_REGISTRY["anthropic.claude-opus-4-5"]
+    InvestigatorApiHandler.workspace_agent = WorkspaceAgent(workflow, BedrockModelClient(model_id=model.invocation_id, region=model.region))
     return ThreadingHTTPServer((host, port), InvestigatorApiHandler)
 
 

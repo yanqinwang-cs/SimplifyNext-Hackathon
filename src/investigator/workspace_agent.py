@@ -21,6 +21,20 @@ class WorkspaceChatRequest(BaseModel):
     message: str = Field(min_length=1)
 
 
+class WorkspaceToolCall(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str
+    arguments: dict[str, Any] = Field(default_factory=dict)
+
+
+class WorkspaceTurn(BaseModel):
+    """Small model envelope: tool calls are structured; the final reply is prose."""
+
+    model_config = ConfigDict(extra="forbid")
+    response: str | None = None
+    tool_calls: list[WorkspaceToolCall] = Field(default_factory=list, max_length=8)
+
+
 @dataclass(frozen=True)
 class WorkspaceChatResponse:
     response: str
@@ -44,6 +58,10 @@ class WorkspaceToolRequest(BaseModel):
 
 
 class WorkspaceToolAuthorizationError(PermissionError):
+    pass
+
+
+class WorkspaceModelUnavailable(RuntimeError):
     pass
 
 
@@ -83,49 +101,49 @@ class WorkspaceAgent:
 
     def chat(self, case_id: str, message: str) -> WorkspaceChatResponse:
         text = message.strip()
-        lowered = text.lower()
         if not text:
             raise ValueError("Workspace message must not be empty")
-        if any(word in lowered for word in ("run investigation", "continue", "resume")):
-            self.invoke_tool(case_id, WorkspaceToolRequest(tool="RESUME_INVESTIGATION"))
-            response = "The investigation has been resumed. I’ll show the next request or status here when it is available."
-            actions = ["View current case"]
-        elif "stop" in lowered or "pause" in lowered:
-            self.invoke_tool(case_id, WorkspaceToolRequest(tool="PAUSE_INVESTIGATION"))
-            response = "The investigation is paused. No semantic case reasoning was changed by this action."
-            actions = ["Resume investigation"]
-        elif "need" in lowered or "request" in lowered:
-            pending = self.invoke_tool(case_id, WorkspaceToolRequest(tool="GET_PENDING_REQUEST"))["request"]
-            if pending:
-                response = f"The investigation needs: {pending.get('informationSought') or pending.get('information_sought')}. This matters because {pending.get('reason')}."
-            else:
-                response = "There is no outstanding request for human information."
-            actions = ["Show sources", "Show history"]
-        elif "source" in lowered or "evidence" in lowered or "case" in lowered or "happening" in lowered:
-            summary = self.invoke_tool(case_id, WorkspaceToolRequest(tool="GET_CASE_SUMMARY"))
-            response = summary["human_summary"]
-            actions = ["Show sources", "Show history"]
-        elif "fail" in lowered or "error" in lowered or "debug" in lowered or "commit" in lowered:
-            failure = self.invoke_tool(case_id, WorkspaceToolRequest(tool="GET_LATEST_FAILURE"))
-            state = self.workflow.ensure_case(case_id)
-            if failure.get("available") and state.runtime_status == "FAILED" and state.clean_checkpoint:
-                self.invoke_tool(case_id, WorkspaceToolRequest(tool="RECOVER_FROM_SAFE_STATE"))
-                failure = self.invoke_tool(case_id, WorkspaceToolRequest(tool="GET_LATEST_FAILURE"))
-            response = failure["human_summary"]
-            actions = ["Open debug details"] if failure.get("available") else []
-        elif "steward" in lowered or "review" in lowered:
-            response = "I can request a Case Steward review of the current investigation state."
-            self.invoke_tool(case_id, WorkspaceToolRequest(tool="REQUEST_STEWARD_REVIEW"))
-            actions = ["View current case"]
-        elif "what are you" in lowered or "agents" in lowered:
-            response = "I’m the Workspace Agent: I handle the human interface, evidence workflow, debugging, recovery, and history. The Investigator performs local reasoning, while the Case Steward manages global reassessment. Final disciplinary judgment remains human."
-            actions = []
-        else:
-            response = "I can explain the current case, show sources and history, run or pause the investigation, mediate an evidence request, or explain the latest failure."
-            actions = ["Explain current case", "Show latest failure", "Run investigation"]
         self._append_chat(case_id, "human", text)
-        self._append_chat(case_id, "workspace", response)
-        return WorkspaceChatResponse(response=response, actions=actions, recovery=self._has_recovery(case_id))
+        if self.client is None:
+            response = "The Workspace assistant is currently unavailable. Case operations remain accessible through the workspace controls."
+            self._append_chat(case_id, "workspace", response)
+            return WorkspaceChatResponse(response=response)
+        messages: list[dict[str, Any]] = [{"role": "user", "content": [{"text": f"{self.system_prompt()}\n\nUser message:\n{text}"}]}]
+        try:
+            for _ in range(5):
+                call = self.client.call(messages, WorkspaceTurn)
+                turn = call.parsed
+                if not turn.tool_calls:
+                    if not turn.response:
+                        raise RuntimeError("Workspace model returned neither a response nor a tool call")
+                    self._append_chat(case_id, "workspace", turn.response)
+                    return WorkspaceChatResponse(response=turn.response, recovery=self._has_recovery(case_id))
+                for tool_call in turn.tool_calls:
+                    result = self.invoke_tool(case_id, {"tool": tool_call.name, "payload": tool_call.arguments})
+                    messages.append({"role": "assistant", "content": [{"text": turn.model_dump_json()}]})
+                    messages.append({"role": "user", "content": [{"text": f"Deterministic tool result for {tool_call.name}: {result}"}]})
+            raise RuntimeError("Workspace tool loop exceeded the five-round safety bound")
+        except WorkspaceModelUnavailable:
+            raise
+        except WorkspaceToolAuthorizationError:
+            raise
+        except Exception as exc:
+            response = "The Workspace assistant could not respond. Case operations remain accessible through the workspace controls."
+            self._append_chat(case_id, "workspace", response)
+            self._append_chat(case_id, "system", f"Workspace model failure: {type(exc).__name__}: {exc}")
+            return WorkspaceChatResponse(response=response)
+
+    @staticmethod
+    def system_prompt() -> str:
+        tools = sorted(WorkspaceAgent.READ_TOOLS | WorkspaceAgent.ACTION_TOOLS)
+        return "\n".join((
+            "You are SimplifyNext Workspace Assistant, the human-facing operational interface for an academic-integrity investigation.",
+            "Investigator performs local case reasoning; Steward performs global reassessment. Explain state, navigate history, mediate evidence, invoke operational tools, and explain/recover failures.",
+            "You may inspect the whole case, but must not create or edit semantic Evidence, Proposition, Hypothesis, or Uncertainty nodes, determine guilt, or make a disciplinary outcome.",
+            "Use a deterministic tool whenever the answer depends on current state. Do not guess status, failure cause, source inventory, pending request, safe state, or request/run linkage.",
+            "Speak naturally to university investigators and hide internal graph IDs and schema jargon unless audit detail is explicitly requested.",
+            f"Available Workspace tools: {', '.join(tools)}. Return JSON matching WorkspaceTurn; use tool_calls for tools and response for the final natural-language answer.",
+        ))
 
     def _read_tool(self, case_id: str, request: WorkspaceToolRequest) -> dict[str, Any]:
         state = self.workflow.ensure_case(case_id)
