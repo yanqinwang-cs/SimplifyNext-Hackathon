@@ -156,11 +156,14 @@ class HumanEvidenceWorkflow:
             state.last_updated_at = datetime.now(timezone.utc)
             self.repository.save(state)
 
-    def save_reasoning_state(self, case_id: str, graph: Any, focus_node_id: str, case_revision: int | None = None) -> None:
+    def save_reasoning_state(self, case_id: str, graph: Any, focus_node_id: str, case_revision: int | None = None, focus: Any | None = None) -> None:
         with self._lock:
             state = self.ensure_case(case_id)
             state.reasoning_graph = graph.model_copy(deep=True)
             state.focus_node_id = focus_node_id
+            if focus is not None:
+                state.focus_recent_node_ids = list(focus.recent_node_ids)
+                state.focus_recent_region_node_ids = list(focus.recent_region_node_ids)
             if case_revision is not None:
                 state.revision = case_revision
             state.last_updated_at = datetime.now(timezone.utc)
@@ -247,6 +250,11 @@ class HumanEvidenceWorkflow:
                 raise EvidenceRequestConflict("Only one pending human evidence request is allowed")
             if any(item.request_id == request.request_id for item in state.evidence_request_history):
                 raise EvidenceRequestConflict(f"Evidence request ID already exists: {request.request_id}")
+            request = request.model_copy(update={
+                "originating_run_id": request.originating_run_id or self.current_run_id(case_id),
+                "originating_actor": request.originating_actor or "investigator",
+                "created_case_revision": request.created_case_revision if request.created_case_revision is not None else state.revision,
+            })
             state.evidence_request_history.append(request)
             state.runtime_status = "WAITING_FOR_EVIDENCE"
             state.current_actor = "NONE"
@@ -296,7 +304,7 @@ class HumanEvidenceWorkflow:
                         dict(source_data.get("metadata") or {}),
                     )
                     source_ids.append(source.id)
-            completed = pending.model_copy(update={"status": EvidenceRequestStatus(parsed.status), "released_source_ids": source_ids, "note": parsed.note})
+            completed = pending.model_copy(update={"status": EvidenceRequestStatus(parsed.status), "released_source_ids": source_ids, "note": parsed.note, "fulfilled_case_revision": state.revision + 1})
             index = state.evidence_request_history.index(pending)
             state.evidence_request_history[index] = completed
             state.revision += 1
@@ -304,8 +312,18 @@ class HumanEvidenceWorkflow:
             state.current_actor = "NONE"
             state.last_updated_at = datetime.now(timezone.utc)
             self.repository.save(state)
+        self.record_trace(case_id, {"event": "evidence_request_resolved", "request_id": request_id, "status": completed.status.value, "released_source_ids": list(completed.released_source_ids), "fulfilled_case_revision": completed.fulfilled_case_revision, "actor": "human"})
         if self.resume_callback:
             self.resume_callback(case_id)
+            resumed_run_id = self.current_run_id(case_id)
+            if resumed_run_id:
+                with self._lock:
+                    state = self.ensure_case(case_id)
+                    current = next(item for item in state.evidence_request_history if item.request_id == request_id)
+                    updated = current.model_copy(update={"resumed_run_id": resumed_run_id})
+                    state.evidence_request_history[state.evidence_request_history.index(current)] = updated
+                    self.repository.save(state)
+                    completed = updated
         return completed
 
     def set_model_revision_active(self, case_id: str, active: bool) -> None:
@@ -330,7 +348,7 @@ class HumanEvidenceWorkflow:
         pending_payload = (pending.model_dump(mode="json") | {"informationSought": pending.information_sought}) if pending else None
         runs = self.get_runs(case_id)
         latest = runs[-1] if runs else None
-        return {"caseId": state.case_id, "caseRevision": state.revision, "title": state.title, "status": runtime_status.lower(), "caseStatus": state.case_status, "runtimeStatus": runtime_status, "currentActor": current_actor, "institutionalStatus": "Investigating" if state.case_status == "ACTIVE" else state.case_status.title(), "currentFocus": pending.information_sought if pending else "Review the current case state.", "messages": messages, "visibleSources": [{"id": source.id, "name": source.name, "sourceType": source.source_type.value, "content": source.content or "", "contentPreview": (source.content or "")[:180]} for source in state.sources.values()], "pendingEvidenceRequest": pending_payload, "lastError": state.last_error, "lastTraceStep": state.last_trace_step, "lastUpdatedAt": state.last_updated_at.isoformat(), "latestRun": latest}
+        return {"caseId": state.case_id, "caseRevision": state.revision, "title": state.title, "status": runtime_status.lower(), "caseStatus": state.case_status, "runtimeStatus": runtime_status, "currentActor": current_actor, "institutionalStatus": "Investigating" if state.case_status == "ACTIVE" else state.case_status.title(), "currentFocus": pending.information_sought if pending else "Review the current case state.", "messages": messages, "visibleSources": [{"id": source.id, "name": source.name, "sourceType": source.source_type.value, "content": source.content or "", "contentPreview": (source.content or "")[:180]} for source in state.sources.values()], "pendingEvidenceRequest": pending_payload, "requestHistory": [item.model_dump(mode="json") for item in state.evidence_request_history], "runs": runs, "lastError": state.last_error, "lastTraceStep": state.last_trace_step, "lastUpdatedAt": state.last_updated_at.isoformat(), "latestRun": latest}
 
     def get_traces(self, case_id: str) -> list[dict[str, Any]]:
         return [dict(trace) for trace in self.ensure_case(case_id).trace_history]

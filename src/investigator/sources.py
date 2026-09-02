@@ -3,6 +3,7 @@
 import re
 from typing import Any
 
+from investigator.graph import GraphNode, GraphNodeType
 from investigator.models.source import Source, SourceType
 from investigator.state.case_state import CaseState
 
@@ -18,4 +19,6 @@ class SourceRegistry:
         if source.id in state.sources:
             raise ValueError(f"Duplicate source ID: {source.id!r}")
         state.sources[source.id] = source
+        if state.reasoning_graph is not None:
+            state.reasoning_graph.add_node(GraphNode(id=source.id, node_type=GraphNodeType.SOURCE, statement=source.name, semantic_key=source.id, canonical_id=source.id, metadata={"source_type": source.source_type.value, "readable": True}))
         return source

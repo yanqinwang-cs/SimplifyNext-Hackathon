@@ -1,4 +1,5 @@
 from copy import deepcopy
+import hashlib
 
 from investigator.graph import CaseGraph, EdgeRelation, GraphEdge, GraphNode, GraphNodeType, GraphStatus, make_edge_id
 from investigator.roles.focus import InvestigationFocus, investigator_region
@@ -14,6 +15,7 @@ class GraphInvestigationCoordinator:
         self._require_node(graph, focus.node_id)
         self.graph, self.focus = graph, focus
         self._new_nodes: set[str] = set()
+        self._turn_refs: dict[str, str] = {}
         self.history = GraphHistory()
         self.history.append(graph, focus, "initial graph")
         self.stopped = False
@@ -48,49 +50,53 @@ class GraphInvestigationCoordinator:
         self.history.append(self.graph, self.focus, update.reason)
 
     def _apply_add_evidence(self, graph: CaseGraph, new_nodes: set[str], update: AddEvidenceCommand) -> None:
-        self._require_new_id(graph, update.node_id)
-        graph.add_node(GraphNode(id=update.node_id, node_type=GraphNodeType.EVIDENCE, statement=update.statement, metadata={"source_ids": list(update.source_ids)}))
-        new_nodes.add(update.node_id)
+        node_id = self._allocate_node_id(graph, GraphNodeType.EVIDENCE, update.node_id, update.local_ref)
+        graph.add_node(GraphNode(id=node_id, node_type=GraphNodeType.EVIDENCE, statement=update.statement, semantic_key=update.local_ref, canonical_id=node_id, metadata={"source_ids": list(update.source_ids)}))
+        self._remember_ref(update.local_ref, node_id)
+        new_nodes.add(node_id)
 
     def _apply_add_proposition(self, graph: CaseGraph, new_nodes: set[str], update: AddPropositionCommand) -> None:
-        self._require_new_id(graph, update.node_id)
+        node_id = self._allocate_node_id(graph, GraphNodeType.PROPOSITION, update.node_id, update.local_ref)
         permitted = self._permitted_ids() | new_nodes
-        sources = [self._require_local_active(graph, identifier, {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}, permitted) for identifier in update.derived_from_node_ids]
-        graph.add_node(GraphNode(id=update.node_id, node_type=GraphNodeType.PROPOSITION, statement=update.statement))
+        sources = [self._require_local_active(graph, self._resolve_ref(identifier), {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}, permitted) for identifier in update.derived_from_node_ids]
+        graph.add_node(GraphNode(id=node_id, node_type=GraphNodeType.PROPOSITION, statement=update.statement, semantic_key=update.local_ref, canonical_id=node_id))
         for source in sources:
-            graph.add_edge(GraphEdge(id=make_edge_id(update.node_id, EdgeRelation.DERIVED_FROM, source.id), source_id=update.node_id, target_id=source.id, relation=EdgeRelation.DERIVED_FROM, explanation=update.reason))
-        new_nodes.add(update.node_id)
+            graph.add_edge(GraphEdge(id=make_edge_id(node_id, EdgeRelation.DERIVED_FROM, source.id), source_id=node_id, target_id=source.id, relation=EdgeRelation.DERIVED_FROM, explanation=update.reason))
+        self._remember_ref(update.local_ref, node_id)
+        new_nodes.add(node_id)
 
     def _apply_add_hypothesis(self, graph: CaseGraph, new_nodes: set[str], update: AddHypothesisCommand) -> None:
-        self._require_new_id(graph, update.node_id)
-        graph.add_node(GraphNode(id=update.node_id, node_type=GraphNodeType.HYPOTHESIS, statement=update.statement))
-        new_nodes.add(update.node_id)
+        node_id = self._allocate_node_id(graph, GraphNodeType.HYPOTHESIS, update.node_id, update.local_ref)
+        graph.add_node(GraphNode(id=node_id, node_type=GraphNodeType.HYPOTHESIS, statement=update.statement, semantic_key=update.local_ref, canonical_id=node_id))
+        self._remember_ref(update.local_ref, node_id)
+        new_nodes.add(node_id)
 
     def _apply_add_uncertainty(self, graph: CaseGraph, new_nodes: set[str], update: AddUncertaintyCommand) -> None:
-        self._require_new_id(graph, update.node_id)
+        node_id = self._allocate_node_id(graph, GraphNodeType.UNCERTAINTY, update.node_id, update.local_ref)
         permitted = self._permitted_ids() | new_nodes
-        target = self._require_local_active(graph, update.target_node_id, {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}, permitted)
-        graph.add_node(GraphNode(id=update.node_id, node_type=GraphNodeType.UNCERTAINTY, statement=update.statement))
-        graph.add_edge(GraphEdge(id=make_edge_id(update.node_id, EdgeRelation.TARGETS, target.id), source_id=update.node_id, target_id=target.id, relation=EdgeRelation.TARGETS, explanation=update.reason))
-        new_nodes.add(update.node_id)
+        target = self._require_local_active(graph, self._resolve_ref(update.target_node_id), {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}, permitted)
+        graph.add_node(GraphNode(id=node_id, node_type=GraphNodeType.UNCERTAINTY, statement=update.statement, semantic_key=update.local_ref, canonical_id=node_id))
+        graph.add_edge(GraphEdge(id=make_edge_id(node_id, EdgeRelation.TARGETS, target.id), source_id=node_id, target_id=target.id, relation=EdgeRelation.TARGETS, explanation=update.reason))
+        self._remember_ref(update.local_ref, node_id)
+        new_nodes.add(node_id)
 
     def _apply_relation(self, graph: CaseGraph, new_nodes: set[str], update: AddSupportCommand | AddConflictCommand) -> None:
         permitted = self._permitted_ids() | new_nodes
-        source = self._require_local_active(graph, update.source_node_id, {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}, permitted)
-        target = self._require_local_active(graph, update.target_node_id, {GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}, permitted)
+        source = self._require_local_active(graph, self._resolve_ref(update.source_node_id), {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}, permitted)
+        target = self._require_local_active(graph, self._resolve_ref(update.target_node_id), {GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}, permitted)
         relation = EdgeRelation.SUPPORTS if isinstance(update, AddSupportCommand) else EdgeRelation.CONFLICTS
         graph.add_edge(GraphEdge(id=make_edge_id(source.id, relation, target.id), source_id=source.id, target_id=target.id, relation=relation, strength=update.strength, explanation=update.reason))
 
     def _apply_derivation(self, graph: CaseGraph, new_nodes: set[str], update: AddDerivationCommand) -> None:
         permitted = self._permitted_ids() | new_nodes
-        proposition = self._require_local_active(graph, update.derived_proposition_id, {GraphNodeType.PROPOSITION}, permitted)
-        source = self._require_local_active(graph, update.source_node_id, {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}, permitted)
+        proposition = self._require_local_active(graph, self._resolve_ref(update.derived_proposition_id), {GraphNodeType.PROPOSITION}, permitted)
+        source = self._require_local_active(graph, self._resolve_ref(update.source_node_id), {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}, permitted)
         graph.add_edge(GraphEdge(id=make_edge_id(proposition.id, EdgeRelation.DERIVED_FROM, source.id), source_id=proposition.id, target_id=source.id, relation=EdgeRelation.DERIVED_FROM, explanation=update.reason))
 
     def _apply_specialization(self, graph: CaseGraph, new_nodes: set[str], update: AddSpecializationCommand) -> None:
         permitted = self._permitted_ids() | new_nodes
-        child = self._require_local_active(graph, update.child_hypothesis_id, {GraphNodeType.HYPOTHESIS}, permitted)
-        parent = self._require_local_active(graph, update.parent_hypothesis_id, {GraphNodeType.HYPOTHESIS}, permitted)
+        child = self._require_local_active(graph, self._resolve_ref(update.child_hypothesis_id), {GraphNodeType.HYPOTHESIS}, permitted)
+        parent = self._require_local_active(graph, self._resolve_ref(update.parent_hypothesis_id), {GraphNodeType.HYPOTHESIS}, permitted)
         graph.add_edge(GraphEdge(id=make_edge_id(child.id, EdgeRelation.SPECIALIZES, parent.id), source_id=child.id, target_id=parent.id, relation=EdgeRelation.SPECIALIZES, explanation=update.reason))
 
     def _require_local_active(self, graph: CaseGraph, identifier: str, types: set[GraphNodeType], permitted: set[str]) -> GraphNode:
@@ -105,6 +111,28 @@ class GraphInvestigationCoordinator:
     def _require_new_id(graph: CaseGraph, identifier: str) -> None:
         if identifier in graph.nodes:
             raise ValueError(f"Duplicate graph node ID: {identifier!r}")
+
+    def _allocate_node_id(self, graph: CaseGraph, node_type: GraphNodeType, node_id: str | None, local_ref: str | None) -> str:
+        if node_id is not None:
+            self._require_new_id(graph, node_id)
+            return node_id
+        assert local_ref is not None
+        if local_ref in self._turn_refs:
+            raise ValueError(f"Duplicate turn-local reference: {local_ref!r}")
+        digest = hashlib.sha256(f"{graph.case_id}:{node_type.value}:{local_ref}".encode()).hexdigest()[:16]
+        candidate = f"node_{digest}"
+        suffix = 1
+        while candidate in graph.nodes:
+            candidate = f"node_{digest}{suffix:x}"
+            suffix += 1
+        return candidate
+
+    def _remember_ref(self, local_ref: str | None, node_id: str) -> None:
+        if local_ref is not None:
+            self._turn_refs[local_ref] = node_id
+
+    def _resolve_ref(self, identifier: str) -> str:
+        return self._turn_refs.get(identifier, identifier)
 
     def review_with_steward(self, decision: StewardDecision, review_context: StewardReviewContext | None = None) -> None:
         if self.stopped:
@@ -138,7 +166,9 @@ class GraphInvestigationCoordinator:
 
     def legal_node_ids(self) -> set[str]:
         """The single existing-node boundary shared by Investigator view and validators."""
-        return {self.focus.node_id, *(node.id for node in self.graph.neighbors(self.focus.node_id)), *self._new_nodes}
+        recent = set(self.focus.recent_node_ids) | set(self.focus.recent_region_node_ids)
+        nearby = {node.id for identifier in recent if identifier in self.graph.nodes for node in self.graph.neighbors(identifier)}
+        return {self.focus.node_id, *(node.id for node in self.graph.neighbors(self.focus.node_id)), *recent, *nearby, *self._new_nodes, *(node.id for node in self.graph.nodes.values() if node.node_type is GraphNodeType.SOURCE and node.status is GraphStatus.ACTIVE)}
 
     def active_reasoning_view(self) -> CaseGraph:
         """Return the exact graph workspace whose IDs are legal for Investigator references."""

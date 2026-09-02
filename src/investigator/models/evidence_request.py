@@ -21,6 +21,11 @@ class EvidenceRequest(BaseModel):
     requested_at_revision: int = Field(ge=0)
     released_source_ids: list[str] = Field(default_factory=list)
     note: str | None = None
+    originating_run_id: str | None = None
+    originating_actor: str | None = None
+    created_case_revision: int | None = Field(default=None, ge=0)
+    fulfilled_case_revision: int | None = Field(default=None, ge=0)
+    resumed_run_id: str | None = None
 
 
 class EvidenceRequestSubmission(BaseModel):

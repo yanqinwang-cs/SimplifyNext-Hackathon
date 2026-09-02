@@ -8,7 +8,7 @@
     "contract": "StewardDecisionResponse",
     "git_commit": "6c483d1",
     "prompt_hash": "6f8c20db1af87b630034a0f494ea0241577dc178f89acf5c9fdc139256fc200e",
-    "schema_hash": "c1d034291a6ea54ed9e0805c81e02ec4d6c81044e24d58acfa80d0fb6492e705",
+    "schema_hash": "01f41e8e1bf12cf638ac05e2177550cf13ab64cebecbebd853d1944b0c35b077",
     "source": "experiments/steward_screen/runner.py",
     "template_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
   },
@@ -171,6 +171,81 @@
         "title": "ShiftFocusDecision",
         "type": "object"
       },
+      "StewardRequestEvidenceDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment": {
+            "title": "Assessment",
+            "type": "string"
+          },
+          "expected_information_value": {
+            "title": "Expected Information Value",
+            "type": "string"
+          },
+          "information_sought": {
+            "title": "Information Sought",
+            "type": "string"
+          },
+          "operation": {
+            "const": "request_evidence",
+            "default": "request_evidence",
+            "title": "Operation",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "target_uncertainty_id": {
+            "title": "Target Uncertainty Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessment",
+          "reason",
+          "target_uncertainty_id",
+          "information_sought",
+          "expected_information_value"
+        ],
+        "title": "StewardRequestEvidenceDecision",
+        "type": "object"
+      },
+      "StewardRequestOpenDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment": {
+            "title": "Assessment",
+            "type": "string"
+          },
+          "expected_information_value": {
+            "title": "Expected Information Value",
+            "type": "string"
+          },
+          "information_sought": {
+            "title": "Information Sought",
+            "type": "string"
+          },
+          "operation": {
+            "const": "request_open",
+            "default": "request_open",
+            "title": "Operation",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessment",
+          "reason",
+          "information_sought",
+          "expected_information_value"
+        ],
+        "title": "StewardRequestOpenDecision",
+        "type": "object"
+      },
       "StopUnresolvedDecision": {
         "additionalProperties": false,
         "properties": {
@@ -217,6 +292,8 @@
         "generalize": "#/$defs/GeneralizeDecision",
         "keep_focus": "#/$defs/KeepFocusDecision",
         "reactivate": "#/$defs/ReactivateDecision",
+        "request_evidence": "#/$defs/StewardRequestEvidenceDecision",
+        "request_open": "#/$defs/StewardRequestOpenDecision",
         "shift_focus": "#/$defs/ShiftFocusDecision",
         "stop_unresolved": "#/$defs/StopUnresolvedDecision"
       },
@@ -240,6 +317,12 @@
       },
       {
         "$ref": "#/$defs/StopUnresolvedDecision"
+      },
+      {
+        "$ref": "#/$defs/StewardRequestOpenDecision"
+      },
+      {
+        "$ref": "#/$defs/StewardRequestEvidenceDecision"
       }
     ]
   },

@@ -47,6 +47,8 @@ STEWARD_PROCEDURE = (
     ProcedureSpec("archive", "Remove a stale or superseded branch from active attention while retaining history.", "The target is stale/superseded; current-focus archive has an active destination.", "Keeps historical state auditable without active distraction.", "Deleting or silently mutating a branch.", "generalize or keep_focus when the branch remains useful.", "steward"),
     ProcedureSpec("reactivate", "Return archived material when it becomes materially relevant.", "Archived target is identified and newly relevant.", "Allows historical evidence/branches to re-enter active reasoning.", "Creating a duplicate replacement branch.", "shift_focus or keep_focus if it is already active.", "steward"),
     ProcedureSpec("stop_unresolved", "Hand an unresolved frontier to the human decision-maker after review.", "Trusted global frontier assessed; no useful region/action remains; local work is exhausted.", "Makes unresolved termination explicit without having Steward decide guilt.", "Stopping because evidence is merely unavailable or confidence is reduced.", "keep_focus, shift_focus, or request further local work.", "steward"),
+    ProcedureSpec("request_open", "Ask the human for specific useful case context when a targeted evidence request is not earned.", "A concrete information need and expected investigative value are stated.", "Preserves bounded human-in-the-loop recovery without graph mutation.", "A vague request for more information.", "request_evidence when one active uncertainty and a precise source need are justified.", "steward"),
+    ProcedureSpec("request_evidence", "Ask the human for a targeted source that addresses one active uncertainty.", "One active uncertainty, precise information need, reason, and expected value are stated.", "Makes Steward recovery auditable without changing the graph.", "Inventing a target or using an action ID as evidence.", "request_open when targeted prerequisites are not satisfied.", "steward"),
 )
 
 INVESTIGATOR_INTENT_COVERAGE = {
@@ -73,6 +75,8 @@ STEWARD_INTENT_COVERAGE = {
     "archive": "archive",
     "reactivate": "reactivate",
     "handoff": "stop_unresolved",
+    "ask broad human question": "request_open",
+    "ask targeted human question": "request_evidence",
 }
 
 GRAPH_OPERATION_RELATIONS = {

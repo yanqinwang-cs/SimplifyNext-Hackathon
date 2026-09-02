@@ -32,9 +32,16 @@ class _InvestigatorCommand(BaseModel):
 
 class AddEvidenceCommand(_InvestigatorCommand):
     operation: Literal["add_evidence"] = "add_evidence"
-    node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE)$")
+    node_id: str | None = Field(default=None, pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE)$")
+    local_ref: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_-]{0,63}$")
     statement: str
     source_ids: list[str] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def has_one_reference(self) -> "AddEvidenceCommand":
+        if bool(self.node_id) == bool(self.local_ref):
+            raise ValueError("add_evidence requires exactly one of node_id or local_ref")
+        return self
 
     @field_validator("source_ids")
     @classmethod
@@ -48,9 +55,16 @@ class AddEvidenceCommand(_InvestigatorCommand):
 
 class AddPropositionCommand(_InvestigatorCommand):
     operation: Literal["add_proposition"] = "add_proposition"
-    node_id: str = Field(pattern=r"^P\d+(?:\.\d+)*$")
+    node_id: str | None = Field(default=None, pattern=r"^P\d+(?:\.\d+)*$")
+    local_ref: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_-]{0,63}$")
     statement: str
     derived_from_node_ids: list[str] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def has_one_reference(self) -> "AddPropositionCommand":
+        if bool(self.node_id) == bool(self.local_ref):
+            raise ValueError("add_proposition requires exactly one of node_id or local_ref")
+        return self
 
     @model_validator(mode="after")
     def sources_are_unique(self) -> "AddPropositionCommand":
@@ -61,20 +75,34 @@ class AddPropositionCommand(_InvestigatorCommand):
 
 class AddHypothesisCommand(_InvestigatorCommand):
     operation: Literal["add_hypothesis"] = "add_hypothesis"
-    node_id: str = Field(pattern=r"^H\d+(?:\.\d+)*$")
+    node_id: str | None = Field(default=None, pattern=r"^H\d+(?:\.\d+)*$")
+    local_ref: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_-]{0,63}$")
     statement: str
+
+    @model_validator(mode="after")
+    def has_one_reference(self) -> "AddHypothesisCommand":
+        if bool(self.node_id) == bool(self.local_ref):
+            raise ValueError("add_hypothesis requires exactly one of node_id or local_ref")
+        return self
 
 
 class AddUncertaintyCommand(_InvestigatorCommand):
     operation: Literal["add_uncertainty"] = "add_uncertainty"
-    node_id: str = Field(pattern=r"^U\d+(?:\.\d+)*$")
+    node_id: str | None = Field(default=None, pattern=r"^U\d+(?:\.\d+)*$")
+    local_ref: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_-]{0,63}$")
     statement: str
-    target_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*|H\d+(?:\.\d+)*)$")
+    target_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*|H\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$")
+
+    @model_validator(mode="after")
+    def has_one_reference(self) -> "AddUncertaintyCommand":
+        if bool(self.node_id) == bool(self.local_ref):
+            raise ValueError("add_uncertainty requires exactly one of node_id or local_ref")
+        return self
 
 
 class _RelationCommand(_InvestigatorCommand):
-    source_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*)$")
-    target_node_id: str = Field(pattern=r"^(?:P\d+(?:\.\d+)*|H\d+(?:\.\d+)*)$")
+    source_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$")
+    target_node_id: str = Field(pattern=r"^(?:P\d+(?:\.\d+)*|H\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$")
     strength: EdgeStrength | None = None
 
 
@@ -88,14 +116,14 @@ class AddConflictCommand(_RelationCommand):
 
 class AddDerivationCommand(_InvestigatorCommand):
     operation: Literal["add_derivation"] = "add_derivation"
-    derived_proposition_id: str = Field(pattern=r"^P\d+(?:\.\d+)*$")
-    source_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*)$")
+    derived_proposition_id: str = Field(pattern=r"^(?:P\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$")
+    source_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$")
 
 
 class AddSpecializationCommand(_InvestigatorCommand):
     operation: Literal["add_specialization"] = "add_specialization"
-    child_hypothesis_id: str = Field(pattern=r"^H\d+(?:\.\d+)*$")
-    parent_hypothesis_id: str = Field(pattern=r"^H\d+(?:\.\d+)*$")
+    child_hypothesis_id: str = Field(pattern=r"^(?:H\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$")
+    parent_hypothesis_id: str = Field(pattern=r"^(?:H\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$")
 
 
 class MoveFocusCommand(_InvestigatorCommand):

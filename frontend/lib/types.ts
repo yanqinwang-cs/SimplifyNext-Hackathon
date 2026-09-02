@@ -6,6 +6,9 @@ export interface EvidenceRequest {
   informationSought: string;
   reason: string;
   status: EvidenceRequestStatus;
+  originating_run_id?: string | null;
+  originating_actor?: string | null;
+  resumed_run_id?: string | null;
 }
 
 export interface VisibleSource {
@@ -64,4 +67,6 @@ export interface CaseWorkspaceState {
   lastTraceStep?: number | null;
   lastUpdatedAt?: string;
   latestRun?: RunSummary | null;
+  requestHistory?: EvidenceRequest[];
+  runs?: RunSummary[];
 }

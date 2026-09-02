@@ -16,7 +16,7 @@ from investigator.roles.focus import InvestigationFocus, investigator_region
 from investigator.roles.investigator import INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdate
 from investigator.roles.investigator import InvestigatorOperation
 from investigator.roles.procedure import INVESTIGATOR_PROCEDURE, STEWARD_PROCEDURE, procedural_contract_errors
-from investigator.roles.steward import StewardDecision, StopUnresolvedDecision, StewardReviewContext
+from investigator.roles.steward import StewardDecision, StopUnresolvedDecision, StewardReviewContext, StewardRequestEvidenceDecision, StewardRequestOpenDecision
 
 
 class EnquiryKind(str, Enum):
@@ -88,6 +88,14 @@ class RequestEvidence(_ReasonedStep):
 class RequestOpen(_ReasonedStep):
     type: Literal["request_open"] = "request_open"
     information_sought: str | None = None
+    expected_information_value: str | None = None
+
+    @field_validator("information_sought", "expected_information_value")
+    @classmethod
+    def substantive_open_request(cls, value: str | None) -> str | None:
+        if value is not None and (not value.strip() or value.strip().lower() in {"more information", "additional information", "anything else"}):
+            raise ValueError("request_open must state a concrete information need and expected value")
+        return value
 
 
 class RequestStewardReview(_ReasonedStep):
@@ -335,7 +343,9 @@ class InvestigatorCycleCoordinator:
 
     @staticmethod
     def _view_for(graph: CaseGraph, focus: InvestigationFocus, new_nodes: set[str]) -> CaseGraph:
-        allowed = {focus.node_id, *(node.id for node in graph.neighbors(focus.node_id)), *new_nodes}
+        recent = set(focus.recent_node_ids) | set(focus.recent_region_node_ids)
+        nearby = {node.id for identifier in recent if identifier in graph.nodes for node in graph.neighbors(identifier)}
+        allowed = {focus.node_id, *(node.id for node in graph.neighbors(focus.node_id)), *recent, *nearby, *new_nodes, *(node.id for node in graph.nodes.values() if node.node_type is GraphNodeType.SOURCE and node.status is GraphStatus.ACTIVE)}
         return graph.model_copy(update={
             "nodes": {identifier: graph.nodes[identifier] for identifier in allowed},
             "edges": {identifier: edge for identifier, edge in graph.edges.items() if edge.source_id in allowed and edge.target_id in allowed},
@@ -475,6 +485,9 @@ class InvestigatorCycleCoordinator:
             raise CycleError(CycleFailureCode.STALE_STEWARD_REVISION, "Steward decision baseline does not match its canonical snapshot")
         try:
             parsed = TypeAdapter(StewardDecision).validate_python(decision)
+            if isinstance(parsed, (StewardRequestOpenDecision, StewardRequestEvidenceDecision)):
+                self._create_human_request(parsed)
+                return self.cycle.model_copy(deep=True)
             working = GraphInvestigationCoordinator(deepcopy(self.graph), self.focus.model_copy(deep=True))
             working.review_with_steward(parsed, review_context=review_context or self.review_context)
         except CycleError:
@@ -491,6 +504,19 @@ class InvestigatorCycleCoordinator:
             self._new_nodes = set()
         self.cycle.handoff_reason = None
         return self.cycle.model_copy(deep=True)
+
+    def _create_human_request(self, request: StewardRequestOpenDecision | StewardRequestEvidenceDecision) -> None:
+        if self.cycle.evidence_request is not None:
+            raise CycleError(CycleFailureCode.EVIDENCE_REQUEST_ALREADY_PENDING, "A human evidence request is already pending")
+        if isinstance(request, StewardRequestEvidenceDecision):
+            node = self.graph.nodes.get(request.target_uncertainty_id)
+            if node is None or node.node_type is not GraphNodeType.UNCERTAINTY or node.status is not GraphStatus.ACTIVE:
+                raise CycleError(CycleFailureCode.INVALID_ENQUIRY_TARGET, "Steward targeted request must identify an active uncertainty")
+        item = EvidenceRequest(request_id=f"R{len(self.cycle.evidence_request_history) + 1}", target_uncertainty_id=getattr(request, "target_uncertainty_id", None), information_sought=request.information_sought, reason=request.reason, expected_information_value=request.expected_information_value, requested_at_revision=self.cycle.case_revision)
+        self.cycle.evidence_request = item
+        self.cycle.evidence_request_history.append(item.model_copy(deep=True))
+        self.cycle.status = CycleStatus.WAITING_FOR_EVIDENCE
+        self.cycle.handoff_reason = "REQUESTED_EVIDENCE"
 
     def _validate_enquiry_request(self, request: RequestEnquiry, working: GraphInvestigationCoordinator) -> None:
         if self.cycle.in_flight_enquiry is not None:

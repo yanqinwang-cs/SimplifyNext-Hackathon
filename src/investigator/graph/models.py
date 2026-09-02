@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class GraphNodeType(str, Enum):
+    SOURCE = "source"
     EVIDENCE = "evidence"
     PROPOSITION = "proposition"
     HYPOTHESIS = "hypothesis"
@@ -51,6 +52,8 @@ class GraphNode(BaseModel):
     statement: str
     status: GraphStatus = GraphStatus.ACTIVE
     metadata: dict[str, Any] = Field(default_factory=dict)
+    semantic_key: str | None = None
+    canonical_id: str | None = None
 
     @model_validator(mode="after")
     def validate_id(self) -> "GraphNode":
@@ -83,14 +86,15 @@ def make_edge_id(source_id: str, relation: EdgeRelation, target_id: str) -> str:
 
 
 def _valid_id(value: str) -> bool:
-    return bool(value == value.strip() and "\n" not in value and "\t" not in value and re.fullmatch(r"[A-Z][A-Za-z0-9_.:]*", value))
+    return bool(value == value.strip() and "\n" not in value and "\t" not in value and re.fullmatch(r"(?:[A-Z][A-Za-z0-9_.:]*|node_[0-9a-f]{12,64})", value))
 
 
 def _valid_node_id(node_id: str, node_type: GraphNodeType) -> bool:
     patterns = {
-        GraphNodeType.EVIDENCE: r"(?:E\d+(?:\.\d+)*|A\d+_RELEASE)",
-        GraphNodeType.PROPOSITION: r"P\d+(?:\.\d+)*",
-        GraphNodeType.HYPOTHESIS: r"H\d+(?:\.\d+)*",
-        GraphNodeType.UNCERTAINTY: r"U\d+(?:\.\d+)*",
+        GraphNodeType.SOURCE: r"(?:S\d+|source_[a-z0-9][a-z0-9_.-]*|node_[0-9a-f]{12,64})",
+        GraphNodeType.EVIDENCE: r"(?:E\d+(?:\.\d+)*|A\d+_RELEASE|node_[0-9a-f]{12,64})",
+        GraphNodeType.PROPOSITION: r"(?:P\d+(?:\.\d+)*|node_[0-9a-f]{12,64})",
+        GraphNodeType.HYPOTHESIS: r"(?:H\d+(?:\.\d+)*|node_[0-9a-f]{12,64})",
+        GraphNodeType.UNCERTAINTY: r"(?:U\d+(?:\.\d+)*|node_[0-9a-f]{12,64})",
     }
     return bool(re.fullmatch(patterns[node_type], node_id))

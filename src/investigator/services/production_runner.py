@@ -45,7 +45,7 @@ def _checkpoint_state(state: CaseState) -> dict[str, Any]:
         "evidence": {}, "entities": {}, "claims": {}, "hypotheses": {}, "transformations": [],
         "uncertainties": {}, "conflicts": {}, "evidence_correction_history": [],
         "reasoning_graph": state.reasoning_graph.model_dump(mode="json"),
-        "focus_node_id": state.focus_node_id, "revision": 0, "evidence_request_history": [],
+        "focus_node_id": state.focus_node_id, "focus_recent_node_ids": [], "focus_recent_region_node_ids": [], "revision": 0, "evidence_request_history": [],
         "case_status": "ACTIVE", "runtime_status": "IDLE", "current_actor": "NONE",
         "last_error": None, "last_trace_step": None,
     }
@@ -103,7 +103,7 @@ class ProductionInvestigationRunner:
         _assert_clean_baseline(state)
         graph = state.reasoning_graph or _initial_graph(case_id)
         focus_id = state.focus_node_id or "U1"
-        coordinator = InvestigatorCycleCoordinator(graph, InvestigationFocus(node_id=focus_id), case_revision=state.revision)
+        coordinator = InvestigatorCycleCoordinator(graph, InvestigationFocus(node_id=focus_id, recent_node_ids=state.focus_recent_node_ids, recent_region_node_ids=state.focus_recent_region_node_ids), case_revision=state.revision)
         model_calls = 0
         self.workflow.record_trace(case_id, {"event": "run_started", "step": 0, "actor": "system", "runtime_status": "RUNNING_INVESTIGATOR", "case_revision": coordinator.cycle.case_revision})
         for step in range(1, MAX_ORCHESTRATION_STEPS + 1):
@@ -120,11 +120,11 @@ class ProductionInvestigationRunner:
             if coordinator.cycle.status is CycleStatus.AWAITING_STEWARD:
                 self._steward_turn(case_id, coordinator, step)
                 model_calls += 1
-                self.workflow.save_reasoning_state(case_id, coordinator.graph, coordinator.focus.node_id)
+                self.workflow.save_reasoning_state(case_id, coordinator.graph, coordinator.focus.node_id, focus=coordinator.focus)
                 continue
             self._investigator_turn(case_id, coordinator, step)
             model_calls += 1
-            self.workflow.save_reasoning_state(case_id, coordinator.graph, coordinator.focus.node_id)
+            self.workflow.save_reasoning_state(case_id, coordinator.graph, coordinator.focus.node_id, focus=coordinator.focus)
             if coordinator.cycle.status is CycleStatus.WAITING_FOR_EVIDENCE:
                 self.workflow.persist_pending_request(case_id, coordinator.cycle.evidence_request)
                 return
@@ -138,18 +138,20 @@ class ProductionInvestigationRunner:
         observation = coordinator.observation(snapshot=snapshot)
         prompt = build_investigator_cycle_prompt(observation)
         contract_diagnostics = coordinator.contract_check(observation, prompt, snapshot=snapshot)
-        trace: dict[str, Any] = {"case_id": case_id, "event": "investigator_started", "step": step, "actor": "investigator", "runtime_status": "RUNNING_INVESTIGATOR", "case_revision": coordinator.cycle.case_revision, "snapshot_case_revision": snapshot.case_revision, "snapshot_graph_node_ids": sorted(snapshot.graph.nodes), "active_reasoning_node_ids": sorted(snapshot.active_reasoning_node_ids), "legal_graph_node_ids": sorted(contract_diagnostics["legal_graph_node_ids"]), "visible_source_ids": sorted(source.id for source in observation.visible_sources), "prompt_source_ids": sorted(source.id for source in observation.visible_sources), "snapshot_hash": _snapshot_hash(snapshot), "prompt_hash": hashlib.sha256(prompt.encode()).hexdigest(), "raw_output": None}
+        trace: dict[str, Any] = {"case_id": case_id, "event": "investigator_started", "step": step, "actor": "investigator", "runtime_status": "RUNNING_INVESTIGATOR", "case_revision": coordinator.cycle.case_revision, "turn_start_revision": canonical.revision, "snapshot_case_revision": snapshot.case_revision, "snapshot_graph_node_ids": sorted(snapshot.graph.nodes), "active_reasoning_node_ids": sorted(snapshot.active_reasoning_node_ids), "legal_graph_node_ids": sorted(contract_diagnostics["legal_graph_node_ids"]), "visible_source_ids": sorted(source.id for source in observation.visible_sources), "prompt_source_ids": sorted(source.id for source in observation.visible_sources), "snapshot_hash": _snapshot_hash(snapshot), "prompt_hash": hashlib.sha256(prompt.encode()).hexdigest(), "raw_output": None}
         trace["contract_check"] = contract_diagnostics
         try:
             call = self._call_with_retry(prompt, InvestigatorTurnResponse, lambda value: coordinator.validate_turn(value, snapshot=snapshot), trace, "Investigator")
         except Exception as exc:
             trace.update({"event": "investigator_failed", "error": str(exc), "failure_category": type(exc).__name__})
+            trace["final_case_revision"] = self.workflow.ensure_case(case_id).revision
             self.workflow.record_trace(case_id, trace)
             raise
         trace.update({"event": "investigator_completed", "raw_output": call.raw_output, "parsed_response": call.parsed.model_dump(mode="json"), "input_tokens": call.metadata.input_tokens, "output_tokens": call.metadata.output_tokens, "latency_seconds": call.metadata.latency_seconds})
-        self.workflow.record_trace(case_id, trace)
         self.workflow.assert_turn_snapshot_current(case_id, snapshot)
         coordinator.apply_turn(call.parsed, snapshot=snapshot)
+        trace.update({"committed_case_revision": coordinator.cycle.case_revision, "final_case_revision": coordinator.cycle.case_revision})
+        self.workflow.record_trace(case_id, trace)
 
     def _steward_turn(self, case_id: str, coordinator: InvestigatorCycleCoordinator, step: int) -> None:
         self.workflow.set_runtime(case_id, "RUNNING_STEWARD", "STEWARD", step=step)

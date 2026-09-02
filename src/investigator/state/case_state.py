@@ -35,6 +35,8 @@ class CaseState(BaseModel):
     trace_history: list[dict[str, Any]] = Field(default_factory=list)
     reasoning_graph: CaseGraph | None = None
     focus_node_id: str | None = None
+    focus_recent_node_ids: list[str] = Field(default_factory=list)
+    focus_recent_region_node_ids: list[str] = Field(default_factory=list)
     clean_checkpoint: dict[str, Any] | None = None
     revision: int = 0
 

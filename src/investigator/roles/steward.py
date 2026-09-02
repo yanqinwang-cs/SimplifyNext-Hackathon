@@ -11,6 +11,8 @@ class StewardOperation(str, Enum):
     ARCHIVE = "archive"
     REACTIVATE = "reactivate"
     STOP_UNRESOLVED = "stop_unresolved"
+    REQUEST_OPEN = "request_open"
+    REQUEST_EVIDENCE = "request_evidence"
 
 
 class StewardReviewContext(BaseModel):
@@ -70,7 +72,20 @@ class StopUnresolvedDecision(_DecisionBase):
     reopening_conditions: str
 
 
+class StewardRequestOpenDecision(_DecisionBase):
+    operation: Literal["request_open"] = "request_open"
+    information_sought: str
+    expected_information_value: str
+
+
+class StewardRequestEvidenceDecision(_DecisionBase):
+    operation: Literal["request_evidence"] = "request_evidence"
+    target_uncertainty_id: str
+    information_sought: str
+    expected_information_value: str
+
+
 StewardDecision: TypeAlias = Annotated[
-    KeepFocusDecision | ShiftFocusDecision | GeneralizeDecision | ArchiveDecision | ReactivateDecision | StopUnresolvedDecision,
+    KeepFocusDecision | ShiftFocusDecision | GeneralizeDecision | ArchiveDecision | ReactivateDecision | StopUnresolvedDecision | StewardRequestOpenDecision | StewardRequestEvidenceDecision,
     Field(discriminator="operation"),
 ]

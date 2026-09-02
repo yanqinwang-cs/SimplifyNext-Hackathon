@@ -40,4 +40,5 @@ class OperationSpecRegistry:
 
     @classmethod
     def matrix(cls, relation: EdgeRelation) -> dict[tuple[GraphNodeType, GraphNodeType], bool]:
-        return {(source, target): cls.allows(relation, source, target) for source, target in product(GraphNodeType, repeat=2)}
+        semantic_types = (GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS, GraphNodeType.UNCERTAINTY)
+        return {(source, target): cls.allows(relation, source, target) for source, target in product(semantic_types, repeat=2)}
