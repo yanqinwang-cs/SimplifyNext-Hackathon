@@ -153,7 +153,7 @@ def test_workspace_exposes_case_and_truthful_runtime_states(tmp_path: Path) -> N
     assert failed["lastError"] == {"failure_category": "TEST_FAILURE", "message": "Failure detail", "actor": "NONE", "step": 5}
 
 
-def test_run_rejects_waiting_running_and_stopped_cases(tmp_path: Path) -> None:
+def test_run_rejects_waiting_running_but_allows_stopped_cases(tmp_path: Path) -> None:
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     workflow.ensure_case("case-01")
     workflow.set_runtime("case-01", "RUNNING_INVESTIGATOR", "INVESTIGATOR")
@@ -166,7 +166,17 @@ def test_run_rejects_waiting_running_and_stopped_cases(tmp_path: Path) -> None:
     with pytest.raises(EvidenceRequestConflict, match="pending"):
         workflow.start_run("case-01")
     workflow.set_runtime("case-01", "STOPPED", "NONE")
-    with pytest.raises(EvidenceRequestConflict, match="Stopped"):
+    workflow.run_callback = lambda _case_id, active: active.set_runtime("case-01", "IDLE", "NONE")
+    workspace = workflow.start_run("case-01")
+    assert workspace["caseRevision"] == 0
+
+
+def test_run_rejects_true_inactive_case(tmp_path: Path) -> None:
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
+    state = workflow.ensure_case("case-01")
+    state.case_status = "CLOSED"
+    workflow.repository.save(state)
+    with pytest.raises(EvidenceRequestConflict, match="inactive"):
         workflow.start_run("case-01")
 
 

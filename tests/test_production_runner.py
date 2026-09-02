@@ -131,6 +131,30 @@ def test_runner_can_resume_after_fulfilment_and_stop_via_steward(tmp_path: Path)
     assert state.reasoning_graph is not None and state.focus_node_id == "U1"
 
 
+def test_stop_unresolved_run_is_resumable_from_latest_revision(tmp_path: Path) -> None:
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
+    first_client = SequenceClient([
+        {"graph_updates": [], "next_step": {"type": "local_exhausted", "reason": "No useful local work remains."}},
+        steward_stop(),
+    ])
+    ProductionInvestigationRunner(workflow, first_client).run("case-01")
+    stopped = workflow.repository.load("case-01")
+    stopped_revision = stopped.revision
+    assert stopped.runtime_status == "STOPPED"
+    second_client = SequenceClient([
+        investigator_graph_update("Progress after autonomous pause", next_step="local_exhausted"),
+        steward_stop(),
+    ])
+    ProductionInvestigationRunner(workflow, second_client).run("case-01")
+    resumed = workflow.repository.load("case-01")
+    assert resumed.runtime_status == "STOPPED"
+    assert resumed.revision > stopped_revision
+    assert sum(trace.get("event") == "run_started" for trace in resumed.trace_history) == 2
+    run_starts = [trace for trace in resumed.trace_history if trace.get("event") == "run_started"]
+    assert run_starts[1]["run_start_revision"] == stopped_revision
+    assert sum(trace.get("event") == "stopped" for trace in resumed.trace_history) == 2
+
+
 def test_runner_preserves_raw_parse_failure_in_role_trace(tmp_path: Path) -> None:
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     bad = ModelParseError("invalid fixture JSON", raw_output='{"not": "a turn"}')

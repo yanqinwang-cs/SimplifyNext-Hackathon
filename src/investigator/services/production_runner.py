@@ -153,7 +153,7 @@ class ProductionInvestigationRunner:
                 return
             if coordinator.cycle.status is CycleStatus.STOPPED:
                 self.workflow.set_runtime(case_id, "STOPPED", "NONE")
-                self.workflow.record_trace(case_id, {"event": "stopped", "step": step, "actor": "system", "runtime_status": "STOPPED", "case_revision": coordinator.cycle.case_revision})
+                self.workflow.record_trace(case_id, {"event": "stopped", "step": step, "actor": "system", "runtime_status": "STOPPED", "case_revision": coordinator.cycle.case_revision, "resumable": True, "human_summary": "Autonomous investigation paused for human review; unresolved issues remain preserved."})
                 return
             if model_calls >= MAX_MODEL_CALLS:
                 self.workflow.set_runtime(case_id, "IDLE", "NONE")

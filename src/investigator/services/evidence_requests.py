@@ -104,7 +104,7 @@ class HumanEvidenceWorkflow:
                 raise EvidenceRequestConflict("Resolve the pending human evidence request before running")
             if state.runtime_status in {"RUNNING_INVESTIGATOR", "RUNNING_STEWARD"} or case_id in self._in_flight_actor:
                 raise EvidenceRequestConflict("Investigation is already running")
-            if state.runtime_status == "STOPPED" or state.case_status != "ACTIVE":
+            if state.case_status != "ACTIVE":
                 raise EvidenceRequestConflict("Stopped or inactive cases cannot be restarted")
             self.set_runtime(case_id, "RUNNING_INVESTIGATOR", "INVESTIGATOR")
             run_id = self.begin_run(case_id, state.revision)
@@ -123,7 +123,7 @@ class HumanEvidenceWorkflow:
                 self.set_runtime(case_id, "IDLE", "NONE")
                 self.record_workspace_event(case_id, {"type": "run_completed", "run_id": self.current_run_id(case_id), "runtime_status": "IDLE", "case_revision": state.revision, "human_summary": "The investigation run completed successfully."})
             elif state.runtime_status == "STOPPED":
-                self.record_workspace_event(case_id, {"type": "run_stopped", "run_id": self.current_run_id(case_id), "runtime_status": "STOPPED", "case_revision": state.revision, "human_summary": "The investigation run was stopped."})
+                self.record_workspace_event(case_id, {"type": "run_stopped", "run_id": self.current_run_id(case_id), "runtime_status": "STOPPED", "case_revision": state.revision, "resumable": state.case_status == "ACTIVE", "human_summary": "Autonomous investigation paused for human review. The unresolved issues remain preserved, and the investigation can be resumed or new evidence can be added."})
         except Exception as exc:
             category = "ORCHESTRATION_CONFIGURATION_FAILURE" if type(exc).__name__ == "BedrockConfigurationError" else ("CASE_SNAPSHOT_MISMATCH" if isinstance(exc, CaseSnapshotMismatch) else type(exc).__name__)
             state = self.ensure_case(case_id)

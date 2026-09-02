@@ -96,13 +96,29 @@ def test_exact_native_run_tool_call_executes_once_then_gets_final_model_turn(tmp
 
 
 def test_native_unauthorized_tool_is_rejected_before_execution(tmp_path):
-    client = FakeWorkspaceClient([tool_response("add_evidence")])
-    try:
-        WorkspaceAgent(make_workflow(tmp_path), client).chat("case-01", "please mutate the graph")
-    except WorkspaceToolAuthorizationError:
-        pass
-    else:
-        raise AssertionError("semantic tool must be rejected")
+    client = FakeWorkspaceClient([tool_response("add_evidence"), text_response("That operation is not authorized.")])
+    result = WorkspaceAgent(make_workflow(tmp_path), client).chat("case-01", "please mutate the graph")
+    assert result.response == "That operation is not authorized."
+
+
+def test_failed_tool_call_is_paired_and_next_user_turn_remains_valid(tmp_path):
+    workflow = make_workflow(tmp_path)
+    state = workflow.ensure_case("case-01")
+    state.case_status = "CLOSED"
+    workflow.repository.save(state)
+    client = FakeWorkspaceClient([tool_response("RUN_INVESTIGATION"), text_response("The investigation could not be started from the current state."), text_response("The previous run remains recorded.")])
+    agent = WorkspaceAgent(workflow, client)
+    first = agent.chat("case-01", "run the investigation")
+    assert first.response == "The investigation could not be started from the current state."
+    conversation = agent.session_store.session("case-01")["conversation"]
+    assistant_index = next(index for index, item in enumerate(conversation) if item.get("tool_uses"))
+    tool_result = conversation[assistant_index + 1]
+    assert tool_result["role"] == "tool"
+    assert tool_result["call_id"] == "call_001"
+    assert tool_result["result"]["status"] == "error"
+    assert "EvidenceRequestConflict" in tool_result["result"]["error"]
+    second = agent.chat("case-01", "what happened in the latest run?")
+    assert second.response == "The previous run remains recorded."
 
 
 def test_recover_retains_canonical_state(tmp_path):

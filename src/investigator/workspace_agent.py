@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import re
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -151,6 +152,7 @@ class WorkspaceAgent:
         messages: list[dict[str, Any]] = [{"role": "system", "text": self.system_prompt()}, *session["conversation"]]
         try:
             for _ in range(5):
+                self._assert_tool_result_pairing(messages)
                 call = self.client.call_native(messages, self.tool_specs())
                 self._record_requested_tools(case_id, turn_id, call.tool_uses)
                 if not call.tool_uses:
@@ -165,7 +167,10 @@ class WorkspaceAgent:
                 session["conversation"].append(assistant_message)
                 messages.append(assistant_message)
                 for tool_call in call.tool_uses:
-                    result = self.invoke_tool(case_id, {"tool": tool_call.name, "payload": tool_call.arguments})
+                    try:
+                        result = self.invoke_tool(case_id, {"tool": tool_call.name, "payload": tool_call.arguments})
+                    except Exception as exc:
+                        result = {"status": "error", "error": self._safe_tool_error(exc)}
                     tool_message = {"role": "tool", "call_id": tool_call.call_id, "result": result}
                     session["conversation"].append(tool_message)
                     messages.append(tool_message)
@@ -194,6 +199,21 @@ class WorkspaceAgent:
 
     def tool_specs(self) -> list[dict[str, Any]]:
         return [{"name": name, "description": f"Deterministic Workspace operation {name}.", "inputSchema": schema.model_json_schema()} for name, schema in sorted(_TOOL_ARGUMENTS.items()) if name in self.READ_TOOLS or name in self.ACTION_TOOLS]
+
+    @staticmethod
+    def _safe_tool_error(exc: Exception) -> str:
+        summary = f"{type(exc).__name__}: {exc}"
+        return re.sub(r"(?i)(access[_ -]?key|secret|session[_ -]?token|authorization|credential)(?:\s*[:=]\s*)\S+", r"\1=[REDACTED]", summary)
+
+    @staticmethod
+    def _assert_tool_result_pairing(messages: list[dict[str, Any]]) -> None:
+        """Verify the provider-neutral history has no orphaned tool uses."""
+        for index, message in enumerate(messages):
+            uses = message.get("tool_uses", []) if message.get("role") == "assistant" else []
+            for offset, use in enumerate(uses, start=1):
+                result = messages[index + offset] if index + offset < len(messages) else None
+                if not result or result.get("role") != "tool" or result.get("call_id") != use.get("call_id"):
+                    raise RuntimeError(f"Workspace conversation has an unpaired tool use: {use.get('call_id')}")
 
     def _begin_workspace_turn(self, case_id: str, message: str) -> str:
         session = self.session_store.session(case_id)
