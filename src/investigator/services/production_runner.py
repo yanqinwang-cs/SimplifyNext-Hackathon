@@ -20,6 +20,7 @@ from investigator.sources import SourceRegistry
 
 MAX_ORCHESTRATION_STEPS = 12
 MAX_MODEL_CALLS = 8
+RECENT_INVESTIGATOR_TURN_LIMIT = 3
 
 
 def _snapshot_hash(snapshot: TurnSnapshot) -> str:
@@ -33,6 +34,46 @@ def _snapshot_hash(snapshot: TurnSnapshot) -> str:
         "visible_source_signatures": snapshot.visible_source_signatures,
     }
     return hashlib.sha256(json.dumps(safe, sort_keys=True).encode()).hexdigest()
+
+
+def _recent_investigator_actions(workflow: HumanEvidenceWorkflow, case_id: str) -> list[dict[str, Any]]:
+    completed = [trace for trace in workflow.get_traces(case_id) if trace.get("actor") == "investigator" and trace.get("event") == "investigator_completed"]
+    return [
+        {
+            "revision": trace.get("committed_case_revision"),
+            "changes": trace.get("committed_graph_changes", []),
+            "next_step": (trace.get("parsed_response") or {}).get("next_step", {}).get("type", "unknown"),
+            "correction_used": int(trace.get("attempts", 1)) > 1,
+        }
+        for trace in completed[-RECENT_INVESTIGATOR_TURN_LIMIT:]
+    ]
+
+
+def _committed_graph_changes(response: InvestigatorTurnResponse, before: CaseGraph, after: CaseGraph) -> list[dict[str, Any]]:
+    """Summarize committed turn facts without retaining hidden model reasoning."""
+    new_node_ids = set(after.nodes) - set(before.nodes)
+    changes: list[dict[str, Any]] = []
+    for update in response.graph_updates:
+        payload = update.model_dump(mode="json")
+        operation = payload["operation"]
+        change: dict[str, Any] = {"operation": operation}
+        node_id = payload.get("node_id")
+        if node_id is None and operation.startswith("add_"):
+            matches = [identifier for identifier in new_node_ids if after.nodes[identifier].statement == payload.get("statement")]
+            node_id = matches[0] if len(matches) == 1 else None
+        if node_id and node_id in after.nodes:
+            node = after.nodes[node_id]
+            change.update({"node_id": node.id, "node_type": node.node_type.value, "statement": node.statement})
+        elif payload.get("statement"):
+            change["statement"] = payload["statement"]
+        source_ids = payload.get("source_ids")
+        if source_ids:
+            change["source_ids"] = source_ids
+        affected = [payload.get(name) for name in ("source_node_id", "target_node_id", "derived_proposition_id", "child_hypothesis_id", "parent_hypothesis_id", "focus_node_id") if payload.get(name)]
+        if affected:
+            change["affected_node_ids"] = affected
+        changes.append(change)
+    return changes
 
 
 def _initial_graph(case_id: str) -> CaseGraph:
@@ -138,9 +179,10 @@ class ProductionInvestigationRunner:
         snapshot = coordinator.turn_snapshot(self.workflow.readable_sources(case_id), repository_revision=canonical.revision)
         self.workflow.assert_turn_snapshot_current(case_id, snapshot)
         observation = coordinator.observation(snapshot=snapshot)
-        prompt = build_investigator_cycle_prompt(observation)
+        recent_actions = _recent_investigator_actions(self.workflow, case_id)
+        prompt = build_investigator_cycle_prompt(observation, recent_actions)
         contract_diagnostics = coordinator.contract_check(observation, prompt, snapshot=snapshot)
-        trace: dict[str, Any] = {"case_id": case_id, "event": "investigator_started", "step": step, "actor": "investigator", "runtime_status": "RUNNING_INVESTIGATOR", "case_revision": coordinator.cycle.case_revision, "run_start_revision": run_start_revision, "turn_start_revision": canonical.revision, "snapshot_case_revision": snapshot.case_revision, "snapshot_graph_node_ids": sorted(snapshot.graph.nodes), "investigator_visible_graph_node_ids": sorted(observation.local_graph.nodes), "active_reasoning_node_ids": sorted(observation.local_graph.nodes), "legal_graph_node_ids": sorted(observation.local_graph.nodes), "visible_source_ids": sorted(source.id for source in observation.visible_sources), "prompt_source_ids": sorted(source.id for source in observation.visible_sources), "snapshot_hash": _snapshot_hash(snapshot), "prompt_hash": hashlib.sha256(prompt.encode()).hexdigest(), "raw_output": None}
+        trace: dict[str, Any] = {"case_id": case_id, "event": "investigator_started", "step": step, "actor": "investigator", "runtime_status": "RUNNING_INVESTIGATOR", "case_revision": coordinator.cycle.case_revision, "run_start_revision": run_start_revision, "turn_start_revision": canonical.revision, "snapshot_case_revision": snapshot.case_revision, "snapshot_graph_node_ids": sorted(snapshot.graph.nodes), "investigator_visible_graph_node_ids": sorted(observation.local_graph.nodes), "active_reasoning_node_ids": sorted(observation.local_graph.nodes), "legal_graph_node_ids": sorted(observation.local_graph.nodes), "visible_source_ids": sorted(source.id for source in observation.visible_sources), "prompt_source_ids": sorted(source.id for source in observation.visible_sources), "recent_investigator_turn_count": len(recent_actions), "recent_investigator_revision_ids": [item["revision"] for item in recent_actions], "snapshot_hash": _snapshot_hash(snapshot), "prompt_hash": hashlib.sha256(prompt.encode()).hexdigest(), "raw_output": None}
         trace["contract_check"] = contract_diagnostics
         try:
             call = self._call_with_retry(prompt, InvestigatorTurnResponse, lambda value: coordinator.validate_turn(value, snapshot=snapshot), trace, "Investigator")
@@ -154,7 +196,7 @@ class ProductionInvestigationRunner:
         trace.update({"event": "investigator_completed", "raw_output": call.raw_output, "parsed_response": call.parsed.model_dump(mode="json"), "input_tokens": call.metadata.input_tokens, "output_tokens": call.metadata.output_tokens, "latency_seconds": call.metadata.latency_seconds})
         self.workflow.assert_turn_snapshot_current(case_id, snapshot)
         coordinator.apply_turn(call.parsed, snapshot=snapshot)
-        trace.update({"committed_case_revision": coordinator.cycle.case_revision, "final_case_revision": coordinator.cycle.case_revision})
+        trace.update({"committed_case_revision": coordinator.cycle.case_revision, "final_case_revision": coordinator.cycle.case_revision, "committed_graph_changes": _committed_graph_changes(call.parsed, snapshot.graph, coordinator.graph)})
         self.workflow.record_trace(case_id, trace)
 
     def _steward_turn(self, case_id: str, coordinator: InvestigatorCycleCoordinator, step: int, run_start_revision: int) -> None:

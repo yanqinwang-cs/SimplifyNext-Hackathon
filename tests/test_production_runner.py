@@ -63,10 +63,10 @@ def steward_stop() -> dict:
     }
 
 
-def investigator_graph_update(statement: str) -> dict:
+def investigator_graph_update(statement: str, next_step: str = "continue_local") -> dict:
     return {
         "graph_updates": [{"operation": "add_hypothesis", "statement": statement, "reason": "It is a bounded explanation worth preserving."}],
-        "next_step": {"type": "continue_local", "reason": "The new hypothesis supports another local step."},
+        "next_step": {"type": next_step, "reason": "The new hypothesis supports the next bounded step."},
     }
 
 
@@ -240,6 +240,41 @@ def test_failed_later_turn_preserves_successful_turns_and_trace_revisions(tmp_pa
     run = workflow.get_runs("case-01")[0]
     assert run["run_start_revision"] == 2
     assert run["latest_safe_revision"] == run["final_case_revision"] == run["final_committed_revision"] == 4
+
+
+def test_recent_investigator_actions_are_in_next_prompt_and_full_graph_remains_visible(tmp_path: Path) -> None:
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
+    client = SequenceClient([
+        investigator_graph_update("Recent committed hypothesis"),
+        investigator_graph_update("Second committed hypothesis", next_step="local_exhausted"),
+        steward_stop(),
+    ])
+    ProductionInvestigationRunner(workflow, client).run("case-01")
+    first_trace = next(trace for trace in workflow.get_traces("case-01") if trace.get("event") == "investigator_completed")
+    committed_id = first_trace["committed_graph_changes"][0]["node_id"]
+    second_prompt = client.calls[1][0]
+    assert "<RECENT_INVESTIGATOR_ACTIONS>" in second_prompt
+    assert "Turn committed at revision 1" in second_prompt
+    assert "add_hypothesis" in second_prompt
+    assert committed_id in second_prompt
+    assert "Recent committed hypothesis" in second_prompt
+    assert "Second committed hypothesis" not in second_prompt
+
+
+def test_recent_investigator_action_memory_is_bounded(tmp_path: Path) -> None:
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
+    responses = [investigator_graph_update(f"Committed hypothesis {number}") for number in range(5)]
+    responses[-1] = investigator_graph_update("Committed hypothesis 4", next_step="local_exhausted")
+    responses.append(steward_stop())
+    client = SequenceClient(responses)
+    ProductionInvestigationRunner(workflow, client).run("case-01")
+    fifth_prompt = client.calls[4][0]
+    recent_memory = fifth_prompt.split("</RECENT_INVESTIGATOR_ACTIONS>", 1)[0]
+    assert "Committed hypothesis 0" not in recent_memory
+    assert all(f"Committed hypothesis {number}" in recent_memory for number in range(1, 4))
+    trace = next(trace for trace in workflow.get_traces("case-01") if trace.get("step") == 4 and trace.get("actor") == "investigator")
+    assert trace["recent_investigator_turn_count"] == 3
+    assert trace["recent_investigator_revision_ids"] == [1, 2, 3]
 
 
 def test_reset_demo_case_replaces_stale_state_and_captures_verified_checkpoint(tmp_path: Path) -> None:

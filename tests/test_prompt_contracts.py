@@ -89,6 +89,14 @@ def test_investigator_prompt_states_both_discriminators() -> None:
     assert 'next-step object uses the exact field "type"' in prompt
 
 
+def test_first_investigator_prompt_has_empty_recent_action_memory_and_anti_repetition_policy() -> None:
+    prompt = investigator_prompt()
+    assert "<RECENT_INVESTIGATOR_ACTIONS>\nNone." in prompt
+    assert "Do not recreate an existing observation, proposition, hypothesis, or uncertainty merely by paraphrasing it." in prompt
+    assert "not progress" in prompt
+    assert "concrete, case-relevant, answerable, materially useful question" in prompt
+
+
 def test_steward_validation_failure_preserves_raw_and_provider_json() -> None:
     client = MockModelClient({"operation": "release", "assessment": "x", "reason": "x"}, ModelCallMetadata(provider="mock", model="mock", latency_seconds=0.01, parse_success=True))
     trace: dict[str, object] = {}

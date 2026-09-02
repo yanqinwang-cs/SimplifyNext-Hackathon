@@ -1,10 +1,35 @@
 import json
+from typing import Any
 
 from investigator.cycle import InvestigatorObservation, TURN_RESPONSE_ADAPTER
 from investigator.roles.procedure import render_procedure
 
 
-def build_investigator_cycle_prompt(observation: InvestigatorObservation) -> str:
+def _render_recent_actions(recent_actions: list[dict[str, Any]] | None) -> str:
+    if not recent_actions:
+        return "<RECENT_INVESTIGATOR_ACTIONS>\nNone.\n</RECENT_INVESTIGATOR_ACTIONS>"
+    lines = ["<RECENT_INVESTIGATOR_ACTIONS>"]
+    for item in recent_actions:
+        lines.append(f"Turn committed at revision {item['revision']}:")
+        for change in item.get("changes", []):
+            details = f"- {change['operation']}"
+            if change.get("node_id"):
+                details += f" {change['node_type']} {change['node_id']}"
+            if change.get("statement"):
+                details += f": {change['statement']}"
+            if change.get("source_ids"):
+                details += f"; sources: {', '.join(change['source_ids'])}"
+            if change.get("affected_node_ids"):
+                details += f"; affected nodes: {', '.join(change['affected_node_ids'])}"
+            lines.append(details)
+        lines.append(f"- next step: {item['next_step']}")
+        lines.append(f"- correction used: {'yes' if item.get('correction_used') else 'no'}")
+    lines.append("Do not repeat a recent operation or statement merely by paraphrasing it.")
+    lines.append("</RECENT_INVESTIGATOR_ACTIONS>")
+    return "\n".join(lines)
+
+
+def build_investigator_cycle_prompt(observation: InvestigatorObservation, recent_actions: list[dict[str, Any]] | None = None) -> str:
     """Render the Investigator contract from its live Pydantic schema."""
     def node_ref(node) -> str:
         if node.semantic_key:
@@ -32,7 +57,9 @@ def build_investigator_cycle_prompt(observation: InvestigatorObservation) -> str
         "<OPERATION_POLICY>\nIF a directly source-grounded graph operation is offered by the exact schema, use the relevant visible source reference and verify the observation against that source.\nELIF a statement is a small inference from visible graph material, use ADD_PROPOSITION with appropriate derivation or relation.\nELIF a statement is a broader explanation, reuse a substantively equivalent HYPOTHESIS; otherwise create one using the exact schema branch.\nELIF a consequential question remains unresolved, use ADD_UNCERTAINTY.\nIF useful human information is needed, use REQUEST_INFORMATION with a concrete case-relevant question; target metadata and expected value are optional.\nELIF predefined actions are explicitly offered, use only a listed legacy REQUEST_ENQUIRY; ELSE PASS.\nIF a request returns ALREADY_AVAILABLE or NO_NEW_SOURCE: review current visible sources, continue from what they support, and do not immediately repeat the same request.\nIF a request is UNAVAILABLE: NEVER infer the requested proposition is false; reassess another useful enquiry, current focus, or Steward review.\nMOVE_FOCUS may target only a legal canonical graph node. Focus guides attention but does not limit Investigator visibility or referenceability.\nNEVER create a Steward operation, release a raw source, decide guilt, or use a hidden source or mechanism.\n</OPERATION_POLICY>",
         "<LOCAL_AUTHORITY>\nThe exact runtime Pydantic schema defines which graph operations are available. The coordinator defines mechanical legality. In production, investigator_visible_graph_node_ids equals the full canonical graph node set; active_reasoning_node_ids remains a compatibility diagnostic with the same production value. Raw SourceRegistry visibility is a separate namespace; a visible raw source is not inaccessible merely because there is no semantic graph node for it: it is read-only and has no semantic edges.\n</LOCAL_AUTHORITY>",
         '<DISCRIMINATORS>Graph updates use the exact field "operation". The next-step object uses the exact field "type". Do not swap these fields.</DISCRIMINATORS>',
-        "<CYCLE_DISCIPLINE>\nAll graph_updates form one coherent local step and are applied in order. Reason first, operation second; prerequisites must be satisfied before serialization. CONTINUE_LOCAL requires graph work. REQUEST_STEWARD_REVIEW requests global case management without selecting the Steward operation.\n</CYCLE_DISCIPLINE>",
+        _render_recent_actions(recent_actions),
+        "<MATERIAL_PROGRESS>\nMaterial progress means genuinely new source-grounded evidence, a substantively new proposition, a materially different or refined hypothesis, a consequential new uncertainty, a meaningful relation, a genuinely different unresolved region, a materially useful information request, or an appropriate exhaustion/handoff. Restating an existing node, trivial paraphrase, re-adding an equivalent source observation, repeating an uncertainty, or adding filler nodes is not progress. Do not recreate an existing observation, proposition, hypothesis, or uncertainty merely by paraphrasing it. Before creating a node, check the full graph and RECENT_INVESTIGATOR_ACTIONS for the same or materially equivalent claim or question. Revisit an existing node only when new evidence materially changes, supports, conflicts with, specializes, or clarifies it.\n</MATERIAL_PROGRESS>",
+        "<CYCLE_DISCIPLINE>\nAll graph_updates form one coherent local step and are applied in order. Reason first, operation second; prerequisites must be satisfied before serialization. CONTINUE_LOCAL requires actual material graph work, not filler. If local evidence is exhausted, prefer REQUEST_INFORMATION with a concrete, case-relevant, answerable, materially useful question when one can be stated; otherwise use REQUEST_STEWARD_REVIEW or LOCAL_EXHAUSTED. REQUEST_STEWARD_REVIEW requests global case management without selecting the Steward operation.\n</CYCLE_DISCIPLINE>",
         "<HUMAN_EVIDENCE_REQUESTS>\nBoth Investigator and Steward may use REQUEST_INFORMATION. Ask a concrete, case-relevant question that can materially advance the investigation; broad is allowed, vacuous is not. Target metadata and expected information value are optional. Requesting does not mutate the graph. A fulfilled response registers a read-only SOURCE for review; it is not automatically semantic EVIDENCE.\n</HUMAN_EVIDENCE_REQUESTS>",
         '<LEGACY_COMPATIBILITY>\nThe legacy "request_open" and "request_evidence" payload names are accepted only when migrating older responses and are normalized to REQUEST_INFORMATION. Do not select either legacy name in a new production response.\n</LEGACY_COMPATIBILITY>',
         f"<CASE_SOURCES>\n{sources}\n</CASE_SOURCES>",
