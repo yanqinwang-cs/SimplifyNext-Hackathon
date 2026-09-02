@@ -1,362 +1,198 @@
+"""Compact investigator workspace prototype for the Stage 2 development case."""
+
 import streamlit as st
-from dotenv import load_dotenv
-from pathlib import Path
 
-from demo_data import DEMO_MESSAGES
-from investigator.environments.case_01 import Case1ControlledEnvironment
-from investigator.llm.bedrock import BedrockModelClient
-from investigator.services import InvestigationService, InvestigationSession, ModelStructuredOutputError, SessionStatus
-from investigator.tracing import InteractiveTrace, InteractiveTraceWriter, new_session_id, utc_now
+try:  # Streamlit executes this file with app/ as the import directory.
+    from case_service import (
+        CaseWorkspaceState,
+        clarify_request,
+        get_case_workspace,
+        mark_unavailable,
+        partially_fulfil,
+        provide_evidence,
+        redirect_investigation,
+    )
+except ModuleNotFoundError:  # Support importing app.streamlit_app in tests.
+    from app.case_service import (
+        CaseWorkspaceState,
+        clarify_request,
+        get_case_workspace,
+        mark_unavailable,
+        partially_fulfil,
+        provide_evidence,
+        redirect_investigation,
+    )
 
 
-st.set_page_config(page_title="SimplifyNext — Case 01", page_icon="S", layout="wide")
+st.set_page_config(page_title="SimplifyNext — Investigator Workspace", page_icon="S", layout="wide")
 
 
 def initialize_session() -> None:
-    if "messages" not in st.session_state:
-        st.session_state.messages = [message.copy() for message in DEMO_MESSAGES]
-    st.session_state.setdefault("investigation", None)
-    st.session_state.setdefault("investigation_service", None)
-    st.session_state.setdefault("review_mode", None)
+    st.session_state.setdefault("workspace", get_case_workspace("case-01"))
+    st.session_state.setdefault("active_panel", None)
     st.session_state.setdefault("notice", None)
-    st.session_state.setdefault("structured_error", None)
-    st.session_state.setdefault("structured_raw_output", None)
-    st.session_state.setdefault("trace_writer", None)
-    st.session_state.setdefault("seed_hypothesis", "")
 
 
-def _jsonable(value):
-    return value.model_dump(mode="json") if hasattr(value, "model_dump") else value
+def _set_workspace(updated: CaseWorkspaceState) -> None:
+    st.session_state.workspace = updated
+    st.session_state.active_panel = None
+    st.session_state.notice = "Update recorded."
 
 
-def _persist(event_type: str, payload: dict | None = None, error: Exception | None = None) -> None:
-    writer = st.session_state.trace_writer
-    if writer is None:
-        return
-    session = st.session_state.investigation
-    values = {}
-    if session is not None:
-        values.update(
-            status=session.status.value,
-            current_case_state=_jsonable(session.case_state),
-            initial_raw_model_output=session.initial_raw_model_output,
-            initial_response=_jsonable(session.initial_response),
-            initial_metadata=_jsonable(session.initial_metadata),
-        )
-    if error is not None:
-        values["latest_error"] = {"stage": getattr(error, "stage", event_type), "message": str(error)}
-        if payload and "raw_model_output" in payload:
-            values["latest_error"]["raw_model_output"] = payload["raw_model_output"]
-    writer.update(**values)
-    writer.record(event_type, payload)
+def render_styles() -> None:
+    st.markdown(
+        """
+        <style>
+        .block-container { max-width: 1120px; padding-top: 2rem; padding-bottom: 2rem; }
+        .eyebrow { color:#55708f; font-size:.78rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+        .status { color:#174ea6; background:#e8f0fe; border-radius:999px; padding:.28rem .7rem; font-size:.85rem; font-weight:700; }
+        .message { border:1px solid #dce3ed; border-radius:9px; padding:.75rem 1rem; margin:.55rem 0; background:#fff; }
+        .message strong { color:#172b4d; }
+        .message-meta { color:#75839a; font-size:.8rem; margin-left:.5rem; }
+        .assistant-message { border-left:3px solid #2563b8; }
+        .focus-label, .request-label { color:#174ea6; font-weight:700; font-size:.95rem; margin-bottom:.35rem; }
+        .focus-text { font-size:1.22rem; line-height:1.42; color:#172b4d; }
+        .request-text { color:#172b4d; font-size:1.05rem; line-height:1.45; }
+        .why { color:#53657d; font-size:.94rem; line-height:1.45; margin-top:.7rem; }
+        div.stButton > button { min-height:2.55rem; border-radius:6px; font-weight:650; border:1px solid #2563b8; color:#174ea6; background:#fff; }
+        div.stButton > button:hover { border-color:#123f91; color:#123f91; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
-def _record_model_error(exc: Exception) -> None:
-    payload = {"stage": getattr(exc, "stage", "model_call"), "error": str(exc)}
-    if getattr(exc, "raw_output", None) is not None:
-        payload["raw_model_output"] = exc.raw_output
-    _persist("model_error", payload, exc)
+def render_header(state: CaseWorkspaceState) -> None:
+    left, right = st.columns([5, 2])
+    with left:
+        st.markdown(f"<div class='eyebrow'>SimplifyNext · {state.case_id}</div>", unsafe_allow_html=True)
+        st.title(state.title)
+    with right:
+        st.markdown(f"<div style='text-align:right; margin-top:1.8rem'><span class='status'>● {state.status}</span></div>", unsafe_allow_html=True)
+        source_col, details_col = st.columns(2)
+        if source_col.button("Sources", use_container_width=True):
+            st.session_state.active_panel = "sources"
+        if details_col.button("Details", use_container_width=True):
+            st.session_state.active_panel = "details"
 
 
-def render_hypotheses(session: InvestigationSession) -> None:
-    active = [h for h in session.case_state.hypotheses.values() if h.status.value not in {"removed", "rejected", "archived"}]
-    if active:
-        st.subheader("Active hypotheses")
-        for hypothesis in active:
-            st.markdown(f"- **{hypothesis.id}** — {hypothesis.statement}")
+def render_sources(state: CaseWorkspaceState) -> None:
+    with st.expander("Sources", expanded=True):
+        st.caption("Received and visible case materials")
+        for source in state.visible_sources:
+            st.write(f"• {source}")
 
 
-def render_uncertainties(session: InvestigationSession) -> None:
-    unresolved = [
-        (identifier, uncertainty)
-        for identifier, uncertainty in session.case_state.uncertainties.items()
-        if any(identifier in hypothesis.unresolved_issue_ids for hypothesis in session.case_state.hypotheses.values())
-    ]
-    if unresolved:
-        st.subheader("Key uncertainties")
-        for identifier, uncertainty in unresolved:
-            st.markdown(f"- **{identifier}** — {uncertainty.description}")
+def render_details(state: CaseWorkspaceState) -> None:
+    with st.expander("Case details", expanded=True):
+        st.write(f"**Current line of enquiry**  \n{state.current_line_of_enquiry}")
+        st.write(f"**Request status:** {state.current_request.status.replace('_', ' ')}")
 
 
-def render_evidence(session: InvestigationSession, service: InvestigationService) -> None:
-    if not session.case_state.evidence:
-        return
-    with st.expander("Evidence"):
-        for identifier, evidence in session.case_state.evidence.items():
-            with st.expander(identifier):
-                st.caption(evidence.raw_content[:500])
-        with st.expander("Correct evidence"):
-            evidence_id = st.selectbox("Evidence item", list(session.case_state.evidence), key="correction_evidence_id")
-            current = session.case_state.get_evidence(evidence_id)
-            st.caption(current.raw_content[:500])
-            corrected = st.text_area("Corrected authoritative content", key="corrected_evidence_content")
-            reason = st.text_input("Reason (optional)", key="evidence_correction_reason")
-            if st.button("Save evidence correction", type="primary"):
-                try:
-                    previous = current.raw_content
-                    service.correct_evidence(session, evidence_id, corrected, reason or None)
-                    _persist("evidence_correction", {"evidence_id": evidence_id, "previous_content": previous, "corrected_content": corrected, "reason": reason or None})
-                    st.session_state.notice = "Evidence corrected. Investigation is paused for reassessment."
-                except Exception as exc:
-                    st.session_state.notice = str(exc)
-                    _persist("state_error", {"error": str(exc)}, exc)
+def render_history(state: CaseWorkspaceState) -> None:
+    for message in state.messages:
+        css_class = "assistant-message" if message.role == "simplifynext" else ""
+        role = "SimplifyNext" if message.role == "simplifynext" else "Investigator"
+        st.markdown(f"<div class='message {css_class}'><strong>{role}</strong><span class='message-meta'>{message.timestamp}</span><br>{message.content}</div>", unsafe_allow_html=True)
+
+
+def render_latest_update(state: CaseWorkspaceState) -> None:
+    request = state.current_request
+    st.markdown(
+        f"""
+        <div class="message assistant-message">
+          <strong>SimplifyNext</strong><span class="message-meta">10:22 AM</span>
+          <div class="focus-label" style="margin-top:.8rem">Current focus</div>
+          <div class="focus-text">{state.current_focus}</div>
+          <hr>
+          <div class="request-label">Information requested</div>
+          <div class="request-text">{request.information_sought}</div>
+          <div class="why"><strong>Why this matters</strong><br>{request.reason}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_action_panel(state: CaseWorkspaceState) -> None:
+    st.markdown("**Current request**")
+    actions = st.columns(5)
+    labels = [("Provide evidence", "provide"), ("Partially fulfil", "partial"), ("Unavailable", "unavailable"), ("Clarify", "clarify"), ("Redirect", "redirect")]
+    for column, (label, panel) in zip(actions, labels):
+        if column.button(label, use_container_width=True, key=f"action-{panel}"):
+            st.session_state.active_panel = panel
+    panel = st.session_state.active_panel
+    if panel == "provide":
+        with st.form("provide-evidence"):
+            st.caption(state.current_request.information_sought)
+            st.file_uploader("Evidence file", key="provide_file")
+            note = st.text_area("Optional note", key="provide_note")
+            if st.form_submit_button("Submit evidence", type="primary"):
+                _set_workspace(provide_evidence(state, note))
+                st.rerun()
+    elif panel == "partial":
+        with st.form("partial-evidence"):
+            st.file_uploader("Evidence available", key="partial_file")
+            unavailable = st.text_area("What could not be obtained?", key="partial_unavailable")
+            if st.form_submit_button("Submit partial fulfilment", type="primary"):
+                _set_workspace(partially_fulfil(state, unavailable))
+                st.rerun()
+    elif panel == "unavailable":
+        with st.form("unavailable"):
+            reason = st.text_area("Optional reason", key="unavailable_reason")
+            if st.form_submit_button("Confirm unavailable", type="primary"):
+                _set_workspace(mark_unavailable(state, reason))
+                st.rerun()
+    elif panel in {"clarify", "redirect"}:
+        label = "Clarification question" if panel == "clarify" else "New investigative direction"
+        with st.form(panel):
+            text = st.text_area(label)
+            if st.form_submit_button("Submit", type="primary") and text.strip():
+                action = clarify_request if panel == "clarify" else redirect_investigation
+                _set_workspace(action(state, text))
                 st.rerun()
 
 
-def render_sidebar(session: InvestigationSession | None) -> None:
-    with st.sidebar:
-        if session is None:
-            st.caption("Start an investigation to inspect its case state.")
-            return
-        render_hypotheses(session)
-        render_uncertainties(session)
-        render_evidence(session, st.session_state.investigation_service)
-
-
-def render_chat() -> None:
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
-    prompt = st.chat_input("Type a message…")
-    if prompt:
-        st.session_state.messages.extend([
-            {"role": "user", "content": prompt},
-            {"role": "assistant", "content": "Message recorded for review. Automated steering is not connected yet."},
-        ])
-        st.session_state.notice = "Correction or chat input was recorded. Automated reassessment is not connected yet."
-        _persist("investigator_correction_recorded", {"text": prompt})
-        st.rerun()
-
-
-def start_investigation(seed_hypothesis: str) -> None:
-    load_dotenv()
-    environment = Case1ControlledEnvironment(Path(__file__).resolve().parents[1] / "experiments/investigation_smoke/case_01/artifacts")
-    try:
-        client = BedrockModelClient()
-        model_id = client.model_id
-    except Exception as exc:
-        trace = InteractiveTrace(session_id=new_session_id(), case_id=environment.case_id, environment_id=environment.environment_id, model_id="unknown-model", started_at=utc_now(), updated_at=utc_now(), status="error", initial_prompt=environment.initial_prompt(), investigator_seed_hypothesis=seed_hypothesis)
-        st.session_state.trace_writer = InteractiveTraceWriter(Path(__file__).resolve().parents[1] / "runs", trace)
-        _persist("investigation_started", {})
-        _record_model_error(exc)
-        st.session_state.notice = f"Could not start the investigation: {exc}"
-        return
-    trace = InteractiveTrace(session_id=new_session_id(), case_id=environment.case_id, environment_id=environment.environment_id, model_id=model_id, started_at=utc_now(), updated_at=utc_now(), status="starting", initial_prompt=environment.initial_prompt(), investigator_seed_hypothesis=seed_hypothesis)
-    st.session_state.trace_writer = InteractiveTraceWriter(Path(__file__).resolve().parents[1] / "runs", trace)
-    _persist("investigation_started", {})
-    try:
-        service = InvestigationService(client, environment)
-        session = service.start_case(seed_hypothesis)
-    except ModelStructuredOutputError as exc:
-        st.session_state.notice = "The model returned an invalid structured response."
-        st.session_state.structured_error = str(exc)
-        st.session_state.structured_raw_output = exc.raw_output
-        _record_model_error(exc)
-        return
-    except Exception as exc:
-        st.session_state.notice = f"Could not start the investigation: {exc}"
-        _record_model_error(exc)
-        return
-    st.session_state.investigation_service = service
-    st.session_state.investigation = session
-    st.session_state.notice = None
-    st.session_state.structured_error = None
-    st.session_state.structured_raw_output = None
-    _persist("initial_model_response", {"raw_model_output": session.initial_raw_model_output, "parsed_response": _jsonable(session.initial_response), "metadata": _jsonable(session.initial_metadata)})
-    _persist("action_proposed", {"action_id": session.pending_action.action_id})
-    _persist("investigator_seed_hypothesis", {"statement": seed_hypothesis, "hypothesis_id": "H1"})
-    try:
-        service.advance_until_interrupt(session, on_event=lambda event, payload: _persist(event, payload))
-        _persist("autonomous_investigation_advanced", {})
-    except Exception as exc:
-        st.session_state.notice = f"Investigation paused: {exc}"
-        _persist("state_error", {"error": str(exc)}, exc)
-
-
-def render_action_review(session: InvestigationSession, service: InvestigationService) -> None:
-    action = session.pending_action
-    if action is None:
-        return
-    with st.expander("Review next action", expanded=True):
-        st.markdown(f"**Recommended next step**  \n{action.action_id} — {action.title}")
-        st.write(session.action_reason or "This step may help distinguish between the current explanations.")
-        columns = st.columns(5)
-        if columns[0].button("Continue investigation", use_container_width=True):
-            try:
-                service.advance_until_interrupt(session, on_event=lambda event, payload: _persist(event, payload))
-                _persist("autonomous_investigation_advanced", {})
-                st.session_state.notice = "Investigation advanced."
-            except Exception as exc:
-                if isinstance(exc, ModelStructuredOutputError):
-                    st.session_state.notice = "The model returned an invalid structured response."
-                    st.session_state.structured_error = str(exc)
-                    st.session_state.structured_raw_output = exc.raw_output
-                    _record_model_error(exc)
-                else:
-                    st.session_state.notice = f"Could not prepare the revision: {exc}"
-                    _persist("state_error", {"error": str(exc)}, exc)
-            st.rerun()
-        if columns[1].button("Redirect", use_container_width=True):
-            st.session_state.review_mode = "redirect"
-            st.rerun()
-        if columns[2].button("Correct", use_container_width=True):
-            st.session_state.review_mode = "correct"
-            st.rerun()
-        if columns[3].button("Pause", use_container_width=True):
-            service.pause(session)
-            _persist("investigation_paused", {})
-            st.session_state.notice = "Investigation paused. The current state has been preserved."
-            st.rerun()
-        if columns[4].button("Stop", use_container_width=True):
-            service.stop(session)
-            _persist("investigation_stopped", {})
-            st.session_state.notice = "Investigation stopped. The current state has been preserved."
-            st.rerun()
-        if st.session_state.review_mode == "redirect":
-            replacement = st.selectbox("Redirect to", ["A1", "A2", "A3", "A4"])
-            reason = st.text_input("Why redirect?", key="redirect_reason")
-            if st.button("Save redirect", type="primary"):
-                try:
-                    service.set_human_action(session, replacement, reason or None)
-                    _persist("human_action_redirected", {"from_action_id": action.action_id, "to_action_id": replacement, "reason": reason or None})
-                    st.session_state.review_mode = None
-                    st.session_state.notice = f"Action redirected to {replacement}."
-                except Exception as exc:
-                    st.session_state.notice = str(exc)
-                    _persist("state_error", {"error": str(exc)}, exc)
-                st.rerun()
-        elif st.session_state.review_mode == "correct":
-            st.text_area("What should be corrected?", key="correction_text")
-            if st.button("Save correction", type="primary"):
-                st.session_state.review_mode = None
-                st.session_state.notice = "Correction recorded. Automated reassessment from investigator steering is not connected yet."
-                _persist("investigator_correction_recorded", {"text": st.session_state.correction_text})
+def render_composer(state: CaseWorkspaceState) -> None:
+    with st.form("composer", clear_on_submit=True):
+        text = st.text_area("Add note, clarification, or evidence…", label_visibility="collapsed", height=72, placeholder="Add note, clarification, or evidence…")
+        attach, submit = st.columns([5, 1])
+        with attach:
+            st.file_uploader("Attach files", label_visibility="collapsed", key="composer_file")
+        with submit:
+            if st.form_submit_button("Send", type="primary", use_container_width=True) and text.strip():
+                _set_workspace(clarify_request(state, text))
                 st.rerun()
 
 
-def render_revision_review(session: InvestigationSession, service: InvestigationService) -> None:
-    revision = session.pending_revision
-    if revision is None:
-        return
-    with st.expander("Review proposed changes", expanded=True):
-        st.markdown("**Proposed changes**")
-        for update in revision.hypothesis_updates:
-            st.markdown(f"- {update.hypothesis_id} — {update.transition.value}")
-        for update in revision.uncertainty_updates:
-            st.markdown(f"- {update.uncertainty_id} — {update.transition.value}")
-        with st.expander("Reasons"):
-            for update in revision.hypothesis_updates:
-                st.caption(f"{update.hypothesis_id}: {update.reason}")
-            for update in revision.uncertainty_updates:
-                st.caption(f"{update.uncertainty_id}: {update.reason}")
-        removals = [update for update in revision.hypothesis_updates if update.transition.value == "remove"]
-        if removals:
-            st.warning("Review proposed hypothesis removal")
-            for removal in removals:
-                hypothesis = session.case_state.get_hypothesis(removal.hypothesis_id)
-                st.write(f"**{hypothesis.id}** — {hypothesis.statement}")
-                st.caption(f"Reason: {removal.reason}")
-                st.caption(f"Evidence basis: {', '.join(removal.add_conflicting_evidence_ids) or 'none'}")
-                review_columns = st.columns(2)
-                if review_columns[0].button("Confirm removal", key=f"remove-{hypothesis.id}"):
-                    try:
-                        _persist("human_removal_decision", {"hypothesis_id": hypothesis.id, "decision": "confirm"})
-                        service.resolve_hypothesis_removal(session, hypothesis.id, True)
-                        st.session_state.notice = "Hypothesis removal applied."
-                    except Exception as exc:
-                        st.session_state.notice = f"Could not apply removal: {exc}"
-                        _persist("state_error", {"error": str(exc)}, exc)
-                    st.rerun()
-                if review_columns[1].button("Keep hypothesis", key=f"keep-{hypothesis.id}"):
-                    try:
-                        _persist("human_removal_decision", {"hypothesis_id": hypothesis.id, "decision": "keep"})
-                        service.resolve_hypothesis_removal(session, hypothesis.id, False)
-                        st.session_state.notice = "Hypothesis retained. Routine updates were applied."
-                    except Exception as exc:
-                        st.session_state.notice = f"Could not retain hypothesis: {exc}"
-                        _persist("state_error", {"error": str(exc)}, exc)
-                    st.rerun()
-        columns = st.columns(4)
-        if not removals and columns[0].button("Continue investigation", type="primary", use_container_width=True):
-            try:
-                service.advance_until_interrupt(session, on_event=lambda event, payload: _persist(event, payload))
-                st.session_state.notice = "Investigation advanced."
-            except Exception as exc:
-                if isinstance(exc, ModelStructuredOutputError):
-                    st.session_state.notice = "The model returned an invalid structured response."
-                    st.session_state.structured_error = str(exc)
-                    st.session_state.structured_raw_output = exc.raw_output
-                    _record_model_error(exc)
-                else:
-                    st.session_state.notice = f"Could not apply the revision: {exc}"
-                    _persist("state_error", {"error": str(exc)}, exc)
-            st.rerun()
-        if columns[1].button("Correct", use_container_width=True):
-            st.session_state.review_mode = "revision_correct"
-            st.rerun()
-        if columns[2].button("Pause", use_container_width=True):
-            service.pause(session)
-            _persist("investigation_paused", {})
-            st.session_state.notice = "Investigation paused. The current state has been preserved."
-            st.rerun()
-        if columns[3].button("Stop", use_container_width=True):
-            service.stop(session)
-            _persist("investigation_stopped", {})
-            st.session_state.notice = "Investigation stopped. The current state has been preserved."
-            st.rerun()
-        if st.session_state.review_mode == "revision_correct":
-            st.text_area("What should be corrected?", key="revision_correction")
-            if st.button("Record correction"):
-                st.session_state.notice = "Correction recorded. Automated reassessment is not connected yet."
-                _persist("investigator_correction_recorded", {"text": st.session_state.revision_correction})
-                st.rerun()
+def render_collapsed_context(state: CaseWorkspaceState) -> None:
+    with st.expander("Unresolved questions"):
+        for item in state.unresolved_questions:
+            st.write(f"• {item}")
+    with st.expander("Active explanations"):
+        for item in state.active_explanations:
+            st.write(f"• {item}")
+    with st.expander("Case history"):
+        for item in state.case_history:
+            st.write(f"• {item}")
 
 
 def main() -> None:
     initialize_session()
-    session = st.session_state.investigation
-    service = st.session_state.investigation_service
-    st.title("SimplifyNext")
-    st.caption("Academic integrity review — Case 01")
-    render_sidebar(session)
-    st.subheader("Investigator chat")
-    render_chat()
-    if session is None:
-        st.write("Review the case with a controlled investigation assistant.")
-        seed = st.text_area("Starting hypothesis / concern", help="Enter one broad explanation worth investigating. Avoid assuming a specific mechanism unless already established.", key="seed_hypothesis")
-        if st.button("Start investigation", type="primary"):
-            if not seed.strip():
-                st.warning("Enter a starting hypothesis or concern before starting.")
-            else:
-                with st.spinner("Investigating…"):
-                    start_investigation(seed)
-            st.rerun()
-    else:
-        if session.status is SessionStatus.AWAITING_ACTION_REVIEW:
-            render_action_review(session, service)
-        elif session.status is SessionStatus.AWAITING_REVISION_REVIEW:
-            render_revision_review(session, service)
-        elif session.status is SessionStatus.STOPPED:
-            st.info("Investigation stopped. The current state remains available for inspection.")
-        elif session.status is SessionStatus.PAUSED:
-            st.info("Investigation paused. The current state remains available for inspection.")
-            if st.button("Continue investigation", type="primary"):
-                with st.spinner("Investigating…"):
-                    try:
-                        session.status = SessionStatus.READY
-                        service.advance_until_interrupt(session, on_event=lambda event, payload: _persist(event, payload))
-                        _persist("autonomous_investigation_advanced", {})
-                    except Exception as exc:
-                        st.session_state.notice = f"Investigation paused: {exc}"
-                        _persist("state_error", {"error": str(exc)}, exc)
-                st.rerun()
+    state = st.session_state.workspace
+    render_styles()
+    render_header(state)
+    if st.session_state.active_panel == "sources":
+        render_sources(state)
+    elif st.session_state.active_panel == "details":
+        render_details(state)
+    render_history(state)
+    render_latest_update(state)
+    render_action_panel(state)
+    render_composer(state)
+    render_collapsed_context(state)
     if st.session_state.notice:
         st.info(st.session_state.notice)
-    if st.session_state.structured_error:
-        with st.expander("Show raw model output"):
-            if st.session_state.structured_raw_output:
-                st.code(st.session_state.structured_raw_output, language="json")
-            st.caption(st.session_state.structured_error)
 
 
 if __name__ == "__main__":

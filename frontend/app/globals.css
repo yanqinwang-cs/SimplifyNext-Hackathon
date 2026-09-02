@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #172b4d;
+  --muted: #64748b;
+  --line: #d9e1ec;
+  --blue: #1769c2;
+  --blue-dark: #0d4e9b;
+  --canvas: #f7f9fc;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--navy);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button, input, textarea { font: inherit; }
+
+button:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
