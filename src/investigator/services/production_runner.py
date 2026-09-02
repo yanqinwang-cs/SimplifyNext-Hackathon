@@ -12,7 +12,7 @@ from investigator.graph import CaseGraph, GraphNode, GraphNodeType
 from investigator.llm import ModelCallResult, ModelClient, ModelParseError
 from investigator.roles import InvestigationFocus
 from investigator.roles.procedure import correction_guidance, render_procedure
-from investigator.roles.steward import StewardDecision, StewardReviewContext
+from investigator.roles.steward import ProductionStewardDecision, StewardDecision, StewardReviewContext
 from investigator.services.evidence_requests import CaseSnapshotMismatch, HumanEvidenceWorkflow
 from investigator.state.case_state import CaseState
 from investigator.sources import SourceRegistry
@@ -217,7 +217,7 @@ class StewardEnvelope(RootModel[dict[str, object]]):
     """Provider JSON envelope validated against the production Steward union."""
 
 
-def _parse_and_validate_steward(value: StewardEnvelope, coordinator: InvestigatorCycleCoordinator, context: StewardReviewContext, snapshot=None) -> StewardDecision:
-    decision = TypeAdapter(StewardDecision).validate_python(value.root)
+def _parse_and_validate_steward(value: StewardEnvelope, coordinator: InvestigatorCycleCoordinator, context: StewardReviewContext, snapshot=None) -> ProductionStewardDecision:
+    decision = TypeAdapter(ProductionStewardDecision).validate_python(value.root)
     coordinator.validate_steward_decision(decision, coordinator.cycle.case_revision, context, snapshot=snapshot)
     return decision

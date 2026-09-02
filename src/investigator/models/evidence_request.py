@@ -13,7 +13,7 @@ class EvidenceRequestStatus(str, Enum):
 class EvidenceRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     request_id: str = Field(pattern=r"^R\d+$")
-    reason: str
+    reason: str | None = None
     target_uncertainty_id: str | None = None
     information_sought: str | None = None
     expected_information_value: str | None = None

@@ -8,7 +8,7 @@ from threading import RLock
 from typing import Any, Callable
 from datetime import datetime, timezone
 
-from investigator.cycle import EvidenceRequest, EvidenceRequestResponse, EvidenceRequestStatus, RequestEvidence
+from investigator.cycle import EvidenceRequest, EvidenceRequestResponse, EvidenceRequestStatus, RequestEvidence, RequestInformation
 from investigator.cycle import TurnSnapshot
 from investigator.sources import SourceRegistry
 from investigator.models.source import Source
@@ -221,7 +221,7 @@ class HumanEvidenceWorkflow:
             raise CaseSnapshotMismatch("Clean checkpoint identity does not match restored state")
         return restored
 
-    def request_evidence(self, case_id: str, step: RequestEvidence | dict, expected_case_revision: int | None = None) -> EvidenceRequest:
+    def request_evidence(self, case_id: str, step: RequestEvidence | RequestInformation | dict, expected_case_revision: int | None = None) -> EvidenceRequest:
         with self._lock:
             state = self.ensure_case(case_id)
             self._check_revision(state, expected_case_revision)
@@ -229,14 +229,23 @@ class HumanEvidenceWorkflow:
                 raise EvidenceRequestConflict("A human request cannot be created while an Investigator revision is active")
             if any(item.status.value == "pending" for item in state.evidence_request_history):
                 raise EvidenceRequestConflict("Only one pending human evidence request is allowed")
-            parsed = step if isinstance(step, RequestEvidence) else RequestEvidence.model_validate(step)
+            if isinstance(step, (RequestEvidence, RequestInformation)):
+                parsed = step
+            elif step.get("type") == "request_information":
+                parsed = RequestInformation.model_validate(step)
+            else:
+                parsed = RequestEvidence.model_validate(step)
+            question = parsed.question if isinstance(parsed, RequestInformation) else parsed.information_sought
+            target = parsed.target_uncertainty_id
+            expected_value = parsed.expected_information_value
+            reason = parsed.reason
             number = 1 + max((int(match.group(1)) for item in state.evidence_request_history if (match := re.fullmatch(r"R(\d+)", item.request_id))), default=0)
             request = EvidenceRequest(
                 request_id=f"R{number}",
-                target_uncertainty_id=parsed.target_uncertainty_id,
-                information_sought=parsed.information_sought or "Additional case information.",
-                reason=parsed.reason,
-                expected_information_value=parsed.expected_information_value,
+                target_uncertainty_id=target,
+                information_sought=question or "Additional case information.",
+                reason=reason,
+                expected_information_value=expected_value,
                 requested_at_revision=state.revision,
             )
             state.evidence_request_history.append(request)
@@ -352,12 +361,25 @@ class HumanEvidenceWorkflow:
             runtime_status = f"RUNNING_{current_actor}"
         messages: list[dict[str, Any]] = []
         if pending:
-            request_payload = pending.model_dump(mode="json") | {"informationSought": pending.information_sought}
+            request_payload = self._public_request(pending)
             messages.append({"id": f"request-{pending.request_id}", "role": "simplifynext", "text": "The available material leaves one important question open.", "request": request_payload})
-        pending_payload = (pending.model_dump(mode="json") | {"informationSought": pending.information_sought}) if pending else None
+        pending_payload = self._public_request(pending) if pending else None
         runs = self.get_runs(case_id)
         latest = runs[-1] if runs else None
-        return {"caseId": state.case_id, "caseRevision": state.revision, "title": state.title, "status": runtime_status.lower(), "caseStatus": state.case_status, "runtimeStatus": runtime_status, "currentActor": current_actor, "institutionalStatus": "Investigating" if state.case_status == "ACTIVE" else state.case_status.title(), "currentFocus": pending.information_sought if pending else "Review the current case state.", "messages": messages, "chatHistory": [], "workspaceTurns": [], "workspaceEvents": self.workspace_events(case_id), "visibleSources": [{"id": source.id, "name": source.name, "sourceType": source.source_type.value, "content": source.content or "", "contentPreview": (source.content or "")[:180]} for source in state.sources.values()], "pendingEvidenceRequest": pending_payload, "requestHistory": [item.model_dump(mode="json") for item in state.evidence_request_history], "runs": runs, "lastError": state.last_error, "lastTraceStep": state.last_trace_step, "lastUpdatedAt": state.last_updated_at.isoformat(), "latestRun": latest}
+        return {"caseId": state.case_id, "caseRevision": state.revision, "title": state.title, "status": runtime_status.lower(), "caseStatus": state.case_status, "runtimeStatus": runtime_status, "currentActor": current_actor, "institutionalStatus": "Investigating" if state.case_status == "ACTIVE" else state.case_status.title(), "currentFocus": pending.information_sought if pending else "Review the current case state.", "messages": messages, "chatHistory": [], "workspaceTurns": [], "workspaceEvents": self.workspace_events(case_id), "visibleSources": [{"id": source.id, "name": source.name, "sourceType": source.source_type.value, "content": source.content or "", "contentPreview": (source.content or "")[:180]} for source in state.sources.values()], "pendingEvidenceRequest": pending_payload, "requestHistory": [self._public_request(item) for item in state.evidence_request_history], "runs": runs, "lastError": state.last_error, "lastTraceStep": state.last_trace_step, "lastUpdatedAt": state.last_updated_at.isoformat(), "latestRun": latest}
+
+    @staticmethod
+    def _public_request(request: EvidenceRequest) -> dict[str, Any]:
+        """Expose the human-facing question without internal targeting metadata."""
+        return {
+            "request_id": request.request_id,
+            "informationSought": request.information_sought,
+            "reason": request.reason,
+            "status": request.status.value,
+            "originating_run_id": request.originating_run_id,
+            "originating_actor": request.originating_actor,
+            "resumed_run_id": request.resumed_run_id,
+        }
 
     def record_workspace_event(self, case_id: str, event: dict[str, Any]) -> dict[str, Any]:
         self._event_sequence += 1

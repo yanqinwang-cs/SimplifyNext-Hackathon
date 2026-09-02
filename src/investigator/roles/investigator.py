@@ -37,12 +37,6 @@ class AddEvidenceCommand(_InvestigatorCommand):
     statement: str
     source_ids: list[str] = Field(min_length=1)
 
-    @model_validator(mode="after")
-    def has_one_reference(self) -> "AddEvidenceCommand":
-        if bool(self.node_id) == bool(self.local_ref):
-            raise ValueError("add_evidence requires exactly one of node_id or local_ref")
-        return self
-
     @field_validator("source_ids")
     @classmethod
     def source_ids_are_unique(cls, value: list[str]) -> list[str]:
@@ -61,12 +55,6 @@ class AddPropositionCommand(_InvestigatorCommand):
     derived_from_node_ids: list[str] = Field(min_length=1)
 
     @model_validator(mode="after")
-    def has_one_reference(self) -> "AddPropositionCommand":
-        if bool(self.node_id) == bool(self.local_ref):
-            raise ValueError("add_proposition requires exactly one of node_id or local_ref")
-        return self
-
-    @model_validator(mode="after")
     def sources_are_unique(self) -> "AddPropositionCommand":
         if len(self.derived_from_node_ids) != len(set(self.derived_from_node_ids)):
             raise ValueError("derived_from_node_ids must not contain duplicates")
@@ -79,12 +67,6 @@ class AddHypothesisCommand(_InvestigatorCommand):
     local_ref: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_-]{0,63}$")
     statement: str
 
-    @model_validator(mode="after")
-    def has_one_reference(self) -> "AddHypothesisCommand":
-        if bool(self.node_id) == bool(self.local_ref):
-            raise ValueError("add_hypothesis requires exactly one of node_id or local_ref")
-        return self
-
 
 class AddUncertaintyCommand(_InvestigatorCommand):
     operation: Literal["add_uncertainty"] = "add_uncertainty"
@@ -92,12 +74,6 @@ class AddUncertaintyCommand(_InvestigatorCommand):
     local_ref: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_-]{0,63}$")
     statement: str
     target_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*|H\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$")
-
-    @model_validator(mode="after")
-    def has_one_reference(self) -> "AddUncertaintyCommand":
-        if bool(self.node_id) == bool(self.local_ref):
-            raise ValueError("add_uncertainty requires exactly one of node_id or local_ref")
-        return self
 
 
 class _RelationCommand(_InvestigatorCommand):

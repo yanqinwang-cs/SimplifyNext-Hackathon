@@ -44,20 +44,20 @@ class GraphInvestigationCoordinator:
         elif isinstance(update, AddSpecializationCommand):
             self._apply_specialization(candidate, new_nodes, update)
         elif isinstance(update, MoveFocusCommand):
-            self._move_focus(update.focus_node_id, update.reason, self._permitted_ids())
+            self._move_focus(self._resolve_ref(update.focus_node_id), update.reason, self._permitted_ids())
         if not isinstance(update, MoveFocusCommand):
             self.graph = candidate
         self._new_nodes = new_nodes
         self.history.append(self.graph, self.focus, update.reason)
 
     def _apply_add_evidence(self, graph: CaseGraph, new_nodes: set[str], update: AddEvidenceCommand) -> None:
-        node_id = self._allocate_node_id(graph, GraphNodeType.EVIDENCE, update.node_id, update.local_ref)
+        node_id = self._allocate_node_id(graph, GraphNodeType.EVIDENCE, update.node_id, update.local_ref, update.statement)
         graph.add_node(GraphNode(id=node_id, node_type=GraphNodeType.EVIDENCE, statement=update.statement, semantic_key=update.local_ref, canonical_id=node_id, metadata={"source_ids": list(update.source_ids)}))
         self._remember_ref(update.local_ref, node_id)
         new_nodes.add(node_id)
 
     def _apply_add_proposition(self, graph: CaseGraph, new_nodes: set[str], update: AddPropositionCommand) -> None:
-        node_id = self._allocate_node_id(graph, GraphNodeType.PROPOSITION, update.node_id, update.local_ref)
+        node_id = self._allocate_node_id(graph, GraphNodeType.PROPOSITION, update.node_id, update.local_ref, update.statement)
         permitted = self._permitted_ids() | new_nodes
         sources = [self._require_local_active(graph, self._resolve_ref(identifier), {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}, permitted) for identifier in update.derived_from_node_ids]
         graph.add_node(GraphNode(id=node_id, node_type=GraphNodeType.PROPOSITION, statement=update.statement, semantic_key=update.local_ref, canonical_id=node_id))
@@ -67,13 +67,13 @@ class GraphInvestigationCoordinator:
         new_nodes.add(node_id)
 
     def _apply_add_hypothesis(self, graph: CaseGraph, new_nodes: set[str], update: AddHypothesisCommand) -> None:
-        node_id = self._allocate_node_id(graph, GraphNodeType.HYPOTHESIS, update.node_id, update.local_ref)
+        node_id = self._allocate_node_id(graph, GraphNodeType.HYPOTHESIS, update.node_id, update.local_ref, update.statement)
         graph.add_node(GraphNode(id=node_id, node_type=GraphNodeType.HYPOTHESIS, statement=update.statement, semantic_key=update.local_ref, canonical_id=node_id))
         self._remember_ref(update.local_ref, node_id)
         new_nodes.add(node_id)
 
     def _apply_add_uncertainty(self, graph: CaseGraph, new_nodes: set[str], update: AddUncertaintyCommand) -> None:
-        node_id = self._allocate_node_id(graph, GraphNodeType.UNCERTAINTY, update.node_id, update.local_ref)
+        node_id = self._allocate_node_id(graph, GraphNodeType.UNCERTAINTY, update.node_id, update.local_ref, update.statement)
         permitted = self._permitted_ids() | new_nodes
         target = self._require_local_active(graph, self._resolve_ref(update.target_node_id), {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}, permitted)
         graph.add_node(GraphNode(id=node_id, node_type=GraphNodeType.UNCERTAINTY, statement=update.statement, semantic_key=update.local_ref, canonical_id=node_id))
@@ -113,14 +113,13 @@ class GraphInvestigationCoordinator:
         if identifier in graph.nodes:
             raise ValueError(f"Duplicate graph node ID: {identifier!r}")
 
-    def _allocate_node_id(self, graph: CaseGraph, node_type: GraphNodeType, node_id: str | None, local_ref: str | None) -> str:
+    def _allocate_node_id(self, graph: CaseGraph, node_type: GraphNodeType, node_id: str | None, local_ref: str | None, statement: str) -> str:
         if node_id is not None:
             self._require_new_id(graph, node_id)
             return node_id
-        assert local_ref is not None
         if local_ref in self._turn_refs:
             raise ValueError(f"Duplicate turn-local reference: {local_ref!r}")
-        digest = hashlib.sha256(f"{graph.case_id}:{node_type.value}:{local_ref}".encode()).hexdigest()[:16]
+        digest = hashlib.sha256(f"{graph.case_id}:{node_type.value}:{local_ref or ''}:{statement}".encode()).hexdigest()[:16]
         candidate = f"node_{digest}"
         suffix = 1
         while candidate in graph.nodes:

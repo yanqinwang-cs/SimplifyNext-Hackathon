@@ -11,6 +11,7 @@ class StewardOperation(str, Enum):
     ARCHIVE = "archive"
     REACTIVATE = "reactivate"
     STOP_UNRESOLVED = "stop_unresolved"
+    REQUEST_INFORMATION = "request_information"
     REQUEST_OPEN = "request_open"
     REQUEST_EVIDENCE = "request_evidence"
 
@@ -85,7 +86,26 @@ class StewardRequestEvidenceDecision(_DecisionBase):
     expected_information_value: str
 
 
+class StewardRequestInformationDecision(BaseModel):
+    """Common production request shape; legacy request branches remain load-compatible."""
+
+    model_config = ConfigDict(extra="forbid")
+    operation: Literal["request_information"] = "request_information"
+    assessment: str
+    question: str
+    reason: str | None = None
+    target_uncertainty_id: str | None = None
+    expected_information_value: str | None = None
+
+
 StewardDecision: TypeAlias = Annotated[
     KeepFocusDecision | ShiftFocusDecision | GeneralizeDecision | ArchiveDecision | ReactivateDecision | StopUnresolvedDecision | StewardRequestOpenDecision | StewardRequestEvidenceDecision,
+    Field(discriminator="operation"),
+]
+
+# Production may use the common request contract without changing the frozen
+# StewardDecision schema consumed by experiment assurance snapshots.
+ProductionStewardDecision: TypeAlias = Annotated[
+    KeepFocusDecision | ShiftFocusDecision | GeneralizeDecision | ArchiveDecision | ReactivateDecision | StopUnresolvedDecision | StewardRequestInformationDecision | StewardRequestOpenDecision | StewardRequestEvidenceDecision,
     Field(discriminator="operation"),
 ]

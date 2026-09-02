@@ -16,7 +16,7 @@ from investigator.roles.focus import InvestigationFocus, investigator_region
 from investigator.roles.investigator import INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdate
 from investigator.roles.investigator import InvestigatorOperation
 from investigator.roles.procedure import INVESTIGATOR_PROCEDURE, STEWARD_PROCEDURE, procedural_contract_errors
-from investigator.roles.steward import StewardDecision, StopUnresolvedDecision, StewardReviewContext, StewardRequestEvidenceDecision, StewardRequestOpenDecision
+from investigator.roles.steward import ProductionStewardDecision, StopUnresolvedDecision, StewardReviewContext, StewardRequestEvidenceDecision, StewardRequestInformationDecision, StewardRequestOpenDecision
 
 
 class EnquiryKind(str, Enum):
@@ -98,6 +98,24 @@ class RequestOpen(_ReasonedStep):
         return value
 
 
+class RequestInformation(BaseModel):
+    """The production model-facing human-information request contract."""
+
+    model_config = ConfigDict(extra="forbid")
+    type: Literal["request_information"] = "request_information"
+    question: str
+    reason: str | None = None
+    target_uncertainty_id: str | None = None
+    expected_information_value: str | None = None
+
+    @field_validator("question", "reason", "expected_information_value")
+    @classmethod
+    def substantive_text(cls, value: str | None) -> str | None:
+        if value is not None and (not value.strip() or value.strip().lower() in {"more information", "additional information", "anything else", "give me more evidence", "give me more context", "tell me what to investigate", "find anomalies for me"}):
+            raise ValueError("request_information text must be substantive")
+        return value
+
+
 class RequestStewardReview(_ReasonedStep):
     type: Literal["request_steward_review"] = "request_steward_review"
 
@@ -107,7 +125,7 @@ class LocalExhausted(_ReasonedStep):
 
 
 InvestigatorNextStep: TypeAlias = Annotated[
-    ContinueLocal | RequestEnquiry | RequestEvidence | RequestOpen | RequestStewardReview | LocalExhausted,
+    ContinueLocal | RequestEnquiry | RequestInformation | RequestStewardReview | LocalExhausted,
     Field(discriminator="type"),
 ]
 NEXT_STEP_ADAPTER = TypeAdapter(InvestigatorNextStep)
@@ -117,6 +135,26 @@ class InvestigatorTurnResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     graph_updates: list[InvestigatorUpdate] = Field(max_length=5)
     next_step: InvestigatorNextStep
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_legacy_requests(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+        payload = dict(value)
+        step = payload.get("next_step")
+        if isinstance(step, dict) and step.get("type") in {"request_open", "request_evidence"}:
+            legacy = dict(step)
+            payload["next_step"] = {
+                "type": "request_information",
+                # Compatibility-only fallback for the historical broad request
+                # branch, which allowed an omitted information_sought field.
+                "question": legacy.get("information_sought") or "What additional case context is relevant to the current investigation?",
+                "reason": legacy.get("reason"),
+                "target_uncertainty_id": legacy.get("target_uncertainty_id"),
+                "expected_information_value": legacy.get("expected_information_value"),
+            }
+        return payload
 
     @model_validator(mode="after")
     def continue_requires_graph_work(self) -> "InvestigatorTurnResponse":
@@ -380,7 +418,7 @@ class InvestigatorCycleCoordinator:
         next_step = response.next_step
         if isinstance(next_step, RequestEnquiry):
             self._validate_enquiry_request(next_step, working)
-        elif isinstance(next_step, (RequestEvidence, RequestOpen)):
+        elif isinstance(next_step, RequestInformation):
             self._validate_evidence_request(next_step, working)
         self.graph, self.focus, self._new_nodes = working.graph, working.focus, working._new_nodes
         self.cycle.tenure_turn_count += 1
@@ -398,13 +436,13 @@ class InvestigatorCycleCoordinator:
             self.cycle.steward_review_required_after_enquiry = self.cycle.tenure_turn_count >= self.cycle.max_turns_per_tenure
             self.cycle.status = CycleStatus.ENQUIRY_IN_FLIGHT
             self.cycle.handoff_reason = None
-        elif isinstance(next_step, (RequestEvidence, RequestOpen)):
+        elif isinstance(next_step, RequestInformation):
             request = EvidenceRequest(
                 request_id=f"R{len(self.cycle.evidence_request_history) + 1}",
-                target_uncertainty_id=getattr(next_step, "target_uncertainty_id", None),
-                information_sought=getattr(next_step, "information_sought", None),
+                target_uncertainty_id=next_step.target_uncertainty_id,
+                information_sought=next_step.question,
                 reason=next_step.reason,
-                expected_information_value=getattr(next_step, "expected_information_value", None),
+                expected_information_value=next_step.expected_information_value,
                 requested_at_revision=self.cycle.case_revision,
             )
             self.cycle.evidence_request = request
@@ -481,7 +519,7 @@ class InvestigatorCycleCoordinator:
         self.cycle.handoff_reason = None
         return self.cycle.model_copy(deep=True)
 
-    def apply_steward_decision(self, decision: StewardDecision | dict, based_on_revision: int, review_context: StewardReviewContext | None = None, snapshot: TurnSnapshot | None = None) -> InvestigatorCycleState:
+    def apply_steward_decision(self, decision: ProductionStewardDecision | dict, based_on_revision: int, review_context: StewardReviewContext | None = None, snapshot: TurnSnapshot | None = None) -> InvestigatorCycleState:
         if self.cycle.status is CycleStatus.ENQUIRY_IN_FLIGHT:
             raise CycleError(CycleFailureCode.STEWARD_WRITE_DURING_IN_FLIGHT, "Steward graph writes are forbidden while an enquiry is in flight")
         if self.cycle.status is not CycleStatus.AWAITING_STEWARD:
@@ -491,8 +529,8 @@ class InvestigatorCycleCoordinator:
         if snapshot is not None and (snapshot.case_revision != self.cycle.case_revision or snapshot.graph.model_dump(mode="json") != self.graph.model_dump(mode="json") or snapshot.focus.model_dump(mode="json") != self.focus.model_dump(mode="json")):
             raise CycleError(CycleFailureCode.STALE_STEWARD_REVISION, "Steward decision baseline does not match its canonical snapshot")
         try:
-            parsed = TypeAdapter(StewardDecision).validate_python(decision)
-            if isinstance(parsed, (StewardRequestOpenDecision, StewardRequestEvidenceDecision)):
+            parsed = TypeAdapter(ProductionStewardDecision).validate_python(decision)
+            if isinstance(parsed, (StewardRequestInformationDecision, StewardRequestOpenDecision, StewardRequestEvidenceDecision)):
                 self._create_human_request(parsed)
                 return self.cycle.model_copy(deep=True)
             working = GraphInvestigationCoordinator(deepcopy(self.graph), self.focus.model_copy(deep=True), full_graph_visibility=self.full_graph_visibility)
@@ -512,14 +550,18 @@ class InvestigatorCycleCoordinator:
         self.cycle.handoff_reason = None
         return self.cycle.model_copy(deep=True)
 
-    def _create_human_request(self, request: StewardRequestOpenDecision | StewardRequestEvidenceDecision) -> None:
+    def _create_human_request(self, request: StewardRequestInformationDecision | StewardRequestOpenDecision | StewardRequestEvidenceDecision) -> None:
         if self.cycle.evidence_request is not None:
             raise CycleError(CycleFailureCode.EVIDENCE_REQUEST_ALREADY_PENDING, "A human evidence request is already pending")
-        if isinstance(request, StewardRequestEvidenceDecision):
-            node = self.graph.nodes.get(request.target_uncertainty_id)
+        target_uncertainty_id = getattr(request, "target_uncertainty_id", None)
+        if target_uncertainty_id is not None:
+            node = self.graph.nodes.get(target_uncertainty_id)
             if node is None or node.node_type is not GraphNodeType.UNCERTAINTY or node.status is not GraphStatus.ACTIVE:
                 raise CycleError(CycleFailureCode.INVALID_ENQUIRY_TARGET, "Steward targeted request must identify an active uncertainty")
-        item = EvidenceRequest(request_id=f"R{len(self.cycle.evidence_request_history) + 1}", target_uncertainty_id=getattr(request, "target_uncertainty_id", None), information_sought=request.information_sought, reason=request.reason, expected_information_value=request.expected_information_value, requested_at_revision=self.cycle.case_revision)
+        question = getattr(request, "question", None) or getattr(request, "information_sought", None)
+        if not question:
+            raise CycleError(CycleFailureCode.INVALID_EVIDENCE_REQUEST, "Human information request requires a question")
+        item = EvidenceRequest(request_id=f"R{len(self.cycle.evidence_request_history) + 1}", target_uncertainty_id=target_uncertainty_id, information_sought=question, reason=getattr(request, "reason", None), expected_information_value=getattr(request, "expected_information_value", None), requested_at_revision=self.cycle.case_revision)
         self.cycle.evidence_request = item
         self.cycle.evidence_request_history.append(item.model_copy(deep=True))
         self.cycle.status = CycleStatus.WAITING_FOR_EVIDENCE
@@ -536,10 +578,10 @@ class InvestigatorCycleCoordinator:
         if node is None or node.node_type is not GraphNodeType.UNCERTAINTY or node.status is not GraphStatus.ACTIVE or node.id not in permitted:
             raise CycleError(CycleFailureCode.INVALID_ENQUIRY_TARGET, "Target must be an active local uncertainty after this turn's updates")
 
-    def _validate_evidence_request(self, request: RequestEvidence, working: GraphInvestigationCoordinator) -> None:
+    def _validate_evidence_request(self, request: RequestInformation, working: GraphInvestigationCoordinator) -> None:
         if self.cycle.evidence_request is not None:
             raise CycleError(CycleFailureCode.EVIDENCE_REQUEST_ALREADY_PENDING, "A human evidence request is already pending")
-        if isinstance(request, RequestOpen):
+        if request.target_uncertainty_id is None:
             return
         node = working.graph.nodes.get(request.target_uncertainty_id)
         permitted = working._permitted_ids() | working._new_nodes

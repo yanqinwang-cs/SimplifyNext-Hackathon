@@ -32,10 +32,9 @@ INVESTIGATOR_PROCEDURE = (
     ProcedureSpec("add_derivation", "Record why a proposition was inferred.", "The proposition and legal E/P basis already exist.", "Captures inferential provenance separately from evidential bearing.", "Using SUPPORTS merely to explain derivation.", "add_evidence -> add_proposition -> add_derivation.", "investigator"),
     ProcedureSpec("add_specialization", "Connect a specific explanation to a broader parent.", "Both active hypotheses and the child-parent relationship are already determined.", "Preserves explanatory hierarchy.", "Inventing a parent after selecting the operation.", "Add or reuse the broader hypothesis first.", "investigator"),
     ProcedureSpec("move_focus", "Move the current area of Investigator attention.", "The destination is a legal canonical graph node.", "Guides attention without changing graph visibility or global case management.", "Directly changing global focus.", "request_steward_review.", "investigator"),
-    ProcedureSpec("request_open", "Ask for useful context when targeted specificity is not earned.", "Useful information is needed but no precise target/need/value is justified.", "Provides a safe lower-specificity path without invented precision.", "An incomplete targeted evidence request.", "request_evidence once its prerequisites are known.", "investigator"),
-    ProcedureSpec("request_evidence", "Ask for a targeted human evidence response.", "A specific active uncertainty, precise need, reason, and expected value are already formulated.", "Makes the human request auditable and decision-relevant.", "Choosing the request first and inventing its fields afterward.", "request_open until targeted prerequisites are satisfied.", "investigator"),
+    ProcedureSpec("request_information", "Ask for useful human information or clarification.", "A concrete, case-relevant question is formulated; target metadata is optional.", "Keeps the substantive investigative question while the system owns request bookkeeping.", "A vague request that outsources investigation to the human.", "request_steward_review when global reassessment is needed.", "investigator"),
     ProcedureSpec("request_steward_review", "Ask for global case-management review.", "Local reasoning is exhausted or global reassessment is materially useful.", "Separates global attention management from local extraction.", "Investigator mutating distant/global focus.", "Continue locally when useful work remains.", "investigator"),
-    ProcedureSpec("request_enquiry", "Select one explicitly available legacy predefined enquiry.", "A listed action and addressable active local uncertainty are already identified.", "Preserves the existing Stage 1 path.", "Inventing an action or targeting an unavailable uncertainty.", "request_evidence or request_open when a human request is appropriate.", "investigator"),
+    ProcedureSpec("request_enquiry", "Select one explicitly available legacy predefined enquiry.", "A listed action and addressable active local uncertainty are already identified.", "Preserves the existing Stage 1 path.", "Inventing an action or targeting an unavailable uncertainty.", "request_information when a human request is appropriate.", "investigator"),
     ProcedureSpec("continue_local", "Continue bounded local reasoning.", "At least one graph update is ready.", "Prevents no-op turns.", "Continuing without graph work.", "local_exhausted or request_steward_review.", "investigator"),
     ProcedureSpec("local_exhausted", "Declare that the local frontier has no useful next step.", "Local useful work is genuinely exhausted.", "Creates a controlled Steward boundary.", "Using it while useful local work remains.", "continue_local or request_steward_review.", "investigator"),
 )
@@ -47,8 +46,7 @@ STEWARD_PROCEDURE = (
     ProcedureSpec("archive", "Remove a stale or superseded branch from active attention while retaining history.", "The target is stale/superseded; current-focus archive has an active destination.", "Keeps historical state auditable without active distraction.", "Deleting or silently mutating a branch.", "generalize or keep_focus when the branch remains useful.", "steward"),
     ProcedureSpec("reactivate", "Return archived material when it becomes materially relevant.", "Archived target is identified and newly relevant.", "Allows historical evidence/branches to re-enter active reasoning.", "Creating a duplicate replacement branch.", "shift_focus or keep_focus if it is already active.", "steward"),
     ProcedureSpec("stop_unresolved", "Hand an unresolved frontier to the human decision-maker after review.", "Trusted global frontier assessed; no useful region/action remains; local work is exhausted.", "Makes unresolved termination explicit without having Steward decide guilt.", "Stopping because evidence is merely unavailable or confidence is reduced.", "keep_focus, shift_focus, or request further local work.", "steward"),
-    ProcedureSpec("request_open", "Ask the human for specific useful case context when a targeted evidence request is not earned.", "A concrete information need and expected investigative value are stated.", "Preserves bounded human-in-the-loop recovery without graph mutation.", "A vague request for more information.", "request_evidence when one active uncertainty and a precise source need are justified.", "steward"),
-    ProcedureSpec("request_evidence", "Ask the human for a targeted source that addresses one active uncertainty.", "One active uncertainty, precise information need, reason, and expected value are stated.", "Makes Steward recovery auditable without changing the graph.", "Inventing a target or using an action ID as evidence.", "request_open when targeted prerequisites are not satisfied.", "steward"),
+    ProcedureSpec("request_information", "Ask the human for useful case information or clarification.", "A concrete, case-relevant question is formulated; target metadata is optional.", "Uses the same request intent as Investigator while preserving Steward authority over when to ask.", "A vague request for more information.", "keep_focus or shift_focus when no human request is justified.", "steward"),
 )
 
 INVESTIGATOR_INTENT_COVERAGE = {
@@ -61,8 +59,7 @@ INVESTIGATOR_INTENT_COVERAGE = {
     "add inferential derivation": "add_derivation",
     "specialize explanation": "add_specialization",
     "move local focus": "move_focus",
-    "ask broad/open question": "request_open",
-    "ask targeted evidence question": "request_evidence",
+    "ask for human information": "request_information",
     "select legacy predefined enquiry": "request_enquiry",
     "request global review": "request_steward_review",
     "continue local reasoning": "continue_local",
@@ -75,8 +72,7 @@ STEWARD_INTENT_COVERAGE = {
     "archive": "archive",
     "reactivate": "reactivate",
     "handoff": "stop_unresolved",
-    "ask broad human question": "request_open",
-    "ask targeted human question": "request_evidence",
+    "ask human for information": "request_information",
 }
 
 GRAPH_OPERATION_RELATIONS = {
@@ -101,6 +97,8 @@ def render_procedure(role: str) -> str:
     lines = ["Reason first, operation second. Choose an operation only after its prerequisites are satisfied."]
     for spec in procedure_for(role):
         lines.append(f"- {spec.operation}: purpose={spec.purpose} prerequisites={spec.prerequisites} why={spec.rationale} invalid_substitute={spec.invalid_substitute} valid_alternative={spec.valid_alternative}")
+    if role == "investigator":
+        lines.append("- legacy compatibility: request_open and request_evidence payloads are accepted only for migration and normalized to request_information; do not select those legacy names in new production responses.")
     return "\n".join(lines)
 
 
