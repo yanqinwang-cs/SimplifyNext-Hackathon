@@ -65,7 +65,7 @@ class HumanEvidenceWorkflow:
         directory = self._run_dir(case_id, run_id)
         directory.mkdir(parents=True)
         started_at = datetime.now(timezone.utc).isoformat()
-        (directory / "run_result.json").write_text(json.dumps({"run_id": run_id, "started_at": started_at, "ended_at": None, "termination_reason": None, "final_runtime_status": "RUNNING_INVESTIGATOR", "outcome_type": "RUNNING", "originating_actor": "INVESTIGATOR", "start_revision": start_revision, "final_committed_revision": start_revision, "model_calls": 0, "correction_retries": 0, "final_error": None, "pending_request_id": None, "trace_path": f"/api/cases/{case_id}/runs/{run_id}/raw-traces"}, indent=2) + "\n", encoding="utf-8")
+        (directory / "run_result.json").write_text(json.dumps({"run_id": run_id, "started_at": started_at, "ended_at": None, "termination_reason": None, "final_runtime_status": "RUNNING_INVESTIGATOR", "outcome_type": "RUNNING", "originating_actor": "INVESTIGATOR", "start_revision": start_revision, "run_start_revision": start_revision, "latest_safe_revision": start_revision, "final_committed_revision": start_revision, "model_calls": 0, "correction_retries": 0, "final_error": None, "pending_request_id": None, "trace_path": f"/api/cases/{case_id}/runs/{run_id}/raw-traces"}, indent=2) + "\n", encoding="utf-8")
         self._active_runs[case_id] = run_id
         return run_id
 
@@ -81,7 +81,7 @@ class HumanEvidenceWorkflow:
         result = json.loads(path.read_text(encoding="utf-8"))
         pending = next((item for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None)
         outcome = "WAITING_FOR_EVIDENCE" if pending else {"IDLE": "COMPLETED", "STOPPED": "STOPPED", "FAILED": "FAILED"}.get(state.runtime_status, state.runtime_status)
-        result.update({"ended_at": datetime.now(timezone.utc).isoformat(), "termination_reason": termination_reason or state.runtime_status.lower(), "final_runtime_status": state.runtime_status, "outcome_type": outcome, "final_case_revision": state.revision, "final_committed_revision": state.revision, "final_error": final_error or state.last_error, "pending_request_id": pending.request_id if pending else None, "request_text": pending.information_sought if pending else None})
+        result.update({"ended_at": datetime.now(timezone.utc).isoformat(), "termination_reason": termination_reason or state.runtime_status.lower(), "final_runtime_status": state.runtime_status, "outcome_type": outcome, "final_case_revision": state.revision, "latest_safe_revision": state.revision, "final_committed_revision": state.revision, "final_error": final_error or state.last_error, "pending_request_id": pending.request_id if pending else None, "request_text": pending.information_sought if pending else None})
         path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
 
     def record_model_attempt(self, case_id: str, *, correction: bool = False) -> None:
@@ -129,7 +129,7 @@ class HumanEvidenceWorkflow:
             state = self.ensure_case(case_id)
             self.record_trace(case_id, {"event": "failed", "step": state.last_trace_step, "actor": "system", "runtime_status": "FAILED", "case_revision": state.revision, "current_actor": state.current_actor, "failure_category": category, "error": str(exc)})
             self.set_runtime(case_id, "FAILED", "NONE", failure_category=category, message=str(exc), step=state.last_trace_step)
-            self.record_workspace_event(case_id, {"type": "run_failed", "run_id": self.current_run_id(case_id), "runtime_status": "FAILED", "case_revision": state.revision, "human_summary": "The investigation run failed. No later model step was started."})
+            self.record_workspace_event(case_id, {"type": "run_failed", "run_id": self.current_run_id(case_id), "runtime_status": "FAILED", "case_revision": state.revision, "final_case_revision": state.revision, "human_summary": f"The investigation run failed. The failed turn was not committed; earlier successful turns remain preserved at revision {state.revision}."})
         finally:
             self.finalize_run(case_id)
 
@@ -407,7 +407,7 @@ class HumanEvidenceWorkflow:
                     # A run may be initializing on another thread; omit it until
                     # its first result snapshot is complete.
                     continue
-                runs.append({key: payload.get(key) for key in ("run_id", "started_at", "ended_at", "termination_reason", "final_runtime_status", "outcome_type", "originating_actor", "start_revision", "final_committed_revision", "final_error", "pending_request_id", "request_text", "trace_path")})
+                runs.append({key: payload.get(key) for key in ("run_id", "started_at", "ended_at", "termination_reason", "final_runtime_status", "outcome_type", "originating_actor", "start_revision", "run_start_revision", "latest_safe_revision", "final_case_revision", "final_committed_revision", "final_error", "pending_request_id", "request_text", "trace_path")})
         return runs
 
     def raw_trace_path(self, case_id: str, run_id: str) -> Path:

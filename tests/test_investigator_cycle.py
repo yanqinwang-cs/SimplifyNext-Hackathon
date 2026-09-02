@@ -36,16 +36,21 @@ def update(node_id="P3"):
     return {"operation": "add_proposition", "node_id": node_id, "statement": "local observation", "derived_from_node_ids": ["P1"], "reason": "It is useful locally."}
 
 
-def test_turn_schema_has_four_next_steps_and_enforces_noop_and_cap():
+def test_turn_schema_has_four_next_steps_and_enforces_noop():
     values = ("continue_local", "request_enquiry", "request_steward_review", "local_exhausted")
     for value in values:
         assert value in str(InvestigatorTurnResponse.model_json_schema())
     with pytest.raises(ValidationError):
         InvestigatorTurnResponse.model_validate({"graph_updates": [], "next_step": {"type": "continue_local", "reason": "again"}})
-    with pytest.raises(CycleError) as error:
-        coordinator().apply_turn({"graph_updates": [update(f"P{i}") for i in range(3, 9)], "next_step": {"type": "local_exhausted", "reason": "done"}})
-    assert error.value.code is CycleFailureCode.TOO_MANY_GRAPH_UPDATES
     assert coordinator().apply_turn({"graph_updates": [], "next_step": {"type": "local_exhausted", "reason": "No useful local step remains."}}).status is CycleStatus.AWAITING_STEWARD
+
+
+@pytest.mark.parametrize("count", [6, 7])
+def test_turn_allows_more_than_five_structurally_valid_graph_updates(count):
+    item = coordinator()
+    response = {"graph_updates": [{"operation": "add_hypothesis", "statement": f"Hypothesis {number}", "reason": "It is a distinct bounded explanation."} for number in range(count)], "next_step": {"type": "local_exhausted", "reason": "The update batch is complete."}}
+    item.apply_turn(response)
+    assert sum(node.node_type is GraphNodeType.HYPOTHESIS for node in item.graph.nodes.values()) == 2 + count
 
 
 def test_turn_is_atomic_and_allows_ordered_new_objects():
@@ -57,6 +62,15 @@ def test_turn_is_atomic_and_allows_ordered_new_objects():
     with pytest.raises(CycleError):
         item.apply_turn({"graph_updates": [update("P4"), {"operation": "add_uncertainty", "node_id": "U4", "statement": "bad", "target_node_id": "P999", "reason": "bad"}], "next_step": {"type": "local_exhausted", "reason": "bad"}})
     assert set(item.graph.nodes) == before
+
+
+def test_many_updates_with_invalid_reference_are_atomic():
+    item = coordinator()
+    before = item.graph.model_dump(mode="json")
+    response = {"graph_updates": [{"operation": "add_hypothesis", "statement": "A valid preceding update", "reason": "It is useful locally."}, {"operation": "add_proposition", "statement": "An invalid update", "derived_from_node_ids": ["P999"], "reason": "This reference does not exist."}], "next_step": {"type": "local_exhausted", "reason": "The batch should be rejected."}}
+    with pytest.raises(CycleError, match="rolled back"):
+        item.apply_turn(response)
+    assert item.graph.model_dump(mode="json") == before
 
 
 def test_enquiry_availability_completion_and_budget():

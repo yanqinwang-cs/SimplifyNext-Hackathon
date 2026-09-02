@@ -133,7 +133,7 @@ NEXT_STEP_ADAPTER = TypeAdapter(InvestigatorNextStep)
 
 class InvestigatorTurnResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    graph_updates: list[InvestigatorUpdate] = Field(max_length=5)
+    graph_updates: list[InvestigatorUpdate] = Field(default_factory=list)
     next_step: InvestigatorNextStep
 
     @model_validator(mode="before")
@@ -298,7 +298,6 @@ class StewardSnapshot(BaseModel):
 
 class CycleFailureCode(str, Enum):
     TURN_SCHEMA_FAILURE = "TURN_SCHEMA_FAILURE"
-    TOO_MANY_GRAPH_UPDATES = "TOO_MANY_GRAPH_UPDATES"
     GRAPH_UPDATE_FAILURE = "GRAPH_UPDATE_FAILURE"
     TURN_ATOMIC_ROLLBACK = "TURN_ATOMIC_ROLLBACK"
     INVALID_AVAILABLE_ACTION = "INVALID_AVAILABLE_ACTION"
@@ -400,14 +399,10 @@ class InvestigatorCycleCoordinator:
         self._require_investigator_active()
         if snapshot is not None and (snapshot.case_revision != self.cycle.case_revision or snapshot.graph.model_dump(mode="json") != self.graph.model_dump(mode="json") or snapshot.focus.model_dump(mode="json") != self.focus.model_dump(mode="json")):
             raise CycleError(CycleFailureCode.TURN_ATOMIC_ROLLBACK, "Investigator turn baseline does not match its canonical snapshot")
-        if isinstance(response, dict) and isinstance(response.get("graph_updates"), list) and len(response["graph_updates"]) > 5:
-            raise CycleError(CycleFailureCode.TOO_MANY_GRAPH_UPDATES, "An Investigator turn may contain at most five graph updates")
         try:
             response = TURN_RESPONSE_ADAPTER.validate_python(response)
         except Exception as exc:
             raise CycleError(CycleFailureCode.TURN_SCHEMA_FAILURE, f"Invalid InvestigatorTurnResponse: {exc}") from exc
-        if len(response.graph_updates) > 5:
-            raise CycleError(CycleFailureCode.TOO_MANY_GRAPH_UPDATES, "An Investigator turn may contain at most five graph updates")
         working = GraphInvestigationCoordinator(deepcopy(self.graph), self.focus.model_copy(deep=True), full_graph_visibility=self.full_graph_visibility)
         working._new_nodes = set(snapshot.new_node_ids if snapshot is not None else self._new_nodes)
         try:

@@ -47,12 +47,12 @@ def test_request_enquiry_uses_production_coordinator_and_semantic_evaluator() ->
     assert result.schema_valid and result.production_applied and result.semantic_pass
 
 
-def test_production_coordinator_rejects_more_than_five_updates() -> None:
+def test_production_coordinator_allows_more_than_five_valid_updates() -> None:
     fixture = all_fixtures()[9]
     updates = [{"operation": "add_proposition", "node_id": f"P{i}", "statement": "local observation", "derived_from_node_ids": ["E1"], "reason": "The visible record supports this local observation."} for i in range(2, 8)]
-    with pytest.raises(CycleError) as error:
-        InvestigatorCycleCoordinator(fixture.observation.local_graph, fixture.observation.current_focus).apply_turn({"graph_updates": updates, "next_step": {"type": "local_exhausted", "reason": "No further local work remains."}})
-    assert error.value.code is CycleFailureCode.TOO_MANY_GRAPH_UPDATES
+    coordinator = InvestigatorCycleCoordinator(fixture.observation.local_graph, fixture.observation.current_focus)
+    coordinator.apply_turn({"graph_updates": updates, "next_step": {"type": "local_exhausted", "reason": "No further local work remains."}})
+    assert all(f"P{i}" in coordinator.graph.nodes for i in range(2, 8))
 
 
 def test_failed_graph_update_is_atomic() -> None:

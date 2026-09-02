@@ -254,7 +254,7 @@ class WorkspaceAgent:
                 return {"available": False, "human_summary": "No investigation run is recorded."}
             return {"available": True, "run_id": latest["run_id"], "trace_path": latest.get("trace_path") or f"/api/cases/{case_id}/runs/{latest['run_id']}/raw-traces", "human_summary": "The latest run's sanitized raw trace is available at the trace link."}
         if request.tool == "GET_LAST_SAFE_STATE":
-            return {"state": state.clean_checkpoint.get("state") if state.clean_checkpoint else None}
+            return {"state": state.model_dump(mode="json"), "revision": state.revision, "source": "latest_committed_safe_state"}
         if request.tool == "OPEN_TRACE":
             return {"runs": workspace.get("runs", []), "traces": state.trace_history}
         raise WorkspaceToolAuthorizationError(request.tool)

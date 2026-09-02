@@ -116,6 +116,17 @@ def test_recover_retains_canonical_state(tmp_path):
     assert workflow.ensure_case("case-01").trace_history[-1]["event"] == "workspace_recovery"
 
 
+def test_last_safe_state_reports_latest_committed_canonical_state(tmp_path):
+    workflow = make_workflow(tmp_path)
+    state = workflow.ensure_case("case-01")
+    state.revision = 4
+    workflow.repository.save(state)
+    result = WorkspaceAgent(workflow).invoke_tool("case-01", {"tool": "GET_LAST_SAFE_STATE"})
+    assert result["revision"] == 4
+    assert result["source"] == "latest_committed_safe_state"
+    assert result["state"]["revision"] == 4
+
+
 def test_workspace_failure_is_queryable_separately(tmp_path):
     workflow = make_workflow(tmp_path)
     client = FakeWorkspaceClient([tool_response("GET_LATEST_WORKSPACE_FAILURE"), text_response("The latest Workspace turn failed while processing its requested operation.")])

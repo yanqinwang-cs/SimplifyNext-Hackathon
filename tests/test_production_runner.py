@@ -63,6 +63,23 @@ def steward_stop() -> dict:
     }
 
 
+def investigator_graph_update(statement: str) -> dict:
+    return {
+        "graph_updates": [{"operation": "add_hypothesis", "statement": statement, "reason": "It is a bounded explanation worth preserving."}],
+        "next_step": {"type": "continue_local", "reason": "The new hypothesis supports another local step."},
+    }
+
+
+def investigator_invalid_graph_update() -> dict:
+    return {
+        "graph_updates": [
+            {"operation": "add_hypothesis", "statement": "A failed turn's valid preliminary update", "reason": "It would be useful if the turn completed."},
+            {"operation": "add_proposition", "statement": "An invalid reference", "derived_from_node_ids": ["P999"], "reason": "This must fail atomically."},
+        ],
+        "next_step": {"type": "local_exhausted", "reason": "The invalid batch must not commit."},
+    }
+
+
 def test_seed_uses_six_visible_sources_without_graph_evidence(tmp_path: Path) -> None:
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     seed_demo_case(workflow, "case-01")
@@ -177,6 +194,48 @@ def test_failed_retry_continues_current_canonical_state(tmp_path: Path) -> None:
         time.sleep(0.01)
     assert attempts == ["run_000001", "run_000002"]
     assert len(workflow.get_runs("case-01")) == 2
+
+
+def test_failed_later_turn_preserves_successful_turns_and_trace_revisions(tmp_path: Path) -> None:
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
+    seed_demo_case(workflow, "case-01")
+    state = workflow.repository.load("case-01")
+    state.revision = 2
+    workflow.repository.save(state)
+    client = SequenceClient([
+        investigator_graph_update("Successful turn one"),
+        investigator_graph_update("Successful turn two"),
+        investigator_invalid_graph_update(),
+        investigator_invalid_graph_update(),
+    ])
+    runner = ProductionInvestigationRunner(workflow, client)
+    workflow.run_callback = lambda case_id, _workflow: runner.run(case_id)
+    workflow.start_run("case-01")
+    for _ in range(100):
+        if workflow.get_workspace("case-01")["runtimeStatus"] == "FAILED":
+            break
+        time.sleep(0.01)
+
+    final_state = workflow.repository.load("case-01")
+    assert final_state.revision == 4
+    statements = {node.statement for node in final_state.reasoning_graph.nodes.values()}
+    assert {"Successful turn one", "Successful turn two"} <= statements
+    assert "A failed turn's valid preliminary update" not in statements
+
+    investigator_traces = [trace for trace in workflow.get_traces("case-01") if trace.get("actor") == "investigator"]
+    assert [trace["turn_start_revision"] for trace in investigator_traces] == [2, 3, 4]
+    assert {trace["run_start_revision"] for trace in investigator_traces} == {2}
+    failed = next(trace for trace in investigator_traces if trace["event"] == "investigator_failed")
+    assert failed["failed_turn_start_revision"] == 4
+    assert failed["final_case_revision"] == failed["latest_safe_revision"] == 4
+    run_started = next(trace for trace in workflow.get_traces("case-01") if trace["event"] == "run_started")
+    assert run_started["run_start_revision"] == run_started["latest_safe_revision"] == 2
+    run_failed = next(event for event in workflow.workspace_events("case-01") if event["type"] == "run_failed")
+    assert run_failed["final_case_revision"] == 4
+    assert "preserved at revision 4" in run_failed["human_summary"]
+    run = workflow.get_runs("case-01")[0]
+    assert run["run_start_revision"] == 2
+    assert run["latest_safe_revision"] == run["final_case_revision"] == run["final_committed_revision"] == 4
 
 
 def test_reset_demo_case_replaces_stale_state_and_captures_verified_checkpoint(tmp_path: Path) -> None:
