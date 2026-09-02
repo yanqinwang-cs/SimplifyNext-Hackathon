@@ -145,6 +145,7 @@ class InvestigatorObservation(BaseModel):
     # the semantic graph.  Callers may leave this empty when no source store
     # is attached (for example, generic cycle tests).
     visible_sources: list[Source] = Field(default_factory=list)
+    full_graph_visibility: bool = False
 
 
 class TurnSnapshot(BaseModel):
@@ -160,6 +161,7 @@ class TurnSnapshot(BaseModel):
     visible_source_signatures: dict[str, str] = Field(default_factory=dict)
     active_reasoning_node_ids: list[str] = Field(default_factory=list)
     new_node_ids: list[str] = Field(default_factory=list)
+    full_graph_visibility: bool = False
 
     @classmethod
     def from_coordinator(cls, coordinator: "InvestigatorCycleCoordinator", visible_sources: list[Source] | None = None, repository_revision: int | None = None) -> "TurnSnapshot":
@@ -179,6 +181,7 @@ class TurnSnapshot(BaseModel):
             visible_source_signatures=signatures,
             active_reasoning_node_ids=sorted(coordinator.legal_node_ids()),
             new_node_ids=sorted(coordinator._new_nodes),
+            full_graph_visibility=coordinator.full_graph_visibility,
         )
 
     def observation(self, available_enquiries: list[AvailableEnquiry], participants: list[dict[str, object]], max_turns_per_tenure: int) -> InvestigatorObservation:
@@ -187,7 +190,7 @@ class TurnSnapshot(BaseModel):
         return InvestigatorObservation(
             current_focus=self.focus.model_copy(deep=True),
             case_revision=self.case_revision,
-            local_graph=deepcopy(self.graph.model_copy(update={"nodes": {key: self.graph.nodes[key] for key in self.active_reasoning_node_ids}, "edges": {key: edge for key, edge in self.graph.edges.items() if edge.source_id in self.active_reasoning_node_ids and edge.target_id in self.active_reasoning_node_ids}})),
+            local_graph=deepcopy(self.graph if self.full_graph_visibility else self.graph.model_copy(update={"nodes": {key: self.graph.nodes[key] for key in self.active_reasoning_node_ids}, "edges": {key: edge for key, edge in self.graph.edges.items() if edge.source_id in self.active_reasoning_node_ids and edge.target_id in self.active_reasoning_node_ids}})),
             available_enquiries=deepcopy(available_enquiries),
             participants=deepcopy(participants),
             tenure_turn_count=cycle.tenure_turn_count,
@@ -197,6 +200,7 @@ class TurnSnapshot(BaseModel):
             recently_released_evidence_ids=list(cycle.recently_released_evidence_ids),
             workflow_feedback=cycle.workflow_feedback,
             visible_sources=deepcopy(self.visible_sources),
+            full_graph_visibility=self.full_graph_visibility,
         )
 
 
@@ -280,7 +284,7 @@ class CycleError(ValueError):
 class InvestigatorCycleCoordinator:
     """Deterministic single-writer coordinator for bounded Investigator tenures."""
 
-    def __init__(self, graph: CaseGraph, focus: InvestigationFocus, available_enquiries: list[AvailableEnquiry] | None = None, participants: list[dict[str, object]] | None = None, max_turns_per_tenure: int = 6, review_context: StewardReviewContext | None = None, case_revision: int = 0) -> None:
+    def __init__(self, graph: CaseGraph, focus: InvestigationFocus, available_enquiries: list[AvailableEnquiry] | None = None, participants: list[dict[str, object]] | None = None, max_turns_per_tenure: int = 6, review_context: StewardReviewContext | None = None, case_revision: int = 0, full_graph_visibility: bool = False) -> None:
         if max_turns_per_tenure < 1:
             raise ValueError("max_turns_per_tenure must be positive")
         if focus.node_id not in graph.nodes:
@@ -289,6 +293,7 @@ class InvestigatorCycleCoordinator:
             raise ValueError("case_revision must be non-negative")
         self.graph = graph
         self.focus = focus
+        self.full_graph_visibility = full_graph_visibility
         self.available_enquiries = [AvailableEnquiry.model_validate(item) for item in (available_enquiries or [])]
         self.participants = deepcopy(participants or [])
         self.review_context = review_context
@@ -302,7 +307,7 @@ class InvestigatorCycleCoordinator:
         # The coordinator's active view is also the sole legal existing-node set.
         if snapshot is not None:
             return snapshot.observation(self.available_enquiries, self.participants, self.cycle.max_turns_per_tenure)
-        region = self._view_for(self.graph, self.focus, self._new_nodes)
+        region = deepcopy(self.graph) if self.full_graph_visibility else self._view_for(self.graph, self.focus, self._new_nodes)
         return InvestigatorObservation(current_focus=self.focus.model_copy(deep=True), case_revision=self.cycle.case_revision, local_graph=deepcopy(region), available_enquiries=deepcopy(self.available_enquiries), participants=deepcopy(self.participants), tenure_turn_count=self.cycle.tenure_turn_count, max_turns_per_tenure=self.cycle.max_turns_per_tenure, turns_remaining=max(0, self.cycle.max_turns_per_tenure - self.cycle.tenure_turn_count), in_flight_enquiry=deepcopy(self.cycle.in_flight_enquiry), recently_released_evidence_ids=list(self.cycle.recently_released_evidence_ids), workflow_feedback=self.cycle.workflow_feedback, visible_sources=deepcopy(visible_sources or []))
 
     def contract_check(self, observation: InvestigatorObservation, rendered_prompt: str, snapshot: TurnSnapshot | None = None) -> dict[str, object]:
@@ -320,7 +325,7 @@ class InvestigatorCycleCoordinator:
         legal = self.legal_node_ids()
         exposed = set(observation.local_graph.nodes)
         if exposed != legal or observation.current_focus.node_id not in exposed:
-            raise CycleError(CycleFailureCode.TURN_SCHEMA_FAILURE, "CONTRACT CHECK failed: visible graph and legal local graph differ")
+            raise CycleError(CycleFailureCode.TURN_SCHEMA_FAILURE, "CONTRACT CHECK failed: Investigator-visible graph and canonical legal graph differ")
         source_ids = [source.id for source in observation.visible_sources]
         if len(source_ids) != len(set(source_ids)) or any(not source.content or source.content not in rendered_prompt for source in observation.visible_sources):
             raise CycleError(CycleFailureCode.TURN_SCHEMA_FAILURE, "CONTRACT CHECK failed: visible source registry/body boundary is inconsistent")
@@ -328,17 +333,19 @@ class InvestigatorCycleCoordinator:
             if snapshot.case_revision != observation.case_revision or snapshot.focus.node_id != observation.current_focus.node_id:
                 raise CycleError(CycleFailureCode.TURN_SCHEMA_FAILURE, "CONTRACT CHECK failed: snapshot and observation identity differ")
             if set(snapshot.active_reasoning_node_ids) != exposed or set(snapshot.active_reasoning_node_ids) != legal:
-                raise CycleError(CycleFailureCode.TURN_SCHEMA_FAILURE, "CONTRACT CHECK failed: snapshot, observation, and legal graph IDs differ")
+                raise CycleError(CycleFailureCode.TURN_SCHEMA_FAILURE, "CONTRACT CHECK failed: snapshot, observation, and canonical graph IDs differ")
             if set(source_ids) != {source.id for source in snapshot.visible_sources}:
                 raise CycleError(CycleFailureCode.TURN_SCHEMA_FAILURE, "CONTRACT CHECK failed: snapshot and observation source IDs differ")
             if snapshot.cycle is not None and snapshot.cycle.evidence_request != self.cycle.evidence_request:
                 raise CycleError(CycleFailureCode.TURN_SCHEMA_FAILURE, "CONTRACT CHECK failed: snapshot and canonical pending request differ")
         if self.cycle.status in {CycleStatus.WAITING_FOR_EVIDENCE, CycleStatus.ENQUIRY_IN_FLIGHT}:
             raise CycleError(CycleFailureCode.TURN_SCHEMA_FAILURE, "CONTRACT CHECK failed: Investigator cannot be called while a request is in flight")
-        return {"case_revision": self.cycle.case_revision, "snapshot_graph_node_ids": sorted(snapshot.graph.nodes) if snapshot else sorted(self.graph.nodes), "observation_graph_node_ids": sorted(exposed), "legal_graph_node_ids": sorted(legal), "active_reasoning_node_ids": sorted(snapshot.active_reasoning_node_ids) if snapshot else sorted(legal), "visible_source_ids": sorted(source_ids)}
+        return {"case_revision": self.cycle.case_revision, "snapshot_graph_node_ids": sorted(snapshot.graph.nodes) if snapshot else sorted(self.graph.nodes), "investigator_visible_graph_node_ids": sorted(exposed), "observation_graph_node_ids": sorted(exposed), "legal_graph_node_ids": sorted(legal), "active_reasoning_node_ids": sorted(snapshot.active_reasoning_node_ids) if snapshot else sorted(legal), "visible_source_ids": sorted(source_ids)}
 
     def legal_node_ids(self) -> set[str]:
         """IDs in the same active reasoning view used by the Investigator prompt."""
+        if self.full_graph_visibility:
+            return set(self.graph.nodes)
         return set(self._view_for(self.graph, self.focus, self._new_nodes).nodes)
 
     @staticmethod
@@ -363,7 +370,7 @@ class InvestigatorCycleCoordinator:
             raise CycleError(CycleFailureCode.TURN_SCHEMA_FAILURE, f"Invalid InvestigatorTurnResponse: {exc}") from exc
         if len(response.graph_updates) > 5:
             raise CycleError(CycleFailureCode.TOO_MANY_GRAPH_UPDATES, "An Investigator turn may contain at most five graph updates")
-        working = GraphInvestigationCoordinator(deepcopy(self.graph), self.focus.model_copy(deep=True))
+        working = GraphInvestigationCoordinator(deepcopy(self.graph), self.focus.model_copy(deep=True), full_graph_visibility=self.full_graph_visibility)
         working._new_nodes = set(snapshot.new_node_ids if snapshot is not None else self._new_nodes)
         try:
             for update in response.graph_updates:
@@ -488,7 +495,7 @@ class InvestigatorCycleCoordinator:
             if isinstance(parsed, (StewardRequestOpenDecision, StewardRequestEvidenceDecision)):
                 self._create_human_request(parsed)
                 return self.cycle.model_copy(deep=True)
-            working = GraphInvestigationCoordinator(deepcopy(self.graph), self.focus.model_copy(deep=True))
+            working = GraphInvestigationCoordinator(deepcopy(self.graph), self.focus.model_copy(deep=True), full_graph_visibility=self.full_graph_visibility)
             working.review_with_steward(parsed, review_context=review_context or self.review_context)
         except CycleError:
             raise

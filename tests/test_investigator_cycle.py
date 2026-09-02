@@ -93,3 +93,26 @@ def test_stop_requires_trusted_context_and_prompt_exposes_local_schema():
     prompt = build_investigator_cycle_prompt(coordinator().observation())
     assert "InvestigatorTurnResponse" in prompt and "add_proposition" in prompt and "local_exhausted" in prompt
     assert '"local_graph"' in prompt and '"available_enquiries"' in prompt
+
+
+def test_production_visibility_exposes_full_graph_and_focus_is_advisory():
+    item = InvestigatorCycleCoordinator(graph(), InvestigationFocus(node_id="U1"), full_graph_visibility=True)
+    observation = item.observation()
+    assert set(observation.local_graph.nodes) == set(item.graph.nodes)
+    assert item.contract_check(observation, build_investigator_cycle_prompt(observation), item.turn_snapshot())
+    item.focus = InvestigationFocus(node_id="H1")
+    assert set(item.observation().local_graph.nodes) == set(graph().nodes)
+
+
+def test_production_visibility_allows_legal_reference_outside_focus():
+    item = InvestigatorCycleCoordinator(graph(), InvestigationFocus(node_id="U1"), full_graph_visibility=True)
+    item.apply_turn({"graph_updates": [{"operation": "add_conflict", "source_node_id": "E1", "target_node_id": "H2", "strength": "direct", "reason": "The existing source materially conflicts with this explanation."}], "next_step": {"type": "request_steward_review", "reason": "The full graph has been updated."}})
+    assert "E1_CONFLICTS_H2" in item.graph.edges
+
+
+def test_production_visibility_contract_rejects_omitted_canonical_node():
+    item = InvestigatorCycleCoordinator(graph(), InvestigationFocus(node_id="U1"), full_graph_visibility=True)
+    observation = item.observation()
+    observation.local_graph = observation.local_graph.model_copy(update={"nodes": {"U1": observation.local_graph.nodes["U1"]}, "edges": {}})
+    with pytest.raises(CycleError, match="canonical legal graph"):
+        item.contract_check(observation, build_investigator_cycle_prompt(observation), item.turn_snapshot())

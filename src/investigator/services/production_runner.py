@@ -103,7 +103,7 @@ class ProductionInvestigationRunner:
         _assert_clean_baseline(state)
         graph = state.reasoning_graph or _initial_graph(case_id)
         focus_id = state.focus_node_id or "U1"
-        coordinator = InvestigatorCycleCoordinator(graph, InvestigationFocus(node_id=focus_id, recent_node_ids=state.focus_recent_node_ids, recent_region_node_ids=state.focus_recent_region_node_ids), case_revision=state.revision)
+        coordinator = InvestigatorCycleCoordinator(graph, InvestigationFocus(node_id=focus_id, recent_node_ids=state.focus_recent_node_ids, recent_region_node_ids=state.focus_recent_region_node_ids), case_revision=state.revision, full_graph_visibility=True)
         model_calls = 0
         self.workflow.record_trace(case_id, {"event": "run_started", "step": 0, "actor": "system", "runtime_status": "RUNNING_INVESTIGATOR", "case_revision": coordinator.cycle.case_revision})
         for step in range(1, MAX_ORCHESTRATION_STEPS + 1):
@@ -138,7 +138,7 @@ class ProductionInvestigationRunner:
         observation = coordinator.observation(snapshot=snapshot)
         prompt = build_investigator_cycle_prompt(observation)
         contract_diagnostics = coordinator.contract_check(observation, prompt, snapshot=snapshot)
-        trace: dict[str, Any] = {"case_id": case_id, "event": "investigator_started", "step": step, "actor": "investigator", "runtime_status": "RUNNING_INVESTIGATOR", "case_revision": coordinator.cycle.case_revision, "turn_start_revision": canonical.revision, "snapshot_case_revision": snapshot.case_revision, "snapshot_graph_node_ids": sorted(snapshot.graph.nodes), "active_reasoning_node_ids": sorted(snapshot.active_reasoning_node_ids), "legal_graph_node_ids": sorted(contract_diagnostics["legal_graph_node_ids"]), "visible_source_ids": sorted(source.id for source in observation.visible_sources), "prompt_source_ids": sorted(source.id for source in observation.visible_sources), "snapshot_hash": _snapshot_hash(snapshot), "prompt_hash": hashlib.sha256(prompt.encode()).hexdigest(), "raw_output": None}
+        trace: dict[str, Any] = {"case_id": case_id, "event": "investigator_started", "step": step, "actor": "investigator", "runtime_status": "RUNNING_INVESTIGATOR", "case_revision": coordinator.cycle.case_revision, "turn_start_revision": canonical.revision, "snapshot_case_revision": snapshot.case_revision, "snapshot_graph_node_ids": sorted(snapshot.graph.nodes), "investigator_visible_graph_node_ids": sorted(observation.local_graph.nodes), "active_reasoning_node_ids": sorted(observation.local_graph.nodes), "legal_graph_node_ids": sorted(observation.local_graph.nodes), "visible_source_ids": sorted(source.id for source in observation.visible_sources), "prompt_source_ids": sorted(source.id for source in observation.visible_sources), "snapshot_hash": _snapshot_hash(snapshot), "prompt_hash": hashlib.sha256(prompt.encode()).hexdigest(), "raw_output": None}
         trace["contract_check"] = contract_diagnostics
         try:
             call = self._call_with_retry(prompt, InvestigatorTurnResponse, lambda value: coordinator.validate_turn(value, snapshot=snapshot), trace, "Investigator")

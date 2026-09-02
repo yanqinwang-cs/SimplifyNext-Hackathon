@@ -11,9 +11,10 @@ from investigator.roles.steward import ArchiveDecision, GeneralizeDecision, Reac
 class GraphInvestigationCoordinator:
     """Offline sequential coordinator enforcing Investigator and Steward boundaries."""
 
-    def __init__(self, graph: CaseGraph, focus: InvestigationFocus) -> None:
+    def __init__(self, graph: CaseGraph, focus: InvestigationFocus, *, full_graph_visibility: bool = False) -> None:
         self._require_node(graph, focus.node_id)
         self.graph, self.focus = graph, focus
+        self.full_graph_visibility = full_graph_visibility
         self._new_nodes: set[str] = set()
         self._turn_refs: dict[str, str] = {}
         self.history = GraphHistory()
@@ -166,12 +167,16 @@ class GraphInvestigationCoordinator:
 
     def legal_node_ids(self) -> set[str]:
         """The single existing-node boundary shared by Investigator view and validators."""
+        if self.full_graph_visibility:
+            return set(self.graph.nodes)
         recent = set(self.focus.recent_node_ids) | set(self.focus.recent_region_node_ids)
         nearby = {node.id for identifier in recent if identifier in self.graph.nodes for node in self.graph.neighbors(identifier)}
         return {self.focus.node_id, *(node.id for node in self.graph.neighbors(self.focus.node_id)), *recent, *nearby, *self._new_nodes, *(node.id for node in self.graph.nodes.values() if node.node_type is GraphNodeType.SOURCE and node.status is GraphStatus.ACTIVE)}
 
     def active_reasoning_view(self) -> CaseGraph:
         """Return the exact graph workspace whose IDs are legal for Investigator references."""
+        if self.full_graph_visibility:
+            return deepcopy(self.graph)
         allowed = self.legal_node_ids()
         return self.graph.model_copy(update={
             "nodes": {identifier: self.graph.nodes[identifier] for identifier in allowed},
