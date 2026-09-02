@@ -9,6 +9,7 @@ from investigator.roles.coordinator import GraphInvestigationCoordinator
 from investigator.roles.focus import InvestigationFocus, investigator_region
 from investigator.roles.investigator import INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdate
 from investigator.roles.steward import HandoffToHumanDecision, StewardDecision, StewardReviewContext
+from investigator.sources import SourceRegistry
 
 
 class EnquiryKind(str, Enum):
@@ -181,7 +182,7 @@ class CycleError(ValueError):
 class InvestigatorCycleCoordinator:
     """Deterministic single-writer coordinator for bounded Investigator tenures."""
 
-    def __init__(self, graph: CaseGraph, focus: InvestigationFocus, available_enquiries: list[AvailableEnquiry] | None = None, participants: list[dict[str, object]] | None = None, max_turns_per_tenure: int = 6, review_context: StewardReviewContext | None = None) -> None:
+    def __init__(self, graph: CaseGraph, focus: InvestigationFocus, available_enquiries: list[AvailableEnquiry] | None = None, participants: list[dict[str, object]] | None = None, max_turns_per_tenure: int = 6, review_context: StewardReviewContext | None = None, source_registry: SourceRegistry | None = None) -> None:
         if max_turns_per_tenure < 1:
             raise ValueError("max_turns_per_tenure must be positive")
         if focus.node_id not in graph.nodes:
@@ -191,6 +192,7 @@ class InvestigatorCycleCoordinator:
         self.available_enquiries = [AvailableEnquiry.model_validate(item) for item in (available_enquiries or [])]
         self.participants = deepcopy(participants or [])
         self.review_context = review_context
+        self.source_registry = source_registry
         self.cycle = InvestigatorCycleState(max_turns_per_tenure=max_turns_per_tenure)
         self._new_nodes: set[str] = set()
         self._recent_environment_evidence_ids: set[str] = set()
@@ -252,7 +254,7 @@ class InvestigatorCycleCoordinator:
             raise CycleError(CycleFailureCode.TURN_SCHEMA_FAILURE, f"Invalid InvestigatorTurnResponse: {exc}") from exc
         if len(response.graph_updates) > 5:
             raise CycleError(CycleFailureCode.TOO_MANY_GRAPH_UPDATES, "An Investigator turn may contain at most five graph updates")
-        working = GraphInvestigationCoordinator(deepcopy(self.graph), self.focus.model_copy(deep=True))
+        working = GraphInvestigationCoordinator(deepcopy(self.graph), self.focus.model_copy(deep=True), source_registry=self.source_registry)
         working._new_nodes = set(self._new_nodes)
         working._recent_environment_evidence_ids = set(self._recent_environment_evidence_ids)
         aliases: dict[str, str] = {}

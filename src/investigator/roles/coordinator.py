@@ -4,16 +4,18 @@ import re
 from investigator.graph import CaseGraph, EdgeRelation, GraphEdge, GraphNode, GraphNodeType, GraphStatus, make_edge_id
 from investigator.roles.focus import InvestigationFocus, investigator_region
 from investigator.roles.history import GraphHistory
-from investigator.roles.investigator import AddConflictCommand, AddDerivationCommand, AddHypothesisCommand, AddPropositionCommand, AddSpecializationCommand, AddSupportCommand, AddUncertaintyCommand, INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdate, MoveFocusCommand
+from investigator.roles.investigator import AddConflictCommand, AddDerivationCommand, AddEvidenceCommand, AddHypothesisCommand, AddPropositionCommand, AddSpecializationCommand, AddSupportCommand, AddUncertaintyCommand, INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdate, MoveFocusCommand
 from investigator.roles.steward import ArchiveDecision, GeneralizeDecision, HandoffToHumanDecision, ReactivateDecision, ShiftFocusDecision, StewardDecision, StewardReviewContext
+from investigator.sources import SourceRegistry
 
 
 class GraphInvestigationCoordinator:
     """Offline sequential coordinator enforcing Investigator and Steward boundaries."""
 
-    def __init__(self, graph: CaseGraph, focus: InvestigationFocus) -> None:
+    def __init__(self, graph: CaseGraph, focus: InvestigationFocus, source_registry: SourceRegistry | None = None) -> None:
         self._require_node(graph, focus.node_id)
         self.graph, self.focus = graph, focus
+        self.source_registry = source_registry
         self._new_nodes: set[str] = set()
         self._recent_environment_evidence_ids: set[str] = set()
         self.history = GraphHistory()
@@ -24,12 +26,12 @@ class GraphInvestigationCoordinator:
         aliases = aliases if aliases is not None else {}
         raw = update.model_dump(exclude_none=True) if hasattr(update, "model_dump") else dict(update)
         operation = raw.get("operation")
-        if operation in {"add_proposition", "add_hypothesis", "add_uncertainty"}:
+        if operation in {"add_evidence", "add_proposition", "add_hypothesis", "add_uncertainty"}:
             local_ref = raw.get("local_ref")
             if local_ref and local_ref in aliases:
                 raise ValueError(f"Duplicate local reference: {local_ref!r}")
             if not raw.get("node_id"):
-                raw["node_id"] = self._next_free_id({"add_proposition": "P", "add_hypothesis": "H", "add_uncertainty": "U"}[operation])
+                raw["node_id"] = self._next_free_id({"add_evidence": "E", "add_proposition": "P", "add_hypothesis": "H", "add_uncertainty": "U"}[operation])
 
         def resolve(field: str, ref_field: str) -> None:
             reference = raw.pop(ref_field, None)
@@ -63,7 +65,9 @@ class GraphInvestigationCoordinator:
         # Keep newly created IDs available for later local relation commands;
         # provenance edges must not consume that locality allowance.
         new_nodes = set(self._new_nodes)
-        if isinstance(update, AddPropositionCommand):
+        if isinstance(update, AddEvidenceCommand):
+            self._apply_add_evidence(candidate, new_nodes, update)
+        elif isinstance(update, AddPropositionCommand):
             self._apply_add_proposition(candidate, new_nodes, update)
         elif isinstance(update, AddHypothesisCommand):
             self._apply_add_hypothesis(candidate, new_nodes, update)
@@ -84,6 +88,14 @@ class GraphInvestigationCoordinator:
         if local_ref:
             aliases[local_ref] = update.node_id
         self.history.append(self.graph, self.focus, update.reason)
+
+    def _apply_add_evidence(self, graph: CaseGraph, new_nodes: set[str], update: AddEvidenceCommand) -> None:
+        if self.source_registry is None:
+            raise ValueError("add_evidence requires a visible SourceRegistry")
+        source = self.source_registry.get(update.source_id)
+        self._require_new_id(graph, update.node_id)
+        graph.add_node(GraphNode(id=update.node_id, node_type=GraphNodeType.EVIDENCE, statement=update.statement, metadata={"source_id": source.source_id, "source_filename": source.filename, "origin": "model_extracted"}))
+        new_nodes.add(update.node_id)
 
     @staticmethod
     def _alias_id(reference: str, aliases: dict[str, str]) -> str:

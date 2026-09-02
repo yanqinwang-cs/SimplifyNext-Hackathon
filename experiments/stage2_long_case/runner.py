@@ -58,7 +58,7 @@ def _call(client: ModelClient, prompt: str, schema: Any, remaining: int) -> tupl
 
 def run_trajectory(fixture: Stage2Fixture, investigator: ModelClient, steward: ModelClient, *, max_model_calls: int = MAX_MODEL_CALLS, max_steps: int = MAX_STEPS) -> dict[str, Any]:
     fixture = run_fixture(fixture)
-    coordinator = InvestigatorCycleCoordinator(fixture.graph.model_copy(deep=True), fixture.focus.model_copy(deep=True), max_turns_per_tenure=MAX_TENURE_TURNS)
+    coordinator = InvestigatorCycleCoordinator(fixture.graph.model_copy(deep=True), fixture.focus.model_copy(deep=True), max_turns_per_tenure=MAX_TENURE_TURNS, source_registry=fixture.source_registry)
     traces: list[dict[str, Any]] = []
     usage = {"Investigator": {"calls": 0, "input_tokens": 0, "output_tokens": 0, "latency": 0.0}, "Steward": {"calls": 0, "input_tokens": 0, "output_tokens": 0, "latency": 0.0}}
     termination = "ORCHESTRATION_LIMIT"
@@ -116,9 +116,9 @@ def run_trajectory(fixture: Stage2Fixture, investigator: ModelClient, steward: M
 
 
 def manifest(fixture: Stage2Fixture, git_sha: str, model_id: str) -> dict[str, Any]:
-    public = [{"evidence_id": item.evidence_id, "filename": item.filename, "content": item.content} for item in fixture.evidence]
+    public = [{"source_id": item.source_id, "filename": item.filename, "content": item.content} for item in fixture.evidence]
     hidden = {path.name: _hash(path.read_bytes()) for path in sorted(HIDDEN.glob("*.md"))}
-    return {"suite": "stage2a-long-case", "suite_version": "stage2a-long-case-v1", "case_id": fixture.case_id, "git_sha": git_sha, "models": {"investigator": model_id, "steward": model_id}, "region": "us-east-1", "max_model_calls": MAX_MODEL_CALLS, "max_orchestration_steps": MAX_STEPS, "max_investigator_turns_per_tenure": MAX_TENURE_TURNS, "public_fixture_hash": _hash(public), "hidden_hashes": hidden, "public_filename_to_evidence_id": {item.filename: item.evidence_id for item in fixture.evidence}, "investigator_schema_hash": _hash(InvestigatorTurnResponse.model_json_schema()), "steward_schema_hash": _hash(TypeAdapter(StewardDecision).json_schema()), "hidden_files_exposed_to_models": False}
+    return {"suite": "stage2a-long-case", "suite_version": "stage2a-long-case-v1", "case_id": fixture.case_id, "git_sha": git_sha, "models": {"investigator": model_id, "steward": model_id}, "region": "us-east-1", "max_model_calls": MAX_MODEL_CALLS, "max_orchestration_steps": MAX_STEPS, "max_investigator_turns_per_tenure": MAX_TENURE_TURNS, "public_fixture_hash": _hash(public), "hidden_hashes": hidden, "public_source_id_to_filename": {item.source_id: item.filename for item in fixture.evidence}, "investigator_schema_hash": _hash(InvestigatorTurnResponse.model_json_schema()), "steward_schema_hash": _hash(TypeAdapter(StewardDecision).json_schema()), "hidden_files_exposed_to_models": False}
 
 
 def parse_args() -> argparse.Namespace:

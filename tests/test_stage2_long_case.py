@@ -6,8 +6,11 @@ from pydantic import TypeAdapter
 from experiments.stage2_long_case.fixture import CASE_ID, HIDDEN, fresh_fixtures, run_fixture
 from experiments.stage2_long_case.prompt import build_prompt, build_steward_prompt
 from experiments.stage2_long_case.runner import MAX_MODEL_CALLS, MAX_STEPS, manifest, run_trajectory
-from investigator.cycle import InvestigatorTurnResponse, LocalExhausted
+from investigator.cycle import InvestigatorCycleCoordinator, InvestigatorTurnResponse, LocalExhausted
+from investigator.graph import GraphNodeType
 from investigator.llm import ModelCallMetadata, ModelCallResult
+from investigator.roles.coordinator import GraphInvestigationCoordinator
+from investigator.roles.investigator import AddEvidenceCommand, AddPropositionCommand
 from investigator.roles.steward import StewardDecision
 
 
@@ -29,6 +32,9 @@ def test_public_loader_has_19_sources_and_never_loads_hidden():
     fixture = fresh_fixtures()[0]
     assert len(fixture.evidence) == 19
     assert all("hidden" not in item.filename for item in fixture.evidence)
+    assert all(item.source_id.startswith("S") for item in fixture.evidence)
+    assert set(fixture.graph.nodes) == {"U1"}
+    assert not fixture.graph.edges
     assert HIDDEN.exists()
 
 
@@ -64,6 +70,51 @@ def test_manifest_records_mapping_budgets_and_hidden_hashes():
     assert value["suite_version"] == "stage2a-long-case-v1"
     assert value["max_model_calls"] == MAX_MODEL_CALLS == 24
     assert value["max_orchestration_steps"] == MAX_STEPS == 60
-    assert len(value["public_filename_to_evidence_id"]) == 19
+    assert len(value["public_source_id_to_filename"]) == 19
     assert set(value["hidden_hashes"]) == {"ground_truth.md", "fixture_audit.md", "action_release_map.md"}
     assert value["hidden_files_exposed_to_models"] is False
+
+
+def test_add_evidence_is_source_grounded_and_independent_of_graph_locality():
+    fixture = fresh_fixtures()[0]
+    coordinator = InvestigatorCycleCoordinator(fixture.graph, fixture.focus, source_registry=fixture.source_registry)
+    coordinator.cycle.tenure_turn_count = 0
+    coordinator._new_nodes = set()
+    coordinator.apply_turn({"graph_updates": [{"operation": "add_evidence", "local_ref": "eTimeline", "statement": "The timeline records three assessment-time event clusters.", "source_id": "S5", "reason": "This atomic observation is directly stated by the timeline source."}], "next_step": {"type": "local_exhausted", "reason": "The source observation is ready for review."}})
+    node = coordinator.graph.nodes["E1"]
+    assert node.node_type is GraphNodeType.EVIDENCE
+    assert node.metadata == {"source_id": "S5", "source_filename": "deterministic_timeline.md", "origin": "model_extracted"}
+    assert node.statement != fixture.source_registry.get("S5").content
+
+
+def test_add_evidence_rejects_unknown_or_hidden_sources_atomically():
+    fixture = fresh_fixtures()[0]
+    coordinator = InvestigatorCycleCoordinator(fixture.graph, fixture.focus, source_registry=fixture.source_registry)
+    for source_id in ("S99", "ground_truth"):
+        with pytest.raises(ValueError, match="source"):
+            coordinator.apply_turn({"graph_updates": [{"operation": "add_evidence", "statement": "An observation.", "source_id": source_id, "reason": "Ground this observation."}], "next_step": {"type": "local_exhausted", "reason": "Stop."}})
+    assert set(coordinator.graph.nodes) == {"U1"}
+
+
+def test_same_turn_evidence_local_ref_and_atomic_rollback():
+    fixture = fresh_fixtures()[0]
+    graph_coordinator = GraphInvestigationCoordinator(fixture.graph, fixture.focus, fixture.source_registry)
+    graph_coordinator.apply_investigator_update(AddEvidenceCommand(local_ref="e1", statement="A source records a session.", source_id="S1", reason="Direct observation."), aliases={})
+    aliases = {"e1": "E1"}
+    graph_coordinator.apply_investigator_update(AddPropositionCommand(local_ref="p1", statement="The record contains a session.", derived_from_node_refs=["e1"], reason="Interpret the observation."), aliases=aliases)
+    assert set(graph_coordinator.graph.nodes) == {"U1", "E1", "P1"}
+    with pytest.raises(ValueError):
+        graph_coordinator.apply_investigator_update({"operation": "add_evidence", "local_ref": "bad", "statement": "Bad.", "source_id": "S99", "reason": "Invalid source."}, aliases={})
+    assert "E2" not in graph_coordinator.graph.nodes
+
+
+def test_source_registry_survives_graph_archive_and_can_be_reread():
+    fixture = fresh_fixtures()[0]
+    coordinator = InvestigatorCycleCoordinator(fixture.graph, fixture.focus, source_registry=fixture.source_registry)
+    coordinator.apply_turn({"graph_updates": [{"operation": "add_evidence", "statement": "The record contains one observation.", "source_id": "S1", "reason": "Direct observation."}], "next_step": {"type": "local_exhausted", "reason": "Review."}})
+    original = fixture.source_registry.get("S1").content
+    coordinator.graph.archive_node("E1", "No longer locally active.")
+    assert fixture.source_registry.get("S1").content == original
+    reread = GraphInvestigationCoordinator(coordinator.graph, coordinator.focus, fixture.source_registry)
+    reread.apply_investigator_update({"operation": "add_evidence", "statement": "The same source records a distinct second observation.", "source_id": "S1", "reason": "The source contains a materially different observation."})
+    assert reread.graph.nodes["E2"].metadata["source_id"] == "S1"

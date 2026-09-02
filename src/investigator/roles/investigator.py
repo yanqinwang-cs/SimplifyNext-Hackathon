@@ -7,6 +7,7 @@ from investigator.graph import EdgeStrength
 
 
 class InvestigatorOperation(str, Enum):
+    ADD_EVIDENCE = "add_evidence"
     ADD_PROPOSITION = "add_proposition"
     ADD_HYPOTHESIS = "add_hypothesis"
     ADD_UNCERTAINTY = "add_uncertainty"
@@ -45,6 +46,14 @@ class AddPropositionCommand(_InvestigatorCommand):
         if len(values) != len(set(values)):
             raise ValueError("derived_from_node_ids must not contain duplicates")
         return self
+
+
+class AddEvidenceCommand(_InvestigatorCommand):
+    operation: Literal["add_evidence"] = "add_evidence"
+    node_id: str | None = Field(default=None, pattern=r"^E\d+(?:\.\d+)*$")
+    local_ref: str | None = Field(default=None, pattern=r"^[A-Za-z][A-Za-z0-9_]*$")
+    statement: str
+    source_id: str = Field(min_length=1)
 
 
 class AddHypothesisCommand(_InvestigatorCommand):
@@ -138,7 +147,7 @@ class MoveFocusCommand(_InvestigatorCommand):
 
 
 InvestigatorUpdate: TypeAlias = Annotated[
-    AddPropositionCommand | AddHypothesisCommand | AddUncertaintyCommand |
+    AddEvidenceCommand | AddPropositionCommand | AddHypothesisCommand | AddUncertaintyCommand |
     AddSupportCommand | AddConflictCommand | AddDerivationCommand |
     AddSpecializationCommand | MoveFocusCommand,
     Field(discriminator="operation"),
