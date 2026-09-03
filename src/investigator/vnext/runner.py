@@ -37,6 +37,7 @@ class VNextRunMetadata(BaseModel):
     rule_preset_id: str
     violation_ids: list[str]
     proposal_hash: str
+    proposal_update_count: int = 0
     completion_state: VNextRunStatus = VNextRunStatus.COMPLETED
 
 
@@ -123,6 +124,7 @@ class VNextInvestigationRunner:
             rule_preset_id=run_input.rule_preset.preset_id,
             violation_ids=[item.violation_id for item in run_input.rule_preset.violations],
             proposal_hash=proposal_hash,
+            proposal_update_count=len(assessment.proposal.graph_updates),
         )
         return VNextRunResult(
             graph=deepcopy(applied.graph),
