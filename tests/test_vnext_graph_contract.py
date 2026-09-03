@@ -152,3 +152,17 @@ def test_self_derivation_is_aggregated_with_an_unrelated_reference_issue() -> No
         (0, "SELF_DERIVATION"),
         (1, "UNRESOLVED_REFERENCE"),
     }
+
+
+def test_distinct_proposition_derivation_remains_legal() -> None:
+    proposal = InvestigatorProposal.model_validate({
+        "graph_updates": [
+            {"operation": "add_evidence", "local_ref": "e1", "statement": "first evidence", "source_ids": ["S1"], "reason": "record first"},
+            {"operation": "add_proposition", "local_ref": "p1", "statement": "first proposition", "derived_from_node_ids": ["e1"], "reason": "derive first"},
+            {"operation": "add_evidence", "local_ref": "e2", "statement": "second evidence", "source_ids": ["S1"], "reason": "record second"},
+            {"operation": "add_proposition", "local_ref": "p2", "statement": "second proposition", "derived_from_node_ids": ["e2"], "reason": "derive second"},
+            {"operation": "add_derivation", "source_node_id": "p1", "derived_proposition_id": "p2", "reason": "connect distinct propositions"},
+        ]
+    })
+    result = GraphWarden(CaseGraph(case_id="case-01", nodes={"S0": GraphNode(id="S0", node_type=GraphNodeType.SOURCE, statement="source")}, edges={}), _source()).apply(proposal)
+    assert result.graph.outgoing(result.local_ref_resolution["p2"], relation=EdgeRelation.DERIVED_FROM)

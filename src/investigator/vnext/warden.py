@@ -181,13 +181,15 @@ class GraphWarden:
                         actual_type=GraphNodeType.PROPOSITION.value,
                         allowed_types=[GraphNodeType.EVIDENCE.value, GraphNodeType.PROPOSITION.value],
                         problem=(
-                            f"Operation {operation_index} (add_derivation) uses proposition "
-                            f"{update.derived_proposition_id!r} as its own derivation source."
+                            f"Operation {operation_index} derives proposition "
+                            f"{update.derived_proposition_id!r} from itself."
                         ),
                         required_action=(
-                            "Remove only this add_derivation operation, or replace its source with a distinct "
-                            "active EVIDENCE or PROPOSITION basis. The proposition's existing derived_from_node_ids "
-                            "already record its legal derivation basis; preserve unrelated valid operations."
+                            "The proposition cannot be derived from itself. This proposition already declares its "
+                            "legal derivation basis through derived_from_node_ids. Remove only this redundant "
+                            "add_derivation operation, or replace its source with a distinct legal EVIDENCE or "
+                            "PROPOSITION basis if a separate derivation is actually needed. Preserve unrelated "
+                            "valid operations."
                         ),
                     ))
             created_type = OperationSpecRegistry.contract(update.operation).created_type

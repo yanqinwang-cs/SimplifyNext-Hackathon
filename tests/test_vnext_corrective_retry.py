@@ -174,6 +174,59 @@ def test_corrective_prompt_contains_prior_proposal_and_prescriptive_constraints(
     assert "Return only a corrected InvestigatorProposal" in prompt
 
 
+def test_corrective_prompt_prescribes_remove_only_for_self_derivation() -> None:
+    proposal = InvestigatorProposal.model_validate({
+        "graph_updates": [{"operation": "add_derivation", "derived_proposition_id": "p1", "source_node_id": "p1", "reason": "Connect."}]
+    })
+    assessment = _assessment(proposal)
+    issue = ProposalValidationIssue(
+        operation_index=3,
+        field="add_derivation",
+        error_code="SELF_DERIVATION",
+        reference="p1",
+        problem="Operation 3 derives proposition 'p1' from itself.",
+        required_action=(
+            "The proposition cannot be derived from itself. This proposition already declares its legal derivation "
+            "basis through derived_from_node_ids. Remove only this redundant add_derivation operation. "
+            "Preserve unrelated valid operations."
+        ),
+    )
+    prompt = build_corrective_prompt(assessment, [issue])
+    assert "SELF_DERIVATION" in prompt
+    assert "operation_index\": 3" in prompt
+    assert "p1" in prompt
+    assert "cannot be derived from itself" in prompt
+    assert "Remove only this redundant add_derivation operation" in prompt
+    assert "Preserve unrelated valid operations" in prompt
+    assert "PREVIOUS PROPOSAL" in prompt
+
+
+def test_self_derivation_corrective_retry_changes_only_the_proposal(tmp_path: Path) -> None:
+    initial = InvestigatorProposal.model_validate({
+        "graph_updates": [
+            {"operation": "add_evidence", "local_ref": "device_evidence", "statement": "Device record.", "source_ids": ["S1"], "reason": "Record source."},
+            {"operation": "add_proposition", "local_ref": "p_device", "statement": "Device proposition.", "derived_from_node_ids": ["device_evidence"], "reason": "Create proposition."},
+            {"operation": "add_derivation", "derived_proposition_id": "p_device", "source_node_id": "p_device", "reason": "Connect proposition."},
+        ]
+    })
+    repaired = InvestigatorProposal.model_validate({
+        "graph_updates": initial.graph_updates[:2]
+    })
+    original_assessment = _assessment(initial, support_ref="p_device")
+    client = RepairClient([original_assessment, repaired])
+    workflow = _workflow(tmp_path, client)
+
+    assert workflow.get_workspace("case-01")["runtimeStatus"] == "COMPLETED"
+    assert len(client.calls) == 2
+    persisted = workflow.repository.load("case-01")
+    completed = next(item for item in persisted.trace_history if item.get("event") == "vnext_completed")
+    result = completed["result"]
+    assert result["furthest_conclusion"]["statement"] == original_assessment.furthest_conclusion.statement
+    assert result["violation_assessments"][0]["status"] == original_assessment.violation_assessments[0].status.value
+    assert result["violation_assessments"][0]["confidence"] == original_assessment.violation_assessments[0].confidence.value
+    assert any(item["event"] == "vnext_corrective_retry_succeeded" for item in persisted.trace_history)
+
+
 def test_failed_corrective_repair_does_not_get_a_third_model_call(tmp_path: Path) -> None:
     initial = InvestigatorProposal.model_validate({
         "graph_updates": [{"operation": "add_derivation", "derived_proposition_id": "p_missing", "source_node_id": "E1", "reason": "Connect."}]
