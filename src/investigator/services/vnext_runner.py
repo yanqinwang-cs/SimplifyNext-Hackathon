@@ -23,8 +23,8 @@ from investigator.vnext import (
     WardenValidationError,
     run_input_from_case_state,
 )
-from investigator.vnext.model import VNextInvestigatorModel
-from investigator.vnext.models import AssessmentRulePreset
+from investigator.vnext.model import VNextInvestigatorModel, build_corrective_prompt
+from investigator.vnext.models import AssessmentRulePreset, InvestigatorAssessment, InvestigatorProposal
 from investigator.vnext.presets import preset_for_case
 
 
@@ -68,10 +68,71 @@ class VNextProductionRunner:
                     "source_ids": sorted(run_input.sources),
                 },
             )
+            corrective_attempted = False
+            first_assessment: InvestigatorAssessment | None = None
             try:
                 workflow.record_model_attempt(case_id, correction=attempt_number > 1)
-                result = VNextInvestigationRunner(investigator).run(run_input)
-                self._persist_success(workflow, case_id, attempt_number, result, investigator)
+                first_assessment = investigator(run_input)
+                try:
+                    result = VNextInvestigationRunner(lambda _: first_assessment).run(run_input)
+                except WardenValidationError as validation_error:
+                    if attempt_number != 1 or not validation_error.issues:
+                        raise
+                    corrective_attempted = True
+                    issues = [issue.model_dump(mode="json") for issue in validation_error.issues]
+                    workflow.record_trace(
+                        case_id,
+                        {
+                            "event": "vnext_proposal_validation_failed",
+                            "actor": "investigator",
+                            "runtime_status": "RUNNING",
+                            "attempt_number": 1,
+                            "run_id": workflow.current_run_id(case_id),
+                            "case_id": case_id,
+                            "retry_mode": "corrective",
+                            "repairable": True,
+                            "validation_issues": issues,
+                        },
+                    )
+                    workflow.record_trace(
+                        case_id,
+                        {
+                            "event": "vnext_corrective_retry_started",
+                            "actor": "investigator",
+                            "runtime_status": "RUNNING",
+                            "attempt_number": 2,
+                            "run_id": workflow.current_run_id(case_id),
+                            "case_id": case_id,
+                            "retry_mode": "corrective",
+                            "validation_issues": issues,
+                        },
+                    )
+                    workflow.record_model_attempt(case_id, correction=True)
+                    repair_call = client.call(
+                        build_corrective_prompt(first_assessment, validation_error.issues),
+                        InvestigatorProposal,
+                    )
+                    repaired_proposal = repair_call.parsed
+                    if not isinstance(repaired_proposal, InvestigatorProposal):
+                        repaired_proposal = InvestigatorProposal.model_validate(repaired_proposal)
+                    investigator.last_call = repair_call
+                    repaired_assessment = first_assessment.model_copy(update={"proposal": repaired_proposal})
+                    result = VNextInvestigationRunner(lambda _: repaired_assessment).run(run_input)
+                    workflow.record_trace(
+                        case_id,
+                        {
+                            "event": "vnext_corrective_retry_succeeded",
+                            "actor": "investigator",
+                            "runtime_status": "RUNNING",
+                            "attempt_number": 2,
+                            "run_id": workflow.current_run_id(case_id),
+                            "case_id": case_id,
+                            "retry_mode": "corrective",
+                            "validation_issues": issues,
+                        },
+                    )
+                result_attempt_number = 2 if corrective_attempted else attempt_number
+                self._persist_success(workflow, case_id, result_attempt_number, result, investigator)
                 metadata = investigator.last_call.metadata if investigator.last_call else None
                 workflow.record_trace(
                     case_id,
@@ -79,7 +140,7 @@ class VNextProductionRunner:
                         "event": "vnext_completed",
                         "actor": "investigator",
                         "runtime_status": "COMPLETED",
-                        "attempt_number": attempt_number,
+                        "attempt_number": result_attempt_number,
                         "run_id": workflow.current_run_id(case_id),
                         "case_id": case_id,
                         "result": result.model_dump(mode="json"),
@@ -105,13 +166,14 @@ class VNextProductionRunner:
             except Exception as exc:
                 last_error = exc
                 metadata = investigator.last_call.metadata if investigator.last_call else None
+                trace_attempt_number = 2 if corrective_attempted else attempt_number
                 workflow.record_trace(
                     case_id,
                     {
                         "event": "vnext_attempt_failed",
                         "actor": "investigator",
                         "runtime_status": "RUNNING" if attempt_number < self.max_attempts else "FAILED",
-                        "attempt_number": attempt_number,
+                        "attempt_number": trace_attempt_number,
                         "run_id": workflow.current_run_id(case_id),
                         "case_id": case_id,
                         "error_type": type(exc).__name__,
@@ -125,7 +187,7 @@ class VNextProductionRunner:
                         "finish_reason": metadata.finish_reason if metadata else None,
                     },
                 )
-                if not self._retryable(exc) or attempt_number == self.max_attempts:
+                if corrective_attempted or not self._retryable(exc) or attempt_number == self.max_attempts:
                     raise
         raise AssertionError(f"vNext run ended without a result: {last_error}")
 

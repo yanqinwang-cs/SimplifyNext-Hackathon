@@ -3,7 +3,8 @@
 import json
 
 from investigator.llm import ModelCallResult, ModelClient
-from investigator.vnext.models import InvestigatorAssessment, VNextRunInput
+from investigator.vnext.models import InvestigatorAssessment, InvestigatorProposal, VNextRunInput
+from investigator.vnext.warden import ProposalValidationIssue
 
 
 class VNextInvestigatorModel:
@@ -47,5 +48,24 @@ def build_prompt(run_input: VNextRunInput) -> str:
             "\nCURRENT RAW SOURCES\n" + json.dumps(sources, indent=2),
             "\nEXACT INVESTIGATOR ASSESSMENT JSON SCHEMA\n"
             + json.dumps(InvestigatorAssessment.model_json_schema(), indent=2, sort_keys=True),
+        ]
+    )
+
+
+def build_corrective_prompt(
+    assessment: InvestigatorAssessment,
+    issues: list[ProposalValidationIssue],
+) -> str:
+    """Build a proposal-only repair request from deterministic Warden issues."""
+    return "\n".join(
+        [
+            "Your previous InvestigatorAssessment is the authoritative semantic assessment for this retry.",
+            "Do NOT re-investigate the case, change violation conclusions, change confidence, or add unrelated reasoning.",
+            "Repair only the graph-contract defects listed below.",
+            "Preserve valid graph updates, local_ref names, intended meaning, and unrelated operations wherever possible.",
+            "Return only a corrected InvestigatorProposal matching its required schema.",
+            "\nPREVIOUS PROPOSAL\n" + json.dumps(assessment.proposal.model_dump(mode="json"), indent=2),
+            "\nDETERMINISTIC VALIDATION ISSUES\n" + json.dumps([issue.model_dump(mode="json") for issue in issues], indent=2),
+            "\nPROPOSAL JSON SCHEMA\n" + json.dumps(InvestigatorProposal.model_json_schema(), indent=2, sort_keys=True),
         ]
     )
