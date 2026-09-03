@@ -1,4 +1,6 @@
 from collections.abc import Mapping, Sequence
+import json
+import re
 from typing import Any, Protocol, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -8,11 +10,14 @@ MessageInput = str | Sequence[Mapping[str, Any]]
 
 
 def normalize_json_text(raw_text: str) -> str:
-    """Remove one complete outer JSON Markdown fence, without repairing content."""
+    """Normalize one Markdown JSON fence without repairing structured content."""
     text = raw_text.strip()
     first_line, separator, remainder = text.partition("\n")
     if first_line.strip().lower() in {"```", "```json"} and separator and remainder.endswith("```"):
         return remainder[:-3]
+    blocks = list(re.finditer(r"```(?:json)?[ \t]*\r?\n(.*?)```", text, flags=re.IGNORECASE | re.DOTALL))
+    if len(blocks) == 1:
+        return blocks[0].group(1)
     return text
 
 
@@ -72,6 +77,8 @@ def parse_model_output(raw_output: Any, output_schema: type[T]) -> T:
     try:
         if isinstance(raw_output, output_schema):
             return raw_output
+        if isinstance(raw_output, str):
+            raw_output = json.loads(normalize_json_text(raw_output))
         return output_schema.model_validate(raw_output)
     except Exception as exc:
         raise ModelParseError(

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from investigator.graph import CaseGraph, GraphNode, GraphNodeType
+from investigator.graph import CaseGraph, GraphNode, GraphNodeType, GraphStatus
 from investigator.llm import ModelCallMetadata, ModelCallResult
 from investigator.models.source import Source, SourceType
 from investigator.services.evidence_requests import HumanEvidenceWorkflow
@@ -146,7 +146,7 @@ def test_wrong_node_type_feedback_is_prescriptive_and_repair_keeps_unrelated_upd
     assert workflow.get_workspace("case-01")["runtimeStatus"] == "COMPLETED"
     failed = next(item for item in workflow.get_traces("case-01") if item["event"] == "vnext_proposal_validation_failed")
     issue = failed["validation_issues"][0]
-    assert issue["error_code"] == "INVALID_REFERENCE_TYPE_OR_STATUS"
+    assert issue["error_code"] == "INVALID_REFERENCE_TYPE"
     assert issue["reference"] == "u_device"
     assert issue["actual_type"] == "uncertainty"
     assert "evidence, proposition" in issue["required_action"]
@@ -197,3 +197,22 @@ def test_warden_remains_strict_and_atomic_for_rejected_proposal() -> None:
         GraphWarden(graph).apply(proposal)
     assert caught.value.issues[0].actual_type == "uncertainty"
     assert graph.nodes.keys() == {"U1"}
+
+
+def test_warden_reports_status_separately_when_type_is_allowed() -> None:
+    graph = CaseGraph(case_id="case-01", nodes={
+        "P1": GraphNode(id="P1", node_type=GraphNodeType.PROPOSITION, statement="p"),
+        "E1": GraphNode(id="E1", node_type=GraphNodeType.EVIDENCE, statement="e", status=GraphStatus.ARCHIVED),
+    }, edges={})
+    proposal = InvestigatorProposal.model_validate({
+        "graph_updates": [{"operation": "add_derivation", "derived_proposition_id": "P1", "source_node_id": "E1", "reason": "Use source."}]
+    })
+    with pytest.raises(WardenValidationError) as caught:
+        GraphWarden(graph).apply(proposal)
+    issue = caught.value.issues[0]
+    assert issue.error_code == "INVALID_REFERENCE_STATUS"
+    assert issue.reference == "E1"
+    assert issue.actual_type == "evidence"
+    assert issue.actual_status == "archived"
+    assert issue.allowed_statuses == ["active"]
+    assert "active" in issue.required_action

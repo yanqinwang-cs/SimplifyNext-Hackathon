@@ -1,3 +1,4 @@
+import json
 import pytest
 import sys
 import types
@@ -76,6 +77,22 @@ def test_json_normalization_does_not_extract_or_repair(raw: str) -> None:
         json.loads(normalize_json_text(raw))
 
 
+def test_json_normalization_accepts_one_fenced_block_with_trailing_summary() -> None:
+    raw = '```json\n{"graph_updates": []}\n```\n\nRepair Summary: removed the invalid operation.'
+    assert json.loads(normalize_json_text(raw)) == {"graph_updates": []}
+
+
+def test_json_normalization_rejects_multiple_fenced_blocks() -> None:
+    raw = '```json\n{"graph_updates": []}\n```\n```json\n{"graph_updates": []}\n```'
+    with pytest.raises(json.JSONDecodeError):
+        json.loads(normalize_json_text(raw))
+
+
+def test_json_normalization_keeps_malformed_fenced_json_invalid() -> None:
+    with pytest.raises(json.JSONDecodeError):
+        json.loads(normalize_json_text('```json\n{"graph_updates": [\n```'))
+
+
 def test_bedrock_adapter_parses_fenced_json_without_network() -> None:
     class BedrockOutput(BaseModel):
         answer: str
@@ -93,6 +110,22 @@ def test_bedrock_adapter_parses_fenced_json_without_network() -> None:
     )
     assert result.parsed.answer == "4"
     assert result.raw_output == '```json\n{"answer": "4"}\n```'
+
+
+def test_bedrock_adapter_ignores_one_fenced_json_block_trailing_summary() -> None:
+    class BedrockOutput(BaseModel):
+        graph_updates: list[dict]
+
+    class FakeBedrock:
+        def converse(self, **kwargs):
+            return {
+                "output": {"message": {"content": [{"text": '```json\n{"graph_updates": []}\n```\n\nRepair Summary: removed one invalid operation.'}]}},
+                "usage": {},
+                "stopReason": "end_turn",
+            }
+
+    result = BedrockModelClient(model_id="test-model", client=FakeBedrock()).call("repair", BedrockOutput)
+    assert result.parsed.graph_updates == []
 
 
 def test_bedrock_native_tool_schema_uses_json_tagged_union() -> None:
