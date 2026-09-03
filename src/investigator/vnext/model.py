@@ -62,10 +62,15 @@ def build_corrective_prompt(
             "Your previous InvestigatorAssessment is the authoritative semantic assessment for this retry.",
             "Do NOT re-investigate the case, change violation conclusions, change confidence, or add unrelated reasoning.",
             "Repair only the graph-contract defects listed below.",
-            "Preserve valid graph updates, local_ref names, intended meaning, and unrelated operations wherever possible.",
+            "Preserve unrelated valid graph updates, local_ref names, and intended semantic meaning. Operations identified by validation may be changed or removed exactly as required by their corrective action.",
+            "Do not preserve an operation merely for structural similarity if a validation issue explicitly instructs you to remove it.",
+            "Interpret issue fields precisely: allowed_types are for the failed field; construction_allowed_types are legal inputs for constructing a missing node; known_illegal_refs are refs illegal for this specific field only, not globally.",
             "Return only a corrected InvestigatorProposal matching its required schema.",
             "\nPREVIOUS PROPOSAL\n" + json.dumps(assessment.proposal.model_dump(mode="json"), indent=2),
-            "\nDETERMINISTIC VALIDATION ISSUES\n" + json.dumps([issue.model_dump(mode="json") for issue in issues], indent=2),
+            "\nDETERMINISTIC VALIDATION ISSUES\n"
+            "Each issue is authoritative. Read its operation_index, field, problem, and required_action.\n"
+            "Known refs that are illegal for this specific field only are not necessarily illegal as construction inputs.\n"
+            + json.dumps([issue.model_dump(mode="json") for issue in issues], indent=2),
             "\nPROPOSAL JSON SCHEMA\n" + json.dumps(InvestigatorProposal.model_json_schema(), indent=2, sort_keys=True),
         ]
     )

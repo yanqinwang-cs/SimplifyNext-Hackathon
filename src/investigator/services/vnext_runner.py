@@ -117,7 +117,26 @@ class VNextProductionRunner:
                         repaired_proposal = InvestigatorProposal.model_validate(repaired_proposal)
                     investigator.last_call = repair_call
                     repaired_assessment = first_assessment.model_copy(update={"proposal": repaired_proposal})
-                    result = VNextInvestigationRunner(lambda _: repaired_assessment).run(run_input)
+                    try:
+                        result = VNextInvestigationRunner(lambda _: repaired_assessment).run(run_input)
+                    except WardenValidationError as second_validation_error:
+                        workflow.record_trace(
+                            case_id,
+                            {
+                                "event": "vnext_proposal_validation_failed",
+                                "actor": "investigator",
+                                "runtime_status": "FAILED",
+                                "attempt_number": 2,
+                                "run_id": workflow.current_run_id(case_id),
+                                "case_id": case_id,
+                                "retry_mode": "corrective",
+                                "repairable": False,
+                                "validation_issues": [
+                                    issue.model_dump(mode="json") for issue in second_validation_error.issues
+                                ],
+                            },
+                        )
+                        raise
                     workflow.record_trace(
                         case_id,
                         {

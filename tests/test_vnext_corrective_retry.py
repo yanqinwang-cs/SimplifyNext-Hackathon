@@ -170,7 +170,7 @@ def test_corrective_prompt_contains_prior_proposal_and_prescriptive_constraints(
     assert "PREVIOUS PROPOSAL" in prompt
     assert "p_missing" in prompt
     assert "Do NOT re-investigate" in prompt
-    assert "Preserve valid graph updates" in prompt
+    assert "Preserve unrelated valid graph updates" in prompt
     assert "Return only a corrected InvestigatorProposal" in prompt
 
 
@@ -201,6 +201,30 @@ def test_corrective_prompt_prescribes_remove_only_for_self_derivation() -> None:
     assert "PREVIOUS PROPOSAL" in prompt
 
 
+def test_corrective_prompt_clarifies_field_relative_reference_hints() -> None:
+    proposal = InvestigatorProposal.model_validate({
+        "graph_updates": [{"operation": "add_derivation", "derived_proposition_id": "missing", "source_node_id": "E1", "reason": "Connect."}]
+    })
+    assessment = _assessment(proposal)
+    issue = ProposalValidationIssue(
+        operation_index=0,
+        field="add_derivation.derived_proposition_id",
+        error_code="UNRESOLVED_REFERENCE",
+        reference="missing",
+        allowed_types=["proposition"],
+        construction_operation="add_proposition",
+        construction_allowed_types=["evidence", "proposition"],
+        known_illegal_refs={"E1": "evidence"},
+        problem="The target proposition is missing.",
+        required_action="Create the proposition with a legal construction basis.",
+    )
+    prompt = build_corrective_prompt(assessment, [issue])
+    assert "allowed_types are for the failed field" in prompt
+    assert "construction_allowed_types are legal inputs" in prompt
+    assert "illegal for this specific field only" in prompt
+    assert '"construction_allowed_types": [\n      "evidence"' in prompt
+
+
 def test_self_derivation_corrective_retry_changes_only_the_proposal(tmp_path: Path) -> None:
     initial = InvestigatorProposal.model_validate({
         "graph_updates": [
@@ -225,6 +249,41 @@ def test_self_derivation_corrective_retry_changes_only_the_proposal(tmp_path: Pa
     assert result["violation_assessments"][0]["status"] == original_assessment.violation_assessments[0].status.value
     assert result["violation_assessments"][0]["confidence"] == original_assessment.violation_assessments[0].confidence.value
     assert any(item["event"] == "vnext_corrective_retry_succeeded" for item in persisted.trace_history)
+
+
+def test_second_pass_self_derivation_is_traced_and_does_not_get_third_call(tmp_path: Path) -> None:
+    initial = InvestigatorProposal.model_validate({
+        "graph_updates": [{"operation": "add_derivation", "derived_proposition_id": "p_device", "source_node_id": "E1", "reason": "Connect missing proposition."}]
+    })
+    repaired = InvestigatorProposal.model_validate({
+        "graph_updates": [
+            {"operation": "add_evidence", "local_ref": "device_evidence", "statement": "Device record.", "source_ids": ["S1"], "reason": "Record source."},
+            {"operation": "add_proposition", "local_ref": "p_device", "statement": "Device proposition.", "derived_from_node_ids": ["device_evidence"], "reason": "Create proposition."},
+            {"operation": "add_derivation", "derived_proposition_id": "p_device", "source_node_id": "p_device", "reason": "Connect proposition."},
+        ]
+    })
+    client = RepairClient([_assessment(initial), repaired])
+    workflow = _workflow(tmp_path, client)
+
+    assert workflow.get_workspace("case-01")["runtimeStatus"] == "FAILED"
+    assert len(client.calls) == 2
+    traces = workflow.get_traces("case-01")
+    second_failure = next(
+        item for item in traces
+        if item["event"] == "vnext_proposal_validation_failed" and item["attempt_number"] == 2
+    )
+    assert second_failure["runtime_status"] == "FAILED"
+    assert second_failure["retry_mode"] == "corrective"
+    assert second_failure["repairable"] is False
+    issue = next(issue for issue in second_failure["validation_issues"] if issue["error_code"] == "SELF_DERIVATION")
+    assert issue["operation_index"] == 2
+    assert issue["reference"] == "p_device"
+    assert "Remove only this redundant add_derivation operation" in issue["required_action"]
+    assert any(item["event"] == "vnext_attempt_failed" for item in traces)
+    assert not any(
+        node.semantic_key == "p_device"
+        for node in (workflow.repository.load("case-01").reasoning_graph or CaseGraph(case_id="case-01")).nodes.values()
+    )
 
 
 def test_failed_corrective_repair_does_not_get_a_third_model_call(tmp_path: Path) -> None:
