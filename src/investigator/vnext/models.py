@@ -150,11 +150,45 @@ class FurthestJustifiedConclusion(BaseModel):
     confidence: Confidence
 
 
+class SubjectAssessment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    subject_id: str = Field(min_length=1)
+    violation_assessments: list[ViolationAssessment] = Field(min_length=1)
+    furthest_conclusion: FurthestJustifiedConclusion
+
+
 class InvestigatorAssessment(BaseModel):
-    """One complete finite sweep; missing support ends as an assessment."""
+    """One complete finite sweep partitioned by assessment subject."""
 
     model_config = ConfigDict(extra="forbid")
 
     proposal: InvestigatorProposal
-    violation_assessments: list[ViolationAssessment] = Field(min_length=1)
-    furthest_conclusion: FurthestJustifiedConclusion
+    subject_assessments: list[SubjectAssessment] = Field(min_length=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def adapt_legacy_single_subject_shape(cls, value: object) -> object:
+        if isinstance(value, dict) and "subject_assessments" not in value and {"violation_assessments", "furthest_conclusion"} <= value.keys():
+            legacy = dict(value)
+            legacy["subject_assessments"] = [{
+                "subject_id": "case_subject",
+                "violation_assessments": legacy.pop("violation_assessments"),
+                "furthest_conclusion": legacy.pop("furthest_conclusion"),
+            }]
+            return legacy
+        return value
+
+    @property
+    def violation_assessments(self) -> list[ViolationAssessment]:
+        """Legacy single-subject read compatibility; subject_assessments is authoritative."""
+        if len(self.subject_assessments) != 1:
+            raise AttributeError("violation_assessments is available only for a single compatibility subject")
+        return self.subject_assessments[0].violation_assessments
+
+    @property
+    def furthest_conclusion(self) -> FurthestJustifiedConclusion:
+        """Legacy single-subject read compatibility; subject_assessments is authoritative."""
+        if len(self.subject_assessments) != 1:
+            raise AttributeError("furthest_conclusion is available only for a single compatibility subject")
+        return self.subject_assessments[0].furthest_conclusion

@@ -10,6 +10,7 @@ from investigator.vnext import (
     FurthestJustifiedConclusion,
     InvestigatorAssessment,
     InvestigatorProposal,
+    SubjectAssessment,
     VNextInvestigationRunner,
     VNextRunInput,
     VNextRunResult,
@@ -117,11 +118,15 @@ def test_obvious_violation_can_stop_at_possession_without_downstream_fact() -> N
     )
     output = output.model_copy(
         update={
-            "furthest_conclusion": FurthestJustifiedConclusion(
+            "subject_assessments": [SubjectAssessment(
+                subject_id="case_subject",
+                violation_assessments=output.subject_assessments[0].violation_assessments,
+                furthest_conclusion=FurthestJustifiedConclusion(
                 statement="Prohibited device possession is supported; actual information access remains unresolved.",
                 based_on_violation_ids=["unauthorized_device"],
                 confidence=Confidence.HIGH,
-            )
+                ),
+            )]
         }
     )
     result = VNextInvestigationRunner(lambda _: output).run(VNextRunInput(case_id="case-01", sources={"S1": source()}, rule_preset=rule))

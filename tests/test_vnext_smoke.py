@@ -7,6 +7,7 @@ from investigator.vnext import (
     FurthestJustifiedConclusion,
     InvestigatorAssessment,
     InvestigatorProposal,
+    SubjectAssessment,
     VNextRunStatus,
     ViolationAssessment,
     WardenValidationError,
@@ -110,18 +111,22 @@ def test_sparse_fixture_has_same_single_run_contract() -> None:
         valid_assessment().model_copy(
             update={
                 "proposal": InvestigatorProposal(),
-                "violation_assessments": [
+                "subject_assessments": [SubjectAssessment(
+                    subject_id="case_subject",
+                    violation_assessments=[
                     ViolationAssessment(
                         violation_id="unauthorized_device",
                         status=AssessmentStatus.NOT_CURRENTLY_SUPPORTED,
+                        supporting_node_ids=[],
                         reasoning_summary="The present sources do not support the violation.",
                         confidence=Confidence.LOW,
                     )
-                ],
-                "furthest_conclusion": FurthestJustifiedConclusion(
+                    ],
+                    furthest_conclusion=FurthestJustifiedConclusion(
                     statement="The violation is not currently supported by the present record.",
                     confidence=Confidence.LOW,
-                ),
+                    ),
+                )],
             }
         )
     )

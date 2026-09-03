@@ -42,7 +42,11 @@ def build_prompt(run_input: VNextRunInput) -> str:
     return "\n".join(
         [
             "You are the Investigator for one complete finite assessment.",
-            "Evaluate every configured violation exactly once and return the complete assessment in one response.",
+            "Evaluate every configured violation exactly once for every configured assessment subject and return the complete assessment in one response.",
+            "Return one SubjectAssessment per subject_id. subject_id is authoritative; never merge, rename, or infer subjects.",
+            "Evidence or relationships involving multiple subjects may be relevant to more than one subject, but each subject's violation status must be justified independently.",
+            "Do not omit subjects with no incriminating evidence; assess them as NOT_CURRENTLY_SUPPORTED where appropriate.",
+            "Observed communication between two subjects does not automatically establish every violation for both. Script similarity does not automatically establish prohibited collaboration. A shared external source or device does not automatically establish coordination. Association with a subject who has supported misconduct does not establish misconduct for another subject.",
             "Do not ask for more evidence, request human input, or produce a follow-up question.",
             "Missing evidence means NOT_CURRENTLY_SUPPORTED, not another enquiry.",
             "A supported narrower violation does not require proof of stronger downstream conduct.",
@@ -59,6 +63,7 @@ def build_prompt(run_input: VNextRunInput) -> str:
             "\nASSESSMENT CONTEXT\n" + json.dumps(assessment_context, indent=2),
             "\nASSESSMENT SUBJECTS\n" + json.dumps(subjects, indent=2),
             "\nRECORDED SUBJECT RELATIONSHIPS\n" + json.dumps(relationships, indent=2),
+            "\nEXPECTED ASSESSMENT SUBJECT IDS\n" + json.dumps(sorted(run_input.subjects) or ["case_subject"]),
             "\nEXACT INVESTIGATOR ASSESSMENT JSON SCHEMA\n"
             + json.dumps(InvestigatorAssessment.model_json_schema(), indent=2, sort_keys=True),
         ]

@@ -98,10 +98,11 @@ def _print_summary(result: VNextRunResult, metadata: ModelCallMetadata) -> None:
     print(f"preset: {result.metadata.rule_preset_id}")
     print(f"model: {metadata.model}")
     print("violations:")
-    for item in result.violation_assessments:
-        print(f"  {item.violation_id}: {item.status.value.upper()} ({item.confidence.value.upper()})")
-    print("furthest conclusion:")
-    print(f"  {result.furthest_conclusion.statement}")
+    for subject in result.subject_assessments:
+        print(f"subject: {subject.subject_id}")
+        for item in subject.violation_assessments:
+            print(f"  {item.violation_id}: {item.status.value.upper()} ({item.confidence.value.upper()})")
+        print(f"  conclusion: {subject.furthest_conclusion.statement}")
     print(f"graph updates applied: {result.metadata.proposal_update_count}")
     print(f"input tokens: {metadata.input_tokens}")
     print(f"output tokens: {metadata.output_tokens}")

@@ -243,7 +243,14 @@ class VNextProductionRunner:
         temporary.replace(destination)
         run_result_path = directory / "run_result.json"
         run_summary = json.loads(run_result_path.read_text(encoding="utf-8"))
-        conclusion = result.furthest_conclusion.statement
+        subject_conclusions = {
+            item.subject_id: item.furthest_conclusion.statement
+            for item in result.subject_assessments
+        }
+        conclusion = "; ".join(
+            f"{subject_id}: {statement}"
+            for subject_id, statement in subject_conclusions.items()
+        )
         run_summary.update(
             {
                 "final_runtime_status": "COMPLETED",
@@ -251,6 +258,7 @@ class VNextProductionRunner:
                 "vnext_status": result.status.value,
                 "vnext_result_path": str(destination),
                 "vnext_furthest_conclusion": conclusion,
+                "vnext_subject_conclusions": subject_conclusions,
                 "model": metadata.model if metadata else None,
                 "input_tokens": metadata.input_tokens if metadata else None,
                 "output_tokens": metadata.output_tokens if metadata else None,

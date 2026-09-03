@@ -20,6 +20,7 @@ from investigator.vnext.models import (
     AssessmentRulePreset,
     FurthestJustifiedConclusion,
     InvestigatorAssessment,
+    SubjectAssessment,
     VNextRunInput,
     ViolationAssessment,
 )
@@ -36,6 +37,7 @@ class VNextRunMetadata(BaseModel):
     case_id: str
     rule_preset_id: str
     violation_ids: list[str]
+    subject_ids: list[str]
     proposal_hash: str
     proposal_update_count: int = 0
     completion_state: VNextRunStatus = VNextRunStatus.COMPLETED
@@ -47,10 +49,23 @@ class VNextRunResult(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     graph: CaseGraph
-    violation_assessments: list[ViolationAssessment]
-    furthest_conclusion: FurthestJustifiedConclusion
+    subject_assessments: list[SubjectAssessment]
     status: VNextRunStatus = VNextRunStatus.COMPLETED
     metadata: VNextRunMetadata
+
+    @property
+    def violation_assessments(self) -> list[ViolationAssessment]:
+        """Legacy single-subject read compatibility; subject_assessments is authoritative."""
+        if len(self.subject_assessments) != 1:
+            raise AttributeError("violation_assessments is available only for a single compatibility subject")
+        return self.subject_assessments[0].violation_assessments
+
+    @property
+    def furthest_conclusion(self) -> FurthestJustifiedConclusion:
+        """Legacy single-subject read compatibility; subject_assessments is authoritative."""
+        if len(self.subject_assessments) != 1:
+            raise AttributeError("furthest_conclusion is available only for a single compatibility subject")
+        return self.subject_assessments[0].furthest_conclusion
 
 
 def clean_reasoning_graph(case_id: str, sources: Mapping[str, Source]) -> CaseGraph:
@@ -97,7 +112,8 @@ class VNextInvestigationRunner:
         raw_assessment = self.investigator(run_input)
         try:
             assessment = raw_assessment if isinstance(raw_assessment, InvestigatorAssessment) else InvestigatorAssessment.model_validate(raw_assessment)
-            self._validate_assessment(assessment, run_input.rule_preset)
+            assessment = InvestigatorAssessment.model_validate(assessment.model_dump(mode="python"))
+            normalized_subjects = self._validate_assessment(assessment, run_input)
         except VNextRunValidationError:
             raise
         except Exception as exc:
@@ -105,17 +121,20 @@ class VNextInvestigationRunner:
 
         warden = GraphWarden(reasoning_graph, run_input.sources)
         applied = warden.apply(assessment.proposal)
-        resolved_by_id = {
-            item.violation_id: self._resolve_assessment_references(
-                item, applied.local_ref_resolution, applied.graph
-            )
-            for item in assessment.violation_assessments
-        }
-        assessments = [
-            resolved_by_id[item.violation_id]
-            for item in run_input.rule_preset.violations
-        ]
-        conclusion = assessment.furthest_conclusion
+        resolved_subjects = []
+        for subject in normalized_subjects:
+            resolved_by_id = {
+                item.violation_id: self._resolve_assessment_references(
+                    item, applied.local_ref_resolution, applied.graph
+                )
+                for item in subject.violation_assessments
+            }
+            resolved_subjects.append(subject.model_copy(update={
+                "violation_assessments": [
+                    resolved_by_id[item.violation_id]
+                    for item in run_input.rule_preset.violations
+                ],
+            }))
         proposal_hash = hashlib.sha256(
             json.dumps(assessment.proposal.model_dump(mode="json"), sort_keys=True).encode()
         ).hexdigest()
@@ -123,34 +142,57 @@ class VNextInvestigationRunner:
             case_id=run_input.case_id,
             rule_preset_id=run_input.rule_preset.preset_id,
             violation_ids=[item.violation_id for item in run_input.rule_preset.violations],
+            subject_ids=[item.subject_id for item in normalized_subjects],
             proposal_hash=proposal_hash,
             proposal_update_count=len(assessment.proposal.graph_updates),
         )
         return VNextRunResult(
             graph=deepcopy(applied.graph),
-            violation_assessments=assessments,
-            furthest_conclusion=conclusion,
+            subject_assessments=resolved_subjects,
             metadata=metadata,
         )
 
     @staticmethod
-    def _validate_assessment(assessment: InvestigatorAssessment, preset: AssessmentRulePreset) -> None:
+    def _validate_assessment(assessment: InvestigatorAssessment, run_input: VNextRunInput) -> list[SubjectAssessment]:
+        preset = run_input.rule_preset
         expected = [item.violation_id for item in preset.violations]
-        actual = [item.violation_id for item in assessment.violation_assessments]
-        if len(actual) != len(set(actual)):
-            raise VNextRunValidationError("InvestigatorAssessment contains duplicate violation IDs")
-        if set(actual) != set(expected):
-            missing = sorted(set(expected) - set(actual))
-            unknown = sorted(set(actual) - set(expected))
-            raise VNextRunValidationError(
-                f"InvestigatorAssessment must contain exactly the configured violations; missing={missing}, unknown={unknown}"
-            )
-        conclusion_ids = set(assessment.furthest_conclusion.based_on_violation_ids)
-        unknown_conclusion_ids = sorted(conclusion_ids - set(expected))
-        if unknown_conclusion_ids:
-            raise VNextRunValidationError(
-                f"Furthest conclusion references unknown violation IDs: {unknown_conclusion_ids}"
-            )
+        expected_subjects = sorted(run_input.subjects) or ["case_subject"]
+        actual_subjects = [item.subject_id for item in assessment.subject_assessments]
+        if len(actual_subjects) != len(set(actual_subjects)):
+            raise VNextRunValidationError("InvestigatorAssessment contains duplicate SubjectAssessment subject IDs")
+        if set(actual_subjects) != set(expected_subjects):
+            missing = sorted(set(expected_subjects) - set(actual_subjects))
+            unknown = sorted(set(actual_subjects) - set(expected_subjects))
+            if missing:
+                raise VNextRunValidationError(f"Subject assessments are missing subjects: {missing}")
+            raise VNextRunValidationError(f"InvestigatorAssessment contains unknown subjects: {unknown}")
+
+        by_subject = {item.subject_id: item for item in assessment.subject_assessments}
+        normalized: list[SubjectAssessment] = []
+        for subject_id in expected_subjects:
+            subject = by_subject[subject_id]
+            actual = [item.violation_id for item in subject.violation_assessments]
+            if len(actual) != len(set(actual)):
+                raise VNextRunValidationError(f"Subject {subject_id!r} contains duplicate violation IDs")
+            if set(actual) != set(expected):
+                missing = sorted(set(expected) - set(actual))
+                unknown = sorted(set(actual) - set(expected))
+                raise VNextRunValidationError(
+                    f"Subject {subject_id!r} must contain exactly the configured violations; missing={missing}, unknown={unknown}"
+                )
+            conclusion_ids = set(subject.furthest_conclusion.based_on_violation_ids)
+            unknown_conclusion_ids = sorted(conclusion_ids - set(expected))
+            if unknown_conclusion_ids:
+                raise VNextRunValidationError(
+                    f"Subject {subject_id!r} conclusion references unknown violation IDs: {unknown_conclusion_ids}"
+                )
+            normalized.append(subject.model_copy(update={
+                "violation_assessments": [
+                    next(item for item in subject.violation_assessments if item.violation_id == violation_id)
+                    for violation_id in expected
+                ]
+            }))
+        return normalized
 
     @staticmethod
     def _resolve_node_id(identifier: str, local_refs: Mapping[str, str], graph: CaseGraph) -> str:

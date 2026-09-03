@@ -122,7 +122,7 @@ def test_unknown_node_repair_is_proposal_only_and_preserves_assessment(tmp_path:
     assert any(item["event"] == "vnext_corrective_retry_succeeded" for item in result)
     persisted = workflow.repository.load("case-01")
     completed = next(item for item in persisted.trace_history if item.get("event") == "vnext_completed")
-    assert completed["result"]["violation_assessments"][0]["reasoning_summary"] == "Distinctive semantic assessment preserved."
+    assert completed["result"]["subject_assessments"][0]["violation_assessments"][0]["reasoning_summary"] == "Distinctive semantic assessment preserved."
 
 
 def test_wrong_node_type_feedback_is_prescriptive_and_repair_keeps_unrelated_update(tmp_path: Path) -> None:
@@ -272,9 +272,9 @@ def test_self_derivation_corrective_retry_changes_only_the_proposal(tmp_path: Pa
     persisted = workflow.repository.load("case-01")
     completed = next(item for item in persisted.trace_history if item.get("event") == "vnext_completed")
     result = completed["result"]
-    assert result["furthest_conclusion"]["statement"] == original_assessment.furthest_conclusion.statement
-    assert result["violation_assessments"][0]["status"] == original_assessment.violation_assessments[0].status.value
-    assert result["violation_assessments"][0]["confidence"] == original_assessment.violation_assessments[0].confidence.value
+    assert result["subject_assessments"][0]["furthest_conclusion"]["statement"] == original_assessment.furthest_conclusion.statement
+    assert result["subject_assessments"][0]["violation_assessments"][0]["status"] == original_assessment.violation_assessments[0].status.value
+    assert result["subject_assessments"][0]["violation_assessments"][0]["confidence"] == original_assessment.violation_assessments[0].confidence.value
     assert any(item["event"] == "vnext_corrective_retry_succeeded" for item in persisted.trace_history)
 
 
