@@ -1,7 +1,7 @@
 from copy import deepcopy
 import hashlib
 
-from investigator.graph import CaseGraph, EdgeRelation, GraphEdge, GraphNode, GraphNodeType, GraphStatus, make_edge_id
+from investigator.graph import CaseGraph, EdgeRelation, GraphEdge, GraphNode, GraphNodeType, GraphStatus, OperationSpecRegistry, make_edge_id
 from investigator.roles.focus import InvestigationFocus, investigator_region
 from investigator.roles.history import GraphHistory
 from investigator.roles.investigator import AddConflictCommand, AddDerivationCommand, AddEvidenceCommand, AddHypothesisCommand, AddPropositionCommand, AddSpecializationCommand, AddSupportCommand, AddUncertaintyCommand, INVESTIGATOR_UPDATE_ADAPTER, InvestigatorUpdate, MoveFocusCommand
@@ -59,7 +59,8 @@ class GraphInvestigationCoordinator:
     def _apply_add_proposition(self, graph: CaseGraph, new_nodes: set[str], update: AddPropositionCommand) -> None:
         node_id = self._allocate_node_id(graph, GraphNodeType.PROPOSITION, update.node_id, update.local_ref, update.statement)
         permitted = self._permitted_ids() | new_nodes
-        sources = [self._require_local_active(graph, self._resolve_ref(identifier), {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}, permitted) for identifier in update.derived_from_node_ids]
+        allowed = OperationSpecRegistry.allowed_types_for(update.operation, "derived_from_node_ids")
+        sources = [self._require_local_active(graph, self._resolve_ref(identifier), set(allowed), permitted) for identifier in update.derived_from_node_ids]
         graph.add_node(GraphNode(id=node_id, node_type=GraphNodeType.PROPOSITION, statement=update.statement, semantic_key=update.local_ref, canonical_id=node_id))
         for source in sources:
             graph.add_edge(GraphEdge(id=make_edge_id(node_id, EdgeRelation.DERIVED_FROM, source.id), source_id=node_id, target_id=source.id, relation=EdgeRelation.DERIVED_FROM, explanation=update.reason))
@@ -75,7 +76,8 @@ class GraphInvestigationCoordinator:
     def _apply_add_uncertainty(self, graph: CaseGraph, new_nodes: set[str], update: AddUncertaintyCommand) -> None:
         node_id = self._allocate_node_id(graph, GraphNodeType.UNCERTAINTY, update.node_id, update.local_ref, update.statement)
         permitted = self._permitted_ids() | new_nodes
-        target = self._require_local_active(graph, self._resolve_ref(update.target_node_id), {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}, permitted)
+        allowed = OperationSpecRegistry.allowed_types_for(update.operation, "target_node_id")
+        target = self._require_local_active(graph, self._resolve_ref(update.target_node_id), set(allowed), permitted)
         graph.add_node(GraphNode(id=node_id, node_type=GraphNodeType.UNCERTAINTY, statement=update.statement, semantic_key=update.local_ref, canonical_id=node_id))
         graph.add_edge(GraphEdge(id=make_edge_id(node_id, EdgeRelation.TARGETS, target.id), source_id=node_id, target_id=target.id, relation=EdgeRelation.TARGETS, explanation=update.reason))
         self._remember_ref(update.local_ref, node_id)
@@ -83,21 +85,27 @@ class GraphInvestigationCoordinator:
 
     def _apply_relation(self, graph: CaseGraph, new_nodes: set[str], update: AddSupportCommand | AddConflictCommand) -> None:
         permitted = self._permitted_ids() | new_nodes
-        source = self._require_local_active(graph, self._resolve_ref(update.source_node_id), {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}, permitted)
-        target = self._require_local_active(graph, self._resolve_ref(update.target_node_id), {GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS}, permitted)
+        source_types = OperationSpecRegistry.allowed_types_for(update.operation, "source_node_id")
+        target_types = OperationSpecRegistry.allowed_types_for(update.operation, "target_node_id")
+        source = self._require_local_active(graph, self._resolve_ref(update.source_node_id), set(source_types), permitted)
+        target = self._require_local_active(graph, self._resolve_ref(update.target_node_id), set(target_types), permitted)
         relation = EdgeRelation.SUPPORTS if isinstance(update, AddSupportCommand) else EdgeRelation.CONFLICTS
         graph.add_edge(GraphEdge(id=make_edge_id(source.id, relation, target.id), source_id=source.id, target_id=target.id, relation=relation, strength=update.strength, explanation=update.reason))
 
     def _apply_derivation(self, graph: CaseGraph, new_nodes: set[str], update: AddDerivationCommand) -> None:
         permitted = self._permitted_ids() | new_nodes
-        proposition = self._require_local_active(graph, self._resolve_ref(update.derived_proposition_id), {GraphNodeType.PROPOSITION}, permitted)
-        source = self._require_local_active(graph, self._resolve_ref(update.source_node_id), {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}, permitted)
+        proposition_types = OperationSpecRegistry.allowed_types_for(update.operation, "derived_proposition_id")
+        source_types = OperationSpecRegistry.allowed_types_for(update.operation, "source_node_id")
+        proposition = self._require_local_active(graph, self._resolve_ref(update.derived_proposition_id), set(proposition_types), permitted)
+        source = self._require_local_active(graph, self._resolve_ref(update.source_node_id), set(source_types), permitted)
         graph.add_edge(GraphEdge(id=make_edge_id(proposition.id, EdgeRelation.DERIVED_FROM, source.id), source_id=proposition.id, target_id=source.id, relation=EdgeRelation.DERIVED_FROM, explanation=update.reason))
 
     def _apply_specialization(self, graph: CaseGraph, new_nodes: set[str], update: AddSpecializationCommand) -> None:
         permitted = self._permitted_ids() | new_nodes
-        child = self._require_local_active(graph, self._resolve_ref(update.child_hypothesis_id), {GraphNodeType.HYPOTHESIS}, permitted)
-        parent = self._require_local_active(graph, self._resolve_ref(update.parent_hypothesis_id), {GraphNodeType.HYPOTHESIS}, permitted)
+        child_types = OperationSpecRegistry.allowed_types_for(update.operation, "child_hypothesis_id")
+        parent_types = OperationSpecRegistry.allowed_types_for(update.operation, "parent_hypothesis_id")
+        child = self._require_local_active(graph, self._resolve_ref(update.child_hypothesis_id), set(child_types), permitted)
+        parent = self._require_local_active(graph, self._resolve_ref(update.parent_hypothesis_id), set(parent_types), permitted)
         graph.add_edge(GraphEdge(id=make_edge_id(child.id, EdgeRelation.SPECIALIZES, parent.id), source_id=child.id, target_id=parent.id, relation=EdgeRelation.SPECIALIZES, explanation=update.reason))
 
     def _require_local_active(self, graph: CaseGraph, identifier: str, types: set[GraphNodeType], permitted: set[str]) -> GraphNode:

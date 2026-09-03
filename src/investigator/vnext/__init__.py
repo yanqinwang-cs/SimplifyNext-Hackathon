@@ -21,7 +21,7 @@ from investigator.vnext.runner import (
     clean_reasoning_graph,
     run_input_from_case_state,
 )
-from investigator.vnext.warden import GraphWarden, WardenApplyResult, WardenValidationError
+from investigator.vnext.warden import GraphWarden, ProposalValidationIssue, WardenApplyResult, WardenValidationError
 
 __all__ = [
     "GraphWarden",
@@ -41,6 +41,7 @@ __all__ = [
     "ViolationAssessment",
     "ViolationDefinition",
     "WardenApplyResult",
+    "ProposalValidationIssue",
     "WardenValidationError",
     "clean_reasoning_graph",
     "run_input_from_case_state",

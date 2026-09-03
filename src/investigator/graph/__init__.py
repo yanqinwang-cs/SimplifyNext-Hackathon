@@ -11,9 +11,9 @@ from investigator.graph.models import (
     make_edge_id,
 )
 from investigator.graph.operations import propagate_epistemic_status
-from investigator.graph.specs import OPERATION_SPECS, OperationSpec, OperationSpecRegistry
+from investigator.graph.specs import OPERATION_CONTRACTS, OPERATION_SPECS, OperationContract, OperationSpec, OperationSpecRegistry, ReferenceSpec
 
 __all__ = [
     "CaseGraph", "EdgeRelation", "EdgeStatus", "EdgeStrength", "EpistemicStatus",
-    "GraphEdge", "GraphNode", "GraphNodeType", "GraphStatus", "make_edge_id", "propagate_epistemic_status", "OPERATION_SPECS", "OperationSpec", "OperationSpecRegistry",
+    "GraphEdge", "GraphNode", "GraphNodeType", "GraphStatus", "make_edge_id", "propagate_epistemic_status", "OPERATION_SPECS", "OperationSpec", "OperationSpecRegistry", "OPERATION_CONTRACTS", "OperationContract", "ReferenceSpec",
 ]
