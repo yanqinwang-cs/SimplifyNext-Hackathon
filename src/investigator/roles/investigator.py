@@ -3,7 +3,7 @@ from typing import Annotated, Literal, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator, model_validator
 
-from investigator.graph import EdgeStrength
+from investigator.graph import EdgeStrength, GraphScope
 
 
 class InvestigatorOperation(str, Enum):
@@ -36,6 +36,7 @@ class AddEvidenceCommand(_InvestigatorCommand):
     local_ref: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_-]{0,63}$")
     statement: str
     source_ids: list[str] = Field(min_length=1)
+    scope: GraphScope | None = None
 
     @field_validator("source_ids")
     @classmethod
@@ -53,6 +54,7 @@ class AddPropositionCommand(_InvestigatorCommand):
     local_ref: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_-]{0,63}$")
     statement: str
     derived_from_node_ids: list[str] = Field(min_length=1)
+    scope: GraphScope | None = None
 
     @model_validator(mode="after")
     def sources_are_unique(self) -> "AddPropositionCommand":
@@ -66,6 +68,7 @@ class AddHypothesisCommand(_InvestigatorCommand):
     node_id: str | None = Field(default=None, pattern=r"^H\d+(?:\.\d+)*$")
     local_ref: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_-]{0,63}$")
     statement: str
+    scope: GraphScope | None = None
 
 
 class AddUncertaintyCommand(_InvestigatorCommand):
@@ -74,6 +77,7 @@ class AddUncertaintyCommand(_InvestigatorCommand):
     local_ref: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_-]{0,63}$")
     statement: str
     target_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*|H\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$")
+    scope: GraphScope | None = None
 
 
 class _RelationCommand(_InvestigatorCommand):

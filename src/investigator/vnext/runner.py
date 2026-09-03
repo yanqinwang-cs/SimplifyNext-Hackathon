@@ -13,7 +13,7 @@ import json
 
 from pydantic import BaseModel, ConfigDict
 
-from investigator.graph import CaseGraph, GraphNode, GraphNodeType
+from investigator.graph import CaseGraph, GraphNode, GraphNodeType, node_scope, scope_allows_subject
 from investigator.models.source import Source
 from investigator.state.case_state import CaseState
 from investigator.vnext.models import (
@@ -77,7 +77,7 @@ def clean_reasoning_graph(case_id: str, sources: Mapping[str, Source]) -> CaseGr
             statement=source.name,
             semantic_key=source_id,
             canonical_id=source_id,
-            metadata={"source_type": source.source_type.value, "readable": True},
+            metadata={"source_type": source.source_type.value, "readable": True, **({"assessment_scope": source.metadata["assessment_scope"]} if "assessment_scope" in source.metadata else {})},
         )
         for source_id, source in sorted(sources.items())
     }
@@ -119,7 +119,12 @@ class VNextInvestigationRunner:
         except Exception as exc:
             raise VNextRunValidationError(f"Invalid InvestigatorAssessment: {exc}") from exc
 
-        warden = GraphWarden(reasoning_graph, run_input.sources)
+        warden = GraphWarden(
+            reasoning_graph,
+            run_input.sources,
+            subjects=run_input.subjects,
+            subject_relationships=run_input.subject_relationships,
+        )
         applied = warden.apply(assessment.proposal)
         resolved_subjects = []
         for subject in normalized_subjects:
@@ -129,12 +134,19 @@ class VNextInvestigationRunner:
                 )
                 for item in subject.violation_assessments
             }
-            resolved_subjects.append(subject.model_copy(update={
+            resolved_subject = subject.model_copy(update={
                 "violation_assessments": [
                     resolved_by_id[item.violation_id]
                     for item in run_input.rule_preset.violations
                 ],
-            }))
+            })
+            self._validate_subject_node_scopes(
+                resolved_subject,
+                subject.subject_id,
+                applied.graph,
+                run_input.subject_relationships,
+            )
+            resolved_subjects.append(resolved_subject)
         proposal_hash = hashlib.sha256(
             json.dumps(assessment.proposal.model_dump(mode="json"), sort_keys=True).encode()
         ).hexdigest()
@@ -212,3 +224,19 @@ class VNextInvestigationRunner:
         for field_name in ("supporting_node_ids", "mitigating_node_ids"):
             values[field_name] = [cls._resolve_node_id(identifier, local_refs, graph) for identifier in values[field_name]]
         return ViolationAssessment.model_validate(values)
+
+    @staticmethod
+    def _validate_subject_node_scopes(
+        assessment: SubjectAssessment,
+        subject_id: str,
+        graph: CaseGraph,
+        relationships: Mapping[str, object],
+    ) -> None:
+        for violation in assessment.violation_assessments:
+            for field_name in ("supporting_node_ids", "mitigating_node_ids"):
+                for node_id in getattr(violation, field_name):
+                    scope = node_scope(graph.nodes[node_id].metadata)
+                    if not scope_allows_subject(scope, subject_id, dict(relationships)):
+                        raise VNextRunValidationError(
+                            f"Subject {subject_id!r} cannot reference graph node {node_id!r} with scope {scope.model_dump(mode='json')}"
+                        )

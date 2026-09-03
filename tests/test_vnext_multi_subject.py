@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from investigator.graph import GraphNodeType
+from investigator.graph import GraphNodeType, GraphScope, GraphScopeType
 from investigator.llm import ModelCallMetadata, ModelCallResult
 from investigator.models import AssessmentSubject, Source, SourceType
 from investigator.services.evidence_requests import HumanEvidenceWorkflow
@@ -132,8 +132,8 @@ def test_subject_and_violation_output_order_is_deterministic() -> None:
 
 def test_node_references_resolve_inside_each_subject_assessment() -> None:
     proposal = InvestigatorProposal.model_validate({"graph_updates": [
-        {"operation": "add_evidence", "local_ref": "e_a", "statement": "A evidence", "source_ids": ["S1"], "reason": "record A"},
-        {"operation": "add_evidence", "local_ref": "e_b", "statement": "B evidence", "source_ids": ["S1"], "reason": "record B"},
+        {"operation": "add_evidence", "local_ref": "e_a", "statement": "A evidence", "source_ids": ["S1"], "scope": GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id="subject_A"), "reason": "record A"},
+        {"operation": "add_evidence", "local_ref": "e_b", "statement": "B evidence", "source_ids": ["S1"], "scope": GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id="subject_B"), "reason": "record B"},
     ]})
     output = assessment([
         subject_assessment("subject_A", (AssessmentStatus.SUPPORTED, AssessmentStatus.NOT_CURRENTLY_SUPPORTED), refs=("e_a", "")),

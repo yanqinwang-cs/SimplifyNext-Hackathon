@@ -148,8 +148,9 @@ def test_investigator_union_exposes_only_eight_narrow_operations() -> None:
     serialized = str(schema)
     for operation in ("add_evidence", "add_proposition", "add_hypothesis", "add_uncertainty", "add_support", "add_conflict", "add_derivation", "add_specialization", "move_focus"):
         assert operation in serialized
-    for forbidden in ("node_type", "status", "metadata", "relation", "edge_id", "edge_status"):
+    for forbidden in ("node_type", "status", "metadata", "edge_id", "edge_status"):
         assert forbidden not in serialized
+    assert "'relation':" not in serialized
     for operation in ("add_node", "add_dependency", "add_depends_on"):
         with pytest.raises(ValidationError):
             INVESTIGATOR_UPDATE_ADAPTER.validate_python({"operation": operation, "reason": "invalid"})

@@ -46,6 +46,7 @@ def build_prompt(run_input: VNextRunInput) -> str:
             "Return one SubjectAssessment per subject_id. subject_id is authoritative; never merge, rename, or infer subjects.",
             "Evidence or relationships involving multiple subjects may be relevant to more than one subject, but each subject's violation status must be justified independently.",
             "Do not omit subjects with no incriminating evidence; assess them as NOT_CURRENTLY_SUPPORTED where appropriate.",
+            "In multi-subject runs, every semantic graph node requires an explicit appropriate scope. Use CASE only for truly shared assessment context, SUBJECT for one subject, and RELATIONSHIP for material inherently concerning participants of a recorded relationship. Never connect private subject A material directly to private subject B material; use relationship-scoped material for genuine cross-subject reasoning, and do not invent relationships not supplied in VNextRunInput.",
             "Observed communication between two subjects does not automatically establish every violation for both. Script similarity does not automatically establish prohibited collaboration. A shared external source or device does not automatically establish coordination. Association with a subject who has supported misconduct does not establish misconduct for another subject.",
             "Do not ask for more evidence, request human input, or produce a follow-up question.",
             "Missing evidence means NOT_CURRENTLY_SUPPORTED, not another enquiry.",

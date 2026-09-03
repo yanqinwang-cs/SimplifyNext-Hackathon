@@ -6,10 +6,11 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from investigator.graph import CaseGraph, EdgeRelation, GraphNodeType, GraphStatus, OperationSpecRegistry
+from investigator.graph import CaseGraph, EdgeRelation, GraphNodeType, GraphScope, GraphScopeType, GraphStatus, OperationSpecRegistry, node_scope, scopes_compatible
 from investigator.roles.coordinator import GraphInvestigationCoordinator
 from investigator.roles.focus import InvestigationFocus
 from investigator.roles.investigator import AddEvidenceCommand
+from investigator.models.assessment import AssessmentSubject, SubjectRelationship
 from investigator.models.source import Source
 from investigator.vnext.models import InvestigatorProposal
 
@@ -35,6 +36,8 @@ class ProposalValidationIssue(BaseModel):
     source: str | None = None
     target: str | None = None
     first_operation_index: int | None = None
+    source_scope: dict[str, Any] | None = None
+    target_scope: dict[str, Any] | None = None
     problem: str
     required_action: str
 
@@ -60,9 +63,18 @@ class WardenApplyResult(BaseModel):
 class GraphWarden:
     """Validate and atomically apply typed Investigator proposals."""
 
-    def __init__(self, graph: CaseGraph, sources: Mapping[str, Source] | None = None) -> None:
+    def __init__(
+        self,
+        graph: CaseGraph,
+        sources: Mapping[str, Source] | None = None,
+        *,
+        subjects: Mapping[str, AssessmentSubject] | None = None,
+        subject_relationships: Mapping[str, SubjectRelationship] | None = None,
+    ) -> None:
         self.graph = graph
         self.sources = dict(sources or {})
+        self.subjects = dict(subjects or {})
+        self.subject_relationships = dict(subject_relationships or {})
 
     def apply(self, proposal: InvestigatorProposal) -> WardenApplyResult:
         """Apply a validated proposal, committing only after the whole batch succeeds."""
@@ -83,7 +95,8 @@ class GraphWarden:
             preflight_issues = self._preflight_issues(proposal, working)
             if preflight_issues:
                 raise WardenValidationError("Graph Warden rejected proposal preflight", issues=preflight_issues)
-            for operation_index, update in enumerate(proposal.graph_updates):
+            normalized_proposal = self._normalize_compatibility_scopes(proposal)
+            for operation_index, update in enumerate(normalized_proposal.graph_updates):
                 try:
                     working.apply_investigator_update(update)
                 except Exception as exc:
@@ -121,10 +134,22 @@ class GraphWarden:
                 if source.id != source_id:
                     raise WardenValidationError(f"Graph Warden rejected invalid raw source record: {source_id!r}")
 
-    @classmethod
+    def _normalize_compatibility_scopes(self, proposal: InvestigatorProposal) -> InvestigatorProposal:
+        if self.subjects:
+            return proposal
+        compatibility_scope = GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id="case_subject")
+        updates = []
+        for update in proposal.graph_updates:
+            if hasattr(update, "scope") and update.scope is None:
+                updates.append(update.model_copy(update={"scope": compatibility_scope}))
+            else:
+                updates.append(update)
+        return InvestigatorProposal(graph_updates=updates)
+
     def _preflight_issues(
-        cls, proposal: InvestigatorProposal, coordinator: GraphInvestigationCoordinator
+        self, proposal: InvestigatorProposal, coordinator: GraphInvestigationCoordinator
     ) -> list[ProposalValidationIssue]:
+        cls = type(self)
         known = dict(coordinator.graph.nodes)
         known.update({node.semantic_key: node for node in coordinator.graph.nodes.values() if node.semantic_key})
         future_refs = {
@@ -135,6 +160,26 @@ class GraphWarden:
         issues: list[ProposalValidationIssue] = []
         relations = cls._existing_relations(coordinator.graph)
         for operation_index, update in enumerate(proposal.graph_updates):
+            scope = self._effective_scope(update)
+            if hasattr(update, "scope"):
+                if update.scope is None and self.subjects:
+                    issues.append(ProposalValidationIssue(
+                        operation_index=operation_index,
+                        field=f"{update.operation}.scope",
+                        error_code="MISSING_SCOPE",
+                        problem=f"Operation {operation_index} ({update.operation}) creates a semantic node without an explicit assessment scope.",
+                        required_action="Add an explicit CASE, SUBJECT, or RELATIONSHIP scope for this node; do not infer scope from prose.",
+                    ))
+                elif scope is not None:
+                    scope_error = self._scope_identity_error(scope)
+                    if scope_error is not None:
+                        issues.append(ProposalValidationIssue(
+                            operation_index=operation_index,
+                            field=f"{update.operation}.scope",
+                            error_code="INVALID_SCOPE",
+                            problem=f"Operation {operation_index} ({update.operation}) uses invalid assessment scope: {scope_error}.",
+                            required_action="Use CASE, a configured SUBJECT, or a recorded RELATIONSHIP scope; do not invent identities.",
+                        ))
             for reference, field, allowed, item_index in cls._reference_specs(update):
                 node = known.get(coordinator._resolve_ref(reference)) or known.get(reference)
                 field_label = f"{update.operation}.{field}{f'[{item_index}]' if item_index is not None else ''}"
@@ -233,11 +278,66 @@ class GraphWarden:
                         operation_index,
                         f"operation {operation_index} through {update.operation}.{field}",
                     )
+                source_scope = self._reference_scope(source, known, update, scope)
+                target_scope = self._reference_scope(target, known, update, scope)
+                if source_scope is not None and target_scope is not None and not scopes_compatible(source_scope, target_scope, self.subject_relationships):
+                    issues.append(ProposalValidationIssue(
+                        operation_index=operation_index,
+                        field=field,
+                        error_code="INCOMPATIBLE_SCOPE",
+                        relation=relation.value,
+                        source=source,
+                        target=target,
+                        source_scope=source_scope.model_dump(mode="json"),
+                        target_scope=target_scope.model_dump(mode="json"),
+                        problem=(
+                            f"Operation {operation_index} attempts {relation.value.upper()} from {source!r} "
+                            f"({source_scope.scope_type.value} scope) to {target!r} ({target_scope.scope_type.value} scope), "
+                            "but their assessment scopes are incompatible."
+                        ),
+                        required_action=(
+                            "Preserve subject separation; remove this edge or represent genuinely cross-subject "
+                            "evidence through an existing relationship containing both subjects. Do not create a "
+                            "relationship automatically."
+                        ),
+                    ))
             created_type = OperationSpecRegistry.contract(update.operation).created_type
             local_ref = getattr(update, "local_ref", None)
             if local_ref and created_type:
-                known[local_ref] = type("PlannedNode", (), {"node_type": created_type, "status": GraphStatus.ACTIVE, "semantic_key": local_ref})()
+                known[local_ref] = type("PlannedNode", (), {"node_type": created_type, "status": GraphStatus.ACTIVE, "semantic_key": local_ref, "scope": scope})()
         return issues
+
+    def _effective_scope(self, update: object) -> GraphScope | None:
+        scope = getattr(update, "scope", None)
+        if scope is not None:
+            return scope
+        if not self.subjects and hasattr(update, "scope"):
+            return GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id="case_subject")
+        return None
+
+    def _scope_identity_error(self, scope: GraphScope) -> str | None:
+        if scope.scope_type is GraphScopeType.SUBJECT:
+            allowed = set(self.subjects) or {"case_subject"}
+            return None if scope.subject_id in allowed else f"unknown subject ID {scope.subject_id!r}"
+        if scope.scope_type is GraphScopeType.RELATIONSHIP:
+            relationship = self.subject_relationships.get(scope.relationship_id)
+            if relationship is None:
+                return f"unknown relationship ID {scope.relationship_id!r}"
+            unknown_subjects = sorted(set(relationship.subject_ids) - set(self.subjects))
+            if unknown_subjects:
+                return f"relationship {scope.relationship_id!r} contains unknown subject IDs {unknown_subjects}"
+            if len(set(relationship.subject_ids)) < 2:
+                return f"relationship {scope.relationship_id!r} must contain at least two subjects"
+            return None
+        return None
+
+    def _reference_scope(self, reference: str, known: Mapping[str, object], update: object, current_scope: GraphScope | None) -> GraphScope | None:
+        node = known.get(reference)
+        if node is not None:
+            return getattr(node, "scope", node_scope(getattr(node, "metadata", {})))
+        if reference in {getattr(update, "local_ref", None), getattr(update, "node_id", None)}:
+            return current_scope
+        return None
 
     @staticmethod
     def _existing_relations(graph: CaseGraph) -> dict[tuple[str, str, str], tuple[int | None, str]]:
