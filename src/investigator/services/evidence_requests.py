@@ -13,6 +13,9 @@ from investigator.models.evidence_request import allocate_evidence_request_id
 from investigator.cycle import TurnSnapshot
 from investigator.sources import SourceRegistry
 from investigator.models.source import Source
+from investigator.models.source import SourceType
+from investigator.graph import GraphScope, GraphScopeType
+from investigator.models.assessment import AssessmentSubject, SubjectRelationship
 from investigator.state.case_state import CaseState
 from investigator.state.repository import CaseRepository
 
@@ -296,6 +299,93 @@ class HumanEvidenceWorkflow:
         """Return the currently admitted raw sources for the next Investigator prompt."""
         return list(self.ensure_case(case_id).sources.values())
 
+    def add_direct_source(
+        self,
+        case_id: str,
+        *,
+        display_name: str,
+        content: str,
+        source_type: SourceType = SourceType.OTHER,
+        metadata: dict[str, Any] | None = None,
+        assessment_scope: GraphScope | dict[str, Any] | None = None,
+        expected_case_revision: int | None = None,
+    ) -> Source:
+        """Admit one source for the vNext input workflow without graph mutation."""
+        with self._lock:
+            state = self.ensure_case(case_id)
+            self._check_revision(state, expected_case_revision)
+            if not display_name.strip() or not content.strip():
+                raise ValueError("display_name and content are required")
+            scope = GraphScope.model_validate(assessment_scope) if assessment_scope is not None else GraphScope(scope_type=GraphScopeType.CASE)
+            if scope.scope_type is GraphScopeType.SUBJECT and scope.subject_id not in state.subjects:
+                raise ValueError(f"Unknown subject ID: {scope.subject_id!r}")
+            if scope.scope_type is GraphScopeType.RELATIONSHIP:
+                relationship = state.subject_relationships.get(scope.relationship_id)
+                if relationship is None:
+                    raise ValueError(f"Unknown relationship ID: {scope.relationship_id!r}")
+                if len(relationship.subject_ids) < 2:
+                    raise ValueError("A relationship scope requires at least two subjects")
+            source_metadata = dict(metadata or {})
+            source_metadata["assessment_scope"] = scope.model_dump(mode="json")
+            source = SourceRegistry.register_raw_source(
+                state, display_name.strip(), content, source_metadata, add_to_graph=False
+            )
+            source = source.model_copy(update={"source_type": SourceType(source_type)})
+            state.sources[source.id] = source
+            state.revision += 1
+            state.runtime_status = "COMPLETED" if state.runtime_status == "COMPLETED" else state.runtime_status
+            state.last_updated_at = datetime.now(timezone.utc)
+            self.repository.save(state)
+        self.record_workspace_event(case_id, {"type": "source_added", "source_id": source.id, "runtime_status": state.runtime_status, "case_revision": state.revision, "human_summary": f"Source {source.name} was added to the case."})
+        return source
+
+    def add_subject(self, case_id: str, subject: dict[str, Any], expected_case_revision: int | None = None) -> AssessmentSubject:
+        from investigator.models.assessment import AssessmentSubject
+        with self._lock:
+            state = self.ensure_case(case_id)
+            self._check_revision(state, expected_case_revision)
+            item = AssessmentSubject.model_validate(subject)
+            if item.subject_id in state.subjects:
+                raise ValueError(f"Duplicate subject ID: {item.subject_id!r}")
+            state.subjects[item.subject_id] = item
+            state.revision += 1
+            state.last_updated_at = datetime.now(timezone.utc)
+            self.repository.save(state)
+        self.record_workspace_event(case_id, {"type": "subject_added", "subject_id": item.subject_id, "case_revision": state.revision, "human_summary": f"Subject {item.display_name} was added."})
+        return item
+
+    def add_relationship(self, case_id: str, relationship: dict[str, Any], expected_case_revision: int | None = None) -> SubjectRelationship:
+        from investigator.models.assessment import SubjectRelationship
+        with self._lock:
+            state = self.ensure_case(case_id)
+            self._check_revision(state, expected_case_revision)
+            item = SubjectRelationship.model_validate(relationship)
+            if item.relationship_id in state.subject_relationships:
+                raise ValueError(f"Duplicate relationship ID: {item.relationship_id!r}")
+            if any(subject_id not in state.subjects for subject_id in item.subject_ids):
+                raise ValueError("Relationship contains an unknown subject ID")
+            if any(source_id not in state.sources for source_id in item.source_ids):
+                raise ValueError("Relationship contains an unknown source ID")
+            state.subject_relationships[item.relationship_id] = item
+            state.revision += 1
+            state.last_updated_at = datetime.now(timezone.utc)
+            self.repository.save(state)
+        self.record_workspace_event(case_id, {"type": "relationship_added", "relationship_id": item.relationship_id, "case_revision": state.revision, "human_summary": f"Relationship {item.relationship_id} was added."})
+        return item
+
+    def update_context(self, case_id: str, context: dict[str, Any], expected_case_revision: int | None = None) -> Any:
+        from investigator.models.assessment import AssessmentContext
+        with self._lock:
+            state = self.ensure_case(case_id)
+            self._check_revision(state, expected_case_revision)
+            item = AssessmentContext.model_validate(context)
+            state.assessment_context = item
+            state.revision += 1
+            state.last_updated_at = datetime.now(timezone.utc)
+            self.repository.save(state)
+        self.record_workspace_event(case_id, {"type": "context_updated", "case_revision": state.revision, "human_summary": "Assessment context was updated."})
+        return item
+
     def respond(self, case_id: str, request_id: str, response: EvidenceRequestResponse | dict, sources: list[dict[str, Any]] | None = None, expected_case_revision: int | None = None) -> EvidenceRequest:
         with self._lock:
             state = self.ensure_case(case_id)
@@ -373,7 +463,37 @@ class HumanEvidenceWorkflow:
         pending_payload = self._public_request(pending) if pending else None
         runs = self.get_runs(case_id)
         latest = runs[-1] if runs else None
-        return {"caseId": state.case_id, "caseRevision": state.revision, "title": state.title, "status": runtime_status.lower(), "caseStatus": state.case_status, "runtimeStatus": runtime_status, "currentActor": current_actor, "institutionalStatus": "Investigating" if state.case_status == "ACTIVE" else state.case_status.title(), "currentFocus": pending.information_sought if pending else "Review the current case state.", "messages": messages, "chatHistory": [], "workspaceTurns": [], "workspaceEvents": self.workspace_events(case_id), "visibleSources": [{"id": source.id, "name": source.name, "sourceType": source.source_type.value, "content": source.content or "", "contentPreview": (source.content or "")[:180]} for source in state.sources.values()], "pendingEvidenceRequest": pending_payload, "requestHistory": [self._public_request(item) for item in state.evidence_request_history], "runs": runs, "lastError": state.last_error, "lastTraceStep": state.last_trace_step, "lastUpdatedAt": state.last_updated_at.isoformat(), "latestRun": latest}
+        return {"caseId": state.case_id, "caseRevision": state.revision, "title": state.title, "status": runtime_status.lower(), "caseStatus": state.case_status, "runtimeStatus": runtime_status, "currentActor": current_actor, "institutionalStatus": "Investigating" if state.case_status == "ACTIVE" else state.case_status.title(), "currentFocus": pending.information_sought if pending else "Review the current case state.", "messages": messages, "chatHistory": [], "workspaceTurns": [], "workspaceEvents": self.workspace_events(case_id), "visibleSources": [{"id": source.id, "name": source.name, "sourceType": source.source_type.value, "content": source.content or "", "contentPreview": (source.content or "")[:180], "metadata": source.metadata} for source in state.sources.values()], "assessmentContext": state.assessment_context.model_dump(mode="json") if state.assessment_context else None, "subjects": [item.model_dump(mode="json") for item in sorted(state.subjects.values(), key=lambda item: item.subject_id)], "relationships": [item.model_dump(mode="json") for item in sorted(state.subject_relationships.values(), key=lambda item: item.relationship_id)], "pendingEvidenceRequest": pending_payload, "requestHistory": [self._public_request(item) for item in state.evidence_request_history], "runs": runs, "lastError": state.last_error, "lastTraceStep": state.last_trace_step, "lastUpdatedAt": state.last_updated_at.isoformat(), "latestRun": latest}
+
+    def get_guidance_context(self, case_id: str) -> dict[str, Any]:
+        """Return bounded, current, read-only context for the vNext Help Agent."""
+        state = self.ensure_case(case_id)
+        runs = self.get_runs(case_id)
+        latest = next((run for run in reversed(runs) if run.get("vnext_status") == "completed"), None)
+        result: dict[str, Any] | None = None
+        if latest and latest.get("vnext_result_path"):
+            path = Path(str(latest["vnext_result_path"]))
+            if not path.is_absolute():
+                path = self.repository.root / case_id / "runs" / str(latest["run_id"]) / path.name
+            if path.is_file():
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                result = payload.get("result")
+        assessment_revision = latest.get("start_revision") if latest else None
+        return {
+            "case_id": state.case_id,
+            "title": state.title,
+            "assessment_context": state.assessment_context.model_dump(mode="json") if state.assessment_context else None,
+            "subjects": [item.model_dump(mode="json") for item in sorted(state.subjects.values(), key=lambda item: item.subject_id)],
+            "relationships": [item.model_dump(mode="json") for item in sorted(state.subject_relationships.values(), key=lambda item: item.relationship_id)],
+            "source_inventory": [{"id": item.id, "name": item.name, "source_type": item.source_type.value, "scope": item.metadata.get("assessment_scope"), "metadata": item.metadata} for item in sorted(state.sources.values(), key=lambda item: item.id)],
+            "current_case_revision": state.revision,
+            "latest_successful_vnext_run": latest,
+            "latest_assessment_revision": assessment_revision,
+            "assessment_is_stale": assessment_revision is not None and assessment_revision < state.revision,
+            "per_subject_assessments": (result or {}).get("subject_assessments", []),
+            "final_graph": (result or {}).get("graph"),
+            "run_status": state.runtime_status,
+        }
 
     @staticmethod
     def _public_request(request: EvidenceRequest) -> dict[str, Any]:
@@ -414,7 +534,7 @@ class HumanEvidenceWorkflow:
                     # A run may be initializing on another thread; omit it until
                     # its first result snapshot is complete.
                     continue
-                runs.append({key: payload.get(key) for key in ("run_id", "started_at", "ended_at", "termination_reason", "final_runtime_status", "outcome_type", "originating_actor", "start_revision", "run_start_revision", "latest_safe_revision", "final_case_revision", "final_committed_revision", "final_error", "pending_request_id", "request_text", "trace_path", "vnext_status", "vnext_result_path", "vnext_furthest_conclusion", "model", "input_tokens", "output_tokens", "latency_seconds", "finish_reason")})
+                runs.append({key: payload.get(key) for key in ("run_id", "started_at", "ended_at", "termination_reason", "final_runtime_status", "outcome_type", "originating_actor", "start_revision", "run_start_revision", "latest_safe_revision", "final_case_revision", "final_committed_revision", "final_error", "pending_request_id", "request_text", "trace_path", "vnext_status", "vnext_result_path", "vnext_furthest_conclusion", "vnext_subject_conclusions", "model", "input_tokens", "output_tokens", "latency_seconds", "finish_reason")})
         return runs
 
     def raw_trace_path(self, case_id: str, run_id: str) -> Path:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import os
 import re
 from typing import Any
 
@@ -87,6 +88,7 @@ _TOOL_ARGUMENTS: dict[str, type[BaseModel]] = {
     )
 }
 _TOOL_ARGUMENTS.update({"READ_SOURCE": _ReadSourceArguments, "GET_RUN": _RunArguments, "FULFIL_REQUEST": _EvidenceArguments, "MARK_REQUEST_UNAVAILABLE": _EvidenceArguments, "ADD_SOURCE": _SourceArguments})
+_TOOL_ARGUMENTS["GET_CASE_GUIDANCE_CONTEXT"] = _NoArguments
 
 
 class WorkspaceToolAuthorizationError(PermissionError):
@@ -105,6 +107,7 @@ class WorkspaceAgent:
         "LIST_SOURCES", "READ_SOURCE", "GET_PENDING_REQUEST", "LIST_REQUEST_HISTORY",
         "LIST_RUNS", "GET_RUN", "GET_LATEST_FAILURE", "GET_LATEST_WORKSPACE_FAILURE", "GET_LATEST_RUN_TRACE", "GET_LAST_SAFE_STATE", "OPEN_TRACE",
     })
+    VNEXT_READ_TOOLS = frozenset({"GET_CASE_GUIDANCE_CONTEXT", "READ_SOURCE", "LIST_SOURCES"})
     ACTION_TOOLS = frozenset({
         "RUN_INVESTIGATION", "PAUSE_INVESTIGATION", "RESUME_INVESTIGATION", "ADD_SOURCE",
         "FULFIL_REQUEST", "MARK_REQUEST_UNAVAILABLE", "REQUEST_STEWARD_REVIEW",
@@ -120,23 +123,38 @@ class WorkspaceAgent:
         self.client = client
         self.session_store = session_store or WorkspaceSessionStore()
         # Reuse the canonical model-screen registry; this does not make a call.
-        self.model_spec = MODEL_REGISTRY["anthropic.claude-opus-4-5"]
+        model_name = os.environ.get("WORKSPACE_MODEL_NAME") or ("anthropic.claude-haiku-4-5" if workflow.run_mode == "vnext" else "anthropic.claude-opus-4-5")
+        self.model_spec = MODEL_REGISTRY[model_name]
+        self.is_vnext = workflow.run_mode == "vnext"
 
     def invoke_tool(self, case_id: str, request: WorkspaceToolRequest | dict[str, Any]) -> dict[str, Any]:
         request = request if isinstance(request, WorkspaceToolRequest) else WorkspaceToolRequest.model_validate(request)
-        if request.tool in self.FORBIDDEN_TOOLS:
+        allowed_reads = self.VNEXT_READ_TOOLS if self.is_vnext else self.READ_TOOLS
+        if request.tool in self.FORBIDDEN_TOOLS or (self.is_vnext and request.tool not in allowed_reads):
             raise WorkspaceToolAuthorizationError(f"Workspace tool is not authorized: {request.tool}")
         argument_schema = _TOOL_ARGUMENTS.get(request.tool)
         if argument_schema is None:
             raise WorkspaceToolAuthorizationError(f"Unknown or unauthorized Workspace tool: {request.tool}")
         request.payload = argument_schema.model_validate(request.payload).model_dump(exclude_none=True)
-        if request.tool in self.READ_TOOLS:
+        if request.tool in allowed_reads:
             return self._read_tool(case_id, request)
-        if request.tool in self.ACTION_TOOLS:
+        if not self.is_vnext and request.tool in self.ACTION_TOOLS:
             return self._action_tool(case_id, request)
         raise WorkspaceToolAuthorizationError(f"Unknown or unauthorized Workspace tool: {request.tool}")
 
     def chat(self, case_id: str, message: str) -> WorkspaceChatResponse:
+        attempts = 2 if self.is_vnext else 1
+        for attempt in range(attempts):
+            try:
+                return self._chat_once(case_id, message)
+            except Exception:
+                if attempt + 1 == attempts:
+                    response = "Help is temporarily unavailable. The case and assessment are unaffected."
+                    self._append_chat(case_id, "workspace", response)
+                    return WorkspaceChatResponse(response=response)
+        raise AssertionError("Workspace chat ended without a response")
+
+    def _chat_once(self, case_id: str, message: str) -> WorkspaceChatResponse:
         text = message.strip()
         if not text:
             raise ValueError("Workspace message must not be empty")
@@ -151,7 +169,7 @@ class WorkspaceAgent:
         turn_id = self._begin_workspace_turn(case_id, text)
         messages: list[dict[str, Any]] = [{"role": "system", "text": self.system_prompt()}, *session["conversation"]]
         try:
-            for _ in range(5):
+            for _ in range(3 if self.is_vnext else 5):
                 self._assert_tool_result_pairing(messages)
                 call = self.client.call_native(messages, self.tool_specs())
                 self._record_requested_tools(case_id, turn_id, call.tool_uses)
@@ -179,15 +197,24 @@ class WorkspaceAgent:
             self._finish_workspace_turn(case_id, turn_id, "failed", "The requested Workspace operation is not authorized.", type(exc).__name__)
             raise
         except Exception as exc:
+            if self.is_vnext:
+                raise
             response = "The Workspace assistant could not respond. Case operations remain accessible through the workspace controls."
             self._finish_workspace_turn(case_id, turn_id, "failed", response, type(exc).__name__)
             self._append_chat(case_id, "workspace", response)
             self._append_chat(case_id, "system", f"Workspace model failure: {type(exc).__name__}: {exc}")
             return WorkspaceChatResponse(response=response)
 
-    @staticmethod
-    def system_prompt() -> str:
-        tools = sorted(WorkspaceAgent.READ_TOOLS | WorkspaceAgent.ACTION_TOOLS)
+    def system_prompt(self) -> str:
+        tools = sorted(self.VNEXT_READ_TOOLS if self.is_vnext else self.READ_TOOLS | self.ACTION_TOOLS)
+        if self.is_vnext:
+            return "\n".join((
+                "You are the SimplifyNext Help Assistant, a read-only human-facing guide.",
+                "Explain the current case, latest assessment, evidence discipline, uncertainty, and product workflow.",
+                "You may read bounded case guidance context and sources, but must never mutate the case, run an assessment, pause/resume, fulfil requests, call Steward, or make a disciplinary judgment.",
+                "Never require a number of sources. Distinguish source statements from truth, similarity from collaboration, opportunity from use, association from misconduct, and absence of support from innocence.",
+                f"Available read-only tools: {', '.join(tools)}. Return ordinary natural-language text only.",
+            ))
         return "\n".join((
             "You are SimplifyNext Workspace Assistant, the human-facing operational interface for an academic-integrity investigation.",
             "Investigator performs local case reasoning; Steward performs global reassessment. Explain state, navigate history, mediate evidence, invoke operational tools, and explain/recover failures.",
@@ -198,7 +225,8 @@ class WorkspaceAgent:
         ))
 
     def tool_specs(self) -> list[dict[str, Any]]:
-        return [{"name": name, "description": f"Deterministic Workspace operation {name}.", "inputSchema": schema.model_json_schema()} for name, schema in sorted(_TOOL_ARGUMENTS.items()) if name in self.READ_TOOLS or name in self.ACTION_TOOLS]
+        allowed = self.VNEXT_READ_TOOLS if self.is_vnext else self.READ_TOOLS | self.ACTION_TOOLS
+        return [{"name": name, "description": f"Deterministic Workspace operation {name}.", "inputSchema": schema.model_json_schema()} for name, schema in sorted(_TOOL_ARGUMENTS.items()) if name in allowed]
 
     @staticmethod
     def _safe_tool_error(exc: Exception) -> str:
@@ -234,6 +262,8 @@ class WorkspaceAgent:
         workspace = self.workflow.get_workspace(case_id)
         if request.tool == "GET_CASE_STATUS":
             return {key: workspace[key] for key in ("runtimeStatus", "currentActor", "caseStatus", "caseRevision")}
+        if request.tool == "GET_CASE_GUIDANCE_CONTEXT":
+            return self.workflow.get_guidance_context(case_id)
         if request.tool == "GET_CASE_SUMMARY":
             nodes = state.reasoning_graph.nodes.values() if state.reasoning_graph else []
             counts = {kind.value: sum(node.node_type is kind for node in nodes) for kind in GraphNodeType}

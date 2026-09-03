@@ -14,6 +14,16 @@ from investigator.state.repository import CaseRepository
 from investigator.workspace_agent import WorkspaceAgent, WorkspaceChatRequest, WorkspaceToolAuthorizationError
 from investigator.model_registry import MODEL_REGISTRY
 from investigator.services.vnext_runner import VNextProductionRunner
+from investigator.models.source import SourceType
+from investigator.graph import GraphScope
+
+
+def sample_cases() -> list[dict[str, str]]:
+    return [
+        {"id": "smart-device", "title": "Smart-device concern", "description": "A focused single-subject assessment."},
+        {"id": "possible-collaboration", "title": "Possible collaboration", "description": "A two-subject assessment with ambiguous evidence."},
+        {"id": "multi-candidate", "title": "Multi-candidate assessment", "description": "An advanced five-subject assessment."},
+    ]
 
 
 class InvestigatorApiHandler(BaseHTTPRequestHandler):
@@ -29,7 +39,10 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 self._write(200, credential_status())
             return
         if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "workspace":
-            self._write(200, self.workflow.get_workspace(parts[2]) | {"chatHistory": self.workspace_agent.chat_history(parts[2])})
+            self._write(200, self.workflow.get_workspace(parts[2]) | {"chatHistory": self.workspace_agent.chat_history(parts[2]), "guidance": self.workflow.get_guidance_context(parts[2])})
+            return
+        if parts == ["api", "samples"]:
+            self._write(200, {"samples": sample_cases()})
             return
         if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "traces":
             self._write(200, {"caseId": parts[2], "traces": self.workflow.get_traces(parts[2])})
@@ -91,6 +104,27 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             except EvidenceRequestConflict as exc:
                 self._write(409, {"error": str(exc)})
             return
+        if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"sources", "subjects", "relationships"}:
+            try:
+                payload = self._read_json()
+                expected_revision = payload.pop("case_revision", None)
+                if parts[3] == "sources":
+                    scope = payload.pop("assessment_scope", None)
+                    source = self.workflow.add_direct_source(
+                        parts[2], display_name=str(payload.pop("display_name", "")), content=str(payload.pop("content", "")),
+                        source_type=SourceType(payload.pop("source_type", "other")), metadata=dict(payload.pop("metadata", {}) or {}),
+                        assessment_scope=scope, expected_case_revision=expected_revision,
+                    )
+                    self._write(200, {"source": source.model_dump(mode="json"), "workspace": self.workflow.get_workspace(parts[2])})
+                elif parts[3] == "subjects":
+                    subject = self.workflow.add_subject(parts[2], payload, expected_revision)
+                    self._write(200, {"subject": subject.model_dump(mode="json"), "workspace": self.workflow.get_workspace(parts[2])})
+                else:
+                    relationship = self.workflow.add_relationship(parts[2], payload, expected_revision)
+                    self._write(200, {"relationship": relationship.model_dump(mode="json"), "workspace": self.workflow.get_workspace(parts[2])})
+            except (ValueError, KeyError, EvidenceRequestConflict) as exc:
+                self._write(409 if isinstance(exc, EvidenceRequestConflict) else 422, {"error": str(exc)})
+            return
         if len(parts) != 6 or parts[0:2] != ["api", "cases"] or parts[3] != "evidence-requests":
             self._write(404, {"error": "Not found"})
             return
@@ -116,6 +150,19 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             return
         clear_credential_override()
         self._write(200, credential_status())
+
+    def do_PUT(self) -> None:
+        parts = self._parts()
+        if len(parts) != 4 or parts[0:2] != ["api", "cases"] or parts[3] != "context":
+            self._write(404, {"error": "Not found"})
+            return
+        try:
+            payload = self._read_json()
+            expected_revision = payload.pop("case_revision", None)
+            context = self.workflow.update_context(parts[2], payload, expected_revision)
+            self._write(200, {"context": context.model_dump(mode="json"), "workspace": self.workflow.get_workspace(parts[2])})
+        except (ValueError, KeyError, EvidenceRequestConflict) as exc:
+            self._write(409 if isinstance(exc, EvidenceRequestConflict) else 422, {"error": str(exc)})
 
     def _parts(self) -> list[str]:
         return [unquote(part) for part in urlparse(self.path).path.strip("/").split("/") if part]
@@ -149,7 +196,8 @@ def create_server(repository_root: str | Path = "data/cases", host: str = "127.0
     workflow.resume_callback = lambda case_id: workflow.start_run(case_id)
     InvestigatorApiHandler.workflow = workflow
     model = MODEL_REGISTRY["anthropic.claude-opus-4-5"]
-    InvestigatorApiHandler.workspace_agent = WorkspaceAgent(workflow, BedrockModelClient(model_id=model.invocation_id, region=model.region))
+    workspace_model = os.environ.get("WORKSPACE_MODEL_ID") or (MODEL_REGISTRY["anthropic.claude-haiku-4-5"].invocation_id if configured_mode == "vnext" else model.invocation_id)
+    InvestigatorApiHandler.workspace_agent = WorkspaceAgent(workflow, BedrockModelClient(model_id=workspace_model, region=model.region))
     return ThreadingHTTPServer((host, port), InvestigatorApiHandler)
 
 

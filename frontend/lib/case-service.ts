@@ -30,6 +30,18 @@ export function sendWorkspaceMessage(caseId: string, message: string): Promise<W
   return request<WorkspaceChatResponse>(`/api/cases/${encodeURIComponent(caseId)}/workspace/chat`, { method: "POST", body: JSON.stringify({ message }) });
 }
 
+export async function addSource(caseId: string, payload: { display_name: string; content: string; source_type: string; metadata?: Record<string, unknown>; assessment_scope: Record<string, unknown>; case_revision?: number }) {
+  return request<{ source: import("./types").VisibleSource; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/sources`, { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function addSubject(caseId: string, payload: { subject_id: string; display_name: string; candidate_number?: string; case_revision?: number }) {
+  return request<{ subject: import("./types").AssessmentSubject; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/subjects`, { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function addRelationship(caseId: string, payload: { relationship_id: string; subject_ids: string[]; relationship_type: string; description?: string; case_revision?: number }) {
+  return request<{ relationship: import("./types").SubjectRelationship; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/relationships`, { method: "POST", body: JSON.stringify(payload) });
+}
+
 export async function provideEvidence(caseId: string, requestId: string, caseRevision: number | undefined, file: File | null, note: string) {
   const sources = file ? [{ display_name: file.name, content: await file.text(), metadata: { media_type: file.type || "application/octet-stream" } }] : [];
   return request<CaseWorkspaceState>(`/api/cases/${encodeURIComponent(caseId)}/evidence-requests/${encodeURIComponent(requestId)}/fulfil`, { method: "POST", body: JSON.stringify({ case_revision: caseRevision, sources, note }) });

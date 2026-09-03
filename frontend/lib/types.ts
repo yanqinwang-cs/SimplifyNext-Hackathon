@@ -17,7 +17,13 @@ export interface VisibleSource {
   sourceType: string;
   content: string;
   contentPreview: string;
+  metadata?: Record<string, unknown>;
 }
+
+export interface AssessmentSubject { subject_id: string; display_name: string; candidate_number?: string | null; metadata?: Record<string, unknown>; }
+export interface SubjectRelationship { relationship_id: string; subject_ids: string[]; relationship_type: string; description?: string | null; source_ids?: string[]; metadata?: Record<string, unknown>; }
+export interface AssessmentContext { assessment_id: string; title?: string | null; assessment_type?: string | null; venue?: string | null; start_time?: string | null; end_time?: string | null; metadata?: Record<string, unknown>; }
+export interface GuidanceContext { current_case_revision: number; latest_assessment_revision?: number | null; assessment_is_stale: boolean; per_subject_assessments: Array<{ subject_id: string; violation_assessments: Array<{ violation_id: string; status: string; reasoning_summary: string; supporting_node_ids: string[]; mitigating_node_ids: string[]; unresolved_points: string[] }>; furthest_conclusion: { statement: string; confidence: string } }>; }
 
 export interface TraceEntry {
   step?: number;
@@ -44,6 +50,7 @@ export interface RunSummary {
   vnext_status?: string | null;
   vnext_result_path?: string | null;
   vnext_furthest_conclusion?: string | null;
+  vnext_subject_conclusions?: Record<string, string> | null;
   model?: string | null;
   input_tokens?: number | null;
   output_tokens?: number | null;
@@ -87,6 +94,10 @@ export interface CaseWorkspaceState {
   runtimeStatus: "IDLE" | "RUNNING" | "COMPLETED" | "RUNNING_INVESTIGATOR" | "RUNNING_STEWARD" | "WAITING_FOR_EVIDENCE" | "FAILED" | "STOPPED" | "PAUSED";
   currentActor: "INVESTIGATOR" | "STEWARD" | "NONE";
   visibleSources: VisibleSource[];
+  assessmentContext?: AssessmentContext | null;
+  subjects?: AssessmentSubject[];
+  relationships?: SubjectRelationship[];
+  guidance?: GuidanceContext;
   lastError?: { failure_category?: string; message?: string; actor?: string; step?: number } | null;
   lastTraceStep?: number | null;
   lastUpdatedAt?: string;
