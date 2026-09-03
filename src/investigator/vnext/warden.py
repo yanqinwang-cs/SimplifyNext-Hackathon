@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from investigator.graph import CaseGraph, GraphNodeType, GraphStatus, OperationSpecRegistry
+from investigator.graph import CaseGraph, EdgeRelation, GraphNodeType, GraphStatus, OperationSpecRegistry
 from investigator.roles.coordinator import GraphInvestigationCoordinator
 from investigator.roles.focus import InvestigationFocus
 from investigator.roles.investigator import AddEvidenceCommand
@@ -31,6 +31,10 @@ class ProposalValidationIssue(BaseModel):
     construction_allowed_types: list[str] = Field(default_factory=list)
     available_refs: dict[str, str] = Field(default_factory=dict)
     known_illegal_refs: dict[str, str] = Field(default_factory=dict)
+    relation: str | None = None
+    source: str | None = None
+    target: str | None = None
+    first_operation_index: int | None = None
     problem: str
     required_action: str
 
@@ -129,6 +133,7 @@ class GraphWarden:
             if getattr(update, "local_ref", None) and OperationSpecRegistry.contract(update.operation).created_type
         }
         issues: list[ProposalValidationIssue] = []
+        relations = cls._existing_relations(coordinator.graph)
         for operation_index, update in enumerate(proposal.graph_updates):
             for reference, field, allowed, item_index in cls._reference_specs(update):
                 node = known.get(coordinator._resolve_ref(reference)) or known.get(reference)
@@ -192,11 +197,91 @@ class GraphWarden:
                             "valid operations."
                         ),
                     ))
+            for source, relation, target, field in cls._planned_relations(update, known):
+                relation_key = (source, relation.value, target)
+                if relation is EdgeRelation.DERIVED_FROM and source == target:
+                    continue
+                first = relations.get(relation_key)
+                if first is not None:
+                    first_index, first_description = first
+                    operation_name = update.operation
+                    required = (
+                        f"Remove only this redundant {operation_name} operation. Preserve the operation that already "
+                        "creates this semantic relation and preserve unrelated valid operations."
+                    )
+                    if relation is EdgeRelation.DERIVED_FROM and operation_name == "add_derivation":
+                        required = (
+                            "Remove only this redundant add_derivation operation. Preserve the add_proposition and "
+                            "its existing derived_from_node_ids. Preserve unrelated valid operations."
+                        )
+                    issues.append(ProposalValidationIssue(
+                        operation_index=operation_index,
+                        field=field,
+                        error_code="DUPLICATE_RELATION",
+                        relation=relation.value,
+                        source=source,
+                        target=target,
+                        first_operation_index=first_index,
+                        problem=(
+                            f"Operation {operation_index} attempts to add {relation.value.upper()}({source}, {target}), "
+                            f"but that relation is already created by {first_description}."
+                        ),
+                        required_action=required,
+                    ))
+                else:
+                    relations[relation_key] = (
+                        operation_index,
+                        f"operation {operation_index} through {update.operation}.{field}",
+                    )
             created_type = OperationSpecRegistry.contract(update.operation).created_type
             local_ref = getattr(update, "local_ref", None)
             if local_ref and created_type:
                 known[local_ref] = type("PlannedNode", (), {"node_type": created_type, "status": GraphStatus.ACTIVE, "semantic_key": local_ref})()
         return issues
+
+    @staticmethod
+    def _existing_relations(graph: CaseGraph) -> dict[tuple[str, str, str], tuple[int | None, str]]:
+        result: dict[tuple[str, str, str], tuple[int | None, str]] = {}
+        for edge in graph.edges.values():
+            if edge.relation is EdgeRelation.DERIVED_FROM:
+                source_node, target_node = graph.nodes[edge.target_id], graph.nodes[edge.source_id]
+            else:
+                source_node, target_node = graph.nodes[edge.source_id], graph.nodes[edge.target_id]
+            source = source_node.semantic_key or source_node.id
+            target = target_node.semantic_key or target_node.id
+            result[(source, edge.relation.value, target)] = (None, f"the canonical graph edge {edge.id}")
+        return result
+
+    @staticmethod
+    def _planned_relations(
+        update: object, known: Mapping[str, object]
+    ) -> list[tuple[str, EdgeRelation, str, str]]:
+        def identity(reference: str) -> str:
+            node = known.get(reference)
+            return getattr(node, "semantic_key", None) or getattr(node, "id", None) or reference
+
+        if update.operation == "add_proposition":
+            target = getattr(update, "local_ref", None) or getattr(update, "node_id", None)
+            if target is None:
+                return []
+            return [
+                (identity(reference), EdgeRelation.DERIVED_FROM, target, "derived_from_node_ids")
+                for reference in update.derived_from_node_ids
+            ]
+        if update.operation == "add_derivation":
+            return [(
+                identity(update.source_node_id), EdgeRelation.DERIVED_FROM,
+                identity(update.derived_proposition_id), "add_derivation",
+            )]
+        if update.operation in {"add_support", "add_conflict"}:
+            relation = EdgeRelation.SUPPORTS if update.operation == "add_support" else EdgeRelation.CONFLICTS
+            return [(identity(update.source_node_id), relation, identity(update.target_node_id), update.operation)]
+        if update.operation == "add_uncertainty":
+            source = getattr(update, "local_ref", None) or getattr(update, "node_id", None)
+            return [] if source is None else [(source, EdgeRelation.TARGETS, identity(update.target_node_id), "target_node_id")]
+        if update.operation == "add_specialization":
+            return [(identity(update.child_hypothesis_id), EdgeRelation.SPECIALIZES, identity(update.parent_hypothesis_id), "add_specialization")]
+        return []
 
     @staticmethod
     def _construction_types(operation: str | None) -> frozenset[GraphNodeType]:

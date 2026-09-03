@@ -166,3 +166,41 @@ def test_distinct_proposition_derivation_remains_legal() -> None:
     })
     result = GraphWarden(CaseGraph(case_id="case-01", nodes={"S0": GraphNode(id="S0", node_type=GraphNodeType.SOURCE, statement="source")}, edges={}), _source()).apply(proposal)
     assert result.graph.outgoing(result.local_ref_resolution["p2"], relation=EdgeRelation.DERIVED_FROM)
+
+
+def test_duplicate_derivation_is_rejected_before_case_graph_edge_collision() -> None:
+    proposal = InvestigatorProposal.model_validate({
+        "graph_updates": [
+            {"operation": "add_evidence", "local_ref": "device_exam_result", "statement": "device result", "source_ids": ["S1"], "reason": "record result"},
+            {"operation": "add_evidence", "local_ref": "assessment_rules", "statement": "assessment rules", "source_ids": ["S1"], "reason": "record rules"},
+            {"operation": "add_proposition", "local_ref": "p_unauthorized_device_violation", "statement": "device proposition", "derived_from_node_ids": ["device_exam_result", "assessment_rules"], "reason": "derive proposition"},
+            {"operation": "add_derivation", "source_node_id": "device_exam_result", "derived_proposition_id": "p_unauthorized_device_violation", "reason": "repeat derivation"},
+        ]
+    })
+    with pytest.raises(WardenValidationError) as caught:
+        GraphWarden(CaseGraph(case_id="case-01", nodes={"S0": GraphNode(id="S0", node_type=GraphNodeType.SOURCE, statement="source")}, edges={}), _source()).apply(proposal)
+    issue = next(issue for issue in caught.value.issues if issue.error_code == "DUPLICATE_RELATION")
+    assert issue.operation_index == 3
+    assert issue.field == "add_derivation"
+    assert issue.relation == "derived_from"
+    assert issue.source == "device_exam_result"
+    assert issue.target == "p_unauthorized_device_violation"
+    assert issue.first_operation_index == 2
+    assert "Remove only this redundant add_derivation operation" in issue.required_action
+    assert "Duplicate graph edge ID" not in str(caught.value)
+
+
+@pytest.mark.parametrize("operation", ["add_support", "add_conflict"])
+def test_duplicate_support_and_conflict_relations_are_rejected(operation: str) -> None:
+    proposal = InvestigatorProposal.model_validate({
+        "graph_updates": [
+            {"operation": operation, "source_node_id": "E1", "target_node_id": "P1", "reason": "first relation"},
+            {"operation": operation, "source_node_id": "E1", "target_node_id": "P1", "reason": "duplicate relation"},
+        ]
+    })
+    with pytest.raises(WardenValidationError) as caught:
+        GraphWarden(_graph(), _source()).apply(proposal)
+    issue = caught.value.issues[0]
+    assert issue.error_code == "DUPLICATE_RELATION"
+    assert issue.operation_index == 1
+    assert issue.relation == ("supports" if operation == "add_support" else "conflicts")

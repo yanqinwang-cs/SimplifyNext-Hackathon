@@ -225,6 +225,33 @@ def test_corrective_prompt_clarifies_field_relative_reference_hints() -> None:
     assert '"construction_allowed_types": [\n      "evidence"' in prompt
 
 
+def test_corrective_prompt_preserves_semantics_and_removes_duplicate_relations() -> None:
+    proposal = InvestigatorProposal.model_validate({
+        "graph_updates": [{"operation": "add_derivation", "derived_proposition_id": "p1", "source_node_id": "E1", "reason": "Repeat relation."}]
+    })
+    assessment = _assessment(proposal)
+    issue = ProposalValidationIssue(
+        operation_index=4,
+        field="add_derivation",
+        error_code="DUPLICATE_RELATION",
+        reference="E1",
+        relation="derived_from",
+        source="E1",
+        target="p1",
+        first_operation_index=3,
+        problem="The relation already exists.",
+        required_action="Remove only this redundant add_derivation operation. Preserve unrelated valid operations.",
+    )
+    prompt = build_corrective_prompt(assessment, [issue])
+    assert "semantic assessment" in prompt and "frozen" in prompt
+    assert "Do not add new factual predicates" in prompt
+    assert "narrowest statement" in prompt
+    assert "duplicate relation" in prompt
+    assert "remove only the redundant operation" in prompt
+    assert "PREVIOUS PROPOSAL" in prompt
+    assert "DUPLICATE_RELATION" in prompt
+
+
 def test_self_derivation_corrective_retry_changes_only_the_proposal(tmp_path: Path) -> None:
     initial = InvestigatorProposal.model_validate({
         "graph_updates": [
