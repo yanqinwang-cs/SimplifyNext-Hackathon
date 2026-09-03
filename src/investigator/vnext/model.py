@@ -30,6 +30,15 @@ def build_prompt(run_input: VNextRunInput) -> str:
         }
         for source_id, source in sorted(run_input.sources.items())
     ]
+    assessment_context = run_input.assessment_context.model_dump(mode="json") if run_input.assessment_context else None
+    subjects = {
+        subject_id: subject.model_dump(mode="json")
+        for subject_id, subject in sorted(run_input.subjects.items())
+    }
+    relationships = {
+        relationship_id: relationship.model_dump(mode="json")
+        for relationship_id, relationship in sorted(run_input.subject_relationships.items())
+    }
     return "\n".join(
         [
             "You are the Investigator for one complete finite assessment.",
@@ -42,10 +51,14 @@ def build_prompt(run_input: VNextRunInput) -> str:
             "If communication is prohibited, do not require proof of its exact medium or extent.",
             "Evidence discipline: a claim is not automatically a fact; a source statement is not automatically true; association is not collaboration; opportunity is not use; anomaly is not misconduct; absence of evidence is not evidence of absence; unsupported does not mean innocence established.",
             "Raw source IDs identify source records, not automatically established facts. Use graph proposals for any E/P/H/U concepts you need, and reference proposal local_ref values in the assessment after proposing them.",
+            "subject_id is the authoritative identity key. Do not infer that two subjects are the same person from similar names. Do not attribute evidence or conduct from one subject to another merely because they appear in the same assessment or relationship. A recorded relationship is an association or observation, not automatically prohibited collaboration or shared misconduct.",
             "Return JSON only. Use exactly the current schema below. Do not add fields.",
             "\nCASE CONTEXT\n" + (run_input.case_context or ""),
             "\nRULE PRESET\n" + json.dumps(run_input.rule_preset.model_dump(mode="json"), indent=2),
             "\nCURRENT RAW SOURCES\n" + json.dumps(sources, indent=2),
+            "\nASSESSMENT CONTEXT\n" + json.dumps(assessment_context, indent=2),
+            "\nASSESSMENT SUBJECTS\n" + json.dumps(subjects, indent=2),
+            "\nRECORDED SUBJECT RELATIONSHIPS\n" + json.dumps(relationships, indent=2),
             "\nEXACT INVESTIGATOR ASSESSMENT JSON SCHEMA\n"
             + json.dumps(InvestigatorAssessment.model_json_schema(), indent=2, sort_keys=True),
         ]

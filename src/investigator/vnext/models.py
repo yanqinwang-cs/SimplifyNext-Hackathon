@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Annotated, TypeAlias
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from investigator.models.source import Source
+from investigator.models.assessment import AssessmentContext, AssessmentSubject, SubjectRelationship, validate_identity_references
 
 if TYPE_CHECKING:
     from investigator.state.case_state import CaseState
@@ -96,6 +97,9 @@ class VNextRunInput(BaseModel):
     case_id: str = Field(min_length=1)
     case_context: str | None = None
     sources: dict[str, Source] = Field(default_factory=dict)
+    assessment_context: AssessmentContext | None = None
+    subjects: dict[str, AssessmentSubject] = Field(default_factory=dict)
+    subject_relationships: dict[str, SubjectRelationship] = Field(default_factory=dict)
     rule_preset: AssessmentRulePreset
     human_inputs: dict[str, object] = Field(default_factory=dict)
 
@@ -103,6 +107,7 @@ class VNextRunInput(BaseModel):
     def source_keys_match_ids(self) -> "VNextRunInput":
         if any(key != source.id for key, source in self.sources.items()):
             raise ValueError("Source mapping keys must match source IDs")
+        validate_identity_references(self.subjects, self.subject_relationships, self.sources)
         return self
 
     @classmethod
@@ -117,6 +122,9 @@ class VNextRunInput(BaseModel):
             case_id=case_state.case_id,
             case_context=case_state.description,
             sources=case_state.sources,
+            assessment_context=case_state.assessment_context,
+            subjects=case_state.subjects,
+            subject_relationships=case_state.subject_relationships,
             rule_preset=rule_preset,
             human_inputs=dict(human_inputs or {}),
         )

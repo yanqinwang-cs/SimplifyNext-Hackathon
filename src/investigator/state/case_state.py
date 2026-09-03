@@ -10,6 +10,7 @@ from investigator.models.source import Source
 from investigator.models.uncertainty import Uncertainty
 from investigator.models.evidence_request import EvidenceRequest
 from investigator.graph import CaseGraph
+from investigator.models.assessment import AssessmentContext, AssessmentSubject, SubjectRelationship, validate_identity_references
 
 
 class CaseState(BaseModel):
@@ -18,6 +19,9 @@ class CaseState(BaseModel):
     description: str | None = None
     assessment_rule_preset_id: str = "academic-integrity-core"
     sources: dict[str, Source] = Field(default_factory=dict)
+    assessment_context: AssessmentContext | None = None
+    subjects: dict[str, AssessmentSubject] = Field(default_factory=dict)
+    subject_relationships: dict[str, SubjectRelationship] = Field(default_factory=dict)
     evidence: dict[str, EvidenceItem] = Field(default_factory=dict)
     entities: dict[str, Entity] = Field(default_factory=dict)
     claims: dict[str, Claim] = Field(default_factory=dict)
@@ -43,6 +47,7 @@ class CaseState(BaseModel):
 
     @model_validator(mode="after")
     def validate_structure(self) -> "CaseState":
+        validate_identity_references(self.subjects, self.subject_relationships, self.sources)
         if any(key != item.id for key, item in self.evidence.items()):
             raise ValueError("Evidence dictionary keys must match evidence IDs")
         if any(key != item.id for key, item in self.hypotheses.items()):
