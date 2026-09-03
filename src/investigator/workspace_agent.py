@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from copy import deepcopy
 import os
 import re
 from typing import Any
@@ -123,8 +124,10 @@ class WorkspaceAgent:
         self.client = client
         self.session_store = session_store or WorkspaceSessionStore()
         # Reuse the canonical model-screen registry; this does not make a call.
-        model_name = os.environ.get("WORKSPACE_MODEL_NAME") or ("anthropic.claude-haiku-4-5" if workflow.run_mode == "vnext" else "anthropic.claude-opus-4-5")
-        self.model_spec = MODEL_REGISTRY[model_name]
+        configured_id = os.environ.get("WORKSPACE_MODEL_ID")
+        default_name = "anthropic.claude-haiku-4-5" if workflow.run_mode == "vnext" else "anthropic.claude-opus-4-5"
+        self.model_spec = next((spec for spec in MODEL_REGISTRY.values() if spec.invocation_id == configured_id), None) if configured_id else None
+        self.model_spec = self.model_spec or MODEL_REGISTRY[default_name]
         self.is_vnext = workflow.run_mode == "vnext"
 
     def invoke_tool(self, case_id: str, request: WorkspaceToolRequest | dict[str, Any]) -> dict[str, Any]:
@@ -144,12 +147,26 @@ class WorkspaceAgent:
 
     def chat(self, case_id: str, message: str) -> WorkspaceChatResponse:
         attempts = 2 if self.is_vnext else 1
+        session = self.session_store.session(case_id)
+        clean_conversation = deepcopy(session["conversation"])
+        clean_chat_history = deepcopy(session["chat_history"])
+        clean_turns = deepcopy(session["turns"])
         for attempt in range(attempts):
+            if self.is_vnext:
+                session["conversation"] = deepcopy(clean_conversation)
+                session["chat_history"] = deepcopy(clean_chat_history)
+                session["turns"] = deepcopy(clean_turns)
             try:
                 return self._chat_once(case_id, message)
             except Exception:
                 if attempt + 1 == attempts:
+                    session["conversation"] = deepcopy(clean_conversation)
+                    session["chat_history"] = deepcopy(clean_chat_history)
+                    session["turns"] = deepcopy(clean_turns)
+                    self._append_chat(case_id, "human", message.strip())
                     response = "Help is temporarily unavailable. The case and assessment are unaffected."
+                    session["conversation"].append({"role": "user", "text": message.strip()})
+                    session["conversation"].append({"role": "assistant", "text": response})
                     self._append_chat(case_id, "workspace", response)
                     return WorkspaceChatResponse(response=response)
         raise AssertionError("Workspace chat ended without a response")
@@ -192,7 +209,7 @@ class WorkspaceAgent:
                     tool_message = {"role": "tool", "call_id": tool_call.call_id, "result": result}
                     session["conversation"].append(tool_message)
                     messages.append(tool_message)
-            raise RuntimeError("Workspace tool loop exceeded the five-round safety bound")
+            raise RuntimeError("Workspace tool loop exceeded the configured safety bound")
         except WorkspaceToolAuthorizationError as exc:
             self._finish_workspace_turn(case_id, turn_id, "failed", "The requested Workspace operation is not authorized.", type(exc).__name__)
             raise

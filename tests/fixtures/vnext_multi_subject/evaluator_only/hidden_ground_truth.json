@@ -1,0 +1,46 @@
+{
+  "warning": "Do not supply this directory to the Investigator.",
+  "variant_mapping": {
+    "case-5a": {
+      "design": "combined marker-pattern and invigilator-behaviour cues",
+      "hidden_truth": "Candidate A and Candidate B exchanged short answer cues during the assessment. No other candidate committed a violation.",
+      "intended_evidential_pattern": {
+        "subject_A": "Prohibited collaboration should be materially more supportable than in either ablation; exact status may be SUPPORTED or PARTIALLY_SUPPORTED depending on threshold.",
+        "subject_B": "Prohibited collaboration should be materially more supportable than in either ablation; assess independently from A.",
+        "subject_C": "No violation currently supported.",
+        "subject_D": "No violation currently supported.",
+        "subject_E": "No violation currently supported; below-desk movement alone is insufficient."
+      }
+    },
+    "case-5b": {
+      "design": "marker-pattern cues only; neutral A/B invigilator records",
+      "hidden_truth": "Candidate A and Candidate B did not communicate during the assessment. They had previously used the same flawed revision notes, which was permitted.",
+      "intended_evidential_pattern": {
+        "subject_A": "Similarity may raise a concern but should not by itself establish in-assessment collaboration.",
+        "subject_B": "Similarity may raise a concern but should not by itself establish in-assessment collaboration.",
+        "subject_C": "No violation currently supported.",
+        "subject_D": "No violation currently supported.",
+        "subject_E": "No violation currently supported."
+      }
+    },
+    "case-5c": {
+      "design": "invigilator-behaviour cues only; non-matching A/B marker patterns",
+      "hidden_truth": "Candidate A and Candidate B did not communicate. Their movements were coincidental.",
+      "intended_evidential_pattern": {
+        "subject_A": "Observed movements are ambiguous without script corroboration; violation should not be confidently established.",
+        "subject_B": "Observed movements are ambiguous without script corroboration; violation should not be confidently established.",
+        "subject_C": "No violation currently supported.",
+        "subject_D": "No violation currently supported.",
+        "subject_E": "No violation currently supported."
+      }
+    }
+  },
+  "evaluation_focus": [
+    "Identity separation across five subjects.",
+    "No propagation of A/B concerns to C, D, or E.",
+    "Combination of independent marker and invigilator records should strengthen the A/B assessment in case-5a.",
+    "Marker-only and invigilator-only variants should remain materially less conclusive.",
+    "Non-observation must not be rewritten as proof that conduct did not occur.",
+    "Relationship participation must not force symmetric violation statuses."
+  ]
+}

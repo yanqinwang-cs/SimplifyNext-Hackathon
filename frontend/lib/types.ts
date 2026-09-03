@@ -23,7 +23,8 @@ export interface VisibleSource {
 export interface AssessmentSubject { subject_id: string; display_name: string; candidate_number?: string | null; metadata?: Record<string, unknown>; }
 export interface SubjectRelationship { relationship_id: string; subject_ids: string[]; relationship_type: string; description?: string | null; source_ids?: string[]; metadata?: Record<string, unknown>; }
 export interface AssessmentContext { assessment_id: string; title?: string | null; assessment_type?: string | null; venue?: string | null; start_time?: string | null; end_time?: string | null; metadata?: Record<string, unknown>; }
-export interface GuidanceContext { current_case_revision: number; latest_assessment_revision?: number | null; assessment_is_stale: boolean; per_subject_assessments: Array<{ subject_id: string; violation_assessments: Array<{ violation_id: string; status: string; reasoning_summary: string; supporting_node_ids: string[]; mitigating_node_ids: string[]; unresolved_points: string[] }>; furthest_conclusion: { statement: string; confidence: string } }>; }
+export interface GuidanceMaterial { statement: string; source_labels?: string[]; }
+export interface GuidanceContext { current_case_revision: number; latest_assessment_revision?: number | null; assessment_is_stale: boolean; per_subject_assessments: Array<{ subject_id: string; subject_display_name?: string; subject_candidate_number?: string | null; violation_assessments: Array<{ violation_id: string; status: string; reasoning_summary: string; supporting_node_ids: string[]; mitigating_node_ids: string[]; supporting_material?: GuidanceMaterial[]; mitigating_material?: GuidanceMaterial[]; unresolved_points: string[] }>; furthest_conclusion: { statement: string; confidence: string } }>; }
 
 export interface TraceEntry {
   step?: number;

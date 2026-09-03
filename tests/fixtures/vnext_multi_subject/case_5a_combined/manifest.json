@@ -1,0 +1,34 @@
+{
+  "case_id": "case-5a",
+  "visible_source_files": [
+    "assessment_context.md",
+    "assessment_rules.md",
+    "candidate_A_invigilator_report.md",
+    "candidate_A_marker_report.md",
+    "candidate_B_invigilator_report.md",
+    "candidate_B_marker_report.md",
+    "candidate_C_invigilator_report.md",
+    "candidate_C_marker_report.md",
+    "candidate_D_invigilator_report.md",
+    "candidate_D_marker_report.md",
+    "candidate_E_invigilator_report.md",
+    "candidate_E_marker_report.md",
+    "marking_guide.md",
+    "seating_plan.md"
+  ],
+  "subject_ids": [
+    "subject_A",
+    "subject_B",
+    "subject_C",
+    "subject_D",
+    "subject_E"
+  ],
+  "relationship_ids": [
+    "rel_A_B_adjacent"
+  ],
+  "notes": [
+    "Markers independently reviewed only their assigned scripts.",
+    "No visible source states that candidates copied or collaborated.",
+    "Source scope metadata is embedded in case_state.json."
+  ]
+}

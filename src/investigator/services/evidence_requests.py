@@ -107,8 +107,13 @@ class HumanEvidenceWorkflow:
         with self._lock:
             state = self.ensure_case(case_id)
             pending = any(item.status.value == "pending" for item in state.evidence_request_history)
-            if pending or state.runtime_status == "WAITING_FOR_EVIDENCE":
+            if self.run_mode == "legacy" and (pending or state.runtime_status == "WAITING_FOR_EVIDENCE"):
                 raise EvidenceRequestConflict("Resolve the pending human evidence request before running")
+            if self.run_mode == "vnext" and state.runtime_status == "WAITING_FOR_EVIDENCE":
+                state.runtime_status = "IDLE"
+                state.current_actor = "NONE"
+                state.last_updated_at = datetime.now(timezone.utc)
+                self.repository.save(state)
             if state.runtime_status in {"RUNNING", "RUNNING_INVESTIGATOR", "RUNNING_STEWARD"} or case_id in self._in_flight_actor:
                 raise EvidenceRequestConflict("Investigation is already running")
             if state.case_status != "ACTIVE":
@@ -116,7 +121,8 @@ class HumanEvidenceWorkflow:
             runtime_status = "RUNNING" if self.run_mode == "vnext" else "RUNNING_INVESTIGATOR"
             self.set_runtime(case_id, runtime_status, "INVESTIGATOR")
             run_id = self.begin_run(case_id, state.revision)
-            self.record_workspace_event(case_id, {"type": "run_started", "run_id": run_id, "runtime_status": runtime_status, "case_revision": state.revision, "human_summary": f"Investigation run {run_id} started from the current verified case state."})
+            summary = "Assessment started." if self.run_mode == "vnext" else f"Investigation run {run_id} started from the current verified case state."
+            self.record_workspace_event(case_id, {"type": "run_started", "run_id": run_id, "runtime_status": runtime_status, "case_revision": state.revision, "human_summary": summary})
         thread = __import__("threading").Thread(target=self._execute_run, args=(case_id,), daemon=True)
         thread.start()
         return self.get_workspace(case_id)
@@ -129,7 +135,8 @@ class HumanEvidenceWorkflow:
             state = self.ensure_case(case_id)
             if state.runtime_status.startswith("RUNNING_"):
                 self.set_runtime(case_id, "IDLE", "NONE")
-                self.record_workspace_event(case_id, {"type": "run_completed", "run_id": self.current_run_id(case_id), "runtime_status": "IDLE", "case_revision": state.revision, "human_summary": "The investigation run completed successfully."})
+                summary = "Assessment completed." if self.run_mode == "vnext" else "The investigation run completed successfully."
+                self.record_workspace_event(case_id, {"type": "run_completed", "run_id": self.current_run_id(case_id), "runtime_status": "IDLE", "case_revision": state.revision, "human_summary": summary})
             elif state.runtime_status == "STOPPED":
                 self.record_workspace_event(case_id, {"type": "run_stopped", "run_id": self.current_run_id(case_id), "runtime_status": "STOPPED", "case_revision": state.revision, "resumable": state.case_status == "ACTIVE", "human_summary": "Autonomous investigation paused for human review. The unresolved issues remain preserved, and the investigation can be resumed or new evidence can be added."})
         except Exception as exc:
@@ -137,7 +144,8 @@ class HumanEvidenceWorkflow:
             state = self.ensure_case(case_id)
             self.record_trace(case_id, {"event": "failed", "step": state.last_trace_step, "actor": "system", "runtime_status": "FAILED", "case_revision": state.revision, "current_actor": state.current_actor, "failure_category": category, "error": str(exc)})
             self.set_runtime(case_id, "FAILED", "NONE", failure_category=category, message=str(exc), step=state.last_trace_step)
-            self.record_workspace_event(case_id, {"type": "run_failed", "run_id": self.current_run_id(case_id), "runtime_status": "FAILED", "case_revision": state.revision, "final_case_revision": state.revision, "human_summary": f"The investigation run failed. The failed turn was not committed; earlier successful turns remain preserved at revision {state.revision}."})
+            summary = "Assessment could not be completed. Case evidence was unchanged." if self.run_mode == "vnext" else f"The investigation run failed. The failed turn was not committed; earlier successful turns remain preserved at revision {state.revision}."
+            self.record_workspace_event(case_id, {"type": "run_failed", "run_id": self.current_run_id(case_id), "runtime_status": "FAILED", "case_revision": state.revision, "final_case_revision": state.revision, "human_summary": summary})
         finally:
             self.finalize_run(case_id)
 
@@ -478,6 +486,27 @@ class HumanEvidenceWorkflow:
             if path.is_file():
                 payload = json.loads(path.read_text(encoding="utf-8"))
                 result = payload.get("result")
+        subject_lookup = state.subjects
+        graph_nodes = ((result or {}).get("graph") or {}).get("nodes", {})
+        def material(node_id: str) -> dict[str, Any]:
+            node = graph_nodes.get(node_id)
+            if not node:
+                return {"id": node_id, "statement": "Referenced material is unavailable."}
+            metadata = node.get("metadata", {})
+            source_ids = metadata.get("source_ids", [])
+            if metadata.get("source_id"):
+                source_ids = [metadata["source_id"]]
+            return {"id": node_id, "statement": node.get("statement", "Referenced material is unavailable."), "source_labels": [state.sources[source_id].name for source_id in source_ids if source_id in state.sources]}
+        assessments = []
+        for assessment in (result or {}).get("subject_assessments", []):
+            subject = subject_lookup.get(assessment.get("subject_id"))
+            item = dict(assessment)
+            item["subject_display_name"] = subject.display_name if subject else assessment.get("subject_id")
+            item["subject_candidate_number"] = subject.candidate_number if subject else None
+            for violation in item.get("violation_assessments", []):
+                violation["supporting_material"] = [material(node_id) for node_id in violation.get("supporting_node_ids", [])]
+                violation["mitigating_material"] = [material(node_id) for node_id in violation.get("mitigating_node_ids", [])]
+            assessments.append(item)
         assessment_revision = latest.get("start_revision") if latest else None
         return {
             "case_id": state.case_id,
@@ -490,7 +519,7 @@ class HumanEvidenceWorkflow:
             "latest_successful_vnext_run": latest,
             "latest_assessment_revision": assessment_revision,
             "assessment_is_stale": assessment_revision is not None and assessment_revision < state.revision,
-            "per_subject_assessments": (result or {}).get("subject_assessments", []),
+            "per_subject_assessments": assessments,
             "final_graph": (result or {}).get("graph"),
             "run_status": state.runtime_status,
         }

@@ -1,0 +1,281 @@
+{
+  "case_id": "case-5a",
+  "title": "Business Law Assessment Review — Cohort 5A",
+  "description": "Review the available assessment records for each configured subject. Assess every applicable violation independently for each subject.",
+  "assessment_rule_preset_id": "academic-integrity-core",
+  "assessment_context": {
+    "assessment_id": "BL-ICA2-2026",
+    "title": "Business Law Individual In-Class Assessment 2",
+    "assessment_type": "closed-notes individual short-answer assessment",
+    "venue": "Seminar Room 4",
+    "start_time": "2026-08-28T10:00:00+08:00",
+    "end_time": "2026-08-28T11:15:00+08:00",
+    "metadata": {
+      "module": "Business Law",
+      "question_count": 6,
+      "seating": {
+        "subject_A": "Row 2, Seat 2",
+        "subject_B": "Row 2, Seat 3",
+        "subject_C": "Row 1, Seat 5",
+        "subject_D": "Row 3, Seat 2",
+        "subject_E": "Row 3, Seat 5"
+      },
+      "marking_arrangement": "Each script was independently marked by a different marker who saw only that script."
+    }
+  },
+  "subjects": {
+    "subject_A": {
+      "subject_id": "subject_A",
+      "display_name": "Candidate A",
+      "candidate_number": "BL-041",
+      "metadata": {}
+    },
+    "subject_B": {
+      "subject_id": "subject_B",
+      "display_name": "Candidate B",
+      "candidate_number": "BL-073",
+      "metadata": {}
+    },
+    "subject_C": {
+      "subject_id": "subject_C",
+      "display_name": "Candidate C",
+      "candidate_number": "BL-118",
+      "metadata": {}
+    },
+    "subject_D": {
+      "subject_id": "subject_D",
+      "display_name": "Candidate D",
+      "candidate_number": "BL-162",
+      "metadata": {}
+    },
+    "subject_E": {
+      "subject_id": "subject_E",
+      "display_name": "Candidate E",
+      "candidate_number": "BL-205",
+      "metadata": {}
+    }
+  },
+  "subject_relationships": {
+    "rel_A_B_adjacent": {
+      "relationship_id": "rel_A_B_adjacent",
+      "subject_ids": [
+        "subject_A",
+        "subject_B"
+      ],
+      "relationship_type": "adjacent_seating",
+      "source_ids": [
+        "S4"
+      ],
+      "description": "Candidate A and Candidate B were seated next to one another.",
+      "metadata": {}
+    }
+  },
+  "sources": {
+    "S1": {
+      "id": "S1",
+      "name": "Assessment context",
+      "source_type": "document",
+      "content": "# Assessment Context\n\n**Assessment ID:** BL-ICA2-2026  \n**Title:** Business Law Individual In-Class Assessment 2  \n**Format:** Six short-answer questions; individual; closed notes  \n**Date and time:** 28 August 2026, 10:00–11:15  \n**Venue:** Seminar Room 4\n\n## Candidates and seating\n\n| Subject ID | Candidate | Candidate number | Seat |\n|---|---|---|---|\n| subject_A | Candidate A | BL-041 | Row 2, Seat 2 |\n| subject_B | Candidate B | BL-073 | Row 2, Seat 3 |\n| subject_C | Candidate C | BL-118 | Row 1, Seat 5 |\n| subject_D | Candidate D | BL-162 | Row 3, Seat 2 |\n| subject_E | Candidate E | BL-205 | Row 3, Seat 5 |\n\nCandidate A and Candidate B were seated next to one another.\n\nEach script was independently marked by a different marker. Each marker saw only the assigned script and the common marking guide. Invigilator records were prepared separately for each candidate from contemporaneous notes.\n\nStudents were permitted to study together before the assessment. The relevant restrictions applied during the assessment.\n",
+      "metadata": {
+        "filename": "assessment_context.md",
+        "assessment_scope": {
+          "scope_type": "case",
+          "subject_id": null,
+          "relationship_id": null
+        }
+      }
+    },
+    "S2": {
+      "id": "S2",
+      "name": "Assessment rules",
+      "source_type": "document",
+      "content": "# Assessment Rules\n\n1. The assessment was individual work.\n2. Candidates were not permitted to communicate with another candidate during the assessment.\n3. Candidates were not permitted to give or receive answer content or other unauthorized assistance during the assessment.\n4. Candidates were not permitted to use unauthorized electronic devices or communicate with persons outside the assessment room.\n5. Similar answers, common mistakes, prior study together, physical proximity, or opportunity do not by themselves establish a violation.\n6. A finding must be based on the conduct prohibited by the applicable rule, using the available record.\n",
+      "metadata": {
+        "filename": "assessment_rules.md",
+        "assessment_scope": {
+          "scope_type": "case",
+          "subject_id": null,
+          "relationship_id": null
+        }
+      }
+    },
+    "S3": {
+      "id": "S3",
+      "name": "Common marking guide",
+      "source_type": "document",
+      "content": "# Common Marking Guide\n\nMarkers were instructed to assess only the assigned script and not to compare it with other candidates' work.\n\n## Question 1 — Formation\n\nExpected answer: the advertisement is ordinarily an invitation to treat; the customer's order is the offer; the seller's confirmation is acceptance.\n\n## Question 2 — Misrepresentation\n\nExpected answer: a precise monthly revenue figure presented as verified is a statement of fact, not merely opinion. If false and relied upon, it may amount to actionable misrepresentation.\n\n## Question 3 — Past consideration\n\nExpected answer: a past act is not sufficient consideration merely because the promisor retained a benefit. The exception requires that the act was done at the promisor's request and that payment was contemplated.\n\n## Question 4 — Exclusion clauses\n\nExpected answer: an exclusion clause must be brought to the other party's attention before or at contract formation. Notice first given afterward is generally too late.\n\n## Question 5 — Ratification\n\nExpected answer: ratification requires an informed and affirmative adoption of the transaction. Silence alone does not automatically amount to ratification.\n\n## Question 6 — Expectation damages\n\nExpected calculation: $9,200 − $3,600 = $5,600. The $800 deposit is credited once and must not be subtracted twice.\n",
+      "metadata": {
+        "filename": "marking_guide.md",
+        "assessment_scope": {
+          "scope_type": "case",
+          "subject_id": null,
+          "relationship_id": null
+        }
+      }
+    },
+    "S4": {
+      "id": "S4",
+      "name": "Seating plan and room notes",
+      "source_type": "document",
+      "content": "# Seating Plan and Room Notes\n\nFront of room\n\n- Row 1: [empty] [empty] [empty] [empty] Candidate C\n- Row 2: [empty] Candidate A Candidate B [empty] [empty]\n- Row 3: [empty] Candidate D [empty] [empty] Candidate E\n\nThe main invigilator moved between the front desk and the two side aisles. Candidate A and Candidate B were adjacent. Candidate D sat one row behind Candidate A but not adjacent to Candidate B.\n",
+      "metadata": {
+        "filename": "seating_plan.md",
+        "assessment_scope": {
+          "scope_type": "case",
+          "subject_id": null,
+          "relationship_id": null
+        }
+      }
+    },
+    "S10": {
+      "id": "S10",
+      "name": "Candidate A marker report",
+      "source_type": "document",
+      "content": "# Marker Report — Candidate A\n\n**Candidate number:** BL-041  \n**Marker ID:** M-01  \n**Scope:** Candidate A's script only\n\n- **Q1:** Correct. Identifies advertisement as invitation to treat, order as offer, and confirmation as acceptance.\n- **Q2:** Incorrect. Treats the stated monthly revenue figure as mere opinion and writes: “commercial optimism is automatically non-actionable.” Concludes that no misrepresentation is possible.\n- **Q3:** Incorrect. States that retaining the benefit makes past consideration valid. Cites “Lim v Eastern Traders (2004)”; this authority does not appear in the module materials.\n- **Q4:** Correct. States that notice after contract formation is too late.\n- **Q5:** Incorrect. States that the principal's silence automatically ratifies the transaction and writes: “the condition is automatically fulfilled.”\n- **Q6:** Incorrect. Subtracts the $800 deposit twice and gives $4,800 rather than $5,600.\n\nThe script is internally coherent but repeats the above legal and calculation errors.\n",
+      "metadata": {
+        "filename": "candidate_A_marker_report.md",
+        "author_role": "marker",
+        "assessment_scope": {
+          "scope_type": "subject",
+          "subject_id": "subject_A",
+          "relationship_id": null
+        }
+      }
+    },
+    "S11": {
+      "id": "S11",
+      "name": "Candidate A invigilator report",
+      "source_type": "document",
+      "content": "# Invigilator Observation Record — Candidate A\n\n**Candidate number:** BL-041  \n**Invigilator ID:** I-01\n\n- **10:26:** Candidate A paused at Question 3 and turned right toward Candidate B's desk for about two seconds.\n- **10:42:** Candidate A brought the left hand close to the mouth. The invigilator saw lip movement but heard no words.\n- **10:43:** Candidate B looked left. Candidate A then resumed writing.\n- No paper or object was seen passing between candidates.\n- No intervention was made because communication could not be confirmed from the observation alone.\n",
+      "metadata": {
+        "filename": "candidate_A_invigilator_report.md",
+        "author_role": "invigilator",
+        "assessment_scope": {
+          "scope_type": "subject",
+          "subject_id": "subject_A",
+          "relationship_id": null
+        }
+      }
+    },
+    "S12": {
+      "id": "S12",
+      "name": "Candidate B marker report",
+      "source_type": "document",
+      "content": "# Marker Report — Candidate B\n\n**Candidate number:** BL-073  \n**Marker ID:** M-02  \n**Scope:** Candidate B's script only\n\n- **Q1:** Correct. Treats the advertisement as an invitation to treat, the order as an offer, and confirmation as acceptance.\n- **Q2:** Incorrect. Classifies the precise monthly revenue figure as opinion. The answer includes: “commercial optimism is automatically non-actionable.” It therefore rejects misrepresentation.\n- **Q3:** Incorrect. Says that past consideration becomes valid whenever the promisor keeps the benefit. Refers to “Lim v Eastern Traders (2004)”; this authority is not in the prescribed materials.\n- **Q4:** Correct. Explains that the clause was disclosed after contract formation.\n- **Q5:** Incorrect. Says that silence by the principal is automatic ratification and uses the sentence: “the condition is automatically fulfilled.”\n- **Q6:** Incorrect. Deducts the $800 deposit twice and reaches $4,800.\n\nThe answers use a consistent method, but the noted doctrinal and numerical errors remain.\n",
+      "metadata": {
+        "filename": "candidate_B_marker_report.md",
+        "author_role": "marker",
+        "assessment_scope": {
+          "scope_type": "subject",
+          "subject_id": "subject_B",
+          "relationship_id": null
+        }
+      }
+    },
+    "S13": {
+      "id": "S13",
+      "name": "Candidate B invigilator report",
+      "source_type": "document",
+      "content": "# Invigilator Observation Record — Candidate B\n\n**Candidate number:** BL-073  \n**Invigilator ID:** I-01\n\n- **10:27:** Candidate B briefly looked left toward Candidate A after Candidate A had turned in that direction.\n- **10:43:** Candidate B looked left again and then crossed out one sentence in the Question 5 response before rewriting it.\n- No clear speech was heard from Candidate B.\n- No paper or object was seen passing between candidates.\n- The observations were recorded but were not sufficient for an intervention at the time.\n",
+      "metadata": {
+        "filename": "candidate_B_invigilator_report.md",
+        "author_role": "invigilator",
+        "assessment_scope": {
+          "scope_type": "subject",
+          "subject_id": "subject_B",
+          "relationship_id": null
+        }
+      }
+    },
+    "S14": {
+      "id": "S14",
+      "name": "Candidate C marker report",
+      "source_type": "document",
+      "content": "# Marker Report — Candidate C\n\n**Candidate number:** BL-118  \n**Marker ID:** M-03  \n**Scope:** Candidate C's script only\n\n- **Q1:** Correct.\n- **Q2:** Incorrect. Describes the revenue statement as “sales talk,” but still says rescission may be available if reliance is shown.\n- **Q3:** Correct. Identifies the request-and-contemplated-payment exception.\n- **Q4:** Incorrect. Treats notice given after contract formation as sufficient.\n- **Q5:** Correct. Requires informed adoption by the principal.\n- **Q6:** Correct. Gives $5,600 and credits the deposit once.\n\nThe errors are concentrated in Q2 and Q4.\n",
+      "metadata": {
+        "filename": "candidate_C_marker_report.md",
+        "author_role": "marker",
+        "assessment_scope": {
+          "scope_type": "subject",
+          "subject_id": "subject_C",
+          "relationship_id": null
+        }
+      }
+    },
+    "S15": {
+      "id": "S15",
+      "name": "Candidate C invigilator report",
+      "source_type": "document",
+      "content": "# Invigilator Observation Record — Candidate C\n\n**Candidate number:** BL-118  \n**Invigilator ID:** I-01\n\n- Candidate C asked whether the final page had to be numbered.\n- After receiving the procedural answer, Candidate C continued working.\n- No interaction with another candidate was observed.\n- No device or unauthorized material was observed.\n",
+      "metadata": {
+        "filename": "candidate_C_invigilator_report.md",
+        "author_role": "invigilator",
+        "assessment_scope": {
+          "scope_type": "subject",
+          "subject_id": "subject_C",
+          "relationship_id": null
+        }
+      }
+    },
+    "S16": {
+      "id": "S16",
+      "name": "Candidate D marker report",
+      "source_type": "document",
+      "content": "# Marker Report — Candidate D\n\n**Candidate number:** BL-162  \n**Marker ID:** M-04  \n**Scope:** Candidate D's script only\n\n- **Q1:** Correct.\n- **Q2:** Correct.\n- **Q3:** Incorrect. Says that retaining the benefit is enough to validate past consideration, but gives no case citation.\n- **Q4:** Correct.\n- **Q5:** Incorrect. Writes that “silence amounts to acceptance” without addressing knowledge or affirmative adoption.\n- **Q6:** Incorrect arithmetic. Uses the correct method but subtracts $400 instead of $800, producing $5,200.\n\nThe script does not repeat one single error pattern across the assessment.\n",
+      "metadata": {
+        "filename": "candidate_D_marker_report.md",
+        "author_role": "marker",
+        "assessment_scope": {
+          "scope_type": "subject",
+          "subject_id": "subject_D",
+          "relationship_id": null
+        }
+      }
+    },
+    "S17": {
+      "id": "S17",
+      "name": "Candidate D invigilator report",
+      "source_type": "document",
+      "content": "# Invigilator Observation Record — Candidate D\n\n**Candidate number:** BL-162  \n**Invigilator ID:** I-01\n\n- Candidate D looked up twice when noise occurred in the corridor.\n- On each occasion, Candidate D returned immediately to the script.\n- No communication or exchange with another candidate was observed.\n- No device or unauthorized material was observed.\n",
+      "metadata": {
+        "filename": "candidate_D_invigilator_report.md",
+        "author_role": "invigilator",
+        "assessment_scope": {
+          "scope_type": "subject",
+          "subject_id": "subject_D",
+          "relationship_id": null
+        }
+      }
+    },
+    "S18": {
+      "id": "S18",
+      "name": "Candidate E marker report",
+      "source_type": "document",
+      "content": "# Marker Report — Candidate E\n\n**Candidate number:** BL-205  \n**Marker ID:** M-05  \n**Scope:** Candidate E's script only\n\n- **Q1:** Incorrect. Treats the advertisement itself as the offer.\n- **Q2:** Correct.\n- **Q3:** Correct.\n- **Q4:** Correct.\n- **Q5:** Correct.\n- **Q6:** Correct. Gives $5,600.\n\nApart from Q1, the answers track the marking guide.\n",
+      "metadata": {
+        "filename": "candidate_E_marker_report.md",
+        "author_role": "marker",
+        "assessment_scope": {
+          "scope_type": "subject",
+          "subject_id": "subject_E",
+          "relationship_id": null
+        }
+      }
+    },
+    "S19": {
+      "id": "S19",
+      "name": "Candidate E invigilator report",
+      "source_type": "document",
+      "content": "# Invigilator Observation Record — Candidate E\n\n**Candidate number:** BL-205  \n**Invigilator ID:** I-01\n\n- At approximately 10:36, Candidate E placed one hand below desk level for several seconds.\n- When the invigilator moved closer, Candidate E was adjusting the strap of a bag positioned beside the chair.\n- No device or note was seen.\n- No interaction with another candidate was observed.\n",
+      "metadata": {
+        "filename": "candidate_E_invigilator_report.md",
+        "author_role": "invigilator",
+        "assessment_scope": {
+          "scope_type": "subject",
+          "subject_id": "subject_E",
+          "relationship_id": null
+        }
+      }
+    }
+  }
+}
