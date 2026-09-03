@@ -5,6 +5,7 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Any
 from urllib.parse import unquote, urlparse
 
 from investigator.services.evidence_requests import EvidenceRequestConflict, HumanEvidenceWorkflow
@@ -16,6 +17,9 @@ from investigator.model_registry import MODEL_REGISTRY
 from investigator.services.vnext_runner import VNextProductionRunner
 from investigator.models.source import SourceType
 from investigator.graph import GraphScope
+from investigator.models.assessment import AssessmentContext, AssessmentSubject, SubjectRelationship
+from investigator.models.source import Source
+from investigator.state.case_state import CaseState
 
 
 def sample_cases() -> list[dict[str, str]]:
@@ -24,6 +28,26 @@ def sample_cases() -> list[dict[str, str]]:
         {"id": "possible-collaboration", "title": "Possible collaboration", "description": "A two-subject assessment with ambiguous evidence."},
         {"id": "multi-candidate", "title": "Multi-candidate assessment", "description": "An advanced five-subject assessment."},
     ]
+
+
+def seed_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str, case_id: str) -> dict[str, Any]:
+    samples = {item["id"]: item for item in sample_cases()}
+    if sample_id not in samples:
+        raise ValueError(f"Unknown sample case: {sample_id!r}")
+    if sample_id == "smart-device":
+        subjects = {"A": AssessmentSubject(subject_id="A", display_name="Candidate A")}
+        relationships = {}
+    elif sample_id == "possible-collaboration":
+        subjects = {key: AssessmentSubject(subject_id=key, display_name=f"Candidate {key}") for key in ("A", "B")}
+        relationships = {"AB": SubjectRelationship(relationship_id="AB", subject_ids=["A", "B"], relationship_type="observed communication")}
+    else:
+        subjects = {key: AssessmentSubject(subject_id=key, display_name=f"Candidate {key}") for key in ("A", "B", "C", "D", "E")}
+        relationships = {}
+    sources = {f"S{index}": Source(id=f"S{index}", name=f"{samples[sample_id]['title']} source {index}", source_type=SourceType.DOCUMENT, content="Visible sample source material.", metadata={"assessment_scope": GraphScope(scope_type="case").model_dump(mode="json")}) for index in range(1, 3)}
+    state = CaseState(case_id=case_id, title=samples[sample_id]["title"], description=samples[sample_id]["description"], assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title=samples[sample_id]["title"], assessment_type="synthetic demonstration"), subjects=subjects, subject_relationships=relationships, sources=sources)
+    workflow.repository.save(state)
+    workflow.record_workspace_event(case_id, {"type": "case_created", "case_revision": state.revision, "human_summary": f"Sample case {state.title} was opened."})
+    return workflow.get_workspace(case_id)
 
 
 class InvestigatorApiHandler(BaseHTTPRequestHandler):
@@ -74,6 +98,33 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parts = self._parts()
+        if len(parts) == 4 and parts[:2] == ["api", "samples"] and parts[3] in {"open", "reset"}:
+            try:
+                payload = self._read_json()
+                sample_id = parts[2]
+                case_id = str(payload.get("case_id") or f"{sample_id}-working")
+                self._write(200, {"caseId": case_id, "workspace": seed_sample_case(self.workflow, sample_id, case_id)})
+            except (ValueError, KeyError) as exc:
+                self._write(422, {"error": str(exc)})
+            return
+        if len(parts) == 3 and parts[:2] == ["api", "samples"] and parts[2] == "open":
+            try:
+                payload = self._read_json()
+                sample_id = str(payload.get("sample_id") or "")
+                case_id = str(payload.get("case_id") or f"{sample_id}-working")
+                self._write(200, {"caseId": case_id, "workspace": seed_sample_case(self.workflow, sample_id, case_id)})
+            except (ValueError, KeyError) as exc:
+                self._write(422, {"error": str(exc)})
+            return
+        if len(parts) == 3 and parts[:2] == ["api", "samples"] and parts[2] == "reset":
+            try:
+                payload = self._read_json()
+                sample_id = str(payload.get("sample_id") or "")
+                case_id = str(payload.get("case_id") or f"{sample_id}-working")
+                self._write(200, {"caseId": case_id, "workspace": seed_sample_case(self.workflow, sample_id, case_id)})
+            except (ValueError, KeyError) as exc:
+                self._write(422, {"error": str(exc)})
+            return
         if len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3:5] == ["workspace", "chat"]:
             try:
                 payload = WorkspaceChatRequest.model_validate(self._read_json())

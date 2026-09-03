@@ -42,6 +42,14 @@ export function addRelationship(caseId: string, payload: { relationship_id: stri
   return request<{ relationship: import("./types").SubjectRelationship; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/relationships`, { method: "POST", body: JSON.stringify(payload) });
 }
 
+export function openSample(sampleId: string, caseId = `${sampleId}-working`) {
+  return request<{ caseId: string }>("/api/samples/open", { method: "POST", body: JSON.stringify({ sample_id: sampleId, case_id: caseId }) });
+}
+
+export function resetSample(sampleId: string, caseId = `${sampleId}-working`) {
+  return request<{ caseId: string; workspace: CaseWorkspaceState }>("/api/samples/reset", { method: "POST", body: JSON.stringify({ sample_id: sampleId, case_id: caseId }) });
+}
+
 export async function provideEvidence(caseId: string, requestId: string, caseRevision: number | undefined, file: File | null, note: string) {
   const sources = file ? [{ display_name: file.name, content: await file.text(), metadata: { media_type: file.type || "application/octet-stream" } }] : [];
   return request<CaseWorkspaceState>(`/api/cases/${encodeURIComponent(caseId)}/evidence-requests/${encodeURIComponent(requestId)}/fulfil`, { method: "POST", body: JSON.stringify({ case_revision: caseRevision, sources, note }) });
