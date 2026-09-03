@@ -23,6 +23,8 @@ class CaseGraph(BaseModel):
             if edge.source_id not in self.nodes or edge.target_id not in self.nodes:
                 raise ValueError(f"Dangling graph edge endpoint: {edge.id!r}")
             if edge.source_id == edge.target_id:
+                if edge.relation is EdgeRelation.DERIVED_FROM:
+                    raise ValueError(f"DERIVED_FROM self-reference is not allowed: {edge.id!r}")
                 raise ValueError(f"Graph self-edge is not allowed: {edge.id!r}")
             source = self.nodes[edge.source_id].node_type
             target = self.nodes[edge.target_id].node_type

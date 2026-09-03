@@ -79,7 +79,7 @@ class GraphWarden:
             preflight_issues = self._preflight_issues(proposal, working)
             if preflight_issues:
                 raise WardenValidationError("Graph Warden rejected proposal preflight", issues=preflight_issues)
-            for update in proposal.graph_updates:
+            for operation_index, update in enumerate(proposal.graph_updates):
                 try:
                     working.apply_investigator_update(update)
                 except Exception as exc:
@@ -166,6 +166,29 @@ class GraphWarden:
                         allowed_types=sorted(item.value for item in allowed), allowed_statuses=[GraphStatus.ACTIVE.value],
                         problem=f"Operation {operation_index} ({field_label}) references {reference!r} with allowed type {node.node_type.value.upper()} but current status {node.status.value.upper()} is not ACTIVE.",
                         required_action=f"Use an active legal {node.node_type.value} node, correct same-turn dependency ordering if applicable, or remove only this operation. Preserve unrelated valid operations.",
+                    ))
+            if update.operation == "add_derivation":
+                derived_id = coordinator._resolve_ref(update.derived_proposition_id)
+                source_id = coordinator._resolve_ref(update.source_node_id)
+                derived_node = known.get(derived_id) or known.get(update.derived_proposition_id)
+                source_node = known.get(source_id) or known.get(update.source_node_id)
+                if derived_node is not None and source_node is not None and derived_id == source_id:
+                    issues.append(ProposalValidationIssue(
+                        operation_index=operation_index,
+                        field="add_derivation",
+                        error_code="SELF_DERIVATION",
+                        reference=update.source_node_id,
+                        actual_type=GraphNodeType.PROPOSITION.value,
+                        allowed_types=[GraphNodeType.EVIDENCE.value, GraphNodeType.PROPOSITION.value],
+                        problem=(
+                            f"Operation {operation_index} (add_derivation) uses proposition "
+                            f"{update.derived_proposition_id!r} as its own derivation source."
+                        ),
+                        required_action=(
+                            "Remove only this add_derivation operation, or replace its source with a distinct "
+                            "active EVIDENCE or PROPOSITION basis. The proposition's existing derived_from_node_ids "
+                            "already record its legal derivation basis; preserve unrelated valid operations."
+                        ),
                     ))
             created_type = OperationSpecRegistry.contract(update.operation).created_type
             local_ref = getattr(update, "local_ref", None)

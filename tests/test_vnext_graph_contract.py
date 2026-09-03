@@ -1,6 +1,6 @@
 import pytest
 
-from investigator.graph import CaseGraph, GraphNode, GraphNodeType, GraphStatus, OperationSpecRegistry
+from investigator.graph import CaseGraph, EdgeRelation, GraphNode, GraphNodeType, GraphStatus, OperationSpecRegistry
 from investigator.models.source import Source, SourceType
 from investigator.vnext import InvestigatorProposal
 from investigator.vnext.warden import GraphWarden, WardenValidationError
@@ -105,3 +105,50 @@ def test_status_diagnostic_uses_real_graph_status_and_active_requirement() -> No
     assert issue.actual_type == "evidence"
     assert issue.actual_status == "archived"
     assert issue.allowed_statuses == ["active"]
+
+
+def test_exact_repaired_proposal_shape_reports_self_derivation_without_name_error() -> None:
+    proposal = InvestigatorProposal.model_validate({
+        "graph_updates": [
+            {"operation": "add_evidence", "local_ref": "invig_observation_glasses", "statement": "observation", "source_ids": ["S1"], "reason": "record observation"},
+            {"operation": "add_evidence", "local_ref": "device_exam_result", "statement": "device result", "source_ids": ["S1"], "reason": "record result"},
+            {"operation": "add_hypothesis", "local_ref": "h_device_possession", "statement": "device explanation", "reason": "consider explanation"},
+            {"operation": "add_proposition", "local_ref": "p_unauthorized_device_violation", "statement": "device proposition", "derived_from_node_ids": ["invig_observation_glasses", "device_exam_result"], "reason": "derive proposition"},
+            {"operation": "add_derivation", "derived_proposition_id": "p_unauthorized_device_violation", "source_node_id": "p_unauthorized_device_violation", "reason": "connect proposition"},
+        ]
+    })
+
+    with pytest.raises(WardenValidationError) as caught:
+        GraphWarden(CaseGraph(case_id="case-01", nodes={"S0": GraphNode(id="S0", node_type=GraphNodeType.SOURCE, statement="source")}, edges={}), _source()).apply(proposal)
+
+    issues = caught.value.issues
+    assert [(issue.operation_index, issue.error_code) for issue in issues] == [(4, "SELF_DERIVATION")]
+    assert issues[0].field == "add_derivation"
+    assert "derived_from_node_ids" in issues[0].required_action
+
+
+def test_repaired_proposal_without_self_derivation_applies_its_legal_basis() -> None:
+    proposal = InvestigatorProposal.model_validate({
+        "graph_updates": [
+            {"operation": "add_evidence", "local_ref": "observation", "statement": "observation", "source_ids": ["S1"], "reason": "record observation"},
+            {"operation": "add_proposition", "local_ref": "p1", "statement": "proposition", "derived_from_node_ids": ["observation"], "reason": "derive proposition"},
+        ]
+    })
+    result = GraphWarden(CaseGraph(case_id="case-01", nodes={"S0": GraphNode(id="S0", node_type=GraphNodeType.SOURCE, statement="source")}, edges={}), _source()).apply(proposal)
+    proposition_id = result.local_ref_resolution["p1"]
+    assert result.graph.outgoing(proposition_id, relation=EdgeRelation.DERIVED_FROM)
+
+
+def test_self_derivation_is_aggregated_with_an_unrelated_reference_issue() -> None:
+    proposal = InvestigatorProposal.model_validate({
+        "graph_updates": [
+            {"operation": "add_derivation", "derived_proposition_id": "P1", "source_node_id": "P1", "reason": "self derivation"},
+            {"operation": "add_support", "source_node_id": "E99", "target_node_id": "P1", "reason": "missing source"},
+        ]
+    })
+    with pytest.raises(WardenValidationError) as caught:
+        GraphWarden(_graph(), _source()).apply(proposal)
+    assert {(issue.operation_index, issue.error_code) for issue in caught.value.issues} == {
+        (0, "SELF_DERIVATION"),
+        (1, "UNRESOLVED_REFERENCE"),
+    }
