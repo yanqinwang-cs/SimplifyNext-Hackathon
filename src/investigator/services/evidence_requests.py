@@ -44,9 +44,12 @@ def _state_signature(state: CaseState) -> str:
 class HumanEvidenceWorkflow:
     """Single-pending-request application boundary backed by CaseRepository."""
 
-    def __init__(self, repository: CaseRepository, resume_callback: Callable[[str], None] | None = None, run_callback: Callable[[str, "HumanEvidenceWorkflow"], None] | None = None) -> None:
+    def __init__(self, repository: CaseRepository, resume_callback: Callable[[str], None] | None = None, run_callback: Callable[[str, "HumanEvidenceWorkflow"], None] | None = None, run_mode: str = "legacy") -> None:
+        if run_mode not in {"legacy", "vnext"}:
+            raise ValueError("SIMPLIFYNEXT_RUN_MODE must be either 'vnext' or 'legacy'")
         self.repository = repository
         self.resume_callback = resume_callback
+        self.run_mode = run_mode
         self._lock = RLock()
         self._model_revision_active: set[str] = set()
         self._in_flight_actor: dict[str, str] = {}
@@ -103,13 +106,14 @@ class HumanEvidenceWorkflow:
             pending = any(item.status.value == "pending" for item in state.evidence_request_history)
             if pending or state.runtime_status == "WAITING_FOR_EVIDENCE":
                 raise EvidenceRequestConflict("Resolve the pending human evidence request before running")
-            if state.runtime_status in {"RUNNING_INVESTIGATOR", "RUNNING_STEWARD"} or case_id in self._in_flight_actor:
+            if state.runtime_status in {"RUNNING", "RUNNING_INVESTIGATOR", "RUNNING_STEWARD"} or case_id in self._in_flight_actor:
                 raise EvidenceRequestConflict("Investigation is already running")
             if state.case_status != "ACTIVE":
                 raise EvidenceRequestConflict("Stopped or inactive cases cannot be restarted")
-            self.set_runtime(case_id, "RUNNING_INVESTIGATOR", "INVESTIGATOR")
+            runtime_status = "RUNNING" if self.run_mode == "vnext" else "RUNNING_INVESTIGATOR"
+            self.set_runtime(case_id, runtime_status, "INVESTIGATOR")
             run_id = self.begin_run(case_id, state.revision)
-            self.record_workspace_event(case_id, {"type": "run_started", "run_id": run_id, "runtime_status": "RUNNING_INVESTIGATOR", "case_revision": state.revision, "human_summary": f"Investigation run {run_id} started from the current verified case state."})
+            self.record_workspace_event(case_id, {"type": "run_started", "run_id": run_id, "runtime_status": runtime_status, "case_revision": state.revision, "human_summary": f"Investigation run {run_id} started from the current verified case state."})
         thread = __import__("threading").Thread(target=self._execute_run, args=(case_id,), daemon=True)
         thread.start()
         return self.get_workspace(case_id)
@@ -143,7 +147,7 @@ class HumanEvidenceWorkflow:
             state.last_trace_step = step
             state.last_error = ({"failure_category": failure_category, "message": message, "actor": actor, "step": step} if runtime_status == "FAILED" else None)
             state.last_updated_at = datetime.now(timezone.utc)
-            if runtime_status.startswith("RUNNING_"):
+            if runtime_status == "RUNNING" or runtime_status.startswith("RUNNING_"):
                 self._in_flight_actor[case_id] = actor
             else:
                 self._in_flight_actor.pop(case_id, None)
@@ -356,7 +360,10 @@ class HumanEvidenceWorkflow:
         pending = next((item for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None)
         runtime_status = state.runtime_status
         current_actor = state.current_actor
-        if case_id in self._in_flight_actor:
+        if case_id in self._in_flight_actor and self.run_mode == "vnext":
+            current_actor = "INVESTIGATOR"
+            runtime_status = "RUNNING"
+        elif case_id in self._in_flight_actor:
             current_actor = self._in_flight_actor[case_id]
             runtime_status = f"RUNNING_{current_actor}"
         messages: list[dict[str, Any]] = []
@@ -407,7 +414,7 @@ class HumanEvidenceWorkflow:
                     # A run may be initializing on another thread; omit it until
                     # its first result snapshot is complete.
                     continue
-                runs.append({key: payload.get(key) for key in ("run_id", "started_at", "ended_at", "termination_reason", "final_runtime_status", "outcome_type", "originating_actor", "start_revision", "run_start_revision", "latest_safe_revision", "final_case_revision", "final_committed_revision", "final_error", "pending_request_id", "request_text", "trace_path")})
+                runs.append({key: payload.get(key) for key in ("run_id", "started_at", "ended_at", "termination_reason", "final_runtime_status", "outcome_type", "originating_actor", "start_revision", "run_start_revision", "latest_safe_revision", "final_case_revision", "final_committed_revision", "final_error", "pending_request_id", "request_text", "trace_path", "vnext_status", "vnext_result_path", "vnext_furthest_conclusion", "model", "input_tokens", "output_tokens", "latency_seconds", "finish_reason")})
         return runs
 
     def raw_trace_path(self, case_id: str, run_id: str) -> Path:

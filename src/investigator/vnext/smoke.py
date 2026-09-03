@@ -13,17 +13,18 @@ import argparse
 import json
 import os
 import sys
+
 from typing import Any
 
 from investigator.llm import BedrockModelClient, ModelCallMetadata, ModelClient
 from investigator.vnext import (
     AssessmentRulePreset,
-    InvestigatorAssessment,
     VNextInvestigationRunner,
     VNextRunInput,
     VNextRunResult,
     ViolationDefinition,
 )
+from investigator.vnext.model import VNextInvestigatorModel, build_prompt
 
 
 def smoke_rule_preset() -> AssessmentRulePreset:
@@ -78,42 +79,6 @@ def smoke_run_input(case: str = "obvious") -> VNextRunInput:
     )
 
 
-def _schema_contract() -> str:
-    return json.dumps(InvestigatorAssessment.model_json_schema(), indent=2, sort_keys=True)
-
-
-def build_prompt(run_input: VNextRunInput) -> str:
-    """Build the only prompt used by the real Investigator smoke call."""
-    sources = [
-        {
-            "source_id": source_id,
-            "source_type": source.source_type.value,
-            "title": source.name,
-            "content": source.content or "",
-        }
-        for source_id, source in sorted(run_input.sources.items())
-    ]
-    return "\n".join(
-        [
-            "You are the Investigator for one complete finite assessment.",
-            "Evaluate every configured violation exactly once and return the complete assessment in one response.",
-            "Do not ask for more evidence, request human input, or produce a follow-up question.",
-            "Missing evidence means NOT_CURRENTLY_SUPPORTED, not another enquiry.",
-            "A supported narrower violation does not require proof of stronger downstream conduct.",
-            "Assess only the prohibited conduct actually defined by each rule.",
-            "If possession itself is prohibited, proof of activation or use is not required.",
-            "If communication is prohibited, do not require proof of its exact medium or extent.",
-            "Evidence discipline: a claim is not automatically a fact; a source statement is not automatically true; association is not collaboration; opportunity is not use; anomaly is not misconduct; absence of evidence is not evidence of absence; unsupported does not mean innocence established.",
-            "Raw source IDs identify source records, not automatically established facts. Use graph proposals for any E/P/H/U concepts you need, and reference proposal local_ref values in the assessment after proposing them.",
-            "Return JSON only. Use exactly the current schema below. Do not add fields.",
-            "\nCASE CONTEXT\n" + (run_input.case_context or ""),
-            "\nRULE PRESET\n" + json.dumps(run_input.rule_preset.model_dump(mode="json"), indent=2),
-            "\nCURRENT RAW SOURCES\n" + json.dumps(sources, indent=2),
-            "\nEXACT INVESTIGATOR ASSESSMENT JSON SCHEMA\n" + _schema_contract(),
-        ]
-    )
-
-
 def run_smoke(
     client: ModelClient,
     *,
@@ -121,9 +86,11 @@ def run_smoke(
 ) -> tuple[VNextRunResult, ModelCallMetadata, Any]:
     """Make one structured model call and run it through the vNext pipeline."""
     run_input = smoke_run_input(case)
-    call_result = client.call(build_prompt(run_input), InvestigatorAssessment)
-    result = VNextInvestigationRunner(lambda _: call_result.parsed).run(run_input)
-    return result, call_result.metadata, call_result.raw_output
+    investigator = VNextInvestigatorModel(client)
+    result = VNextInvestigationRunner(investigator).run(run_input)
+    if investigator.last_call is None:
+        raise RuntimeError("vNext Investigator did not record its model call")
+    return result, investigator.last_call.metadata, investigator.last_call.raw_output
 
 
 def _print_summary(result: VNextRunResult, metadata: ModelCallMetadata) -> None:

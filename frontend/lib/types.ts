@@ -1,4 +1,4 @@
-export type WorkspaceStatus = "processing" | "waiting_for_evidence" | "ready" | "stopped";
+export type WorkspaceStatus = "processing" | "waiting_for_evidence" | "ready" | "stopped" | "running" | "completed" | "failed";
 export type EvidenceRequestStatus = "pending" | "fulfilled" | "unavailable";
 
 export interface EvidenceRequest {
@@ -41,6 +41,14 @@ export interface RunSummary {
   pending_request_id?: string | null;
   request_text?: string | null;
   trace_path?: string | null;
+  vnext_status?: string | null;
+  vnext_result_path?: string | null;
+  vnext_furthest_conclusion?: string | null;
+  model?: string | null;
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  latency_seconds?: number | null;
+  finish_reason?: string | null;
 }
 
 export interface WorkspaceEvent {
@@ -76,7 +84,7 @@ export interface CaseWorkspaceState {
   currentFocus: string;
   messages: WorkspaceMessage[];
   caseStatus: "ACTIVE" | "HANDED_OFF" | "CLOSED";
-  runtimeStatus: "IDLE" | "RUNNING_INVESTIGATOR" | "RUNNING_STEWARD" | "WAITING_FOR_EVIDENCE" | "FAILED" | "STOPPED" | "PAUSED";
+  runtimeStatus: "IDLE" | "RUNNING" | "COMPLETED" | "RUNNING_INVESTIGATOR" | "RUNNING_STEWARD" | "WAITING_FOR_EVIDENCE" | "FAILED" | "STOPPED" | "PAUSED";
   currentActor: "INVESTIGATOR" | "STEWARD" | "NONE";
   visibleSources: VisibleSource[];
   lastError?: { failure_category?: string; message?: string; actor?: string; step?: number } | null;

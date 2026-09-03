@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
@@ -12,6 +13,7 @@ from investigator.llm.bedrock import BedrockModelClient, CredentialOverride, cle
 from investigator.state.repository import CaseRepository
 from investigator.workspace_agent import WorkspaceAgent, WorkspaceChatRequest, WorkspaceToolAuthorizationError
 from investigator.model_registry import MODEL_REGISTRY
+from investigator.services.vnext_runner import VNextProductionRunner
 
 
 class InvestigatorApiHandler(BaseHTTPRequestHandler):
@@ -138,8 +140,12 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
         return
 
 
-def create_server(repository_root: str | Path = "data/cases", host: str = "127.0.0.1", port: int = 8000, run_callback=None) -> ThreadingHTTPServer:
-    workflow = HumanEvidenceWorkflow(CaseRepository(repository_root), run_callback=run_callback or default_production_run)
+def create_server(repository_root: str | Path = "data/cases", host: str = "127.0.0.1", port: int = 8000, run_callback=None, run_mode: str | None = None) -> ThreadingHTTPServer:
+    configured_mode = run_mode or os.environ.get("SIMPLIFYNEXT_RUN_MODE") or ("legacy" if run_callback is not None else "vnext")
+    if configured_mode not in {"vnext", "legacy"}:
+        raise ValueError("SIMPLIFYNEXT_RUN_MODE must be either 'vnext' or 'legacy'")
+    callback = run_callback or (VNextProductionRunner().run if configured_mode == "vnext" else default_production_run)
+    workflow = HumanEvidenceWorkflow(CaseRepository(repository_root), run_callback=callback, run_mode=configured_mode)
     workflow.resume_callback = lambda case_id: workflow.start_run(case_id)
     InvestigatorApiHandler.workflow = workflow
     model = MODEL_REGISTRY["anthropic.claude-opus-4-5"]
