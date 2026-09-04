@@ -16,7 +16,7 @@ export async function getCases(): Promise<CaseListItem[]> {
   return (await request<{ cases: CaseListItem[] }>("/api/cases")).cases;
 }
 
-export function createCase(payload: { title: string; description?: string; assessment: { title: string; assessment_type: string } }) {
+export function createCase(payload: { title: string }) {
   return request<{ caseId: string; workspace: CaseWorkspaceState }>("/api/cases", { method: "POST", body: JSON.stringify(payload) });
 }
 

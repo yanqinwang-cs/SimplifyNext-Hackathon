@@ -172,3 +172,32 @@ def test_public_samples_seed_real_visible_sources_without_hidden_material(tmp_pa
     assert all("source" not in item["name"].lower() or "source 1" not in item["name"].lower() for item in multi["visibleSources"])
     assert len(multi["visibleSources"]) == 14
     assert all("evaluator_only" not in item["content"] for item in multi["visibleSources"])
+
+
+def test_public_sample_fixture_integrity() -> None:
+    law_expected = {
+        "blank_tutorial.md", "student_script.md", "marker_report.md", "invigilator_report.md",
+        "assessment_rules.md", "course_materials.md", "prior_assessed_work.md", "student_support_session.md",
+        "assessment_logistics.md", "entry_permitted_items_record.md", "device_examination_report.md",
+        "smart_glasses_activity_record.md", "external_ai_service_record.md", "device_account_linkage_record.md",
+        "network_connectivity_record.md", "deterministic_timeline.md", "student_clarification_record.md",
+    }
+    law_root = Path("tests/fixtures/public_samples/law_exam/sources")
+    assert {path.name for path in law_root.glob("*.md")} == law_expected
+    assert not any((law_root / name).exists() for name in ("case_context_note.txt", "assessment_rule_clarification.txt", "student_b_witness_statement.md", "observation_timing_record.md"))
+
+    multi_root = Path("tests/fixtures/public_samples/multi_candidate/sources")
+    multi_files = {path.name for path in multi_root.glob("*.md")}
+    assert len(multi_files) == 14
+    assert all("source 1" not in path.lower() and "source 2" not in path.lower() for path in multi_files)
+    assert all("visible sample source material" not in path.read_text(encoding="utf-8").lower() for path in multi_root.glob("*.md"))
+    assert not any("evaluator_only" in path.parts for path in multi_root.rglob("*"))
+
+
+def test_workspace_home_keeps_samples_in_one_cases_list_and_new_case_minimal() -> None:
+    page = Path("frontend/app/page.tsx").read_text(encoding="utf-8")
+    assert page.count('>Cases</h2>') == 1
+    assert ">Samples</h2>" not in page
+    assert 'placeholder="Case name"' in page
+    assert 'placeholder="Assessment title"' not in page
+    assert 'placeholder="Assessment type"' not in page

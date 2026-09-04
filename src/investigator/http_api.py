@@ -38,10 +38,8 @@ def allocate_case_id(repository: CaseRepository) -> str:
 def create_case(workflow: HumanEvidenceWorkflow, payload: dict[str, Any]) -> dict[str, Any]:
     title = str(payload.get("title") or "").strip()
     assessment = payload.get("assessment") or {}
-    assessment_title = str(assessment.get("title") or "").strip()
-    assessment_type = str(assessment.get("assessment_type") or "").strip()
-    if not title or not assessment_title or not assessment_type:
-        raise ValueError("title, assessment.title, and assessment.assessment_type are required")
+    if not title:
+        raise ValueError("title is required")
     case_id = allocate_case_id(workflow.repository)
     context_payload = {key: assessment.get(key) for key in ("title", "assessment_type", "venue", "start_time", "end_time") if assessment.get(key) is not None}
     context = AssessmentContext(assessment_id=f"{case_id}-assessment", **context_payload)
@@ -55,13 +53,20 @@ def seed_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str, case_id: s
     samples = {item["id"]: item for item in sample_cases()}
     if sample_id not in samples:
         raise ValueError(f"Unknown sample case: {sample_id!r}")
+    fixture_root = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "public_samples"
     if sample_id == "law-exam":
-        source_root = Path(__file__).resolve().parents[2] / "data" / "samples" / "law_exam_investigation" / "sources"
+        source_root = fixture_root / "law_exam" / "sources"
         sources = {f"S{index}": Source(id=f"S{index}", name=path.name, source_type=SourceType.DOCUMENT, content=path.read_text(encoding="utf-8"), metadata={"filename": path.name, "assessment_scope": GraphScope(scope_type="case").model_dump(mode="json")}) for index, path in enumerate(sorted(source_root.glob("*.md")), start=1)}
         state = CaseState(case_id=case_id, title="Law Exam Investigation", description=samples[sample_id]["description"], assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Business Law Individual In-Class Assessment 2", assessment_type="closed-notes individual assessment"), sources=sources)
     elif sample_id == "multi-candidate":
-        fixture = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "vnext_multi_subject" / "case_5a_combined" / "case_state.json"
-        state = CaseState.model_validate(json.loads(fixture.read_text(encoding="utf-8"))).model_copy(deep=True, update={"case_id": case_id, "title": "Multi-Candidate Collaboration Review"})
+        source_root = fixture_root / "multi_candidate" / "sources"
+        subjects = {f"subject_{letter}": AssessmentSubject(subject_id=f"subject_{letter}", display_name=f"Candidate {letter}", candidate_number=number) for letter, number in (("A", "BL-041"), ("B", "BL-073"), ("C", "BL-118"), ("D", "BL-162"), ("E", "BL-205"))}
+        sources = {}
+        for index, path in enumerate(sorted(source_root.glob("*.md")), start=1):
+            letter = next((candidate for candidate in "ABCDE" if f"candidate_{candidate}_" in path.name), None)
+            scope = GraphScope(scope_type="subject", subject_id=f"subject_{letter}") if letter else GraphScope(scope_type="case")
+            sources[f"S{index}"] = Source(id=f"S{index}", name=path.name, source_type=SourceType.DOCUMENT, content=path.read_text(encoding="utf-8"), metadata={"filename": path.name, "assessment_scope": scope.model_dump(mode="json")})
+        state = CaseState(case_id=case_id, title="Multi-Candidate Collaboration Review", description=samples[sample_id]["description"], assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Business Law Individual In-Class Assessment 2", assessment_type="closed-notes individual assessment", venue="Seminar Room 4"), subjects=subjects, subject_relationships={"rel_A_B_adjacent": SubjectRelationship(relationship_id="rel_A_B_adjacent", subject_ids=["subject_A", "subject_B"], relationship_type="adjacent_seating", description="Candidate A and Candidate B were seated next to one another.")}, sources=sources)
     else:
         raise ValueError(f"Unknown sample case: {sample_id!r}")
     workflow.repository.save(state)
@@ -79,6 +84,8 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             cases = []
             for case_id in self.workflow.repository.list_case_ids():
                 state = self.workflow.repository.load(case_id)
+                if case_id == "case-01" and state.title == "Business Law Tutorial 5":
+                    continue
                 runs = self.workflow.get_runs(case_id)
                 cases.append({"case_id": case_id, "title": state.title, "last_updated_at": state.last_updated_at.isoformat(), "revision": state.revision, "subject_count": len(state.subjects), "latest_assessment_status": runs[-1].get("vnext_status") if runs else None})
             self._write(200, {"cases": cases})

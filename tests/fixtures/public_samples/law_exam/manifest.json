@@ -1,0 +1,28 @@
+{
+  "fixture_name": "Law Exam Investigation",
+  "source_count": 17,
+  "canonical_source_files": [
+    "blank_tutorial.md",
+    "student_script.md",
+    "marker_report.md",
+    "invigilator_report.md",
+    "assessment_rules.md",
+    "course_materials.md",
+    "prior_assessed_work.md",
+    "student_support_session.md",
+    "assessment_logistics.md",
+    "entry_permitted_items_record.md",
+    "device_examination_report.md",
+    "smart_glasses_activity_record.md",
+    "external_ai_service_record.md",
+    "device_account_linkage_record.md",
+    "network_connectivity_record.md",
+    "deterministic_timeline.md",
+    "student_clarification_record.md"
+  ],
+  "notes": [
+    "Canonical 17-file Business Law / smart-glasses agent-visible fixture.",
+    "Excludes later ad-hoc evidence and evaluator-only materials.",
+    "Use sources/ as the exact public sample source set."
+  ]
+}
