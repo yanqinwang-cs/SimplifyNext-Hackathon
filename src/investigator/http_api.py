@@ -21,6 +21,7 @@ from investigator.models.assessment import AssessmentContext, AssessmentSubject,
 from investigator.models.source import Source
 from investigator.state.case_state import CaseState
 from investigator.help import product_guide
+from investigator.public_views import workspace_view, public_source_handle, public_student_handle, resolve_source_handle, resolve_student_handle, document_format
 from investigator.runtime_settings import settings as runtime_settings, set_model_overrides, reset_model_overrides
 
 
@@ -79,15 +80,37 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
     workflow: HumanEvidenceWorkflow
     workspace_agent: WorkspaceAgent
 
+    def _public_workspace(self, case_id: str) -> dict[str, Any]:
+        view = workspace_view(self.workflow, case_id)
+        view["chatHistory"] = self.workspace_agent.chat_history(case_id)
+        return view
+
     def do_GET(self) -> None:
         parts = self._parts()
+        if self.workflow.run_mode == "vnext" and os.getenv("SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API") != "1" and ((len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"traces", "runs"}) or (len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "runs")):
+            self._write(404, {"error": "Not found"})
+            return
+        if self.workflow.run_mode == "vnext" and len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "workspace":
+            try: self._write(200, self._public_workspace(parts[2]))
+            except (KeyError, ValueError): self._write(404, {"error": "Case not found"})
+            return
+        if self.workflow.run_mode == "vnext" and len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "report":
+            try: self._write(200, self.workflow.get_report(parts[2]))
+            except (KeyError, ValueError): self._write(404, {"error": "Case not found"})
+            return
+        if self.workflow.run_mode == "vnext" and len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "sources":
+            try:
+                state = self.workflow.repository.require_case(parts[2]); source_id = resolve_source_handle(state, parts[4]); source = state.sources[source_id]
+                self._write(200, {"caseId": parts[2], "source": {"sourceHandle": parts[4], "fileName": source.name, "documentFormat": document_format(source.name), "content": source.content or ""}})
+            except (KeyError, ValueError): self._write(404, {"error": "Source not found"})
+            return
         if parts == ["api", "cases"]:
             cases = []
             for case_id in self.workflow.repository.list_case_ids():
                 state = self.workflow.repository.load(case_id)
                 if case_id in {"law-exam-working", "multi-candidate-working"} or (case_id == "case-01" and state.title == "Business Law Tutorial 5"):
                     continue
-                cases.append({"case_id": case_id, "title": state.title})
+                cases.append({"caseId": case_id, "title": state.title})
             self._write(200, {"cases": cases})
             return
         if parts == ["api", "product-guide"]:
@@ -95,7 +118,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "text/markdown; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
-            self.send_header("Access-Control-Allow-Origin", "*")
+            self._cors_headers()
             self.end_headers()
             self.wfile.write(body)
             return
@@ -133,7 +156,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "application/x-ndjson")
                 self.send_header("Content-Disposition", 'inline; filename="raw_traces.jsonl"')
                 self.send_header("Content-Length", str(len(body)))
-                self.send_header("Access-Control-Allow-Origin", "*")
+                self._cors_headers()
                 self.end_headers()
                 self.wfile.write(body)
             except (KeyError, ValueError):
@@ -143,13 +166,55 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self) -> None:
         self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self._cors_headers()
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
     def do_POST(self) -> None:
         parts = self._parts()
+        if self.workflow.run_mode == "vnext" and ((len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"relationships", "context"}) or (len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] in {"subjects", "evidence-requests"})):
+            self._write(404, {"error": "Not found"})
+            return
+        if self.workflow.run_mode == "vnext" and parts == ["api", "cases"]:
+            try:
+                payload = self._read_json()
+                if set(payload) - {"title"}: raise ValueError("Only title is supported")
+                created = create_case(self.workflow, payload)
+                self._write(201, {"caseId": created["caseId"], "workspace": self._public_workspace(created["caseId"])})
+            except (ValueError, KeyError): self._write(422, {"error": "Invalid case request"})
+            return
+        if self.workflow.run_mode == "vnext" and len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "run":
+            try: self._write(200, self._public_workspace(self.workflow.start_run(parts[2])["caseId"]))
+            except KeyError: self._write(404, {"error": "Case not found"})
+            except EvidenceRequestConflict as exc: self._write(409, {"error": str(exc)})
+            return
+        if self.workflow.run_mode == "vnext" and len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"sources", "students"}:
+            try:
+                state = self.workflow.repository.require_case(parts[2]); payload = self._read_json(); expected = payload.get("caseRevision")
+                if parts[3] == "sources":
+                    if set(payload) - {"fileName", "content", "mediaType", "caseRevision"}: raise ValueError("Invalid source request")
+                    source = self.workflow.add_direct_source(parts[2], display_name=str(payload.get("fileName") or ""), content=str(payload.get("content") or ""), source_type=SourceType.DOCUMENT, metadata={"media_type": payload.get("mediaType") or "text/plain"}, assessment_scope=GraphScope(scope_type="case"), expected_case_revision=expected)
+                    self._write(200, {"source": {"sourceHandle": public_source_handle(parts[2], source.id), "fileName": source.name, "documentFormat": document_format(source.name)}, "workspace": self._public_workspace(parts[2])})
+                else:
+                    if set(payload) - {"displayName", "caseRevision"}: raise ValueError("Invalid student request")
+                    student = self.workflow.add_subject(parts[2], {"display_name": str(payload.get("displayName") or "")}, expected)
+                    self._write(200, {"student": {"studentHandle": public_student_handle(parts[2], student.subject_id), "displayName": student.display_name, "candidateNumber": student.candidate_number}, "workspace": self._public_workspace(parts[2])})
+            except KeyError: self._write(404, {"error": "Case not found"})
+            except (ValueError, EvidenceRequestConflict): self._write(422, {"error": "Invalid request"})
+            return
+        if self.workflow.run_mode == "vnext" and len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "students" and parts[5] == "rename":
+            try:
+                state = self.workflow.repository.require_case(parts[2]); payload = self._read_json(); student_id = resolve_student_handle(state, parts[4]); student = self.workflow.rename_subject(parts[2], student_id, str(payload.get("displayName") or ""), payload.get("caseRevision"))
+                self._write(200, {"student": {"studentHandle": public_student_handle(parts[2], student.subject_id), "displayName": student.display_name, "candidateNumber": student.candidate_number}, "workspace": self._public_workspace(parts[2])})
+            except (KeyError, ValueError): self._write(404, {"error": "Student not found"})
+            return
+        if self.workflow.run_mode == "vnext" and parts in (["api", "samples", "open"], ["api", "samples", "reset"]):
+            try:
+                sample_id = str(self._read_json().get("sample_id") or ""); case_id = {"law-exam": "law-exam-working", "multi-candidate": "multi-candidate-working"}[sample_id]
+                self._write(200, {"caseId": case_id, "workspace": self._public_workspace(seed_sample_case(self.workflow, sample_id, case_id)["caseId"])})
+            except (KeyError, ValueError): self._write(404, {"error": "Sample not found"})
+            return
         if parts == ["api", "cases"]:
             try:
                 workspace = create_case(self.workflow, self._read_json())
@@ -191,7 +256,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 self._write(200, {"response": result.response, "actions": result.actions, "recovery": result.recovery})
             except WorkspaceToolAuthorizationError as exc:
                 self._write(403, {"error": str(exc)})
-            except (ValueError, EvidenceRequestConflict) as exc:
+            except (ValueError, KeyError, EvidenceRequestConflict) as exc:
                 self._write(422, {"error": str(exc)})
             return
         if parts == ["api", "debug", "aws-credentials"]:
@@ -270,6 +335,11 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
 
     def do_DELETE(self) -> None:
         parts = self._parts()
+        if self.workflow.run_mode == "vnext" and len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "students":
+            try:
+                state = self.workflow.repository.require_case(parts[2]); student_id = resolve_student_handle(state, parts[4]); self.workflow.remove_subject(parts[2], student_id, self._read_json().get("caseRevision")); self._write(200, self._public_workspace(parts[2]))
+            except (KeyError, ValueError, EvidenceRequestConflict): self._write(404, {"error": "Student not found"})
+            return
         if len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "subjects":
             try:
                 payload = self._read_json()
@@ -295,6 +365,9 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
 
     def do_PUT(self) -> None:
         parts = self._parts()
+        if self.workflow.run_mode == "vnext":
+            self._write(404, {"error": "Not found"})
+            return
         if len(parts) != 4 or parts[0:2] != ["api", "cases"] or parts[3] != "context":
             self._write(404, {"error": "Not found"})
             return
@@ -317,13 +390,26 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
         return payload
 
     def _write(self, status: int, payload: dict) -> None:
+        origin = self.headers.get("Origin")
+        allowed = {item.strip() for item in os.getenv("SIMPLIFYNEXT_ALLOWED_ORIGINS", "http://127.0.0.1:3000,http://localhost:3000").split(",") if item.strip()}
+        if origin and origin not in allowed:
+            status, payload = 403, {"error": "Origin is not allowed"}
         encoded = json.dumps(payload).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(encoded)))
-        self.send_header("Access-Control-Allow-Origin", "*")
+        if origin and origin in allowed:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
         self.end_headers()
         self.wfile.write(encoded)
+
+    def _cors_headers(self) -> None:
+        origin = self.headers.get("Origin")
+        allowed = {item.strip() for item in os.getenv("SIMPLIFYNEXT_ALLOWED_ORIGINS", "http://127.0.0.1:3000,http://localhost:3000").split(",") if item.strip()}
+        if origin and origin in allowed:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
 
     def log_message(self, *_args: object) -> None:
         return

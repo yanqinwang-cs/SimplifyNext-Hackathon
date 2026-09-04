@@ -63,10 +63,10 @@ class HumanEvidenceWorkflow:
         self._event_sequence = 0
 
     def _run_dir(self, case_id: str, run_id: str) -> Path:
-        return self.repository.root / case_id / "runs" / run_id
+        return self.repository.run_dir(case_id, run_id)
 
     def begin_run(self, case_id: str, start_revision: int | None = None) -> str:
-        run_root = self.repository.root / case_id / "runs"
+        run_root = self.repository.runs_dir(case_id)
         run_root.mkdir(parents=True, exist_ok=True)
         numbers = [int(match.group(1)) for path in run_root.iterdir() if (match := re.fullmatch(r"run_(\d{6})", path.name))]
         run_id = f"run_{max(numbers, default=0) + 1:06d}"
@@ -113,7 +113,7 @@ class HumanEvidenceWorkflow:
     def start_run(self, case_id: str) -> dict[str, Any]:
         """Start one backend-owned run through the configured production hook."""
         with self._lock:
-            state = self.ensure_case(case_id)
+            state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
             pending = any(item.status.value == "pending" for item in state.evidence_request_history)
             if self.run_mode == "legacy" and (pending or state.runtime_status == "WAITING_FOR_EVIDENCE"):
                 raise EvidenceRequestConflict("Resolve the pending human evidence request before running")
@@ -201,7 +201,7 @@ class HumanEvidenceWorkflow:
 
     def assert_turn_snapshot_current(self, case_id: str, snapshot: TurnSnapshot) -> None:
         """Optimistic concurrency gate; never supplies a replacement apply baseline."""
-        state = self.ensure_case(case_id)
+        state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
         expected_revision = snapshot.repository_revision if snapshot.repository_revision is not None else snapshot.case_revision
         if state.revision != expected_revision:
             raise CaseSnapshotMismatch("Turn snapshot is stale: canonical case revision changed")
@@ -305,7 +305,7 @@ class HumanEvidenceWorkflow:
             return request
 
     def current_pending_request(self, case_id: str) -> EvidenceRequest:
-        state = self.ensure_case(case_id)
+        state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
         pending = [item for item in state.evidence_request_history if item.status.value == "pending"]
         if len(pending) != 1:
             raise EvidenceRequestConflict(f"Expected exactly one pending evidence request, found {len(pending)}")
@@ -523,14 +523,14 @@ class HumanEvidenceWorkflow:
 
     def get_guidance_context(self, case_id: str) -> dict[str, Any]:
         """Return bounded, current, read-only context for the vNext Help Agent."""
-        state = self.ensure_case(case_id)
+        state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
         runs = self.get_runs(case_id)
         latest = next((run for run in reversed(runs) if run.get("vnext_status") == "completed"), None)
         result: dict[str, Any] | None = None
         if latest and latest.get("vnext_result_path"):
             path = Path(str(latest["vnext_result_path"]))
             if not path.is_absolute():
-                path = self.repository.root / case_id / "runs" / str(latest["run_id"]) / path.name
+                path = self.repository.run_dir(case_id, str(latest["run_id"])) / path.name
             if path.is_file():
                 payload = json.loads(path.read_text(encoding="utf-8"))
                 result = payload.get("result")
@@ -574,7 +574,7 @@ class HumanEvidenceWorkflow:
 
     def get_report(self, case_id: str) -> dict[str, Any]:
         """Return the deliberately small, user-facing report projection."""
-        state = self.ensure_case(case_id)
+        state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
         guidance = self.get_guidance_context(case_id)
         latest = guidance.get("latest_successful_vnext_run")
         violations = {item.violation_id: item.label for item in preset_for_case(state).violations}
@@ -628,7 +628,7 @@ class HumanEvidenceWorkflow:
         return [dict(trace) for trace in self.ensure_case(case_id).trace_history]
 
     def get_runs(self, case_id: str) -> list[dict[str, Any]]:
-        root = self.repository.root / case_id / "runs"
+        root = self.repository.runs_dir(case_id)
         if not root.is_dir():
             return []
         runs = []

@@ -43,6 +43,6 @@ def test_vnext_guidance_context_reports_no_assessment_and_read_only_tools(tmp_pa
     assert context["latest_successful_vnext_run"] is None
     assert context["assessment_is_stale"] is False
     agent = WorkspaceAgent(workflow)
-    assert {item["name"] for item in agent.tool_specs()} == {"GET_CASE_GUIDANCE_CONTEXT", "LIST_SOURCES", "READ_SOURCE"}
+    assert {item["name"] for item in agent.tool_specs()} == {"GET_CASE_GUIDANCE_CONTEXT", "GET_PRODUCT_GUIDE", "LIST_SOURCES", "READ_SOURCE"}
     with pytest.raises(WorkspaceToolAuthorizationError):
         agent.invoke_tool("case-01", {"tool": "ADD_SOURCE", "payload": {"display_name": "x", "content": "x"}})

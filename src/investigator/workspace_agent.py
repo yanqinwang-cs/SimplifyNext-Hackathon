@@ -59,7 +59,7 @@ class _NoArguments(BaseModel):
 
 class _ReadSourceArguments(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    source_id: str
+    sourceHandle: str
 
 
 class _RunArguments(BaseModel):
@@ -92,6 +92,7 @@ _TOOL_ARGUMENTS: dict[str, type[BaseModel]] = {
 }
 _TOOL_ARGUMENTS.update({"READ_SOURCE": _ReadSourceArguments, "GET_RUN": _RunArguments, "FULFIL_REQUEST": _EvidenceArguments, "MARK_REQUEST_UNAVAILABLE": _EvidenceArguments, "ADD_SOURCE": _SourceArguments})
 _TOOL_ARGUMENTS["GET_CASE_GUIDANCE_CONTEXT"] = _NoArguments
+_TOOL_ARGUMENTS["GET_PRODUCT_GUIDE"] = _NoArguments
 
 
 class WorkspaceToolAuthorizationError(PermissionError):
@@ -148,6 +149,7 @@ class WorkspaceAgent:
         raise WorkspaceToolAuthorizationError(f"Unknown or unauthorized Workspace tool: {request.tool}")
 
     def chat(self, case_id: str, message: str) -> WorkspaceChatResponse:
+        self.workflow.repository.require_case(case_id)
         attempts = 2 if self.is_vnext else 1
         session = self.session_store.session(case_id)
         clean_conversation = deepcopy(session["conversation"])
@@ -281,12 +283,13 @@ class WorkspaceAgent:
         record.update({"model_status": status, "tool_execution_status": "completed" if status == "completed" else "failed", "failure_category": failure_category, "failure_summary": summary})
 
     def _read_tool(self, case_id: str, request: WorkspaceToolRequest) -> dict[str, Any]:
-        state = self.workflow.ensure_case(case_id)
+        state = self.workflow.repository.require_case(case_id)
         workspace = self.workflow.get_workspace(case_id)
         if request.tool == "GET_CASE_STATUS":
             return {key: workspace[key] for key in ("runtimeStatus", "currentActor", "caseStatus", "caseRevision")}
         if request.tool == "GET_CASE_GUIDANCE_CONTEXT":
-            return self.workflow.get_guidance_context(case_id)
+            from investigator.public_views import safe_help_context
+            return safe_help_context(self.workflow, case_id)
         if request.tool == "GET_PRODUCT_GUIDE":
             return {"guide": product_guide()}
         if request.tool == "GET_CASE_SUMMARY":
@@ -299,12 +302,12 @@ class WorkspaceAgent:
         if request.tool == "GET_CURRENT_FOCUS":
             return {"focus": state.focus_node_id, "recent": state.focus_recent_node_ids}
         if request.tool == "LIST_SOURCES":
-            return {"sources": [source.model_dump(mode="json") for source in state.sources.values()]}
+            from investigator.public_views import public_source_handle, document_format
+            return {"sources": [{"sourceHandle": public_source_handle(case_id, source.id), "fileName": source.name, "documentFormat": document_format(source.name)} for source in state.sources.values()]}
         if request.tool == "READ_SOURCE":
-            source = state.sources.get(str(request.payload.get("source_id")))
-            if source is None:
-                raise KeyError("Source not found")
-            return {"source": source.model_dump(mode="json")}
+            from investigator.public_views import resolve_source_handle, document_format
+            source = state.sources[resolve_source_handle(state, str(request.payload.get("sourceHandle")))]
+            return {"caseId": case_id, "source": {"sourceHandle": request.payload["sourceHandle"], "fileName": source.name, "documentFormat": document_format(source.name), "content": source.content or ""}}
         if request.tool == "GET_PENDING_REQUEST":
             return {"request": workspace.get("pendingEvidenceRequest")}
         if request.tool == "LIST_REQUEST_HISTORY":

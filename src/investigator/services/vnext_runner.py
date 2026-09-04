@@ -46,7 +46,7 @@ class VNextProductionRunner:
         self.max_attempts = max_attempts
 
     def run(self, case_id: str, workflow: HumanEvidenceWorkflow) -> VNextRunResult:
-        state = workflow.ensure_case(case_id)
+        state = workflow.repository.require_case(case_id)
         preset = self.preset_resolver(state)
         client = self.client or BedrockModelClient(model_id=effective_model("investigator").invocation_id, region=effective_model("investigator").region)
         last_error: Exception | None = None
@@ -176,7 +176,7 @@ class VNextProductionRunner:
                         "type": "vnext_run_completed",
                         "run_id": workflow.current_run_id(case_id),
                         "runtime_status": "COMPLETED",
-                        "case_revision": workflow.ensure_case(case_id).revision,
+                        "case_revision": workflow.repository.require_case(case_id).revision,
                         "human_summary": "The finite vNext assessment completed.",
                     },
                 )
@@ -224,7 +224,7 @@ class VNextProductionRunner:
         run_id = workflow.current_run_id(case_id)
         if run_id is None:
             raise RuntimeError("Cannot persist vNext result without an active run")
-        directory = workflow.repository.root / case_id / "runs" / run_id
+        directory = workflow.repository.run_dir(case_id, run_id)
         directory.mkdir(parents=True, exist_ok=True)
         metadata = investigator.last_call.metadata if investigator.last_call else None
         payload = {

@@ -11,20 +11,11 @@ export interface EvidenceRequest {
   resumed_run_id?: string | null;
 }
 
-export interface VisibleSource {
-  id: string;
-  name: string;
-  sourceType: string;
-  content: string;
-  contentPreview: string;
-  metadata?: Record<string, unknown>;
-}
+export interface PublicSource { sourceHandle: string; fileName: string; documentFormat: string; }
+export interface PublicSourceDocument { caseId: string; source: PublicSource & { content: string }; }
 
-export interface AssessmentSubject { subject_id: string; display_name: string; candidate_number?: string | null; metadata?: Record<string, unknown>; }
-export interface SubjectRelationship { relationship_id: string; subject_ids: string[]; relationship_type: string; description?: string | null; source_ids?: string[]; metadata?: Record<string, unknown>; }
-export interface AssessmentContext { assessment_id: string; title?: string | null; assessment_type?: string | null; venue?: string | null; start_time?: string | null; end_time?: string | null; metadata?: Record<string, unknown>; }
+export interface AssessmentSubject { studentHandle: string; displayName: string; candidateNumber?: string | null; }
 export interface GuidanceMaterial { statement: string; source_labels?: string[]; }
-export interface GuidanceContext { current_case_revision: number; latest_assessment_revision?: number | null; assessment_is_stale: boolean; per_subject_assessments: Array<{ subject_id: string; subject_display_name?: string; subject_candidate_number?: string | null; violation_assessments: Array<{ violation_id: string; status: string; reasoning_summary: string; supporting_node_ids: string[]; mitigating_node_ids: string[]; supporting_material?: GuidanceMaterial[]; mitigating_material?: GuidanceMaterial[]; unresolved_points: string[] }>; furthest_conclusion: { statement: string; confidence: string } }>; }
 
 export interface TraceEntry {
   step?: number;
@@ -47,9 +38,7 @@ export interface RunSummary {
   final_committed_revision?: number;
   pending_request_id?: string | null;
   request_text?: string | null;
-  trace_path?: string | null;
   vnext_status?: string | null;
-  vnext_result_path?: string | null;
   vnext_furthest_conclusion?: string | null;
   vnext_subject_conclusions?: Record<string, string> | null;
   model?: string | null;
@@ -94,21 +83,13 @@ export interface CaseWorkspaceState {
   caseStatus: "ACTIVE" | "HANDED_OFF" | "CLOSED";
   runtimeStatus: "IDLE" | "RUNNING" | "COMPLETED" | "RUNNING_INVESTIGATOR" | "RUNNING_STEWARD" | "WAITING_FOR_EVIDENCE" | "FAILED" | "STOPPED" | "PAUSED";
   currentActor: "INVESTIGATOR" | "STEWARD" | "NONE";
-  visibleSources: VisibleSource[];
-  assessmentContext?: AssessmentContext | null;
-  subjects?: AssessmentSubject[];
-  relationships?: SubjectRelationship[];
-  guidance?: GuidanceContext;
-  lastError?: { failure_category?: string; message?: string; actor?: string; step?: number } | null;
-  lastTraceStep?: number | null;
-  lastUpdatedAt?: string;
-  latestRun?: RunSummary | null;
-  requestHistory?: EvidenceRequest[];
-  runs?: RunSummary[];
-  chatHistory?: { role: string; text: string }[];
-  workspaceEvents?: WorkspaceEvent[];
+  sources: PublicSource[];
+  students: AssessmentSubject[];
+  report: { state: string; assessmentIsStale: boolean };
+  chatHistory: { role: string; text: string }[];
+  activity: { type: string; summary: string; createdAt: string }[];
 }
-export interface CaseListItem { case_id: string; title: string; }
+export interface CaseListItem { caseId: string; title: string; }
 
 export interface ReportMaterial { statement: string; sourceLabels: string[]; }
 export interface ReportViolation { label: string; status: string; reasoningSummary: string; supportingMaterial: ReportMaterial[]; limitingMaterial: ReportMaterial[]; }
