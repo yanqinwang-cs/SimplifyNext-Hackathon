@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import shutil
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -27,8 +28,8 @@ from investigator.runtime_settings import settings as runtime_settings, set_mode
 
 def sample_cases() -> list[dict[str, str]]:
     return [
-        {"id": "law-exam", "title": "Law Exam Investigation", "description": "A rich single-case investigation with multiple records."},
-        {"id": "multi-candidate", "title": "Multi-Candidate Collaboration Review", "description": "A controlled five-subject assessment."},
+        {"sampleId": "law-exam", "title": "Law Exam Investigation"},
+        {"sampleId": "multi-candidate", "title": "Multi-Candidate Collaboration Review"},
     ]
 
 
@@ -52,14 +53,15 @@ def create_case(workflow: HumanEvidenceWorkflow, payload: dict[str, Any]) -> dic
 
 
 def seed_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str, case_id: str) -> dict[str, Any]:
-    samples = {item["id"]: item for item in sample_cases()}
+    samples = {item["sampleId"]: item for item in sample_cases()}
     if sample_id not in samples:
         raise ValueError(f"Unknown sample case: {sample_id!r}")
-    fixture_root = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "public_samples"
+    fixture_root = Path(__file__).resolve().parent / "public_samples"
+    descriptions = {"law-exam": "A rich single-case investigation with multiple records.", "multi-candidate": "A controlled five-subject assessment."}
     if sample_id == "law-exam":
         source_root = fixture_root / "law_exam" / "sources"
         sources = {f"S{index}": Source(id=f"S{index}", name=path.name, source_type=SourceType.DOCUMENT, content=path.read_text(encoding="utf-8"), metadata={"filename": path.name, "assessment_scope": GraphScope(scope_type="case").model_dump(mode="json")}) for index, path in enumerate(sorted(source_root.glob("*.md")), start=1)}
-        state = CaseState(case_id=case_id, title="Law Exam Investigation", description=samples[sample_id]["description"], assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Business Law Individual In-Class Assessment 2", assessment_type="closed-notes individual assessment"), subjects={"subject_A": AssessmentSubject(subject_id="subject_A", display_name="Candidate A", candidate_number="BL-041")}, sources=sources)
+        state = CaseState(case_id=case_id, title="Law Exam Investigation", description=descriptions[sample_id], case_kind="sample", sample_id=sample_id, assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Business Law Individual In-Class Assessment 2", assessment_type="closed-notes individual assessment"), subjects={"subject_A": AssessmentSubject(subject_id="subject_A", display_name="Candidate A", candidate_number="BL-041")}, sources=sources)
     elif sample_id == "multi-candidate":
         source_root = fixture_root / "multi_candidate" / "sources"
         subjects = {f"subject_{letter}": AssessmentSubject(subject_id=f"subject_{letter}", display_name=f"Candidate {letter}", candidate_number=number) for letter, number in (("A", "BL-041"), ("B", "BL-073"), ("C", "BL-118"), ("D", "BL-162"), ("E", "BL-205"))}
@@ -68,12 +70,41 @@ def seed_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str, case_id: s
             letter = next((candidate for candidate in "ABCDE" if f"candidate_{candidate}_" in path.name), None)
             scope = GraphScope(scope_type="subject", subject_id=f"subject_{letter}") if letter else GraphScope(scope_type="case")
             sources[f"S{index}"] = Source(id=f"S{index}", name=path.name, source_type=SourceType.DOCUMENT, content=path.read_text(encoding="utf-8"), metadata={"filename": path.name, "assessment_scope": scope.model_dump(mode="json")})
-        state = CaseState(case_id=case_id, title="Multi-Candidate Collaboration Review", description=samples[sample_id]["description"], assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Business Law Individual In-Class Assessment 2", assessment_type="closed-notes individual assessment", venue="Seminar Room 4"), subjects=subjects, subject_relationships={"rel_A_B_adjacent": SubjectRelationship(relationship_id="rel_A_B_adjacent", subject_ids=["subject_A", "subject_B"], relationship_type="adjacent_seating", description="Candidate A and Candidate B were seated next to one another.")}, sources=sources)
+        state = CaseState(case_id=case_id, title="Multi-Candidate Collaboration Review", description=descriptions[sample_id], case_kind="sample", sample_id=sample_id, assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Business Law Individual In-Class Assessment 2", assessment_type="closed-notes individual assessment", venue="Seminar Room 4"), subjects=subjects, subject_relationships={"rel_A_B_adjacent": SubjectRelationship(relationship_id="rel_A_B_adjacent", subject_ids=["subject_A", "subject_B"], relationship_type="adjacent_seating", description="Candidate A and Candidate B were seated next to one another.")}, sources=sources)
     else:
         raise ValueError(f"Unknown sample case: {sample_id!r}")
     workflow.repository.save(state)
     workflow.record_workspace_event(case_id, {"type": "case_created", "case_revision": state.revision, "human_summary": f"Sample case {state.title} was opened."})
     return workflow.get_workspace(case_id)
+
+
+SAMPLE_CASE_IDS = {"law-exam": "law-exam-working", "multi-candidate": "multi-candidate-working"}
+
+
+def open_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str) -> str:
+    case_id = SAMPLE_CASE_IDS[sample_id]
+    if workflow.repository.exists(case_id):
+        state = workflow.repository.require_case(case_id)
+        if state.case_kind != "sample" or state.sample_id != sample_id:
+            raise ValueError("Sample working copy metadata is invalid")
+    else:
+        seed_sample_case(workflow, sample_id, case_id)
+    return case_id
+
+
+def reset_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str) -> str:
+    case_id = SAMPLE_CASE_IDS[sample_id]
+    with workflow._lock:
+        state = workflow.repository.require_case(case_id) if workflow.repository.exists(case_id) else None
+        if case_id in workflow._in_flight_actor or (state and state.runtime_status.startswith("RUNNING")):
+            raise EvidenceRequestConflict("Sample cannot be reset while an assessment is running")
+        if workflow.repository.case_artifact_dir(case_id).exists():
+            shutil.rmtree(workflow.repository.case_artifact_dir(case_id))
+        workflow._workspace_events.pop(case_id, None)
+        workflow._in_flight_actor.pop(case_id, None)
+        workflow._model_revision_active.discard(case_id)
+        seed_sample_case(workflow, sample_id, case_id)
+    return case_id
 
 
 class InvestigatorApiHandler(BaseHTTPRequestHandler):
@@ -192,6 +223,9 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
         if self.workflow.run_mode == "vnext" and len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"sources", "students"}:
             try:
                 state = self.workflow.repository.require_case(parts[2]); payload = self._read_json(); expected = payload.get("caseRevision")
+                if state.case_kind == "sample":
+                    self._write(409, {"error": "Sample cases are preconfigured. Reset the sample to restore its original evidence.", "code": "SAMPLE_READ_ONLY"})
+                    return
                 if parts[3] == "sources":
                     if set(payload) - {"fileName", "content", "mediaType", "caseRevision"}: raise ValueError("Invalid source request")
                     source = self.workflow.add_direct_source(parts[2], display_name=str(payload.get("fileName") or ""), content=str(payload.get("content") or ""), source_type=SourceType.DOCUMENT, metadata={"media_type": payload.get("mediaType") or "text/plain"}, assessment_scope=GraphScope(scope_type="case"), expected_case_revision=expected)
@@ -205,15 +239,27 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             return
         if self.workflow.run_mode == "vnext" and len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "students" and parts[5] == "rename":
             try:
-                state = self.workflow.repository.require_case(parts[2]); payload = self._read_json(); student_id = resolve_student_handle(state, parts[4]); student = self.workflow.rename_subject(parts[2], student_id, str(payload.get("displayName") or ""), payload.get("caseRevision"))
+                state = self.workflow.repository.require_case(parts[2]); payload = self._read_json()
+                if state.case_kind == "sample":
+                    self._write(409, {"error": "Sample cases are preconfigured. Reset the sample to restore its original evidence.", "code": "SAMPLE_READ_ONLY"})
+                    return
+                student_id = resolve_student_handle(state, parts[4]); student = self.workflow.rename_subject(parts[2], student_id, str(payload.get("displayName") or ""), payload.get("caseRevision"))
                 self._write(200, {"student": {"studentHandle": public_student_handle(parts[2], student.subject_id), "displayName": student.display_name, "candidateNumber": student.candidate_number}, "workspace": self._public_workspace(parts[2])})
             except (KeyError, ValueError): self._write(404, {"error": "Student not found"})
             return
         if self.workflow.run_mode == "vnext" and parts in (["api", "samples", "open"], ["api", "samples", "reset"]):
             try:
-                sample_id = str(self._read_json().get("sample_id") or ""); case_id = {"law-exam": "law-exam-working", "multi-candidate": "multi-candidate-working"}[sample_id]
-                self._write(200, {"caseId": case_id, "workspace": self._public_workspace(seed_sample_case(self.workflow, sample_id, case_id)["caseId"])})
+                payload = self._read_json()
+                if set(payload) != {"sampleId"}: raise ValueError("Invalid sample request")
+                sample_id = str(payload["sampleId"])
+                if parts[-1] == "open":
+                    case_id = open_sample_case(self.workflow, sample_id)
+                else:
+                    case_id = reset_sample_case(self.workflow, sample_id)
+                    self.workspace_agent.session_store.clear_case(case_id)
+                self._write(200, {"caseId": case_id, "workspace": self._public_workspace(case_id)})
             except (KeyError, ValueError): self._write(404, {"error": "Sample not found"})
+            except EvidenceRequestConflict as exc: self._write(409, {"error": str(exc), "code": "SAMPLE_BUSY"})
             return
         if parts == ["api", "cases"]:
             try:
@@ -337,7 +383,11 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
         parts = self._parts()
         if self.workflow.run_mode == "vnext" and len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "students":
             try:
-                state = self.workflow.repository.require_case(parts[2]); student_id = resolve_student_handle(state, parts[4]); self.workflow.remove_subject(parts[2], student_id, self._read_json().get("caseRevision")); self._write(200, self._public_workspace(parts[2]))
+                state = self.workflow.repository.require_case(parts[2])
+                if state.case_kind == "sample":
+                    self._write(409, {"error": "Sample cases are preconfigured. Reset the sample to restore its original evidence.", "code": "SAMPLE_READ_ONLY"})
+                    return
+                student_id = resolve_student_handle(state, parts[4]); self.workflow.remove_subject(parts[2], student_id, self._read_json().get("caseRevision")); self._write(200, self._public_workspace(parts[2]))
             except (KeyError, ValueError, EvidenceRequestConflict): self._write(404, {"error": "Student not found"})
             return
         if len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "subjects":

@@ -81,6 +81,10 @@ export interface CaseWorkspaceState {
   currentFocus: string;
   messages: WorkspaceMessage[];
   caseStatus: "ACTIVE" | "HANDED_OFF" | "CLOSED";
+  caseKind: "user" | "sample";
+  sample: { sampleId: string; title: string } | null;
+  capabilities: { editStudents: boolean; addEvidence: boolean; resetSample: boolean; runAssessment: boolean; useHelp: boolean; viewSources: boolean };
+  preloadedSourceCount: number;
   runtimeStatus: "IDLE" | "RUNNING" | "COMPLETED" | "RUNNING_INVESTIGATOR" | "RUNNING_STEWARD" | "WAITING_FOR_EVIDENCE" | "FAILED" | "STOPPED" | "PAUSED";
   currentActor: "INVESTIGATOR" | "STEWARD" | "NONE";
   sources: PublicSource[];
@@ -90,6 +94,7 @@ export interface CaseWorkspaceState {
   activity: { type: string; summary: string; createdAt: string }[];
 }
 export interface CaseListItem { caseId: string; title: string; }
+export interface SampleCatalogItem { sampleId: string; title: string; }
 
 export interface ReportMaterial { statement: string; sourceLabels: string[]; }
 export interface ReportViolation { label: string; status: string; reasoningSummary: string; supportingMaterial: ReportMaterial[]; limitingMaterial: ReportMaterial[]; }

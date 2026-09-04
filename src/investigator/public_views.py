@@ -28,6 +28,10 @@ class PublicWorkspace(BaseModel):
     caseRevision: int
     title: str
     caseStatus: str
+    caseKind: str
+    sample: dict[str, str] | None = None
+    capabilities: dict[str, bool]
+    preloadedSourceCount: int = 0
     runtimeStatus: str
     students: list[PublicStudent]
     sources: list[PublicSource]
@@ -74,7 +78,11 @@ def workspace_view(workflow: Any, case_id: str) -> dict[str, Any]:
         caseId=state.case_id, caseRevision=state.revision, title=report["title"], caseStatus=state.case_status,
         runtimeStatus=state.runtime_status, students=[PublicStudent(studentHandle=public_student_handle(case_id, item.subject_id), displayName=item.display_name, candidateNumber=item.candidate_number) for item in sorted(state.subjects.values(), key=lambda item: item.subject_id)],
         sources=[PublicSource(sourceHandle=public_source_handle(case_id, item.id), fileName=item.name, documentFormat=document_format(item.name)) for item in sorted(state.sources.values(), key=lambda item: item.id)],
-        report=PublicReport(state=report["reportState"], assessmentIsStale=report["assessmentIsStale"]),
+    report=PublicReport(state=report["reportState"], assessmentIsStale=report["assessmentIsStale"]),
+        caseKind=state.case_kind,
+        sample={"sampleId": state.sample_id, "title": state.title} if state.case_kind == "sample" and state.sample_id else None,
+        capabilities={"editStudents": state.case_kind != "sample", "addEvidence": state.case_kind != "sample", "resetSample": state.case_kind == "sample", "runAssessment": True, "useHelp": True, "viewSources": True},
+        preloadedSourceCount=len(state.sources) if state.case_kind == "sample" else 0,
         chatHistory=[{"role": str(item.get("role", "workspace")), "text": str(item.get("text", ""))} for item in workflow._workspace_events.get(case_id, []) if item.get("type") == "chat"],
         activity=[{"type": str(item.get("type", "")), "summary": str(item.get("human_summary", "")), "createdAt": str(item.get("created_at", ""))} for item in workflow.workspace_events(case_id)],
     ).model_dump(mode="json")

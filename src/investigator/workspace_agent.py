@@ -44,6 +44,9 @@ class WorkspaceSessionStore:
     def clear(self) -> None:
         self._sessions.clear()
 
+    def clear_case(self, case_id: str) -> None:
+        self._sessions.pop(case_id, None)
+
 
 class WorkspaceToolRequest(BaseModel):
     """Structured boundary for future tools; semantic graph writes are absent by design."""

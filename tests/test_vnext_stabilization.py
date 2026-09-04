@@ -256,8 +256,9 @@ def test_onboarding_and_case_selection_contract() -> None:
     assert 'window.location.href = "/cases"' in root
     assert "Start an investigation" not in root
     assert "Create a new case or choose a case from the sidebar" not in root
-    assert cases.count("Law Exam Investigation") == 1
-    assert cases.count("Multi-Candidate Collaboration Review") == 1
+    assert "getSamples" in cases
+    assert "const samples = [[" not in cases
+    assert "sampleId" in cases
     assert cases.count("sample") >= 2
     assert "Revision" not in cases and "subjects" not in cases
     assert ">Samples<" not in cases

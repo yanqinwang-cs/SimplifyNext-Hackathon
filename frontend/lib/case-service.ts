@@ -1,4 +1,4 @@
-import type { AwsCredentialStatus, CaseListItem, CaseWorkspaceState, PublicSource, PublicSourceDocument, ReportResponse, RunSummary, RuntimeSettings, TraceEntry, WorkspaceChatResponse } from "./types";
+import type { AwsCredentialStatus, CaseListItem, CaseWorkspaceState, PublicSource, PublicSourceDocument, ReportResponse, RunSummary, RuntimeSettings, SampleCatalogItem, TraceEntry, WorkspaceChatResponse } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
@@ -20,6 +20,7 @@ export function getReport(caseId: string): Promise<ReportResponse> {
 export async function getCases(): Promise<CaseListItem[]> {
   return (await request<{ cases: CaseListItem[] }>("/api/cases")).cases;
 }
+export async function getSamples(): Promise<SampleCatalogItem[]> { return (await request<{ samples: SampleCatalogItem[] }>("/api/samples")).samples; }
 
 export function createCase(payload: { title: string }) {
   return request<{ caseId: string; workspace: CaseWorkspaceState }>("/api/cases", { method: "POST", body: JSON.stringify(payload) });
@@ -66,11 +67,11 @@ export function removeSubject(caseId: string, studentHandle: string, caseRevisio
 }
 
 export function openSample(sampleId: string) {
-  return request<{ caseId: string }>("/api/samples/open", { method: "POST", body: JSON.stringify({ sample_id: sampleId }) });
+  return request<{ caseId: string }>("/api/samples/open", { method: "POST", body: JSON.stringify({ sampleId }) });
 }
 
 export function resetSample(sampleId: string) {
-  return request<{ caseId: string; workspace: CaseWorkspaceState }>("/api/samples/reset", { method: "POST", body: JSON.stringify({ sample_id: sampleId }) });
+  return request<{ caseId: string; workspace: CaseWorkspaceState }>("/api/samples/reset", { method: "POST", body: JSON.stringify({ sampleId }) });
 }
 
 export async function provideEvidence(caseId: string, requestId: string, caseRevision: number | undefined, file: File | null, note: string) {

@@ -17,6 +17,8 @@ class CaseState(BaseModel):
     case_id: str
     title: str
     description: str | None = None
+    case_kind: str = "user"
+    sample_id: str | None = None
     assessment_rule_preset_id: str = "academic-integrity-core"
     sources: dict[str, Source] = Field(default_factory=dict)
     assessment_context: AssessmentContext | None = None
