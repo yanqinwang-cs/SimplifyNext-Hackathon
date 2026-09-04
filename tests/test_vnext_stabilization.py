@@ -5,7 +5,7 @@ import time
 import pytest
 
 from investigator.cycle import RequestEvidence
-from investigator.http_api import create_case, product_guide, sample_cases
+from investigator.http_api import create_case, product_guide, sample_cases, seed_sample_case
 from investigator.graph import GraphNode, GraphNodeType
 from investigator.llm import ModelCallMetadata, ModelNativeCall, ModelTextBlock
 from investigator.models.evidence_request import EvidenceRequestStatus
@@ -162,3 +162,13 @@ def test_case_creation_and_public_sample_catalog_are_minimal(tmp_path: Path) -> 
     assert workspace["assessmentContext"]["title"] == "Assessment"
     assert [item["title"] for item in sample_cases()] == ["Law Exam Investigation", "Multi-Candidate Collaboration Review"]
     assert "evaluator_only" not in product_guide()
+
+
+def test_public_samples_seed_real_visible_sources_without_hidden_material(tmp_path: Path) -> None:
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    law = seed_sample_case(workflow, "law-exam", "law-exam-working")
+    multi = seed_sample_case(workflow, "multi-candidate", "multi-candidate-working")
+    assert len(law["visibleSources"]) == 17
+    assert all("source" not in item["name"].lower() or "source 1" not in item["name"].lower() for item in multi["visibleSources"])
+    assert len(multi["visibleSources"]) == 14
+    assert all("evaluator_only" not in item["content"] for item in multi["visibleSources"])

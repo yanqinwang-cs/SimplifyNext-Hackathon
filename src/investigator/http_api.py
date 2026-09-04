@@ -56,22 +56,14 @@ def seed_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str, case_id: s
     if sample_id not in samples:
         raise ValueError(f"Unknown sample case: {sample_id!r}")
     if sample_id == "law-exam":
-        try:
-            state = workflow.repository.load("case-01").model_copy(deep=True, update={"case_id": case_id, "title": "Law Exam Investigation", "description": "A rich textual investigation with multiple records and unresolved explanations."})
-        except KeyError:
-            state = CaseState(case_id=case_id, title="Law Exam Investigation", description=samples[sample_id]["description"], assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Law examination", assessment_type="individual assessment"))
-    elif sample_id == "smart-device":
-        subjects = {"A": AssessmentSubject(subject_id="A", display_name="Candidate A")}
-        relationships = {}
-    elif sample_id == "possible-collaboration":
-        subjects = {key: AssessmentSubject(subject_id=key, display_name=f"Candidate {key}") for key in ("A", "B")}
-        relationships = {"AB": SubjectRelationship(relationship_id="AB", subject_ids=["A", "B"], relationship_type="observed communication")}
+        source_root = Path(__file__).resolve().parents[2] / "data" / "samples" / "law_exam_investigation" / "sources"
+        sources = {f"S{index}": Source(id=f"S{index}", name=path.name, source_type=SourceType.DOCUMENT, content=path.read_text(encoding="utf-8"), metadata={"filename": path.name, "assessment_scope": GraphScope(scope_type="case").model_dump(mode="json")}) for index, path in enumerate(sorted(source_root.glob("*.md")), start=1)}
+        state = CaseState(case_id=case_id, title="Law Exam Investigation", description=samples[sample_id]["description"], assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Business Law Individual In-Class Assessment 2", assessment_type="closed-notes individual assessment"), sources=sources)
+    elif sample_id == "multi-candidate":
+        fixture = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "vnext_multi_subject" / "case_5a_combined" / "case_state.json"
+        state = CaseState.model_validate(json.loads(fixture.read_text(encoding="utf-8"))).model_copy(deep=True, update={"case_id": case_id, "title": "Multi-Candidate Collaboration Review"})
     else:
-        subjects = {key: AssessmentSubject(subject_id=key, display_name=f"Candidate {key}") for key in ("A", "B", "C", "D", "E")}
-        relationships = {}
-    sources = {f"S{index}": Source(id=f"S{index}", name=f"{samples[sample_id]['title']} source {index}", source_type=SourceType.DOCUMENT, content="Visible sample source material.", metadata={"assessment_scope": GraphScope(scope_type="case").model_dump(mode="json")}) for index in range(1, 3)}
-    if sample_id != "law-exam":
-        state = CaseState(case_id=case_id, title=samples[sample_id]["title"], description=samples[sample_id]["description"], assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title=samples[sample_id]["title"], assessment_type="synthetic demonstration"), subjects=subjects, subject_relationships=relationships, sources=sources)
+        raise ValueError(f"Unknown sample case: {sample_id!r}")
     workflow.repository.save(state)
     workflow.record_workspace_event(case_id, {"type": "case_created", "case_revision": state.revision, "human_summary": f"Sample case {state.title} was opened."})
     return workflow.get_workspace(case_id)
