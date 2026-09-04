@@ -194,11 +194,10 @@ def test_public_sample_fixture_integrity() -> None:
     assert not any("evaluator_only" in path.parts for path in multi_root.rglob("*"))
 
 
-def test_workspace_home_keeps_samples_in_one_cases_list_and_new_case_minimal() -> None:
+def test_workspace_home_is_onboarding_and_new_case_minimal() -> None:
     page = Path("frontend/app/page.tsx").read_text(encoding="utf-8")
-    assert page.count('>Cases</h2>') == 1
-    assert ">Samples</h2>" not in page
-    assert 'placeholder="Case name"' in page
+    assert "Investigation Assistant" in page
+    assert 'window.location.href = "/cases"' in page
     assert 'placeholder="Assessment title"' not in page
     assert 'placeholder="Assessment type"' not in page
 
@@ -231,3 +230,24 @@ def test_student_identity_is_explicit_and_samples_keep_their_configuration(tmp_p
     multi = seed_sample_case(workflow, "multi-candidate", "multi-candidate-working")
     assert [item["display_name"] for item in law["subjects"]] == ["Candidate A"]
     assert [item["display_name"] for item in multi["subjects"]] == ["Candidate A", "Candidate B", "Candidate C", "Candidate D", "Candidate E"]
+
+
+def test_onboarding_and_case_selection_contract() -> None:
+    root = Path("frontend/app/page.tsx").read_text(encoding="utf-8")
+    cases = Path("frontend/app/cases/page.tsx").read_text(encoding="utf-8")
+    assert root.count("From evidence to assessment") == 1
+    assert root.count("Set up your case") == 1
+    assert root.count("Run the assessment") == 1
+    assert root.count("Ask what you need next") == 1
+    for asset in ("01-evidence-to-assessment.png", "02-set-up-case.png", "03-run-assessment.png", "04-ask-next.png"):
+        assert f"/onboarding/{asset}" in root
+        path = Path("frontend/public/onboarding") / asset
+        assert path.is_file() and path.stat().st_size > 0
+    assert 'window.location.href = "/cases"' in root
+    assert "Start an investigation" not in root
+    assert "Create a new case or choose a case from the sidebar" not in root
+    assert cases.count("Law Exam Investigation") == 1
+    assert cases.count("Multi-Candidate Collaboration Review") == 1
+    assert cases.count("sample") >= 2
+    assert "Revision" not in cases and "subjects" not in cases
+    assert ">Samples<" not in cases
