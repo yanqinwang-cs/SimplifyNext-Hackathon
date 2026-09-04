@@ -48,8 +48,16 @@ export async function addSource(caseId: string, payload: { display_name: string;
   return request<{ source: import("./types").VisibleSource; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/sources`, { method: "POST", body: JSON.stringify(payload) });
 }
 
-export function addSubject(caseId: string, payload: { subject_id: string; display_name: string; candidate_number?: string; case_revision?: number }) {
+export function addSubject(caseId: string, payload: { subject_id?: string; display_name: string; candidate_number?: string; case_revision?: number }) {
   return request<{ subject: import("./types").AssessmentSubject; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/subjects`, { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function renameSubject(caseId: string, subjectId: string, displayName: string, caseRevision?: number) {
+  return request<{ student: import("./types").AssessmentSubject; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/subjects/${encodeURIComponent(subjectId)}/rename`, { method: "POST", body: JSON.stringify({ display_name: displayName, case_revision: caseRevision }) });
+}
+
+export function removeSubject(caseId: string, subjectId: string, caseRevision?: number) {
+  return request<CaseWorkspaceState>(`/api/cases/${encodeURIComponent(caseId)}/subjects/${encodeURIComponent(subjectId)}`, { method: "DELETE", body: JSON.stringify({ case_revision: caseRevision }) });
 }
 
 export function addRelationship(caseId: string, payload: { relationship_id: string; subject_ids: string[]; relationship_type: string; description?: string; case_revision?: number }) {

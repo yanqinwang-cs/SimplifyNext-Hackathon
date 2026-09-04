@@ -43,7 +43,7 @@ def create_case(workflow: HumanEvidenceWorkflow, payload: dict[str, Any]) -> dic
     case_id = allocate_case_id(workflow.repository)
     context_payload = {key: assessment.get(key) for key in ("title", "assessment_type", "venue", "start_time", "end_time") if assessment.get(key) is not None}
     context = AssessmentContext(assessment_id=f"{case_id}-assessment", **context_payload)
-    state = CaseState(case_id=case_id, title=title, description=str(payload.get("description") or ""), assessment_context=context)
+    state = CaseState(case_id=case_id, title=title, description=str(payload.get("description") or ""), assessment_context=context, subjects={"subject_1": AssessmentSubject(subject_id="subject_1", display_name="Student 1")})
     workflow.repository.save(state)
     workflow.record_workspace_event(case_id, {"type": "case_created", "case_revision": state.revision, "human_summary": "Case created."})
     return workflow.get_workspace(case_id)
@@ -57,7 +57,7 @@ def seed_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str, case_id: s
     if sample_id == "law-exam":
         source_root = fixture_root / "law_exam" / "sources"
         sources = {f"S{index}": Source(id=f"S{index}", name=path.name, source_type=SourceType.DOCUMENT, content=path.read_text(encoding="utf-8"), metadata={"filename": path.name, "assessment_scope": GraphScope(scope_type="case").model_dump(mode="json")}) for index, path in enumerate(sorted(source_root.glob("*.md")), start=1)}
-        state = CaseState(case_id=case_id, title="Law Exam Investigation", description=samples[sample_id]["description"], assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Business Law Individual In-Class Assessment 2", assessment_type="closed-notes individual assessment"), sources=sources)
+        state = CaseState(case_id=case_id, title="Law Exam Investigation", description=samples[sample_id]["description"], assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Business Law Individual In-Class Assessment 2", assessment_type="closed-notes individual assessment"), subjects={"subject_A": AssessmentSubject(subject_id="subject_A", display_name="Candidate A", candidate_number="BL-041")}, sources=sources)
     elif sample_id == "multi-candidate":
         source_root = fixture_root / "multi_candidate" / "sources"
         subjects = {f"subject_{letter}": AssessmentSubject(subject_id=f"subject_{letter}", display_name=f"Candidate {letter}", candidate_number=number) for letter, number in (("A", "BL-041"), ("B", "BL-073"), ("C", "BL-118"), ("D", "BL-162"), ("E", "BL-205"))}
@@ -226,6 +226,14 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             except (ValueError, KeyError, EvidenceRequestConflict) as exc:
                 self._write(409 if isinstance(exc, EvidenceRequestConflict) else 422, {"error": str(exc)})
             return
+        if len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "subjects" and parts[5] == "rename":
+            try:
+                payload = self._read_json()
+                subject = self.workflow.rename_subject(parts[2], parts[4], str(payload.get("display_name") or ""), payload.get("case_revision"))
+                self._write(200, {"student": subject.model_dump(mode="json"), "workspace": self.workflow.get_workspace(parts[2])})
+            except (ValueError, EvidenceRequestConflict) as exc:
+                self._write(409 if isinstance(exc, EvidenceRequestConflict) else 422, {"error": str(exc)})
+            return
         if len(parts) != 6 or parts[0:2] != ["api", "cases"] or parts[3] != "evidence-requests":
             self._write(404, {"error": "Not found"})
             return
@@ -243,6 +251,15 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             self._write(409 if isinstance(exc, EvidenceRequestConflict) else 422, {"error": str(exc)})
 
     def do_DELETE(self) -> None:
+        parts = self._parts()
+        if len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "subjects":
+            try:
+                payload = self._read_json()
+                self.workflow.remove_subject(parts[2], parts[4], payload.get("case_revision"))
+                self._write(200, self.workflow.get_workspace(parts[2]))
+            except (ValueError, EvidenceRequestConflict) as exc:
+                self._write(409 if isinstance(exc, EvidenceRequestConflict) else 422, {"error": str(exc)})
+            return
         if self._parts() != ["api", "debug", "aws-credentials"]:
             self._write(404, {"error": "Not found"})
             return

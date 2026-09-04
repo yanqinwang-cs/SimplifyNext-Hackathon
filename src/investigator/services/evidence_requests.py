@@ -352,7 +352,13 @@ class HumanEvidenceWorkflow:
         with self._lock:
             state = self.ensure_case(case_id)
             self._check_revision(state, expected_case_revision)
-            item = AssessmentSubject.model_validate(subject)
+            payload = dict(subject)
+            if not payload.get("subject_id"):
+                index = 1
+                while f"subject_{index}" in state.subjects:
+                    index += 1
+                payload["subject_id"] = f"subject_{index}"
+            item = AssessmentSubject.model_validate(payload)
             if item.subject_id in state.subjects:
                 raise ValueError(f"Duplicate subject ID: {item.subject_id!r}")
             state.subjects[item.subject_id] = item
@@ -361,6 +367,39 @@ class HumanEvidenceWorkflow:
             self.repository.save(state)
         self.record_workspace_event(case_id, {"type": "subject_added", "subject_id": item.subject_id, "case_revision": state.revision, "human_summary": f"Subject {item.display_name} was added."})
         return item
+
+    def rename_subject(self, case_id: str, subject_id: str, display_name: str, expected_case_revision: int | None = None) -> AssessmentSubject:
+        with self._lock:
+            state = self.ensure_case(case_id)
+            self._check_revision(state, expected_case_revision)
+            item = state.subjects.get(subject_id)
+            if item is None:
+                raise ValueError(f"Unknown subject ID: {subject_id!r}")
+            renamed = item.model_copy(update={"display_name": display_name.strip()})
+            if not renamed.display_name:
+                raise ValueError("display_name is required")
+            state.subjects[subject_id] = renamed
+            state.revision += 1
+            state.last_updated_at = datetime.now(timezone.utc)
+            self.repository.save(state)
+        self.record_workspace_event(case_id, {"type": "subject_renamed", "subject_id": subject_id, "case_revision": state.revision, "human_summary": "A student was renamed."})
+        return renamed
+
+    def remove_subject(self, case_id: str, subject_id: str, expected_case_revision: int | None = None) -> None:
+        with self._lock:
+            state = self.ensure_case(case_id)
+            self._check_revision(state, expected_case_revision)
+            if subject_id not in state.subjects:
+                raise ValueError(f"Unknown subject ID: {subject_id!r}")
+            if len(state.subjects) <= 1:
+                raise ValueError("A case must retain at least one student")
+            if any(subject_id in relationship.subject_ids for relationship in state.subject_relationships.values()):
+                raise ValueError("Cannot remove a student referenced by a relationship")
+            del state.subjects[subject_id]
+            state.revision += 1
+            state.last_updated_at = datetime.now(timezone.utc)
+            self.repository.save(state)
+        self.record_workspace_event(case_id, {"type": "subject_removed", "subject_id": subject_id, "case_revision": state.revision, "human_summary": "A student was removed from the case."})
 
     def add_relationship(self, case_id: str, relationship: dict[str, Any], expected_case_revision: int | None = None) -> SubjectRelationship:
         from investigator.models.assessment import SubjectRelationship

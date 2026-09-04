@@ -201,3 +201,33 @@ def test_workspace_home_keeps_samples_in_one_cases_list_and_new_case_minimal() -
     assert 'placeholder="Case name"' in page
     assert 'placeholder="Assessment title"' not in page
     assert 'placeholder="Assessment type"' not in page
+
+
+def test_new_cases_start_with_one_persistent_student_and_can_add_remove(tmp_path: Path) -> None:
+    repository = CaseRepository(tmp_path / "cases")
+    workflow = HumanEvidenceWorkflow(repository, run_mode="vnext")
+    first = create_case(workflow, {"title": "First case"})
+    second = create_case(workflow, {"title": "Second case"})
+    first_state = repository.load(first["caseId"])
+    assert list(first_state.subjects) == ["subject_1"]
+    assert first_state.subjects["subject_1"].display_name == "Student 1"
+    assert repository.load(first["caseId"]).subjects["subject_1"].display_name == "Student 1"
+    assert list(repository.load(second["caseId"]).subjects) == ["subject_1"]
+
+    added = workflow.add_subject(first["caseId"], {"display_name": "Student 2"})
+    assert added.subject_id == "subject_2"
+    workflow.remove_subject(first["caseId"], added.subject_id)
+    with pytest.raises(ValueError, match="at least one student"):
+        workflow.remove_subject(first["caseId"], "subject_1")
+
+
+def test_student_identity_is_explicit_and_samples_keep_their_configuration(tmp_path: Path) -> None:
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    user = create_case(workflow, {"title": "Explicit students"})
+    before = workflow.ensure_case(user["caseId"])
+    workflow.add_direct_source(user["caseId"], display_name="Evidence", content="Candidate A appears in prose", source_type="document", expected_case_revision=before.revision)
+    assert [item.display_name for item in workflow.ensure_case(user["caseId"]).subjects.values()] == ["Student 1"]
+    law = seed_sample_case(workflow, "law-exam", "law-exam-working")
+    multi = seed_sample_case(workflow, "multi-candidate", "multi-candidate-working")
+    assert [item["display_name"] for item in law["subjects"]] == ["Candidate A"]
+    assert [item["display_name"] for item in multi["subjects"]] == ["Candidate A", "Candidate B", "Candidate C", "Candidate D", "Candidate E"]
