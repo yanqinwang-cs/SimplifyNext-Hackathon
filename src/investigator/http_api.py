@@ -21,6 +21,7 @@ from investigator.models.assessment import AssessmentContext, AssessmentSubject,
 from investigator.models.source import Source
 from investigator.state.case_state import CaseState
 from investigator.help import product_guide
+from investigator.runtime_settings import settings as runtime_settings, set_model_overrides, reset_model_overrides
 
 
 def sample_cases() -> list[dict[str, str]]:
@@ -84,10 +85,9 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             cases = []
             for case_id in self.workflow.repository.list_case_ids():
                 state = self.workflow.repository.load(case_id)
-                if case_id == "case-01" and state.title == "Business Law Tutorial 5":
+                if case_id in {"law-exam-working", "multi-candidate-working"} or (case_id == "case-01" and state.title == "Business Law Tutorial 5"):
                     continue
-                runs = self.workflow.get_runs(case_id)
-                cases.append({"case_id": case_id, "title": state.title, "last_updated_at": state.last_updated_at.isoformat(), "revision": state.revision, "subject_count": len(state.subjects), "latest_assessment_status": runs[-1].get("vnext_status") if runs else None})
+                cases.append({"case_id": case_id, "title": state.title})
             self._write(200, {"cases": cases})
             return
         if parts == ["api", "product-guide"]:
@@ -105,8 +105,17 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             else:
                 self._write(200, credential_status())
             return
+        if parts == ["api", "debug", "runtime-settings"]:
+            if not debug_credentials_enabled():
+                self._write(404, {"error": "Debug runtime settings are disabled"})
+            else:
+                self._write(200, {"aws": {"mode": "temporary_override" if credential_status()["override_active"] else "default_chain"}, **runtime_settings()})
+            return
         if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "workspace":
             self._write(200, self.workflow.get_workspace(parts[2]) | {"chatHistory": self.workspace_agent.chat_history(parts[2]), "guidance": self.workflow.get_guidance_context(parts[2])})
+            return
+        if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "report":
+            self._write(200, self.workflow.get_report(parts[2]))
             return
         if parts == ["api", "samples"]:
             self._write(200, {"samples": sample_cases()})
@@ -199,6 +208,15 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 self._write(422, {"error": str(exc)})
             return
+        if parts == ["api", "debug", "runtime-settings", "models"]:
+            if not debug_credentials_enabled():
+                self._write(404, {"error": "Debug runtime settings are disabled"})
+                return
+            try:
+                self._write(200, set_model_overrides(self._read_json()))
+            except ValueError as exc:
+                self._write(422, {"error": str(exc)})
+            return
         if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "run":
             try:
                 self._write(200, self.workflow.start_run(parts[2]))
@@ -259,6 +277,12 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 self._write(200, self.workflow.get_workspace(parts[2]))
             except (ValueError, EvidenceRequestConflict) as exc:
                 self._write(409 if isinstance(exc, EvidenceRequestConflict) else 422, {"error": str(exc)})
+            return
+        if parts == ["api", "debug", "runtime-settings", "models"]:
+            if not debug_credentials_enabled():
+                self._write(404, {"error": "Debug runtime settings are disabled"})
+                return
+            self._write(200, reset_model_overrides())
             return
         if self._parts() != ["api", "debug", "aws-credentials"]:
             self._write(404, {"error": "Not found"})

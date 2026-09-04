@@ -1,4 +1,5 @@
-import type { AwsCredentialStatus, CaseListItem, CaseWorkspaceState, RunSummary, TraceEntry, WorkspaceChatResponse } from "./types";
+import type { AwsCredentialStatus, CaseListItem, CaseWorkspaceState, ReportResponse, RunSummary, TraceEntry, WorkspaceChatResponse } from "./types";
+import type { RuntimeSettings } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
@@ -10,6 +11,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export function getWorkspace(caseId: string): Promise<CaseWorkspaceState> {
   return request<CaseWorkspaceState>(`/api/cases/${encodeURIComponent(caseId)}/workspace`);
+}
+
+export function getReport(caseId: string): Promise<ReportResponse> {
+  return request<ReportResponse>(`/api/cases/${encodeURIComponent(caseId)}/report`);
 }
 
 export async function getCases(): Promise<CaseListItem[]> {
@@ -92,3 +97,7 @@ export function applyAwsCredentials(credentials: { aws_access_key_id: string; aw
 export function clearAwsCredentials(): Promise<AwsCredentialStatus> {
   return request<AwsCredentialStatus>("/api/debug/aws-credentials", { method: "DELETE" });
 }
+
+export function getRuntimeSettings(): Promise<RuntimeSettings> { return request<RuntimeSettings>("/api/debug/runtime-settings"); }
+export function applyModelOverrides(payload: Record<string, string | null>): Promise<RuntimeSettings> { return request<RuntimeSettings>("/api/debug/runtime-settings/models", { method: "POST", body: JSON.stringify(payload) }); }
+export function resetModelOverrides(): Promise<RuntimeSettings> { return request<RuntimeSettings>("/api/debug/runtime-settings/models", { method: "DELETE" }); }

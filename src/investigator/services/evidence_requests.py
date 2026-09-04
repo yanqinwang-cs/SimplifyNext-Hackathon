@@ -18,6 +18,7 @@ from investigator.graph import GraphScope, GraphScopeType
 from investigator.models.assessment import AssessmentSubject, SubjectRelationship
 from investigator.state.case_state import CaseState
 from investigator.state.repository import CaseRepository
+from investigator.vnext.presets import preset_for_case
 
 
 class EvidenceRequestConflict(RuntimeError):
@@ -72,7 +73,7 @@ class HumanEvidenceWorkflow:
         directory = self._run_dir(case_id, run_id)
         directory.mkdir(parents=True)
         started_at = datetime.now(timezone.utc).isoformat()
-        (directory / "run_result.json").write_text(json.dumps({"run_id": run_id, "started_at": started_at, "ended_at": None, "termination_reason": None, "final_runtime_status": "RUNNING_INVESTIGATOR", "outcome_type": "RUNNING", "originating_actor": "INVESTIGATOR", "start_revision": start_revision, "run_start_revision": start_revision, "latest_safe_revision": start_revision, "final_committed_revision": start_revision, "model_calls": 0, "correction_retries": 0, "final_error": None, "pending_request_id": None, "trace_path": f"/api/cases/{case_id}/runs/{run_id}/raw-traces"}, indent=2) + "\n", encoding="utf-8")
+        self._write_run_result(directory / "run_result.json", {"run_id": run_id, "started_at": started_at, "ended_at": None, "termination_reason": None, "final_runtime_status": "RUNNING_INVESTIGATOR", "outcome_type": "RUNNING", "originating_actor": "INVESTIGATOR", "start_revision": start_revision, "run_start_revision": start_revision, "latest_safe_revision": start_revision, "final_committed_revision": start_revision, "model_calls": 0, "correction_retries": 0, "final_error": None, "pending_request_id": None, "trace_path": f"/api/cases/{case_id}/runs/{run_id}/raw-traces"})
         self._active_runs[case_id] = run_id
         return run_id
 
@@ -89,7 +90,7 @@ class HumanEvidenceWorkflow:
         pending = next((item for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None)
         outcome = "WAITING_FOR_EVIDENCE" if pending else {"IDLE": "COMPLETED", "STOPPED": "STOPPED", "FAILED": "FAILED"}.get(state.runtime_status, state.runtime_status)
         result.update({"ended_at": datetime.now(timezone.utc).isoformat(), "termination_reason": termination_reason or state.runtime_status.lower(), "final_runtime_status": state.runtime_status, "outcome_type": outcome, "final_case_revision": state.revision, "latest_safe_revision": state.revision, "final_committed_revision": state.revision, "final_error": final_error or state.last_error, "pending_request_id": pending.request_id if pending else None, "request_text": pending.information_sought if pending else None})
-        path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        self._write_run_result(path, result)
 
     def record_model_attempt(self, case_id: str, *, correction: bool = False) -> None:
         run_id = self.current_run_id(case_id)
@@ -100,7 +101,14 @@ class HumanEvidenceWorkflow:
         result["model_calls"] = int(result.get("model_calls") or 0) + 1
         if correction:
             result["correction_retries"] = int(result.get("correction_retries") or 0) + 1
-        path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        self._write_run_result(path, result)
+
+    @staticmethod
+    def _write_run_result(path: Path, result: dict[str, Any]) -> None:
+        """Publish a complete run snapshot so readers never see a truncated JSON file."""
+        temporary = path.with_suffix(".json.tmp")
+        temporary.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        temporary.replace(path)
 
     def start_run(self, case_id: str) -> dict[str, Any]:
         """Start one backend-owned run through the configured production hook."""
@@ -562,6 +570,36 @@ class HumanEvidenceWorkflow:
             "per_subject_assessments": assessments,
             "final_graph": (result or {}).get("graph"),
             "run_status": state.runtime_status,
+        }
+
+    def get_report(self, case_id: str) -> dict[str, Any]:
+        """Return the deliberately small, user-facing report projection."""
+        state = self.ensure_case(case_id)
+        guidance = self.get_guidance_context(case_id)
+        latest = guidance.get("latest_successful_vnext_run")
+        violations = {item.violation_id: item.label for item in preset_for_case(state).violations}
+        students = []
+        for assessment in guidance.get("per_subject_assessments", []):
+            student = {"displayName": assessment.get("subject_display_name") or "Student"}
+            student_violations = []
+            for item in assessment.get("violation_assessments", []):
+                def materials(key: str) -> list[dict[str, Any]]:
+                    return [{"statement": material.get("statement", ""), "sourceLabels": material.get("source_labels", [])} for material in item.get(key, [])]
+                student_violations.append({
+                    "label": violations.get(item.get("violation_id"), "Configured violation"),
+                    "status": item.get("status"),
+                    "reasoningSummary": item.get("reasoning_summary", ""),
+                    "supportingMaterial": materials("supporting_material"),
+                    "limitingMaterial": materials("mitigating_material"),
+                })
+            students.append({"displayName": student["displayName"], "violations": student_violations, "furthestConclusion": assessment.get("furthest_conclusion", {}).get("statement", "")})
+        return {
+            "caseId": state.case_id,
+            "title": "Law Exam Investigation" if state.title == "Business Law Tutorial 5" else state.title,
+            "reportState": "available" if latest else "unavailable",
+            "assessmentIsStale": bool(guidance.get("assessment_is_stale")),
+            "latestSuccessfulRun": {"completedAt": latest.get("ended_at")} if latest else None,
+            "students": students,
         }
 
     @staticmethod

@@ -25,6 +25,16 @@ class FailingWorkspaceClient:
         raise RuntimeError("offline failure")
 
 
+def test_report_projection_is_safe_and_unavailable_before_success(tmp_path: Path) -> None:
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    state = CaseState(case_id="case-01", title="Report case")
+    workflow.repository.save(state)
+    report = workflow.get_report("case-01")
+    assert report["reportState"] == "unavailable"
+    assert "guidance" not in report
+    assert "subject_id" not in json.dumps(report)
+
+
 def make_case(tmp_path: Path, mode: str) -> HumanEvidenceWorkflow:
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / mode), run_mode=mode)
     state = CaseState(case_id="case-01", title="Test", reasoning_graph=None)

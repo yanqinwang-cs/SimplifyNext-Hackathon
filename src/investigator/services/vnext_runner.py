@@ -26,6 +26,7 @@ from investigator.vnext import (
 from investigator.vnext.model import VNextInvestigatorModel, build_corrective_prompt
 from investigator.vnext.models import AssessmentRulePreset, InvestigatorAssessment, InvestigatorProposal
 from investigator.vnext.presets import preset_for_case
+from investigator.runtime_settings import effective_model
 
 
 class VNextProductionRunner:
@@ -47,9 +48,7 @@ class VNextProductionRunner:
     def run(self, case_id: str, workflow: HumanEvidenceWorkflow) -> VNextRunResult:
         state = workflow.ensure_case(case_id)
         preset = self.preset_resolver(state)
-        client = self.client or BedrockModelClient(
-            model_id=os.environ.get("VNEXT_INVESTIGATOR_MODEL_ID") or None
-        )
+        client = self.client or BedrockModelClient(model_id=effective_model("investigator").invocation_id, region=effective_model("investigator").region)
         last_error: Exception | None = None
         for attempt_number in range(1, self.max_attempts + 1):
             state = workflow.repository.load(case_id)

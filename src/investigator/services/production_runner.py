@@ -174,6 +174,9 @@ class ProductionInvestigationRunner:
         self.workflow.set_runtime(case_id, "IDLE", "NONE")
 
     def _investigator_turn(self, case_id: str, coordinator: InvestigatorCycleCoordinator, step: int, run_start_revision: int) -> None:
+        from investigator.runtime_settings import effective_model
+        if hasattr(self.client, "model_id"):
+            self.client.model_id = effective_model("investigator").invocation_id
         self.workflow.set_runtime(case_id, "RUNNING_INVESTIGATOR", "INVESTIGATOR", step=step)
         canonical = self.workflow.ensure_case(case_id)
         snapshot = coordinator.turn_snapshot(self.workflow.readable_sources(case_id), repository_revision=canonical.revision)
@@ -200,6 +203,9 @@ class ProductionInvestigationRunner:
         self.workflow.record_trace(case_id, trace)
 
     def _steward_turn(self, case_id: str, coordinator: InvestigatorCycleCoordinator, step: int, run_start_revision: int) -> None:
+        from investigator.runtime_settings import effective_model
+        if hasattr(self.client, "model_id"):
+            self.client.model_id = effective_model("steward").invocation_id
         self.workflow.set_runtime(case_id, "RUNNING_STEWARD", "STEWARD", step=step)
         context = StewardReviewContext(global_frontier_assessed=True, local_frontier_exhausted=True, available_action_ids=[], materially_usable_action_ids=[], active_unresolved_ids=[node.id for node in coordinator.graph.nodes.values() if node.node_type is GraphNodeType.UNCERTAINTY and node.status.value == "active"], obvious_useful_region_remains=False)
         canonical = self.workflow.ensure_case(case_id)
@@ -260,7 +266,8 @@ class ProductionInvestigationRunner:
 
 def default_production_run(case_id: str, workflow: HumanEvidenceWorkflow) -> None:
     from investigator.llm.bedrock import BedrockModelClient
-    ProductionInvestigationRunner(workflow, BedrockModelClient()).run(case_id)
+    from investigator.runtime_settings import effective_model
+    ProductionInvestigationRunner(workflow, BedrockModelClient(model_id=effective_model("investigator").invocation_id, region=effective_model("investigator").region)).run(case_id)
 
 
 class StewardEnvelope(RootModel[dict[str, object]]):

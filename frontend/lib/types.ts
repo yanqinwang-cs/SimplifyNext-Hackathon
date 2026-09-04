@@ -108,7 +108,12 @@ export interface CaseWorkspaceState {
   chatHistory?: { role: string; text: string }[];
   workspaceEvents?: WorkspaceEvent[];
 }
-export interface CaseListItem { case_id: string; title: string; last_updated_at: string; revision: number; subject_count: number; latest_assessment_status?: string | null; }
+export interface CaseListItem { case_id: string; title: string; }
+
+export interface ReportMaterial { statement: string; sourceLabels: string[]; }
+export interface ReportViolation { label: string; status: string; reasoningSummary: string; supportingMaterial: ReportMaterial[]; limitingMaterial: ReportMaterial[]; }
+export interface ReportResponse { caseId: string; title: string; reportState: "available" | "unavailable"; assessmentIsStale: boolean; latestSuccessfulRun: { completedAt?: string | null } | null; students: Array<{ displayName: string; violations: ReportViolation[]; furthestConclusion: string }>; }
+export interface RuntimeSettings { aws: { mode: "default_chain" | "temporary_override" | "unavailable" }; models: Record<string, { effective: string; override: string | null; active_in_vnext?: boolean }>; available_models: Array<{ name: string; label: string }>; }
 
 export interface WorkspaceChatResponse {
   response: string;

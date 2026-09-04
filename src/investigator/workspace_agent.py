@@ -17,6 +17,7 @@ from investigator.sources import SourceRegistry
 from investigator.model_registry import MODEL_REGISTRY
 from investigator.state.case_state import CaseState
 from investigator.help import product_guide
+from investigator.runtime_settings import effective_model
 
 
 class WorkspaceChatRequest(BaseModel):
@@ -184,6 +185,9 @@ class WorkspaceAgent:
             session["conversation"].append({"role": "assistant", "text": response})
             self._append_chat(case_id, "workspace", response)
             return WorkspaceChatResponse(response=response)
+        if hasattr(self.client, "model_id"):
+            self.client.model_id = effective_model("workspace_help").invocation_id
+            self.client.region = effective_model("workspace_help").region
         turn_id = self._begin_workspace_turn(case_id, text)
         messages: list[dict[str, Any]] = [{"role": "system", "text": self.system_prompt()}, *session["conversation"]]
         try:
