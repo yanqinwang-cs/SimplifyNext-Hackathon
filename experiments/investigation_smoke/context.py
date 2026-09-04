@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from investigator.models import CaseParticipant
+
 
 class AssistanceResource(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -27,6 +29,7 @@ class AssessmentContext(BaseModel):
     own_proficiency: list[str]
     general_rules: list[str]
     resources: list[AssistanceResource]
+    participants: list[CaseParticipant]
 
 
 CASE_01_ASSESSMENT_CONTEXT = AssessmentContext(
@@ -64,6 +67,11 @@ CASE_01_ASSESSMENT_CONTEXT = AssessmentContext(
             temporal_bounds=["before assessment", "during assessment"], locations=["examination venue", "unknown"],
         ),
     ],
+    participants=[
+        CaseParticipant(id="PERSON1", contextual_roles=["candidate", "student", "author"], display_label="Candidate 1"),
+        CaseParticipant(id="PERSON2", contextual_roles=["candidate", "student", "coauthor"], display_label="Candidate 2"),
+        CaseParticipant(id="PERSON3", contextual_roles=["tutor", "staff_member"], display_label="Tutor or staff member"),
+    ],
 )
 
 
@@ -74,6 +82,9 @@ def render_assessment_context(context: AssessmentContext = CASE_01_ASSESSMENT_CO
         "Rules: " + " ".join(context.general_rules),
         "Known assistance/resource catalogue (context only; not evidence):",
     ]
+    lines.append("Case participants (contextual roles, not conclusions):")
+    for participant in context.participants:
+        lines.append(f"- {{{{{participant.id}}}}}: {participant.display_label}; roles={', '.join(participant.contextual_roles)}")
     for resource in context.resources:
         lines.append(f"- {resource.id} [{resource.type}] {resource.label}")
         lines.append(f"  capabilities: {', '.join(resource.capabilities)}")

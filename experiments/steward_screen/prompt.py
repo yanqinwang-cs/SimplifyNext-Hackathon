@@ -1,9 +1,73 @@
 import json
+import re
 
+from investigator.policy import render_policy_profile
 from investigator.steward.features import region_health, tunnel_vision_indicators
-from investigator.roles.procedure import render_procedure
 
 from experiments.steward_screen.models import StewardScenario
+
+
+_OUTPUT_CONTRACT = """Return exactly one JSON object matching exactly one of these branch schemas:
+
+KEEP_FOCUS
+{
+  "operation": "keep_focus",
+  "assessment": "Brief case-specific assessment of the current focus.",
+  "reason": "Brief case-specific reason to keep the current focus."
+}
+
+SHIFT_FOCUS
+{
+  "operation": "shift_focus",
+  "assessment": "Brief case-specific assessment of the current focus.",
+  "reason": "Brief case-specific reason for shifting focus.",
+  "destination_node_id": "EXACT_EXISTING_NODE_ID"
+}
+
+GENERALIZE
+{
+  "operation": "generalize",
+  "assessment": "Brief case-specific assessment of the current focus.",
+  "reason": "Brief case-specific reason for generalizing.",
+  "target_node_id": "EXACT_EXISTING_NODE_ID"
+}
+
+ARCHIVE
+{
+  "operation": "archive",
+  "assessment": "Brief case-specific assessment of the target.",
+  "reason": "Brief case-specific reason for archiving.",
+  "target_node_id": "EXACT_EXISTING_NODE_ID",
+  "destination_node_id": "EXACT_EXISTING_NODE_ID_OR_NULL"
+}
+
+REACTIVATE
+{
+  "operation": "reactivate",
+  "assessment": "Brief case-specific assessment of the archived target.",
+  "reason": "Brief case-specific reason for reactivating it.",
+  "target_node_id": "EXACT_EXISTING_NODE_ID"
+}
+
+STOP_UNRESOLVED
+{
+  "operation": "stop_unresolved",
+  "assessment": "Brief case-specific assessment of why no useful frontier remains.",
+  "reason": "Brief case-specific reason for stopping unresolved.",
+  "important_unresolved_ids": ["EXACT_EXISTING_UNCERTAINTY_ID"],
+  "reopening_conditions": "Concrete condition for reopening the investigation."
+}
+
+Use exactly the field names shown and the exact lowercase operation values shown. Do not use "decision" instead of "operation" or "rationale" instead of "assessment" or "reason". Do not rename fields, add fields outside the selected branch schema, return alternatives, wrap the JSON in markdown/code fences, return commentary outside the JSON, or return chain-of-thought.
+
+Every identifier shown in the case context is already the exact stable identifier expected by the production schema and coordinator. Copy it exactly into identifier-valued output fields; do not invent IDs. For ARCHIVE, destination_node_id may be null when allowed by the production schema, but archiving the current focus requires an explicit different ACTIVE destination. STOP_UNRESOLVED is valid only when trusted external frontier context supports it.
+
+The assessment and reason must be grounded in the supplied case state and explain why the selected operation is appropriate. Brief case-specific justification is sufficient; do not provide long reasoning."""
+
+
+def _raw_policy_context() -> str:
+    rendered = render_policy_profile().replace("{{R...}}", "R...", 1)
+    return re.sub(r"\{\{?(R\d+(?:\.\d+)?)\}\}?", r"\1", rendered)
 
 
 def build_prompt(scenario: StewardScenario) -> str:
@@ -11,31 +75,26 @@ def build_prompt(scenario: StewardScenario) -> str:
         "nodes": [node.model_dump(mode="json") for node in sorted(scenario.graph.nodes.values(), key=lambda item: item.id)],
         "edges": [edge.model_dump(mode="json") for edge in sorted(scenario.graph.edges.values(), key=lambda item: item.id)],
     }
-    features = {
-        "region_health": region_health(scenario.graph, scenario.focus).model_dump(mode="json"),
-        "tunnel_vision": tunnel_vision_indicators(scenario.graph, scenario.focus).model_dump(mode="json"),
-    }
-    context = scenario.review_context.model_dump(mode="json") if scenario.review_context else None
-    return """<ROLE>
-You are the global Case Steward. Manage graph focus and relevance; you are not the local Investigator or final judge. Evidence is not automatically truth; support is not proof; conflict is not automatic refutation. Archived material remains historical. The final institutional judgement remains human.
-</ROLE>
-
-<OPERATION_POLICY>
-IF the current focus remains productive AND no materially better global branch requires attention: KEEP_FOCUS.
-ELIF another active global region materially deserves priority: SHIFT_FOCUS.
-ELIF a child explanation is no longer justified but a broader parent remains viable: GENERALIZE.
-ELIF a branch is stale or superseded: ARCHIVE.
-ELIF archived material becomes materially relevant: REACTIVATE.
-ELIF global frontier has been assessed AND no materially useful action remains AND no obvious useful region remains AND no enquiry is in flight: STOP_UNRESOLVED.
-ELSE do not hand off.
-NEVER create graph nodes, create or release raw sources, choose an exact Investigator evidence request, perform local semantic extraction, or decide guilt.
-</OPERATION_POLICY>
-
-<STEWARD_PROCEDURE>
-""" + render_procedure("steward") + """
-</STEWARD_PROCEDURE>
-
-Return exactly one JSON object validated by the runtime StewardDecision schema, with no markdown or explanation outside JSON. STOP_UNRESOLVED is valid only when the supplied trusted frontier context supports it.
-
-Scenario:
-""" + scenario.description + "\n\nState:\n" + json.dumps({"graph": graph, "focus": scenario.focus.model_dump(mode="json"), "features": features, "trusted_review_context": context}, sort_keys=True) + "\n\nReturn one StewardDecision JSON object using only the allowed current operations."
+    features = {"region_health": region_health(scenario.graph, scenario.focus).model_dump(mode="json"), "tunnel_vision": tunnel_vision_indicators(scenario.graph, scenario.focus).model_dump(mode="json")}
+    participant_text = "\n".join(f"{item.id} roles={', '.join(item.contextual_roles)} label={item.display_label}" for item in scenario.participants)
+    focus_history = " -> ".join(scenario.focus.recent_node_ids) or "(none yet)"
+    sections = [
+        "<ROLE>\nYou are the Case Steward. Manage global graph focus and relevance. Do not investigate, choose an exact enquiry or tool, create nodes, or decide institutional guilt. Return exactly one legal StewardDecision JSON object.\n</ROLE>",
+        "<OPERATION_POLICY>\nChoose only the operation justified by the supplied state. Never create or release raw sources, create graph nodes, choose an exact Investigator enquiry, or decide guilt.\n</OPERATION_POLICY>",
+        "<INVESTIGATIVE_PURPOSE>\nDetermine what can responsibly be inferred from available evidence and what consequential uncertainty remains. Do not search for incriminating material or prefer an explanation because it is more incriminating. Final institutional judgement remains human.\n</INVESTIGATIVE_PURPOSE>",
+        "<OBJECT_LEGEND>\nA persistent CaseGraph object has a stable ID plus natural-language content and structured status/relations. E1 = stable EVIDENCE object ID; P1 = stable PROPOSITION object ID; H1 = stable HYPOTHESIS object ID; U1 = stable UNCERTAINTY object ID; PERSON1 = stable participant ID; R1.1 = stable policy-rule ID. Evidence is obtained material, not automatically true. Propositions are factual claims, hypotheses are possible explanations, and uncertainties are consequential unresolved questions. Operations refer to objects using their exact stable IDs; focus/status changes do not change statement truth. Participants are contextual entities, not CaseGraph node types.\n</OBJECT_LEGEND>",
+        "<RELATION_LEGEND>\nSUPPORTS: A provides some support for B, not establishment. CONFLICTS: A creates tension with B, not automatic falsity. SPECIALIZES: child -> parent; child failure does not defeat parent. DEPENDS_ON: A materially depends on B. TARGETS: U concerns P or H. DERIVED_FROM: A was interpreted or derived from B. Edges do not encode chronology; focus/history does.\n</RELATION_LEGEND>",
+        "<POLICY_CONTEXT>\n" + _raw_policy_context() + "\n</POLICY_CONTEXT>",
+        "<POLICY_DISCIPLINE>\nReason evidence -> factual proposition or uncertainty -> applicable policy rule. Cite exact existing rule IDs such as R1.1 only when participant role, conduct/resource, temporal, location, and context scope match. Policy relevance does not establish factual truth. Preserve possession versus use, installed local LLM versus use during an examination, and association versus collaboration.\n</POLICY_DISCIPLINE>",
+        "<STEWARD_OPERATIONS>\nKEEP_FOCUS\nPRECONDITION: Current focus remains materially useful and no other global graph-management operation is warranted.\nACTION: Make no graph-management mutation.\nPOSTCONDITION: Focus, node statuses, and graph content are unchanged.\nVALIDATE: Focus and all Steward-managed state remain unchanged.\n\nSHIFT_FOCUS\nPRECONDITION: destination_node_id exists, is ACTIVE, and is a legal focus destination.\nACTION: Make the already-ACTIVE destination_node_id the new current focus; only focus changes.\nPOSTCONDITION: Focus equals destination_node_id; previous focus remains ACTIVE; no status changes occur.\nVALIDATE: Destination existed and was ACTIVE before the operation, focus changed to it, and statuses are unchanged. An ARCHIVED object cannot be selected; use REACTIVATE for an archived object that becomes useful.\n\nGENERALIZE\nPRECONDITION: target_node_id exists, is ACTIVE, and has an immediate ACTIVE parent through target_node_id --SPECIALIZES--> parent.\nACTION: target_node_id is the specific CHILD being generalized FROM, not the parent; the coordinator resolves its immediate parent.\nPOSTCONDITION: Focus equals that immediate parent; the target remains ACTIVE; no node is archived or rejected; exactly one specialization level is moved.\nVALIDATE: Target exists and is ACTIVE, a valid immediate parent exists, focus equals that parent, and target remains ACTIVE.\n\nARCHIVE\nPRECONDITION: target_node_id exists and is ACTIVE. If it is current focus, destination_node_id is required, exists, is ACTIVE, and differs from the target; a non-focus target needs no redirect beyond the production schema.\nACTION: Change target_node_id from ACTIVE to ARCHIVED.\nPOSTCONDITION: A non-focus target is archived and focus is unchanged. A focus target is archived and focus becomes destination_node_id. Archive preserves history; it does not mean false, rejected, disproven, or permanently irrelevant.\nVALIDATE: Target was ACTIVE and is ARCHIVED afterward; redirect requirements hold when it was focus; otherwise focus and unrelated statuses are unchanged. SHIFT_FOCUS changes attention only while ARCHIVE removes a target from active reasoning.\n\nREACTIVATE\nPRECONDITION: target_node_id exists, is ARCHIVED, and has become materially relevant to active reasoning.\nACTION: Change target_node_id from ARCHIVED to ACTIVE.\nPOSTCONDITION: Target is ACTIVE and focus is unchanged; reactivation does not move focus.\nVALIDATE: Target was ARCHIVED before the transition, is ACTIVE afterward, and focus does not change. REACTIVATE is a status transition; SHIFT_FOCUS is attention between already-ACTIVE objects.\n\nSTOP_UNRESOLVED\nPRECONDITION: Trusted global frontier has been assessed, consequential uncertainty remains, and no materially useful global investigative frontier remains.\nACTION: Stop active investigation in an unresolved state.\nPOSTCONDITION: Case stopped is true; unresolved material remains unresolved; no guilt, innocence, truth, or falsity conclusion is inferred.\nVALIDATE: Trusted external review context permits stopping, important_unresolved_ids are valid active uncertainties, and global frontier conditions are satisfied.\n</STEWARD_OPERATIONS>",
+        "<AUTHORITY_BOUNDARY>\nThe Steward does not create evidence, propositions, hypotheses, uncertainties, tools, or environment actions. The Investigator works locally; the Steward manages global graph focus/status.\n</AUTHORITY_BOUNDARY>",
+        "<CASE_PARTICIPANTS>\n" + participant_text + "\n</CASE_PARTICIPANTS>",
+        "<CASEGRAPH>\n" + json.dumps(graph, sort_keys=True) + "\n</CASEGRAPH>",
+        "<CURRENT_FOCUS>\n" + scenario.focus.node_id + "\n</CURRENT_FOCUS>",
+        "<FOCUS_HISTORY>\n" + focus_history + "\n</FOCUS_HISTORY>",
+        "<DETERMINISTIC_FEATURES>\n" + json.dumps(features, sort_keys=True) + "\n</DETERMINISTIC_FEATURES>",
+    ]
+    if scenario.review_context is not None:
+        sections.append("<TRUSTED_FRONTIER>\n" + json.dumps(scenario.review_context.model_dump(mode="json"), sort_keys=True) + "\nThis is trusted external structural input. Do not author or modify it.\n</TRUSTED_FRONTIER>")
+    sections.extend(["<DYNAMIC_SCENARIO>\n" + scenario.description + "\n</DYNAMIC_SCENARIO>", "<OUTPUT_CONTRACT>\n" + _OUTPUT_CONTRACT + "\n</OUTPUT_CONTRACT>"])
+    return "\n\n".join(sections)

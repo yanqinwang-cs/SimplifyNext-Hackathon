@@ -17,6 +17,7 @@ from investigator.models.hypothesis import (
     TransformationType,
 )
 from investigator.models.source import Source, SourceType
+from investigator.models.participant import CaseParticipant
 from investigator.models.time import ApproximateTime, ExactTime, RelativeTime, TimeRange
 from investigator.models.uncertainty import Uncertainty, UncertaintyKind
 

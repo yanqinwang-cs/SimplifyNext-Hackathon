@@ -4,6 +4,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from investigator.graph import CaseGraph
+from investigator.models import CaseParticipant
 from investigator.roles import InvestigationFocus, StewardReviewContext
 from investigator.model_registry import MODEL_REGISTRY, ModelSpec
 
@@ -21,6 +22,7 @@ class StewardScenario(BaseModel):
     description: str
     graph: CaseGraph
     focus: InvestigationFocus
+    participants: list[CaseParticipant] = Field(default_factory=lambda: [CaseParticipant(id="PERSON1", contextual_roles=["candidate", "student"], display_label="Candidate 1"), CaseParticipant(id="PERSON2", contextual_roles=["tutor", "staff_member"], display_label="Tutor or staff member")])
     review_context: StewardReviewContext | None = None
     expected_operation: str
     expected_target_node_id: str | None = None
@@ -59,6 +61,14 @@ class ScreenResult(BaseModel):
     retry_count: int = 0
     error_category: str | None = None
     error_message: str | None = None
+    schema_failure_code: str | None = None
+    schema_recoverable: bool = False
+    diagnostic_operation: str | None = None
+    diagnostic_target_node_id: str | None = None
+    diagnostic_destination_node_id: str | None = None
+    diagnostic_operation_correct: bool | None = None
+    diagnostic_identifier_correct: bool | None = None
+    diagnostic_decision_correct: bool | None = None
 
 
 class RunSummary(BaseModel):
