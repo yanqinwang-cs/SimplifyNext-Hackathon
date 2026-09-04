@@ -1,4 +1,4 @@
-import type { AwsCredentialStatus, CaseWorkspaceState, RunSummary, TraceEntry, WorkspaceChatResponse } from "./types";
+import type { AwsCredentialStatus, CaseListItem, CaseWorkspaceState, RunSummary, TraceEntry, WorkspaceChatResponse } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
@@ -10,6 +10,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export function getWorkspace(caseId: string): Promise<CaseWorkspaceState> {
   return request<CaseWorkspaceState>(`/api/cases/${encodeURIComponent(caseId)}/workspace`);
+}
+
+export async function getCases(): Promise<CaseListItem[]> {
+  return (await request<{ cases: CaseListItem[] }>("/api/cases")).cases;
+}
+
+export function createCase(payload: { title: string; description?: string; assessment: { title: string; assessment_type: string } }) {
+  return request<{ caseId: string; workspace: CaseWorkspaceState }>("/api/cases", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function getProductGuide(): Promise<string> {
+  const response = await fetch(`${API_BASE}/api/product-guide`);
+  if (!response.ok) throw new Error(`Guide request failed (${response.status})`);
+  return response.text();
 }
 
 export async function getTraces(caseId: string): Promise<TraceEntry[]> {

@@ -108,6 +108,7 @@ export interface CaseWorkspaceState {
   chatHistory?: { role: string; text: string }[];
   workspaceEvents?: WorkspaceEvent[];
 }
+export interface CaseListItem { case_id: string; title: string; last_updated_at: string; revision: number; subject_count: number; latest_assessment_status?: string | null; }
 
 export interface WorkspaceChatResponse {
   response: string;

@@ -2,7 +2,7 @@ import type { CaseWorkspaceState } from "./types";
 
 export const initialWorkspace: CaseWorkspaceState = {
   caseId: "case-01",
-  title: "Business Law Tutorial 5",
+  title: "Law Exam Investigation",
   status: "waiting_for_evidence",
   institutionalStatus: "Investigating",
   currentFocus: "Whether external assistance could explain the unusual assessment pattern.",

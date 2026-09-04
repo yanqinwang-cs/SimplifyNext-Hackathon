@@ -20,21 +20,47 @@ from investigator.graph import GraphScope
 from investigator.models.assessment import AssessmentContext, AssessmentSubject, SubjectRelationship
 from investigator.models.source import Source
 from investigator.state.case_state import CaseState
+from investigator.help import product_guide
 
 
 def sample_cases() -> list[dict[str, str]]:
     return [
-        {"id": "smart-device", "title": "Smart-device concern", "description": "A focused single-subject assessment."},
-        {"id": "possible-collaboration", "title": "Possible collaboration", "description": "A two-subject assessment with ambiguous evidence."},
-        {"id": "multi-candidate", "title": "Multi-candidate assessment", "description": "An advanced five-subject assessment."},
+        {"id": "law-exam", "title": "Law Exam Investigation", "description": "A rich single-case investigation with multiple records."},
+        {"id": "multi-candidate", "title": "Multi-Candidate Collaboration Review", "description": "A controlled five-subject assessment."},
     ]
+
+
+def allocate_case_id(repository: CaseRepository) -> str:
+    numbers = [int(case_id.removeprefix("case-")) for case_id in repository.list_case_ids() if case_id.removeprefix("case-").isdigit()]
+    return f"case-{max(numbers, default=0) + 1:06d}"
+
+
+def create_case(workflow: HumanEvidenceWorkflow, payload: dict[str, Any]) -> dict[str, Any]:
+    title = str(payload.get("title") or "").strip()
+    assessment = payload.get("assessment") or {}
+    assessment_title = str(assessment.get("title") or "").strip()
+    assessment_type = str(assessment.get("assessment_type") or "").strip()
+    if not title or not assessment_title or not assessment_type:
+        raise ValueError("title, assessment.title, and assessment.assessment_type are required")
+    case_id = allocate_case_id(workflow.repository)
+    context_payload = {key: assessment.get(key) for key in ("title", "assessment_type", "venue", "start_time", "end_time") if assessment.get(key) is not None}
+    context = AssessmentContext(assessment_id=f"{case_id}-assessment", **context_payload)
+    state = CaseState(case_id=case_id, title=title, description=str(payload.get("description") or ""), assessment_context=context)
+    workflow.repository.save(state)
+    workflow.record_workspace_event(case_id, {"type": "case_created", "case_revision": state.revision, "human_summary": "Case created."})
+    return workflow.get_workspace(case_id)
 
 
 def seed_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str, case_id: str) -> dict[str, Any]:
     samples = {item["id"]: item for item in sample_cases()}
     if sample_id not in samples:
         raise ValueError(f"Unknown sample case: {sample_id!r}")
-    if sample_id == "smart-device":
+    if sample_id == "law-exam":
+        try:
+            state = workflow.repository.load("case-01").model_copy(deep=True, update={"case_id": case_id, "title": "Law Exam Investigation", "description": "A rich textual investigation with multiple records and unresolved explanations."})
+        except KeyError:
+            state = CaseState(case_id=case_id, title="Law Exam Investigation", description=samples[sample_id]["description"], assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Law examination", assessment_type="individual assessment"))
+    elif sample_id == "smart-device":
         subjects = {"A": AssessmentSubject(subject_id="A", display_name="Candidate A")}
         relationships = {}
     elif sample_id == "possible-collaboration":
@@ -44,7 +70,8 @@ def seed_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str, case_id: s
         subjects = {key: AssessmentSubject(subject_id=key, display_name=f"Candidate {key}") for key in ("A", "B", "C", "D", "E")}
         relationships = {}
     sources = {f"S{index}": Source(id=f"S{index}", name=f"{samples[sample_id]['title']} source {index}", source_type=SourceType.DOCUMENT, content="Visible sample source material.", metadata={"assessment_scope": GraphScope(scope_type="case").model_dump(mode="json")}) for index in range(1, 3)}
-    state = CaseState(case_id=case_id, title=samples[sample_id]["title"], description=samples[sample_id]["description"], assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title=samples[sample_id]["title"], assessment_type="synthetic demonstration"), subjects=subjects, subject_relationships=relationships, sources=sources)
+    if sample_id != "law-exam":
+        state = CaseState(case_id=case_id, title=samples[sample_id]["title"], description=samples[sample_id]["description"], assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title=samples[sample_id]["title"], assessment_type="synthetic demonstration"), subjects=subjects, subject_relationships=relationships, sources=sources)
     workflow.repository.save(state)
     workflow.record_workspace_event(case_id, {"type": "case_created", "case_revision": state.revision, "human_summary": f"Sample case {state.title} was opened."})
     return workflow.get_workspace(case_id)
@@ -56,6 +83,23 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parts = self._parts()
+        if parts == ["api", "cases"]:
+            cases = []
+            for case_id in self.workflow.repository.list_case_ids():
+                state = self.workflow.repository.load(case_id)
+                runs = self.workflow.get_runs(case_id)
+                cases.append({"case_id": case_id, "title": state.title, "last_updated_at": state.last_updated_at.isoformat(), "revision": state.revision, "subject_count": len(state.subjects), "latest_assessment_status": runs[-1].get("vnext_status") if runs else None})
+            self._write(200, {"cases": cases})
+            return
+        if parts == ["api", "product-guide"]:
+            body = product_guide().encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/markdown; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if parts == ["api", "debug", "aws-credentials", "status"]:
             if not debug_credentials_enabled():
                 self._write(404, {"error": "Debug credential endpoints are disabled"})
@@ -98,6 +142,13 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parts = self._parts()
+        if parts == ["api", "cases"]:
+            try:
+                workspace = create_case(self.workflow, self._read_json())
+                self._write(201, {"caseId": workspace["caseId"], "workspace": workspace})
+            except (ValueError, KeyError) as exc:
+                self._write(422, {"error": str(exc)})
+            return
         if len(parts) == 4 and parts[:2] == ["api", "samples"] and parts[3] in {"open", "reset"}:
             try:
                 payload = self._read_json()

@@ -5,6 +5,7 @@ import time
 import pytest
 
 from investigator.cycle import RequestEvidence
+from investigator.http_api import create_case, product_guide, sample_cases
 from investigator.graph import GraphNode, GraphNodeType
 from investigator.llm import ModelCallMetadata, ModelNativeCall, ModelTextBlock
 from investigator.models.evidence_request import EvidenceRequestStatus
@@ -152,3 +153,12 @@ def test_guidance_resolves_subject_and_material_names(tmp_path: Path) -> None:
     assert assessment["subject_candidate_number"] == "BL-041"
     assert assessment["violation_assessments"][0]["supporting_material"][0]["statement"] == "Candidate A looked toward the adjacent seat."
     assert assessment["violation_assessments"][0]["supporting_material"][0]["source_labels"] == ["Invigilator report"]
+
+
+def test_case_creation_and_public_sample_catalog_are_minimal(tmp_path: Path) -> None:
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workspace = create_case(workflow, {"title": "New review", "description": "Context", "assessment": {"title": "Assessment", "assessment_type": "closed notes"}})
+    assert workspace["caseId"] == "case-000001"
+    assert workspace["assessmentContext"]["title"] == "Assessment"
+    assert [item["title"] for item in sample_cases()] == ["Law Exam Investigation", "Multi-Candidate Collaboration Review"]
+    assert "evaluator_only" not in product_guide()

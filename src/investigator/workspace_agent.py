@@ -16,6 +16,7 @@ from investigator.services.evidence_requests import EvidenceRequestConflict, Hum
 from investigator.sources import SourceRegistry
 from investigator.model_registry import MODEL_REGISTRY
 from investigator.state.case_state import CaseState
+from investigator.help import product_guide
 
 
 class WorkspaceChatRequest(BaseModel):
@@ -108,7 +109,7 @@ class WorkspaceAgent:
         "LIST_SOURCES", "READ_SOURCE", "GET_PENDING_REQUEST", "LIST_REQUEST_HISTORY",
         "LIST_RUNS", "GET_RUN", "GET_LATEST_FAILURE", "GET_LATEST_WORKSPACE_FAILURE", "GET_LATEST_RUN_TRACE", "GET_LAST_SAFE_STATE", "OPEN_TRACE",
     })
-    VNEXT_READ_TOOLS = frozenset({"GET_CASE_GUIDANCE_CONTEXT", "READ_SOURCE", "LIST_SOURCES"})
+    VNEXT_READ_TOOLS = frozenset({"GET_CASE_GUIDANCE_CONTEXT", "GET_PRODUCT_GUIDE", "READ_SOURCE", "LIST_SOURCES"})
     ACTION_TOOLS = frozenset({
         "RUN_INVESTIGATION", "PAUSE_INVESTIGATION", "RESUME_INVESTIGATION", "ADD_SOURCE",
         "FULFIL_REQUEST", "MARK_REQUEST_UNAVAILABLE", "REQUEST_STEWARD_REVIEW",
@@ -230,6 +231,7 @@ class WorkspaceAgent:
                 "Explain the current case, latest assessment, evidence discipline, uncertainty, and product workflow.",
                 "You may read bounded case guidance context and sources, but must never mutate the case, run an assessment, pause/resume, fulfil requests, call Steward, or make a disciplinary judgment.",
                 "Never require a number of sources. Distinguish source statements from truth, similarity from collaboration, opportunity from use, association from misconduct, and absence of support from innocence.",
+                "For product-use questions, use GET_PRODUCT_GUIDE as the authoritative guide. Briefly redirect unrelated questions to the investigation, current evidence, or product guide.",
                 f"Available read-only tools: {', '.join(tools)}. Return ordinary natural-language text only.",
             ))
         return "\n".join((
@@ -281,6 +283,8 @@ class WorkspaceAgent:
             return {key: workspace[key] for key in ("runtimeStatus", "currentActor", "caseStatus", "caseRevision")}
         if request.tool == "GET_CASE_GUIDANCE_CONTEXT":
             return self.workflow.get_guidance_context(case_id)
+        if request.tool == "GET_PRODUCT_GUIDE":
+            return {"guide": product_guide()}
         if request.tool == "GET_CASE_SUMMARY":
             nodes = state.reasoning_graph.nodes.values() if state.reasoning_graph else []
             counts = {kind.value: sum(node.node_type is kind for node in nodes) for kind in GraphNodeType}
