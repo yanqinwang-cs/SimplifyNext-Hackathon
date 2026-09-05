@@ -1,70 +1,45 @@
-# How to use the Investigation Assistant
+# SimplifyNext Investigation Assistant
 
-This assistant helps university academic-integrity staff review an existing concern using the textual evidence available in a case.
+SimplifyNext helps authorised staff review a case using the textual evidence admitted through **Evidence**. It organises source statements, observations, claims, propositions, inferences, contradictions, uncertainties, hypotheses, and policy context without turning any one of them into an automatic truth.
 
-It works best with written institutional records such as marker reports, invigilator reports, statements, assessment records, logs, correspondence, and other text-readable evidence.
+## Create and set up a case
 
-## Create a case
+1. Create a case by entering only a case name.
+2. Every new case begins with one configured student named **Student 1**.
+3. Rename that student and add more students when required. Use one human-facing identifier consistently for each student.
+4. Upload the textual case evidence that should be assessed. Evidence is case material; it is not assigned to a student through a separate source form.
 
-Enter a case title and assessment context. Add subjects or candidates and, where useful, record factual relationships such as adjacent seating. You do not need to add subjects or evidence before creating the case.
+Sample cases already contain their configured students and evidence. Sample names and sample material are fixed.
 
-## Upload evidence
+## Add evidence
 
-Use **Add evidence**, provide a source title and type, then paste or upload text. Choose whether the source is case-wide, subject-specific, or relationship-specific. Useful inputs include marker reports, invigilator reports, statements, assessment records, system logs, tutoring records, and correspondence.
+Use **Add evidence** to upload readable `.txt` and `.md` records such as reports, statements, assessment records, logs, correspondence, or messages. The prototype primarily supports text-readable evidence. Photographs, screenshots, handwriting, diagrams, visual-only files, and arbitrary image evidence are not reliable prototype inputs.
 
-## Run an assessment
+There is no minimum evidence count. An empty case can be assessed, but it will produce limited findings. Only files added through **Evidence** are substantive factual case evidence. Case names, descriptions, administrative labels, runtime settings, activity, configured students, policy presets, and relationship configuration are not evidence.
 
-Press **Run assessment**. There is no minimum document count. Sparse evidence may produce a limited result; meaningful results depend on meaningful evidence.
+## Run and review an assessment
 
-## Review the assessment
+Run the assessment after admitting the material you want reviewed. Review each configured student independently and read the status, supporting material, limiting or conflicting material, unresolved points, and furthest justified conclusion.
 
-Review each subject independently. Read the status, supporting and limiting material, unresolved points, and furthest justified conclusion. `NOT_CURRENTLY_SUPPORTED` does not mean innocence established.
+`NOT_CURRENTLY_SUPPORTED` means that the present record does not support the configured violation. It does not mean innocence has been established. A source statement is not automatically true; contradiction establishes inconsistency, not deception or intent; similarity does not establish copying or collaboration; association does not establish prohibited collaboration; opportunity does not establish use; device or credential linkage does not establish the human actor; and knowledge does not establish guilt.
 
-## Use Help
+Relationships normally emerge from evidence and are not entered through the ordinary user interface. A relationship or shared opportunity is structural context, not proof of communication, collaboration, or misconduct. One student's evidence never automatically determines another student's status.
 
-Ask what remains uncertain, what evidence would be useful next, why something is only partially supported, why students are assessed differently, or whether it is reasonable to stop here.
+## Use Workspace Help
 
-## Read the report
+Workspace Help is read-only. Ask what remains uncertain, what evidence would be useful next, why a conclusion is limited, why configured students were assessed differently, what material is repetitive, or whether stopping further enquiry may be reasonable. Help can explain source filenames and current findings, but it cannot add evidence, rename students, run or retry an assessment, change a report, or make a disciplinary decision.
 
-Use **View report** to read the current structured findings and supporting material. If evidence changed after the last assessment, the report is marked out of date; rerun after meaningful changes.
+Further enquiry may not be justified where the remaining uncertainty is unlikely to change the current assessment or where only repetitive or disproportionate collection remains. Useful verification should be proportionate, such as checking an authoritative timestamp, obtaining an underlying record where a summary is disputed, or seeking an independent statement where accounts directly conflict. Final procedural judgment remains with authorised staff.
 
-## Continue or stop
+## Scope and limits
 
-Add evidence and rerun when it could materially clarify the case. Help can identify consequential evidential gaps, but additional evidence may not always change the assessment.
+The assessment is bounded by the admitted evidence and configured policy context. The product is:
 
-## What evidence works best?
+- not a plagiarism detector;
+- not an AI-content detector;
+- not an autonomous cheating detector;
+- not a guilt-decider;
+- not a surveillance system;
+- not a final disciplinary decision-maker.
 
-This prototype is intended primarily for textual evidence: typed reports, pasted text, text-readable documents, logs, statements, messages, correspondence, and structured written records. It is not primarily designed to interpret photographs, screenshots as evidence, diagrams, handwriting, visual-only files, or arbitrary image evidence.
-
-## Use cases
-
-### Complex investigations with many documents
-
-When records are distributed, explanations conflict, and no document is decisive, the assistant can organize evidence, connect relevant records, identify unresolved ambiguity, surface support and conflict, and suggest useful verification categories.
-
-### Combining observations from different staff
-
-Marker records can describe answers and errors, invigilator records can describe observed behavior, and another record can provide timing or context. The assistant combines independently documented observations into one structured assessment and reduces manual synthesis burden; it does not make meetings unnecessary.
-
-### Corroborating ambiguous evidence
-
-One marker anomaly or one invigilator anomaly may not establish misconduct. Combined evidence may materially change the assessment while preserving the distinction between observation, inference, and conclusion.
-
-### Multi-student cases
-
-Keep evidence separated by subject, record legitimate relationships, assess each student independently, and do not propagate one student's evidence to another.
-
-### Identifying useful next evidence
-
-The assistant can identify consequential uncertainty, suggest evidence categories that could clarify it, and recognize when more of the same material adds little. Results describe the extent to which a potential violation is currently supported, not a numerical likelihood.
-
-## What it is not
-
-- It is not a plagiarism detector.
-- It is not an AI-content detector.
-- It is not a word-riddle or hidden-clue solver.
-- It is not an autonomous detective or student-surveillance system.
-- It is not a general-purpose chatbot for unrelated questions.
-- It is not a final disciplinary decision-maker.
-
-The system is designed for an investigation where a credible concern and relevant case material already exist. Final institutional judgment remains with authorized humans.
+Final institutional judgment remains human.

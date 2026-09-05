@@ -7,6 +7,7 @@ import shutil
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from pydantic import BaseModel, ConfigDict, Field
 from urllib.parse import unquote, urlparse, parse_qs
 
 from investigator.services.evidence_requests import EvidenceRequestConflict, HumanEvidenceWorkflow
@@ -24,6 +25,11 @@ from investigator.state.case_state import CaseState
 from investigator.help import product_guide
 from investigator.public_views import assessment_view, workspace_view, public_run_handle, public_source_handle, public_student_handle, resolve_run_handle, resolve_source_handle, resolve_student_handle, document_format
 from investigator.runtime_settings import RuntimeSettingsError, settings as runtime_settings, set_model_overrides, reset_model_overrides
+
+
+class CaseTitleUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    title: str = Field(min_length=1, max_length=160)
 
 
 def sample_cases() -> list[dict[str, str]]:
@@ -70,7 +76,10 @@ def seed_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str, case_id: s
             letter = next((candidate for candidate in "ABCDE" if f"candidate_{candidate}_" in path.name), None)
             scope = GraphScope(scope_type="subject", subject_id=f"subject_{letter}") if letter else GraphScope(scope_type="case")
             sources[f"S{index}"] = Source(id=f"S{index}", name=path.name, source_type=SourceType.DOCUMENT, content=path.read_text(encoding="utf-8"), metadata={"filename": path.name, "assessment_scope": scope.model_dump(mode="json")})
-        state = CaseState(case_id=case_id, title="Multi-Candidate Collaboration Review", description=descriptions[sample_id], case_kind="sample", sample_id=sample_id, assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Business Law Individual In-Class Assessment 2", assessment_type="closed-notes individual assessment", venue="Seminar Room 4"), subjects=subjects, subject_relationships={"rel_A_B_adjacent": SubjectRelationship(relationship_id="rel_A_B_adjacent", subject_ids=["subject_A", "subject_B"], relationship_type="adjacent_seating", description="Candidate A and Candidate B were seated next to one another.")}, sources=sources)
+        seating_source = next((source for source in sources.values() if source.name == "seating_plan.md"), None)
+        if seating_source is None:
+            raise ValueError("The Multi-Candidate sample requires seating_plan.md for relationship provenance")
+        state = CaseState(case_id=case_id, title="Multi-Candidate Collaboration Review", description=descriptions[sample_id], case_kind="sample", sample_id=sample_id, assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Business Law Individual In-Class Assessment 2", assessment_type="closed-notes individual assessment", venue="Seminar Room 4"), subjects=subjects, subject_relationships={"rel_A_B_adjacent": SubjectRelationship(relationship_id="rel_A_B_adjacent", subject_ids=["subject_A", "subject_B"], relationship_type="adjacent_seating", source_ids=[seating_source.id], description="Candidate A and Candidate B were seated next to one another.")}, sources=sources)
     else:
         raise ValueError(f"Unknown sample case: {sample_id!r}")
     workflow.repository.save(state)
@@ -212,7 +221,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self) -> None:
         self.send_response(204)
         self._cors_headers()
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
@@ -461,6 +470,22 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             return
         clear_credential_override()
         self._write(200, credential_status())
+
+    def do_PATCH(self) -> None:
+        parts = self._parts()
+        if self.workflow.run_mode != "vnext" or len(parts) != 3 or parts[0:2] != ["api", "cases"]:
+            self._write(404, {"error": "Not found"})
+            return
+        try:
+            payload = CaseTitleUpdate.model_validate(self._read_json())
+            state = self.workflow.update_case_title(parts[2], payload.title)
+            self._write(200, {"workspace": self._public_workspace(state.case_id)})
+        except KeyError:
+            self._write(404, {"error": "Case not found"})
+        except EvidenceRequestConflict as exc:
+            self._write(409, {"error": str(exc), "code": "CASE_READ_ONLY"})
+        except ValueError as exc:
+            self._write(422, {"error": str(exc), "code": "INVALID_CASE_NAME"})
 
     def do_PUT(self) -> None:
         parts = self._parts()

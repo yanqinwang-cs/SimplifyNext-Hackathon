@@ -24,6 +24,7 @@ from investigator.vnext.models import (
     VNextRunInput,
     ViolationAssessment,
 )
+from investigator.models.assessment import validate_vnext_relationship_provenance
 from investigator.vnext.warden import GraphWarden
 
 
@@ -107,6 +108,7 @@ class VNextInvestigationRunner:
     def run(self, run_input: VNextRunInput) -> VNextRunResult:
         if not isinstance(run_input, VNextRunInput):
             raise TypeError("VNextInvestigationRunner.run requires a VNextRunInput")
+        validate_vnext_relationship_provenance(run_input.subject_relationships)
 
         reasoning_graph = clean_reasoning_graph(run_input.case_id, run_input.sources)
         raw_assessment = self.investigator(run_input)
