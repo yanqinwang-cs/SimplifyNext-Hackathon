@@ -6,6 +6,7 @@ from typing import Any
 
 from investigator.llm import ModelCallResult, ModelClient
 from investigator.vnext.models import InvestigatorAssessment, InvestigatorProposal, VNextRunInput
+from investigator.vnext.graph_grammar import model_facing_graph_grammar
 from investigator.vnext.source_applicability import SourceApplicabilityClassification
 from investigator.vnext.relationships import relationship_scope_prompt_view
 from investigator.vnext.warden import ProposalValidationIssue
@@ -121,6 +122,7 @@ def build_prompt(run_input: VNextRunInput) -> str:
             "\nADMITTED EVIDENCE SOURCES — CASE-WIDE / STUDENT-SPECIFIC / MULTI-STUDENT CANDIDATE (SOURCE STATEMENTS ARE NOT AUTOMATICALLY TRUE)\n" + json.dumps(sources, indent=2),
             "\nAVAILABLE INTERNAL RELATIONSHIP SCOPES (LOCAL REFS ONLY; STRUCTURAL SCOPE, NOT FINDINGS)\n" + json.dumps(relationships, indent=2),
             "\nEXPECTED CONFIGURED STUDENT IDS\n" + json.dumps(sorted(run_input.subjects) or ["case_subject"]),
+            "\n" + model_facing_graph_grammar(),
             retry_section,
             "\nEXACT INVESTIGATOR ASSESSMENT JSON SCHEMA\n"
             + json.dumps(schema, indent=2, sort_keys=True),
@@ -144,6 +146,7 @@ def build_corrective_prompt(
             "Do not add new factual predicates, conduct, intent, use, communication, assistance, or certainty to node statements during repair unless that meaning was already present in the frozen first assessment or proposal.",
             "When creating a missing node required only for graph representation, use the narrowest statement needed to represent the existing frozen semantic conclusion.",
             "Interpret issue fields precisely: allowed_types are for the failed field; construction_allowed_types are legal inputs for constructing a missing node; known_illegal_refs are refs illegal for this specific field only, not globally.",
+            "\n" + model_facing_graph_grammar(),
             "Return only a corrected InvestigatorProposal matching its required schema.",
             "\nPREVIOUS PROPOSAL\n" + json.dumps(assessment.proposal.model_dump(mode="json"), indent=2),
             "\nDETERMINISTIC VALIDATION ISSUES\n"
