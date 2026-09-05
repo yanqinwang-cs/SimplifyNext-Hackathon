@@ -1,4 +1,4 @@
-import type { AwsCredentialStatus, CaseListItem, CaseWorkspaceState, PublicSource, PublicSourceDocument, ReportResponse, RunSummary, RuntimeSettings, SampleCatalogItem, TraceEntry, WorkspaceChatResponse } from "./types";
+import type { AssessmentSummary, AwsCredentialStatus, CaseListItem, CaseWorkspaceState, PublicSource, PublicSourceDocument, ReportResponse, RunSummary, RuntimeSettings, SampleCatalogItem, TraceEntry, WorkspaceChatResponse } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
@@ -42,9 +42,10 @@ export async function getTraces(caseId: string): Promise<TraceEntry[]> {
   return result.traces;
 }
 
-export function runInvestigation(caseId: string): Promise<CaseWorkspaceState> {
-  return request<CaseWorkspaceState>(`/api/cases/${encodeURIComponent(caseId)}/run`, { method: "POST", body: "{}" });
+export function runInvestigation(caseId: string): Promise<{ run: { runHandle: string; state: string; startedAt: string }; workspace: CaseWorkspaceState }> {
+  return request<{ run: { runHandle: string; state: string; startedAt: string }; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/run`, { method: "POST", body: "{}" });
 }
+export function getAssessmentRun(caseId: string, runHandle: string): Promise<{ runHandle: string; state: string; startedAt: string; endedAt: string | null; message: string; reportAvailable: boolean; reportStale: boolean; workspace: CaseWorkspaceState }> { return request(`/api/cases/${encodeURIComponent(caseId)}/assessment-runs/${encodeURIComponent(runHandle)}`); }
 
 export function sendWorkspaceMessage(caseId: string, message: string): Promise<WorkspaceChatResponse> {
   return request<WorkspaceChatResponse>(`/api/cases/${encodeURIComponent(caseId)}/workspace/chat`, { method: "POST", body: JSON.stringify({ message }) });

@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { addSource, addSubject, getAwsCredentialStatus, getReport, getWorkspace, removeSubject, renameSubject, resetSample, runInvestigation, sendWorkspaceMessage } from "../../../lib/case-service";
+import { useEffect, useRef, useState } from "react";
+import { addSource, addSubject, getAssessmentRun, getAwsCredentialStatus, getReport, getWorkspace, removeSubject, renameSubject, resetSample, runInvestigation, sendWorkspaceMessage } from "../../../lib/case-service";
 import type { AwsCredentialStatus, CaseWorkspaceState, ReportResponse } from "../../../lib/types";
 import RuntimeSettingsControl from "../../components/runtime-settings";
 
@@ -12,8 +12,9 @@ export default function CasePage() {
   const [report, setReport] = useState<ReportResponse | null>(null);
   const [credentials, setCredentials] = useState<AwsCredentialStatus | null>(null);
   const [question, setQuestion] = useState(""); const [studentName, setStudentName] = useState(""); const [file, setFile] = useState<File | null>(null); const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null); const [message, setMessage] = useState<string | null>(null);
+  const polling = useRef(false);
   useEffect(() => { Promise.all([getWorkspace(caseId), getReport(caseId)]).then(([next, nextReport]) => { setWorkspace(next); setReport(nextReport); }).catch(() => setError("Could not load this case.")); getAwsCredentialStatus().then(setCredentials).catch(() => setCredentials(null)); }, [caseId]);
-  async function run() { setBusy(true); setError(null); try { setWorkspace(await runInvestigation(caseId)); } catch { setError("Assessment failed; the case and evidence were not changed."); } finally { setBusy(false); } }
+  async function run() { if (polling.current) return; setBusy(true); setError(null); try { const started = await runInvestigation(caseId); setWorkspace(started.workspace); polling.current = true; const deadline = Date.now() + 15 * 60 * 1000; while (Date.now() < deadline && polling.current) { await new Promise((resolve) => window.setTimeout(resolve, 1000)); const next = await getAssessmentRun(caseId, started.run.runHandle); setWorkspace(next.workspace); if (["completed", "failed", "stopped", "interrupted"].includes(next.state)) { if (next.state === "completed") setReport(await getReport(caseId)); break; } } if (Date.now() >= deadline) setError("Could not refresh assessment status. The assessment may still be running. Retry the status check."); } catch { setError("Could not refresh assessment status. The assessment may still be running. Retry the status check."); } finally { polling.current = false; setBusy(false); } }
   async function upload() { if (!workspace || !file) return; setBusy(true); try { const result = await addSource(caseId, { fileName: file.name, content: await file.text(), mediaType: file.type || "text/plain", caseRevision: workspace.caseRevision }); setWorkspace(result.workspace); setFile(null); } catch { setError("Could not add evidence."); } finally { setBusy(false); } }
   async function addStudentNow() { if (!workspace || !studentName.trim()) return; try { const result = await addSubject(caseId, { displayName: studentName.trim(), caseRevision: workspace.caseRevision }); setWorkspace(result.workspace); setStudentName(""); } catch { setError("Could not add student."); } }
   async function ask() { if (!question.trim()) return; setBusy(true); try { await sendWorkspaceMessage(caseId, question.trim()); setQuestion(""); setWorkspace(await getWorkspace(caseId)); } catch { setError("Help is temporarily unavailable."); } finally { setBusy(false); } }

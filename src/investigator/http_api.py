@@ -22,7 +22,7 @@ from investigator.models.assessment import AssessmentContext, AssessmentSubject,
 from investigator.models.source import Source
 from investigator.state.case_state import CaseState
 from investigator.help import product_guide
-from investigator.public_views import workspace_view, public_source_handle, public_student_handle, resolve_source_handle, resolve_student_handle, document_format
+from investigator.public_views import assessment_view, workspace_view, public_run_handle, public_source_handle, public_student_handle, resolve_run_handle, resolve_source_handle, resolve_student_handle, document_format
 from investigator.runtime_settings import settings as runtime_settings, set_model_overrides, reset_model_overrides
 
 
@@ -135,6 +135,13 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 self._write(200, {"caseId": parts[2], "source": {"sourceHandle": parts[4], "fileName": source.name, "documentFormat": document_format(source.name), "content": source.content or ""}})
             except (KeyError, ValueError): self._write(404, {"error": "Source not found"})
             return
+        if self.workflow.run_mode == "vnext" and len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs":
+            try:
+                run_id = resolve_run_handle(self.workflow, parts[2], parts[4])
+                run = next(item for item in self.workflow.get_runs(parts[2]) if item.get("run_id") == run_id)
+                self._write(200, {"runHandle": parts[4], "state": str(run.get("outcome_type") or "RUNNING").lower(), "startedAt": run.get("started_at"), "endedAt": run.get("ended_at"), "message": (run.get("final_error") or {}).get("message", "") if isinstance(run.get("final_error"), dict) else "", "reportAvailable": run.get("vnext_status") == "completed", "reportStale": assessment_view(self.workflow, parts[2])["reportStale"], "workspace": self._public_workspace(parts[2])})
+            except (KeyError, ValueError, StopIteration): self._write(404, {"error": "Assessment run not found"})
+            return
         if parts == ["api", "cases"]:
             cases = []
             for case_id in self.workflow.repository.list_case_ids():
@@ -216,7 +223,13 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             except (ValueError, KeyError): self._write(422, {"error": "Invalid case request"})
             return
         if self.workflow.run_mode == "vnext" and len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "run":
-            try: self._write(200, self._public_workspace(self.workflow.start_run(parts[2])["caseId"]))
+            try:
+                if not self.workflow.repository.require_case(parts[2]).subjects:
+                    self._write(409, {"error": "A configured student is required before assessment", "code": "NO_CONFIGURED_STUDENT"})
+                    return
+                self.workflow.start_run(parts[2]); run_id = self.workflow.current_run_id(parts[2])
+                if run_id is None: raise RuntimeError("Assessment run was not persisted")
+                self._write(202, {"run": {"runHandle": public_run_handle(parts[2], run_id), "state": "running", "startedAt": self.workflow.get_runs(parts[2])[-1].get("started_at")}, "workspace": self._public_workspace(parts[2])})
             except KeyError: self._write(404, {"error": "Case not found"})
             except EvidenceRequestConflict as exc: self._write(409, {"error": str(exc)})
             return

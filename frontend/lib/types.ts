@@ -95,6 +95,7 @@ export interface CaseWorkspaceState {
 }
 export interface CaseListItem { caseId: string; title: string; }
 export interface SampleCatalogItem { sampleId: string; title: string; }
+export interface AssessmentSummary { state: "not_started" | "running" | "complete" | "stale" | "failed_no_report" | "failed_previous_report_retained" | "stopped"; activeRun: { runHandle: string; startedAt: string } | null; latestAttempt: { runHandle: string; state: string; startedAt: string; endedAt: string | null; message: string } | null; reportAvailable: boolean; reportStale: boolean; }
 
 export interface ReportMaterial { statement: string; sourceLabels: string[]; }
 export interface ReportViolation { label: string; status: string; reasoningSummary: string; supportingMaterial: ReportMaterial[]; limitingMaterial: ReportMaterial[]; }

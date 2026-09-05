@@ -24,7 +24,7 @@ from investigator.vnext import (
     run_input_from_case_state,
 )
 from investigator.vnext.model import VNextInvestigatorModel, build_corrective_prompt
-from investigator.vnext.models import AssessmentRulePreset, InvestigatorAssessment, InvestigatorProposal
+from investigator.vnext.models import AssessmentRulePreset, AssessmentStatus, Confidence, FurthestJustifiedConclusion, InvestigatorAssessment, InvestigatorProposal, SubjectAssessment, ViolationAssessment
 from investigator.vnext.presets import preset_for_case
 from investigator.runtime_settings import effective_model
 
@@ -48,12 +48,15 @@ class VNextProductionRunner:
     def run(self, case_id: str, workflow: HumanEvidenceWorkflow) -> VNextRunResult:
         state = workflow.repository.require_case(case_id)
         preset = self.preset_resolver(state)
-        client = self.client or BedrockModelClient(model_id=effective_model("investigator").invocation_id, region=effective_model("investigator").region)
+        substantive_sources = {key: value for key, value in state.sources.items() if (value.content or "").strip()}
+        client = None if not substantive_sources else (self.client or BedrockModelClient(model_id=effective_model("investigator").invocation_id, region=effective_model("investigator").region))
         last_error: Exception | None = None
         for attempt_number in range(1, self.max_attempts + 1):
             state = workflow.repository.load(case_id)
-            run_input = run_input_from_case_state(state, preset)
-            investigator = VNextInvestigatorModel(client)
+            run_input = run_input_from_case_state(state, preset, human_inputs={"zero_evidence": not substantive_sources})
+            if not substantive_sources:
+                run_input = run_input.model_copy(update={"sources": {}})
+            investigator = VNextInvestigatorModel(client) if client is not None else None
             workflow.record_trace(
                 case_id,
                 {
@@ -70,8 +73,11 @@ class VNextProductionRunner:
             corrective_attempted = False
             first_assessment: InvestigatorAssessment | None = None
             try:
-                workflow.record_model_attempt(case_id, correction=attempt_number > 1)
-                first_assessment = investigator(run_input)
+                if not substantive_sources:
+                    first_assessment = self._zero_evidence_assessment(run_input)
+                else:
+                    workflow.record_model_attempt(case_id, correction=attempt_number > 1)
+                    first_assessment = investigator(run_input)
                 try:
                     result = VNextInvestigationRunner(lambda _: first_assessment).run(run_input)
                 except WardenValidationError as validation_error:
@@ -151,7 +157,7 @@ class VNextProductionRunner:
                     )
                 result_attempt_number = 2 if corrective_attempted else attempt_number
                 self._persist_success(workflow, case_id, result_attempt_number, result, investigator)
-                metadata = investigator.last_call.metadata if investigator.last_call else None
+                metadata = investigator.last_call.metadata if investigator and investigator.last_call else None
                 workflow.record_trace(
                     case_id,
                     {
@@ -183,7 +189,7 @@ class VNextProductionRunner:
                 return result
             except Exception as exc:
                 last_error = exc
-                metadata = investigator.last_call.metadata if investigator.last_call else None
+                metadata = investigator.last_call.metadata if investigator and investigator.last_call else None
                 trace_attempt_number = 2 if corrective_attempted else attempt_number
                 workflow.record_trace(
                     case_id,
@@ -197,7 +203,7 @@ class VNextProductionRunner:
                         "error_type": type(exc).__name__,
                         "error": str(exc),
                         "raw_output": getattr(exc, "raw_output", None)
-                        or (investigator.last_call.raw_output if investigator.last_call else None),
+                        or (investigator.last_call.raw_output if investigator and investigator.last_call else None),
                         "model": metadata.model if metadata else None,
                         "input_tokens": metadata.input_tokens if metadata else None,
                         "output_tokens": metadata.output_tokens if metadata else None,
@@ -210,6 +216,13 @@ class VNextProductionRunner:
         raise AssertionError(f"vNext run ended without a result: {last_error}")
 
     @staticmethod
+    def _zero_evidence_assessment(run_input: VNextRunInput) -> InvestigatorAssessment:
+        assessments = []
+        for subject_id in sorted(run_input.subjects):
+            assessments.append(SubjectAssessment(subject_id=subject_id, violation_assessments=[ViolationAssessment(violation_id=item.violation_id, status=AssessmentStatus.NOT_CURRENTLY_SUPPORTED, reasoning_summary="The current record contains no substantive evidence for this assessment.", confidence=Confidence.LOW) for item in run_input.rule_preset.violations], furthest_conclusion=FurthestJustifiedConclusion(statement="The current record does not support a finding on the configured violations.", confidence=Confidence.LOW)))
+        return InvestigatorAssessment(proposal=InvestigatorProposal(graph_updates=[]), subject_assessments=assessments)
+
+    @staticmethod
     def _retryable(exc: Exception) -> bool:
         return isinstance(exc, (ModelParseError, VNextRunValidationError, WardenValidationError, RuntimeError))
 
@@ -219,14 +232,14 @@ class VNextProductionRunner:
         case_id: str,
         attempt_number: int,
         result: VNextRunResult,
-        investigator: VNextInvestigatorModel,
+        investigator: VNextInvestigatorModel | None,
     ) -> None:
         run_id = workflow.current_run_id(case_id)
         if run_id is None:
             raise RuntimeError("Cannot persist vNext result without an active run")
         directory = workflow.repository.run_dir(case_id, run_id)
         directory.mkdir(parents=True, exist_ok=True)
-        metadata = investigator.last_call.metadata if investigator.last_call else None
+        metadata = investigator.last_call.metadata if investigator and investigator.last_call else None
         payload = {
             "run_id": run_id,
             "attempt_number": attempt_number,
