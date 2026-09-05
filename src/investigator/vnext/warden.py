@@ -299,7 +299,10 @@ class GraphWarden:
         for source_id in update.source_ids:
             applicability = self.source_applicability[source_id]
             if scope.scope_type is GraphScopeType.CASE:
-                if applicability.classification.value in {"student_specific", "multi_student_candidate"} and len(self.subjects) > 1:
+                trusted_scope = applicability.trusted_scope
+                if trusted_scope is not None and trusted_scope.scope_type is GraphScopeType.CASE:
+                    continue
+                if trusted_scope is not None or not applicability.case_shared_allowed:
                     raise WardenValidationError(
                         f"Graph Warden rejected source {source_id!r} widened to CASE scope",
                         issues=[self._relationship_issue("SOURCE_SCOPE_WIDENING", source_id, "Use the matched student or a validated relationship scope.")],

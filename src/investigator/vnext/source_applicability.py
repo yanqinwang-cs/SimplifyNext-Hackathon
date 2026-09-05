@@ -140,7 +140,9 @@ def build_source_applicability(
         classification, basis = _classification(len(matched), len(subjects))
         if trusted is not None:
             basis = "trusted_internal_scope"
-            if trusted.scope_type is GraphScopeType.SUBJECT:
+            if trusted.scope_type is GraphScopeType.CASE:
+                classification = SourceApplicabilityClassification.CASE_SHARED
+            elif trusted.scope_type is GraphScopeType.SUBJECT:
                 classification = SourceApplicabilityClassification.STUDENT_SPECIFIC
             elif trusted.scope_type is GraphScopeType.RELATIONSHIP:
                 classification = SourceApplicabilityClassification.MULTI_STUDENT_CANDIDATE
