@@ -52,9 +52,9 @@ def _assessment(*, invalid_support: str | None = None) -> InvestigatorSemanticAs
     support_ref = invalid_support or "e_a"
     return InvestigatorSemanticAssessment(
         semantic_items=[
-            SemanticItem(local_ref="e_a", kind=SemanticItemKind.EVIDENCE_STATEMENT, statement="A record says X.", about_subject_ids=["subject_A"], basis_source_ids=["S1"]),
-            SemanticItem(local_ref="e_b", kind=SemanticItemKind.EVIDENCE_STATEMENT, statement="B record says Y.", about_subject_ids=["subject_B"], basis_source_ids=["S2"]),
-            SemanticItem(local_ref="e_joint", kind=SemanticItemKind.EVIDENCE_STATEMENT, statement="A joint record says Z.", about_subject_ids=["subject_A", "subject_B"], basis_source_ids=["S3"]),
+            SemanticItem(local_ref="e_a", kind=SemanticItemKind.EVIDENCE_STATEMENT, statement="A record says X.", basis_source_ids=["S1"]),
+            SemanticItem(local_ref="e_b", kind=SemanticItemKind.EVIDENCE_STATEMENT, statement="B record says Y.", basis_source_ids=["S2"]),
+            SemanticItem(local_ref="e_joint", kind=SemanticItemKind.EVIDENCE_STATEMENT, statement="A joint record says Z.", basis_source_ids=["S3"]),
             SemanticItem(local_ref="alt_a", kind=SemanticItemKind.HYPOTHESIS, statement="An alternative explanation for A.", about_subject_ids=["subject_A"]),
         ],
         subject_assessments=[
@@ -76,12 +76,12 @@ def test_valid_semantic_assessment_compiles_and_warden_applies() -> None:
 def test_private_source_cross_student_and_joint_private_stitching_are_rejected() -> None:
     run_input = _input()
     private_misuse = _assessment(invalid_support="e_bad").model_copy(update={
-        "semantic_items": _assessment().semantic_items + [SemanticItem(local_ref="e_bad", kind=SemanticItemKind.EVIDENCE_STATEMENT, statement="Misapplied record.", about_subject_ids=["subject_A"], basis_source_ids=["S2"])],
+        "semantic_items": _assessment().semantic_items + [SemanticItem(local_ref="e_bad", kind=SemanticItemKind.EVIDENCE_STATEMENT, statement="Misapplied record.", basis_source_ids=["S2"])],
     })
     with pytest.raises(SemanticValidationError, match="legal scope"):
         compile_semantic_assessment(private_misuse, run_input)
     joint_private = _assessment().model_copy(update={
-        "semantic_items": _assessment().semantic_items[:2] + [SemanticItem(local_ref="joint", kind=SemanticItemKind.PROPOSITION, statement="Joint conclusion.", about_subject_ids=["subject_A", "subject_B"], basis_source_ids=["S3"], basis_item_refs=["e_a", "e_b"])],
+        "semantic_items": _assessment().semantic_items[:2] + [SemanticItem(local_ref="joint", kind=SemanticItemKind.PROPOSITION, statement="Joint conclusion.", about_subject_ids=["subject_A", "subject_B"], basis_item_refs=["e_a", "e_b"])],
     })
     with pytest.raises(SemanticValidationError, match=r"semantic_items\[2\].*Keep separate subject-scoped propositions") as caught:
         compile_semantic_assessment(joint_private, run_input)
@@ -94,7 +94,6 @@ def test_mixed_private_sources_in_one_evidence_item_require_split() -> None:
         local_ref="mixed_observation",
         kind=SemanticItemKind.EVIDENCE_STATEMENT,
         statement="A combined observation.",
-        about_subject_ids=["subject_A", "subject_B"],
         basis_source_ids=["S1", "S2"],
     )
     assessment = _assessment().model_copy(update={"semantic_items": _assessment().semantic_items + [item]})
@@ -116,7 +115,6 @@ def test_same_subject_sources_can_share_one_evidence_item() -> None:
         local_ref="two_a_records",
         kind=SemanticItemKind.EVIDENCE_STATEMENT,
         statement="Two records concern Candidate A.",
-        about_subject_ids=["subject_A"],
         basis_source_ids=["S1", "S1_COPY"],
     )
     assessment = _assessment().model_copy(update={"semantic_items": _assessment().semantic_items + [item]})
@@ -155,7 +153,6 @@ def test_evidence_scope_is_sticky_to_source_not_mentions() -> None:
         local_ref="e_mentions_b",
         kind=SemanticItemKind.EVIDENCE_STATEMENT,
         statement="The record describes an event involving Candidate B.",
-        about_subject_ids=["subject_A", "subject_B"],
         basis_source_ids=["S1"],
     )
     assessment = _assessment().model_copy(update={
@@ -351,7 +348,6 @@ def test_semantic_scope_failure_gets_one_clean_retry_with_concrete_constraint(tm
         local_ref="mixed_retry_item",
         kind=SemanticItemKind.EVIDENCE_STATEMENT,
         statement="A mixed private observation.",
-        about_subject_ids=["subject_A", "subject_B"],
         basis_source_ids=["S1", "S2"],
     )
     invalid = _assessment().model_copy(update={
@@ -437,3 +433,112 @@ def test_normal_semantic_warden_failure_is_terminal_without_model_retry(tmp_path
         time.sleep(0.01)
     assert workflow.ensure_case("case-01").runtime_status == "FAILED"
     assert client.calls == 1
+
+
+def test_kind_specific_union_rejects_wrong_fields_and_unknown_kind() -> None:
+    with pytest.raises(Exception):
+        InvestigatorSemanticAssessment.model_validate({
+            "semantic_items": [{
+                "local_ref": "e1",
+                "kind": "evidence_statement",
+                "statement": "A source statement.",
+                "basis_source_ids": ["S1"],
+                "basis_item_refs": ["p1"],
+            }],
+            "subject_assessments": [],
+        })
+    with pytest.raises(Exception):
+        InvestigatorSemanticAssessment.model_validate({
+            "semantic_items": [{
+                "local_ref": "u1",
+                "kind": "uncertainty",
+                "statement": "An unresolved point.",
+            }],
+            "subject_assessments": [],
+        })
+
+
+def test_proposition_and_hypothesis_contracts_are_strict() -> None:
+    with pytest.raises(Exception):
+        SemanticItem(
+            local_ref="p1",
+            kind=SemanticItemKind.PROPOSITION,
+            statement="A proposition.",
+            about_subject_ids=["subject_A"],
+            basis_source_ids=["S1"],
+            basis_item_refs=["e_a"],
+        )
+    with pytest.raises(Exception):
+        SemanticItem(
+            local_ref="h1",
+            kind=SemanticItemKind.HYPOTHESIS,
+            statement="A hypothesis.",
+            about_subject_ids=["subject_A"],
+            basis_item_refs=["e_a"],
+        )
+
+
+def test_multi_student_hypothesis_requires_and_accepts_existing_relationship() -> None:
+    assessment = _assessment().model_copy(update={
+        "semantic_items": _assessment().semantic_items + [SemanticItem(
+            local_ref="h_joint",
+            kind=SemanticItemKind.HYPOTHESIS,
+            statement="A relationship-level alternative explanation.",
+            about_subject_ids=["subject_A", "subject_B"],
+        )],
+    })
+    compiled = compile_semantic_assessment(assessment, _input())
+    hypothesis = next(update for update in compiled.proposal.graph_updates if getattr(update, "local_ref", None) == "h_joint")
+    assert hypothesis.scope.scope_type is GraphScopeType.RELATIONSHIP
+
+
+def test_unresolved_points_compile_to_deterministic_uncertainty_nodes() -> None:
+    assessment = _assessment().model_copy(update={
+        "subject_assessments": [
+            _assessment().subject_assessments[0].model_copy(update={
+                "violation_assessments": [
+                    _assessment().subject_assessments[0].violation_assessments[0].model_copy(update={
+                        "unresolved_points": ["Whether the record reflects direct access."],
+                    })
+                ]
+            }),
+            _assessment().subject_assessments[1],
+        ]
+    })
+    compiled = compile_semantic_assessment(assessment, _input())
+    uncertainty = next(update for update in compiled.proposal.graph_updates if getattr(update, "operation", None) == "add_uncertainty")
+    assert uncertainty.target_node_id == "evaluation_subject_a_v1"
+    assert uncertainty.node_id == "U1"
+
+
+def test_violation_rules_require_support_and_conflict_but_allow_limiting_support() -> None:
+    conflicted = _assessment().model_copy(update={
+        "subject_assessments": [
+            _assessment().subject_assessments[0].model_copy(update={
+                "violation_assessments": [
+                    _assessment().subject_assessments[0].violation_assessments[0].model_copy(update={
+                        "status": AssessmentStatus.CONFLICTED,
+                        "conflicting_item_refs": ["e_joint"],
+                    })
+                ]
+            }),
+            _assessment().subject_assessments[1],
+        ]
+    })
+    compile_semantic_assessment(conflicted, _input())
+
+    supported_material = _assessment().model_copy(update={
+        "subject_assessments": [
+            _assessment().subject_assessments[0],
+            _assessment().subject_assessments[1].model_copy(update={
+                "violation_assessments": [
+                    _assessment().subject_assessments[1].violation_assessments[0].model_copy(update={
+                        "status": AssessmentStatus.NOT_CURRENTLY_SUPPORTED,
+                        "supporting_item_refs": ["e_b"],
+                        "limiting_item_refs": ["e_joint"],
+                    })
+                ]
+            }),
+        ]
+    })
+    compile_semantic_assessment(supported_material, _input())
