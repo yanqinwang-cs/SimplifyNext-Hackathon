@@ -110,8 +110,9 @@ def workspace_view(workflow: Any, case_id: str) -> dict[str, Any]:
     runs = workflow.get_runs(case_id)
     latest = next((run for run in reversed(runs) if run.get("vnext_status") == "completed"), None)
     report = workflow.get_report(case_id)
+    persistent_activity = [{"type": item.get("type", ""), "summary": item.get("human_summary", ""), "createdAt": ""} for item in state.administrative_activity]
     return PublicWorkspace(
-        caseId=state.case_id, caseRevision=state.revision, title=report["title"], caseStatus=state.case_status,
+        caseId=state.case_id, caseRevision=state.revision, title=state.title, caseStatus=state.case_status,
         runtimeStatus=state.runtime_status, students=[PublicStudent(studentHandle=public_student_handle(case_id, item.subject_id), displayName=item.display_name, candidateNumber=item.candidate_number) for item in sorted(state.subjects.values(), key=lambda item: item.subject_id)],
         sources=[PublicSource(sourceHandle=public_source_handle(case_id, item.id), fileName=item.name, documentFormat=document_format(item.name)) for item in sorted(state.sources.values(), key=lambda item: item.id)],
     report=PublicReport(state=report["reportState"], assessmentIsStale=report["assessmentIsStale"]),
@@ -121,10 +122,8 @@ def workspace_view(workflow: Any, case_id: str) -> dict[str, Any]:
         preloadedSourceCount=len(state.sources) if state.case_kind == "sample" else 0,
         assessment=assessment_view(workflow, case_id),
         chatHistory=[{"role": str(item.get("role", "workspace")), "text": str(item.get("text", ""))} for item in workflow._workspace_events.get(case_id, []) if item.get("type") == "chat"],
-        activity=[{"type": str(item.get("type", "")), "summary": str(item.get("human_summary", "")), "createdAt": str(item.get("created_at", ""))} for item in workflow.workspace_events(case_id)],
+        activity=persistent_activity + [{"type": str(item.get("type", "")), "summary": str(item.get("human_summary", "")), "createdAt": str(item.get("created_at", ""))} for item in workflow.workspace_events(case_id)],
     ).model_dump(mode="json")
 
 def safe_help_context(workflow: Any, case_id: str) -> dict[str, Any]:
-    state = workflow.repository.require_case(case_id)
-    report = workflow.get_report(case_id)
-    return {"caseTitle": report["title"], "assessment": {"state": report["reportState"], "assessmentIsStale": report["assessmentIsStale"]}, "students": report["students"], "sources": [{"sourceHandle": public_source_handle(case_id, source.id), "fileName": source.name, "documentFormat": document_format(source.name)} for source in state.sources.values()], "runtimeStatus": state.runtime_status}
+    return workflow.get_guidance_context(case_id)

@@ -153,7 +153,7 @@ def test_subject_assessment_references_enforce_scope_after_resolution() -> None:
     def result_for(subject_id: str, refs: list[str]) -> InvestigatorAssessment:
         assessments = [SubjectAssessment(subject_id=item, violation_assessments=[ViolationAssessment(violation_id="V1", status=AssessmentStatus.SUPPORTED if item == subject_id else AssessmentStatus.NOT_CURRENTLY_SUPPORTED, supporting_node_ids=refs if item == subject_id else [], reasoning_summary="r", confidence=Confidence.HIGH)], furthest_conclusion=FurthestJustifiedConclusion(statement="c", confidence=Confidence.HIGH)) for item in ("A", "B")]
         return InvestigatorAssessment(proposal=graph_proposal, subject_assessments=assessments)
-    run = VNextRunInput(case_id="case-01", sources={"S1": source()}, subjects={key: AssessmentSubject(subject_id=key, display_name=key) for key in ("A", "B")}, subject_relationships={"AB": SubjectRelationship(relationship_id="AB", subject_ids=["A", "B"], relationship_type="communication")}, rule_preset=rule)
+    run = VNextRunInput(case_id="case-01", sources={"S1": source()}, subjects={key: AssessmentSubject(subject_id=key, display_name=key) for key in ("A", "B")}, subject_relationships={"AB": SubjectRelationship(relationship_id="AB", subject_ids=["A", "B"], relationship_type="communication", source_ids=["S1"])}, rule_preset=rule)
     valid = VNextInvestigationRunner(lambda _: result_for("A", ["a_obs", "ab_obs"])).run(run)
     assert len(valid.subject_assessments[0].violation_assessments[0].supporting_node_ids) == 2
     with pytest.raises(Exception, match="cannot reference graph node"):

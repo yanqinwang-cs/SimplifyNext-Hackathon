@@ -92,7 +92,7 @@ def test_vnext_run_input_copies_identity_structure_and_validates_standalone() ->
     context, subjects, relationships = identity_parts()
     state = CaseState(case_id="case-1", title="Case", assessment_context=context, subjects=subjects, subject_relationships=relationships, sources={"S1": source()})
     run_input = VNextRunInput.from_case_state(state, preset())
-    assert run_input.assessment_context == context
+    assert run_input.assessment_context is None
     assert run_input.subjects == subjects
     assert run_input.subject_relationships == relationships
     with pytest.raises(ValidationError, match="Unknown subject"):
@@ -103,8 +103,8 @@ def test_prompt_contains_structured_identity_context() -> None:
     context, subjects, relationships = identity_parts()
     run_input = VNextRunInput(case_id="case-1", assessment_context=context, subjects=subjects, subject_relationships=relationships, sources={"S1": source()}, rule_preset=preset())
     prompt = build_prompt(run_input)
-    assert "ASSESSMENT CONTEXT" in prompt
-    assert "assessment-1" in prompt
+    assert "ASSESSMENT CONTEXT" not in prompt
+    assert "assessment-1" not in prompt
     assert "subject_A" in prompt and "subject_B" in prompt
     assert "rel_AB" in prompt and "observed_communication" in prompt
     assert "subject_id is the authoritative identity key" in prompt

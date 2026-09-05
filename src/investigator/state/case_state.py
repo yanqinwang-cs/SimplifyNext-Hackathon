@@ -46,6 +46,8 @@ class CaseState(BaseModel):
     focus_recent_region_node_ids: list[str] = Field(default_factory=list)
     clean_checkpoint: dict[str, Any] | None = None
     revision: int = 0
+    administrative_revision: int = 0
+    administrative_activity: list[dict[str, str]] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_structure(self) -> "CaseState":

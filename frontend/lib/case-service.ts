@@ -26,6 +26,10 @@ export function createCase(payload: { title: string }) {
   return request<{ caseId: string; workspace: CaseWorkspaceState }>("/api/cases", { method: "POST", body: JSON.stringify(payload) });
 }
 
+export function updateCaseTitle(caseId: string, title: string) {
+  return request<{ workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}`, { method: "PATCH", body: JSON.stringify({ title }) });
+}
+
 export async function getProductGuide(): Promise<string> {
   const response = await fetch(`${API_BASE}/api/product-guide`);
   if (!response.ok) throw new Error(`Guide request failed (${response.status})`);

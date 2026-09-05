@@ -78,3 +78,14 @@ def validate_identity_references(
         for source_id in relationship.source_ids:
             if source_id not in known_source_ids:
                 raise ValueError(f"Unknown source ID in subject relationship: {source_id!r}")
+
+
+def validate_vnext_relationship_provenance(
+    relationships: Mapping[str, SubjectRelationship],
+) -> None:
+    """Require source provenance before a relationship enters normal vNext input."""
+    for relationship in relationships.values():
+        if not relationship.source_ids:
+            raise ValueError(
+                f"Relationship {relationship.relationship_id!r} requires source provenance for vNext"
+            )

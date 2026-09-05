@@ -40,8 +40,9 @@ def test_direct_source_ingestion_rejects_unknown_scope_identity(tmp_path):
 def test_vnext_guidance_context_reports_no_assessment_and_read_only_tools(tmp_path):
     workflow = make_workflow(tmp_path)
     context = workflow.get_guidance_context("case-01")
-    assert context["latest_successful_vnext_run"] is None
-    assert context["assessment_is_stale"] is False
+    assert context["assessment"]["state"] == "not_started"
+    assert context["assessment"]["assessment_is_stale"] is False
+    assert "latest_successful_vnext_run" not in context
     agent = WorkspaceAgent(workflow)
     assert {item["name"] for item in agent.tool_specs()} == {"GET_CASE_GUIDANCE_CONTEXT", "GET_PRODUCT_GUIDE", "LIST_SOURCES", "READ_SOURCE"}
     with pytest.raises(WorkspaceToolAuthorizationError):

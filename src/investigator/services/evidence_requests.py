@@ -276,6 +276,26 @@ class HumanEvidenceWorkflow:
             return state
         return self.repository.load(case_id)
 
+    def update_case_title(self, case_id: str, title: str) -> CaseState:
+        """Update only administrative case naming; substantive revision is unchanged."""
+        with self._lock:
+            state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+            if state.case_kind == "sample":
+                raise EvidenceRequestConflict("Sample case names are fixed")
+            cleaned = title.strip()
+            if not cleaned:
+                raise ValueError("Case name is required")
+            if len(cleaned) > 160:
+                raise ValueError("Case name must be 160 characters or fewer")
+            if cleaned == state.title:
+                return state
+            state.title = cleaned
+            state.administrative_revision += 1
+            state.administrative_activity.append({"type": "case_name_updated", "human_summary": "Case name updated."})
+            state.last_updated_at = datetime.now(timezone.utc)
+            self.repository.save(state)
+            return state
+
     @staticmethod
     def _restore_clean_checkpoint(state: CaseState) -> CaseState:
         checkpoint = state.clean_checkpoint or {}
@@ -575,8 +595,8 @@ class HumanEvidenceWorkflow:
         display_title = "Law Exam Investigation" if state.title == "Business Law Tutorial 5" else state.title
         return {"caseId": state.case_id, "caseRevision": state.revision, "title": display_title, "status": runtime_status.lower(), "caseStatus": state.case_status, "runtimeStatus": runtime_status, "currentActor": current_actor, "institutionalStatus": "Investigating" if state.case_status == "ACTIVE" else state.case_status.title(), "currentFocus": pending.information_sought if pending else "Review the current case state.", "messages": messages, "chatHistory": [], "workspaceTurns": [], "workspaceEvents": self.workspace_events(case_id), "visibleSources": [{"id": source.id, "name": source.name, "sourceType": source.source_type.value, "content": source.content or "", "contentPreview": (source.content or "")[:180], "metadata": source.metadata} for source in state.sources.values()], "assessmentContext": state.assessment_context.model_dump(mode="json") if state.assessment_context else None, "subjects": [item.model_dump(mode="json") for item in sorted(state.subjects.values(), key=lambda item: item.subject_id)], "relationships": [item.model_dump(mode="json") for item in sorted(state.subject_relationships.values(), key=lambda item: item.relationship_id)], "pendingEvidenceRequest": pending_payload, "requestHistory": [self._public_request(item) for item in state.evidence_request_history], "runs": runs, "lastError": state.last_error, "lastTraceStep": state.last_trace_step, "lastUpdatedAt": state.last_updated_at.isoformat(), "latestRun": latest}
 
-    def get_guidance_context(self, case_id: str) -> dict[str, Any]:
-        """Return bounded, current, read-only context for the vNext Help Agent."""
+    def _assessment_guidance(self, case_id: str) -> dict[str, Any]:
+        """Build internal report material before projecting it for Help."""
         state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
         runs = self.get_runs(case_id)
         latest = next((run for run in reversed(runs) if run.get("vnext_status") == "completed"), None)
@@ -626,10 +646,50 @@ class HumanEvidenceWorkflow:
             "run_status": state.runtime_status,
         }
 
+    def get_guidance_context(self, case_id: str) -> dict[str, Any]:
+        """Return only human-facing, read-only context for the vNext Help Agent."""
+        from investigator.public_views import document_format
+
+        state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+        internal = self._assessment_guidance(case_id)
+        labels = {item.violation_id: item.label for item in preset_for_case(state).violations}
+        assessments: list[dict[str, Any]] = []
+        for assessment in internal["per_subject_assessments"]:
+            safe_violations = []
+            for violation in assessment.get("violation_assessments", []):
+                safe_violations.append({
+                    "label": labels.get(violation.get("violation_id"), "Configured violation"),
+                    "status": violation.get("status"),
+                    "reasoning_summary": violation.get("reasoning_summary", ""),
+                    "unresolved_points": list(violation.get("unresolved_points", [])),
+                    "supporting_material": [{"statement": item.get("statement", ""), "source_labels": list(item.get("source_labels", []))} for item in violation.get("supporting_material", [])],
+                    "limiting_material": [{"statement": item.get("statement", ""), "source_labels": list(item.get("source_labels", []))} for item in violation.get("mitigating_material", [])],
+                })
+            assessments.append({
+                "subject_display_name": assessment.get("subject_display_name", "Student"),
+                "subject_candidate_number": assessment.get("subject_candidate_number"),
+                "violation_assessments": safe_violations,
+                "furthest_conclusion": assessment.get("furthest_conclusion", {}),
+            })
+        return {
+            "case_name": state.title,
+            "assessment": {
+                "state": "stale" if internal["assessment_is_stale"] else ("complete" if internal["latest_successful_vnext_run"] else "not_started"),
+                "assessment_is_stale": internal["assessment_is_stale"],
+                "runtime_status": state.runtime_status,
+            },
+            "students": [{"display_name": item.display_name, "candidate_number": item.candidate_number} for item in sorted(state.subjects.values(), key=lambda item: item.subject_id)],
+            "sources": [{"file_name": item.name, "document_format": document_format(item.name)} for item in sorted(state.sources.values(), key=lambda item: item.id)],
+            "policy_context": [{"label": item.label, "rule_text": item.rule_text, "prohibited_conduct": item.prohibited_conduct} for item in preset_for_case(state).violations],
+            "per_subject_assessments": assessments,
+            "unresolved_points": sorted({point for assessment in assessments for violation in assessment["violation_assessments"] for point in violation["unresolved_points"]}),
+            "run_status": state.runtime_status,
+        }
+
     def get_report(self, case_id: str) -> dict[str, Any]:
         """Return the deliberately small, user-facing report projection."""
         state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
-        guidance = self.get_guidance_context(case_id)
+        guidance = self._assessment_guidance(case_id)
         latest = guidance.get("latest_successful_vnext_run")
         violations = {item.violation_id: item.label for item in preset_for_case(state).violations}
         students = []

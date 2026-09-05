@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Annotated, TypeAlias
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from investigator.models.source import Source
-from investigator.models.assessment import AssessmentContext, AssessmentSubject, SubjectRelationship, validate_identity_references
+from investigator.models.assessment import AssessmentContext, AssessmentSubject, SubjectRelationship, validate_identity_references, validate_vnext_relationship_provenance
 
 if TYPE_CHECKING:
     from investigator.state.case_state import CaseState
@@ -118,11 +118,10 @@ class VNextRunInput(BaseModel):
         *,
         human_inputs: dict[str, object] | None = None,
     ) -> "VNextRunInput":
+        validate_vnext_relationship_provenance(case_state.subject_relationships)
         return cls(
             case_id=case_state.case_id,
-            case_context=case_state.description,
             sources=case_state.sources,
-            assessment_context=case_state.assessment_context,
             subjects=case_state.subjects,
             subject_relationships=case_state.subject_relationships,
             rule_preset=rule_preset,
