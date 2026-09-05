@@ -13,8 +13,13 @@ export function getWorkspace(caseId: string): Promise<CaseWorkspaceState> {
 }
 export function getSourceDocument(caseId: string, sourceHandle: string): Promise<PublicSourceDocument> { return request<PublicSourceDocument>(`/api/cases/${encodeURIComponent(caseId)}/sources/${encodeURIComponent(sourceHandle)}`); }
 
-export function getReport(caseId: string): Promise<ReportResponse> {
-  return request<ReportResponse>(`/api/cases/${encodeURIComponent(caseId)}/report`);
+export function getReport(caseId: string, assessment?: string): Promise<ReportResponse> {
+  const query = assessment ? `?assessment=${encodeURIComponent(assessment)}` : "";
+  return request<ReportResponse>(`/api/cases/${encodeURIComponent(caseId)}/report${query}`);
+}
+
+export function getHistoricalSourceDocument(caseId: string, assessment: string, sourceHandle: string): Promise<PublicSourceDocument & { source: PublicSourceDocument["source"] & { assessmentDate?: string | null } }> {
+  return request<PublicSourceDocument & { source: PublicSourceDocument["source"] & { assessmentDate?: string | null } }>(`/api/cases/${encodeURIComponent(caseId)}/assessment-runs/${encodeURIComponent(assessment)}/sources/${encodeURIComponent(sourceHandle)}`);
 }
 
 export async function getCases(): Promise<CaseListItem[]> {

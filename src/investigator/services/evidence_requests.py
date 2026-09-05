@@ -3,6 +3,7 @@
 import re
 import json
 import hashlib
+import uuid
 from pathlib import Path
 from threading import RLock
 from typing import Any, Callable
@@ -20,6 +21,8 @@ from investigator.state.case_state import CaseState
 from investigator.state.repository import CaseRepository
 from investigator.vnext.presets import preset_for_case
 from investigator.llm.bedrock import redact_sensitive_text
+from investigator.reporting import build_input_snapshot, public_report_from_record
+from investigator.public_views import document_format, public_assessment_source_handle, public_run_handle_for_instance
 
 
 class EvidenceRequestConflict(RuntimeError):
@@ -28,6 +31,12 @@ class EvidenceRequestConflict(RuntimeError):
 
 class CaseSnapshotMismatch(EvidenceRequestConflict):
     """The canonical repository changed relative to a role-turn baseline."""
+    pass
+
+
+class ReportIntegrityError(RuntimeError):
+    """A published assessment artifact cannot be safely projected."""
+
     pass
 
 
@@ -84,15 +93,27 @@ class HumanEvidenceWorkflow:
     def _run_dir(self, case_id: str, run_id: str) -> Path:
         return self.repository.run_dir(case_id, run_id)
 
-    def begin_run(self, case_id: str, start_revision: int | None = None) -> str:
+    def begin_run(self, case_id: str, start_revision: int | None = None, preset: Any | None = None) -> str:
         run_root = self.repository.runs_dir(case_id)
         run_root.mkdir(parents=True, exist_ok=True)
         numbers = [int(match.group(1)) for path in run_root.iterdir() if (match := re.fullmatch(r"run_(\d{6})", path.name))]
         run_id = f"run_{max(numbers, default=0) + 1:06d}"
         directory = self._run_dir(case_id, run_id)
         directory.mkdir(parents=True)
+        state = self.repository.require_case(case_id)
+        run_instance_id = uuid.uuid4().hex
+        if preset is None:
+            try:
+                preset = preset_for_case(state)
+            except ValueError:
+                # Preserve the run admission artifact even when the configured
+                # preset is invalid; the production callback will report the
+                # configuration failure without making a model call.
+                preset = {"preset_id": state.assessment_rule_preset_id, "violations": []}
+        snapshot = build_input_snapshot(state, preset, run_instance_id)
+        self._write_run_result(directory / "assessment_input_snapshot.json", snapshot)
         started_at = datetime.now(timezone.utc).isoformat()
-        self._write_run_result(directory / "run_result.json", {"run_id": run_id, "started_at": started_at, "ended_at": None, "termination_reason": None, "final_runtime_status": "RUNNING_INVESTIGATOR", "outcome_type": "RUNNING", "originating_actor": "INVESTIGATOR", "start_revision": start_revision, "run_start_revision": start_revision, "latest_safe_revision": start_revision, "final_committed_revision": start_revision, "model_calls": 0, "correction_retries": 0, "final_error": None, "pending_request_id": None, "trace_path": f"/api/cases/{case_id}/runs/{run_id}/raw-traces"})
+        self._write_run_result(directory / "run_result.json", {"run_id": run_id, "run_instance_id": run_instance_id, "started_at": started_at, "ended_at": None, "termination_reason": None, "final_runtime_status": "RUNNING_INVESTIGATOR", "outcome_type": "RUNNING", "originating_actor": "INVESTIGATOR", "start_revision": start_revision, "run_start_revision": start_revision, "latest_safe_revision": start_revision, "final_committed_revision": start_revision, "model_calls": 0, "correction_retries": 0, "final_error": None, "pending_request_id": None, "trace_path": f"/api/cases/{case_id}/runs/{run_id}/raw-traces"})
         self._active_runs[case_id] = run_id
         return run_id
 
@@ -184,7 +205,15 @@ class HumanEvidenceWorkflow:
                 raise EvidenceRequestConflict("Stopped or inactive cases cannot be restarted")
             runtime_status = "RUNNING" if self.run_mode == "vnext" else "RUNNING_INVESTIGATOR"
             self.set_runtime(case_id, runtime_status, "INVESTIGATOR")
-            run_id = self.begin_run(case_id, state.revision)
+            run_preset = None
+            callback_owner = getattr(self.run_callback, "__self__", None)
+            resolver = getattr(callback_owner, "preset_resolver", None)
+            if resolver is not None:
+                try:
+                    run_preset = resolver(state)
+                except ValueError:
+                    run_preset = None
+            run_id = self.begin_run(case_id, state.revision, run_preset)
             summary = "Assessment started." if self.run_mode == "vnext" else f"Investigation run {run_id} started from the current verified case state."
             self.record_workspace_event(case_id, {"type": "run_started", "run_id": run_id, "runtime_status": runtime_status, "case_revision": state.revision, "human_summary": summary})
         thread = __import__("threading").Thread(target=self._execute_run, args=(case_id,), daemon=True)
@@ -618,6 +647,47 @@ class HumanEvidenceWorkflow:
         state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
         runs = self.get_runs(case_id)
         latest = next((run for run in reversed(runs) if run.get("vnext_status") == "completed"), None)
+        if latest and self.run_mode == "vnext":
+            try:
+                record = self._report_record(case_id, latest)
+            except (FileNotFoundError, ReportIntegrityError):
+                record = None
+            if record is not None:
+                assessments = []
+                for student in record.get("students", []):
+                    findings = []
+                    for violation in student.get("violations", []):
+                        findings.append({
+                            "violation_id": violation.get("violation_id"),
+                            "status": violation.get("status"),
+                            "reasoning_summary": violation.get("reasoning_summary", ""),
+                            "unresolved_points": violation.get("unresolved_points", []),
+                            "supporting_material": [{"statement": item.get("statement", ""), "source_labels": [source.get("file_name", "") for source in item.get("sources", [])]} for item in violation.get("supporting_material", [])],
+                            "mitigating_material": [{"statement": item.get("statement", ""), "source_labels": [source.get("file_name", "") for source in item.get("sources", [])]} for item in violation.get("limiting_material", [])],
+                        })
+                    assessments.append({
+                        "subject_id": student.get("subject_id"),
+                        "subject_display_name": student.get("display_name", "Student"),
+                        "subject_candidate_number": student.get("candidate_number"),
+                        "violation_assessments": findings,
+                        "furthest_conclusion": {"statement": student.get("furthest_conclusion", "")},
+                    })
+                return {
+                    "case_id": case_id,
+                    "title": record.get("case_name_at_assessment", state.title),
+                    "assessment_context": None,
+                    "subjects": [{"subject_id": item.get("subject_id"), "display_name": item.get("display_name"), "candidate_number": item.get("candidate_number")} for item in record.get("students", [])],
+                    "relationships": [],
+                    "source_inventory": [{"id": item.get("source_id"), "name": item.get("filename"), "source_type": "document", "scope": None, "metadata": {}} for item in record.get("sources", [])],
+                    "current_case_revision": state.revision,
+                    "latest_successful_vnext_run": latest,
+                    "latest_assessment_revision": record.get("assessment_input_revision"),
+                    "assessment_is_stale": int(record.get("assessment_input_revision") or 0) < int(state.revision),
+                    "per_subject_assessments": assessments,
+                    "final_graph": None,
+                    "run_status": state.runtime_status,
+                    "preset": record.get("preset", {}),
+                }
         result: dict[str, Any] | None = None
         if latest and latest.get("vnext_result_path"):
             path = Path(str(latest["vnext_result_path"]))
@@ -670,7 +740,8 @@ class HumanEvidenceWorkflow:
 
         state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
         internal = self._assessment_guidance(case_id)
-        labels = {item.violation_id: item.label for item in preset_for_case(state).violations}
+        preset_payload = internal.get("preset")
+        labels = {item["violation_id"]: item["label"] for item in preset_payload.get("violations", [])} if isinstance(preset_payload, dict) and preset_payload.get("violations") else {item.violation_id: item.label for item in preset_for_case(state).violations}
         assessments: list[dict[str, Any]] = []
         for assessment in internal["per_subject_assessments"]:
             safe_violations = []
@@ -699,41 +770,93 @@ class HumanEvidenceWorkflow:
             },
             "students": [{"display_name": item.display_name, "candidate_number": item.candidate_number} for item in sorted(state.subjects.values(), key=lambda item: item.subject_id)],
             "sources": [{"file_name": item.name, "document_format": document_format(item.name)} for item in sorted(state.sources.values(), key=lambda item: item.id)],
-            "policy_context": [{"label": item.label, "rule_text": item.rule_text, "prohibited_conduct": item.prohibited_conduct} for item in preset_for_case(state).violations],
+            "policy_context": ([{"label": item["label"], "rule_text": item["rule_text"], "prohibited_conduct": item["prohibited_conduct"]} for item in preset_payload.get("violations", [])] if isinstance(preset_payload, dict) and preset_payload.get("violations") else [{"label": item.label, "rule_text": item.rule_text, "prohibited_conduct": item.prohibited_conduct} for item in preset_for_case(state).violations]),
             "per_subject_assessments": assessments,
             "unresolved_points": sorted({point for assessment in assessments for violation in assessment["violation_assessments"] for point in violation["unresolved_points"]}),
             "run_status": state.runtime_status,
         }
 
-    def get_report(self, case_id: str) -> dict[str, Any]:
-        """Return the deliberately small, user-facing report projection."""
+    def _successful_run(self, case_id: str, run_id: str | None = None) -> dict[str, Any] | None:
+        runs = self.get_runs(case_id)
+        if run_id is not None:
+            selected = next((item for item in runs if item.get("run_id") == run_id), None)
+            if selected is None or selected.get("vnext_status") != "completed":
+                raise KeyError("Assessment report not found")
+            return selected
+        return next((item for item in reversed(runs) if item.get("vnext_status") == "completed"), None)
+
+    def _report_record(self, case_id: str, run: dict[str, Any]) -> dict[str, Any]:
+        run_id = str(run["run_id"])
+        path = self.repository.run_dir(case_id, run_id) / "report_record.json"
+        if not path.is_file():
+            raise FileNotFoundError(path)
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ReportIntegrityError("The assessment report could not be read safely.") from exc
+        if not isinstance(record, dict) or record.get("case_id") != case_id or not record.get("run_instance_id"):
+            raise ReportIntegrityError("The assessment report failed its integrity check.")
+        return record
+
+    def get_report(self, case_id: str, run_id: str | None = None) -> dict[str, Any]:
+        """Project one immutable successful assessment behind a safe public DTO."""
         state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
-        guidance = self._assessment_guidance(case_id)
-        latest = guidance.get("latest_successful_vnext_run")
-        violations = {item.violation_id: item.label for item in preset_for_case(state).violations}
-        students = []
-        for assessment in guidance.get("per_subject_assessments", []):
-            student = {"displayName": assessment.get("subject_display_name") or "Student"}
-            student_violations = []
-            for item in assessment.get("violation_assessments", []):
-                def materials(key: str) -> list[dict[str, Any]]:
-                    return [{"statement": _public_semantic_text(state, material.get("statement", "")), "sourceLabels": material.get("source_labels", [])} for material in item.get(key, [])]
-                student_violations.append({
-                    "label": violations.get(item.get("violation_id"), "Configured violation"),
-                    "status": item.get("status"),
-                    "reasoningSummary": _public_semantic_text(state, item.get("reasoning_summary", "")),
-                    "supportingMaterial": materials("supporting_material"),
-                    "limitingMaterial": materials("mitigating_material"),
-                })
-            students.append({"displayName": student["displayName"], "violations": student_violations, "furthestConclusion": _public_semantic_text(state, assessment.get("furthest_conclusion", {}).get("statement", ""))})
-        return {
-            "caseId": state.case_id,
-            "title": "Law Exam Investigation" if state.title == "Business Law Tutorial 5" else state.title,
-            "reportState": "available" if latest else "unavailable",
-            "assessmentIsStale": bool(guidance.get("assessment_is_stale")),
-            "latestSuccessfulRun": {"completedAt": latest.get("ended_at")} if latest else None,
-            "students": students,
-        }
+        run = self._successful_run(case_id, run_id)
+        if run is None:
+            return {
+                "caseId": case_id,
+                "currentCaseName": state.title,
+                "reportState": "unavailable",
+                "assessmentIsStale": False,
+                "isLatestSuccessfulAssessment": False,
+                "assessment": None,
+            }
+        try:
+            record = self._report_record(case_id, run)
+        except FileNotFoundError:
+            return {
+                "caseId": case_id,
+                "currentCaseName": state.title,
+                "reportState": "historical_unavailable",
+                "assessmentIsStale": False,
+                "isLatestSuccessfulAssessment": run_id is None,
+                "message": "Historical report details are unavailable for this assessment. Run a new assessment to produce a report from the current case record.",
+                "assessment": None,
+            }
+        latest = self._successful_run(case_id)
+        latest_id = latest.get("run_id") if latest else None
+        stale = int(record.get("assessment_input_revision") or 0) < int(state.revision)
+        return public_report_from_record(
+            record,
+            current_case_name=state.title,
+            report_state="stale" if stale else "current",
+            is_latest_successful_assessment=run.get("run_id") == latest_id,
+            run_handle=public_run_handle_for_instance(case_id, str(run["run_id"]), run.get("run_instance_id")),
+        )
+
+    def get_historical_source(self, case_id: str, run_id: str, source_handle: str) -> dict[str, Any]:
+        """Read exactly one source version admitted by a selected report."""
+        state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+        del state  # The selected report, not current CaseState, is authoritative here.
+        run = self._successful_run(case_id, run_id)
+        if run is None:
+            raise KeyError("Assessment report not found")
+        record = self._report_record(case_id, run)
+        run_instance_id = str(record["run_instance_id"])
+        for source in record.get("sources", []):
+            source_id = str(source.get("source_id"))
+            if public_assessment_source_handle(case_id, run_instance_id, source_id) == source_handle:
+                return {
+                    "caseId": case_id,
+                    "source": {
+                        "sourceHandle": source_handle,
+                        "fileName": source["filename"],
+                        "documentFormat": source["document_format"],
+                        "content": source.get("content", ""),
+                        "assessmentDate": record.get("completed_at"),
+                    },
+                }
+        raise KeyError("Historical source not found")
 
     @staticmethod
     def _public_request(request: EvidenceRequest) -> dict[str, Any]:
@@ -774,7 +897,7 @@ class HumanEvidenceWorkflow:
                     # A run may be initializing on another thread; omit it until
                     # its first result snapshot is complete.
                     continue
-                runs.append({key: payload.get(key) for key in ("run_id", "started_at", "ended_at", "termination_reason", "final_runtime_status", "outcome_type", "originating_actor", "start_revision", "run_start_revision", "latest_safe_revision", "final_case_revision", "final_committed_revision", "final_error", "pending_request_id", "request_text", "trace_path", "vnext_status", "vnext_result_path", "vnext_furthest_conclusion", "vnext_subject_conclusions", "model", "input_tokens", "output_tokens", "latency_seconds", "finish_reason")})
+                runs.append({key: payload.get(key) for key in ("run_id", "run_instance_id", "started_at", "ended_at", "termination_reason", "final_runtime_status", "outcome_type", "originating_actor", "start_revision", "run_start_revision", "latest_safe_revision", "final_case_revision", "final_committed_revision", "final_error", "pending_request_id", "request_text", "trace_path", "vnext_status", "vnext_result_path", "report_record_path", "vnext_furthest_conclusion", "vnext_subject_conclusions", "model", "input_tokens", "output_tokens", "latency_seconds", "finish_reason")})
         return runs
 
     def raw_trace_path(self, case_id: str, run_id: str) -> Path:

@@ -8,9 +8,15 @@ from investigator.state.case_state import CaseState
 def public_run_handle(case_id: str, run_id: str) -> str:
     return _handle("assessment", case_id, run_id)
 
+def public_run_handle_for_instance(case_id: str, run_id: str, run_instance_id: str | None) -> str:
+    return _handle("assessment", case_id, f"{run_instance_id or run_id}")
+
+def public_assessment_source_handle(case_id: str, run_instance_id: str, source_id: str) -> str:
+    return _handle("assessment-source", case_id, f"{run_instance_id}:{source_id}")
+
 def resolve_run_handle(workflow: Any, case_id: str, handle: str) -> str:
     for run in workflow.get_runs(case_id):
-        if public_run_handle(case_id, str(run.get("run_id"))) == handle:
+        if public_run_handle_for_instance(case_id, str(run.get("run_id")), run.get("run_instance_id")) == handle:
             return str(run["run_id"])
     raise KeyError("Assessment run not found")
 
@@ -37,7 +43,7 @@ def assessment_view(workflow: Any, case_id: str) -> dict[str, Any]:
     def attempt(item: dict[str, Any] | None) -> dict[str, Any] | None:
         if not item: return None
         outcome = str(item.get("outcome_type") or "RUNNING").lower()
-        return {"runHandle": public_run_handle(case_id, str(item["run_id"])), "state": outcome, "startedAt": item.get("started_at"), "endedAt": item.get("ended_at"), "message": (item.get("final_error") or {}).get("message", "") if isinstance(item.get("final_error"), dict) else ""}
+        return {"runHandle": public_run_handle_for_instance(case_id, str(item["run_id"]), item.get("run_instance_id")), "state": outcome, "startedAt": item.get("started_at"), "endedAt": item.get("ended_at"), "message": (item.get("final_error") or {}).get("message", "") if isinstance(item.get("final_error"), dict) else ""}
     return {"state": public_state, "activeRun": attempt(active), "latestAttempt": attempt(latest), "reportAvailable": successful is not None, "reportStale": public_state == "stale"}
 
 class PublicStudent(BaseModel):

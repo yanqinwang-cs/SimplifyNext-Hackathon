@@ -27,6 +27,7 @@ from investigator.vnext.model import VNextInvestigatorModel, build_corrective_pr
 from investigator.vnext.models import AssessmentRulePreset, AssessmentStatus, Confidence, FurthestJustifiedConclusion, InvestigatorAssessment, InvestigatorProposal, SubjectAssessment, ViolationAssessment
 from investigator.vnext.presets import preset_for_case
 from investigator.runtime_settings import effective_model
+from investigator.reporting import build_report_record
 
 
 class VNextProductionRunner:
@@ -47,6 +48,7 @@ class VNextProductionRunner:
 
     def run(self, case_id: str, workflow: HumanEvidenceWorkflow) -> VNextRunResult:
         state = workflow.repository.require_case(case_id)
+        admitted_state = state.model_copy(deep=True)
         preset = self.preset_resolver(state)
         substantive_sources = {key: value for key, value in state.sources.items() if (value.content or "").strip()}
         model_spec = effective_model("investigator") if substantive_sources else None
@@ -55,8 +57,7 @@ class VNextProductionRunner:
         workflow.record_run_model(case_id, logical_model)
         last_error: Exception | None = None
         for attempt_number in range(1, self.max_attempts + 1):
-            state = workflow.repository.load(case_id)
-            run_input = run_input_from_case_state(state, preset, human_inputs={"zero_evidence": not substantive_sources})
+            run_input = run_input_from_case_state(admitted_state, preset, human_inputs={"zero_evidence": not substantive_sources})
             if not substantive_sources:
                 run_input = run_input.model_copy(update={"sources": {}})
             investigator = VNextInvestigatorModel(client) if client is not None else None
@@ -244,14 +245,26 @@ class VNextProductionRunner:
         directory = workflow.repository.run_dir(case_id, run_id)
         directory.mkdir(parents=True, exist_ok=True)
         metadata = investigator.last_call.metadata if investigator and investigator.last_call else None
+        snapshot_path = directory / "assessment_input_snapshot.json"
+        if not snapshot_path.is_file():
+            raise RuntimeError("Cannot publish vNext result without the admitted input snapshot")
+        snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        created_at = datetime.now(timezone.utc).isoformat()
+        report_record = build_report_record(snapshot, result, completed_at=created_at)
         payload = {
             "run_id": run_id,
             "attempt_number": attempt_number,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": created_at,
             "model": logical_model,
             "model_metadata": metadata.model_dump(mode="json") if metadata else None,
             "result": result.model_dump(mode="json"),
         }
+        report_destination = directory / "report_record.json"
+        with NamedTemporaryFile("w", encoding="utf-8", dir=directory, delete=False, suffix=".tmp") as handle:
+            report_temporary = Path(handle.name)
+            json.dump(report_record, handle, indent=2, ensure_ascii=False)
+            handle.write("\n")
+        report_temporary.replace(report_destination)
         destination = directory / "vnext_result.json"
         with NamedTemporaryFile("w", encoding="utf-8", dir=directory, delete=False, suffix=".tmp") as handle:
             temporary = Path(handle.name)
@@ -274,6 +287,7 @@ class VNextProductionRunner:
                 "outcome_type": "COMPLETED",
                 "vnext_status": result.status.value,
                 "vnext_result_path": str(destination),
+                "report_record_path": str(report_destination),
                 "vnext_furthest_conclusion": conclusion,
                 "vnext_subject_conclusions": subject_conclusions,
                 "model": logical_model,
@@ -283,4 +297,4 @@ class VNextProductionRunner:
                 "finish_reason": metadata.finish_reason if metadata else None,
             }
         )
-        run_result_path.write_text(json.dumps(run_summary, indent=2) + "\n", encoding="utf-8")
+        workflow._write_run_result(run_result_path, run_summary)
