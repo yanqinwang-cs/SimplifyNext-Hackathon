@@ -44,6 +44,22 @@ def stop_server(server, thread) -> None:
     thread.join(timeout=2)
 
 
+def test_fresh_product_catalog_has_only_samples_until_users_create_cases(tmp_path: Path) -> None:
+    workflow, server, thread, base = running_server(tmp_path)
+    try:
+        status, payload = request(base, "GET", "/api/cases")
+        assert status == 200 and payload["cases"] == []
+        status, payload = request(base, "GET", "/api/samples")
+        assert status == 200 and len(payload["samples"]) == 2
+        for title in ("Business Law Tutorial 5", "Law Exam Investigation"):
+            status, created = request(base, "POST", "/api/cases", {"title": title})
+            assert status == 201
+            assert any(item["caseId"] == created["caseId"] and item["title"] == title for item in request(base, "GET", "/api/cases")[1]["cases"])
+        assert not (Path(__file__).resolve().parents[1] / "data" / "cases" / "case-01.json").exists()
+    finally:
+        stop_server(server, thread)
+
+
 def test_legacy_vnext_routes_are_rejected_before_mutation(tmp_path: Path) -> None:
     workflow, server, thread, base = running_server(tmp_path)
     try:
@@ -128,6 +144,112 @@ def test_student_mutations_validate_the_full_proposed_registry(tmp_path: Path) -
         assert body["error"] == "Each student must have a distinct identifier."
         assert workflow.repository.load(case_id).model_dump(mode="json") == before_http
     finally:
+        stop_server(server, thread)
+
+
+def test_delete_student_maps_case_handle_and_mutation_errors_truthfully(tmp_path: Path) -> None:
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    first = create_case(workflow, {"title": "First"})
+    second = create_case(workflow, {"title": "Second"})
+    second_student = workflow.add_subject(second["caseId"], {"display_name": "Student 2"})
+    _, server, thread, base = running_server(tmp_path, workflow)
+    try:
+        status, body = request(base, "DELETE", "/api/cases/missing/students/unknown", {})
+        assert status == 404 and body == {"error": "Case not found"}
+        status, body = request(base, "DELETE", f"/api/cases/{first['caseId']}/students/unknown", {})
+        assert status == 404 and body == {"error": "Student not found"}
+        cross_case_handle = public_student_handle(second["caseId"], second_student.subject_id)
+        status, body = request(base, "DELETE", f"/api/cases/{first['caseId']}/students/{cross_case_handle}", {})
+        assert status == 404 and body == {"error": "Student not found"}
+        before = workflow.repository.load(first["caseId"])
+        status, body = request(base, "DELETE", f"/api/cases/{first['caseId']}/students/{public_student_handle(first['caseId'], 'subject_1')}", {})
+        assert status == 422 and body["code"] == "FINAL_STUDENT_REQUIRED"
+        assert workflow.repository.load(first["caseId"]).revision == before.revision
+
+        sample_id = "law-exam-working"
+        seed_sample_case(workflow, "law-exam", sample_id)
+        sample_before = workflow.repository.load(sample_id).model_dump(mode="json")
+        sample_handle = public_student_handle(sample_id, "subject_A")
+        status, body = request(base, "DELETE", f"/api/cases/{sample_id}/students/{sample_handle}", {})
+        assert status == 409 and body["code"] == "SAMPLE_READ_ONLY"
+        assert workflow.repository.load(sample_id).model_dump(mode="json") == sample_before
+
+        workflow.add_subject(first["caseId"], {"display_name": "Student 2"})
+        started = threading.Event()
+        release = threading.Event()
+
+        def callback(case_id: str, active: HumanEvidenceWorkflow) -> None:
+            started.set()
+            release.wait(timeout=2)
+            active.set_runtime(case_id, "COMPLETED", "NONE")
+
+        workflow.run_callback = callback
+        runner = threading.Thread(target=workflow.start_run, args=(first["caseId"],), daemon=True)
+        runner.start()
+        assert started.wait(timeout=2)
+        before_running = workflow.repository.load(first["caseId"])
+        running_handle = public_student_handle(first["caseId"], "subject_2")
+        status, body = request(base, "DELETE", f"/api/cases/{first['caseId']}/students/{running_handle}", {})
+        assert status == 409 and body["code"] == "CASE_MUTATION_CONFLICT"
+        assert body["error"] != "Student not found"
+        assert workflow.repository.load(first["caseId"]).revision == before_running.revision
+        release.set()
+        runner.join(timeout=2)
+        for _ in range(100):
+            if workflow.current_run_id(first["caseId"]) is None:
+                break
+            time.sleep(0.01)
+        status, _ = request(base, "DELETE", f"/api/cases/{first['caseId']}/students/{running_handle}", {})
+        assert status == 200
+    finally:
+        stop_server(server, thread)
+
+
+def test_sample_reset_rejects_finalizing_run_until_active_owner_releases(tmp_path: Path) -> None:
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    seed_sample_case(workflow, "law-exam", "law-exam-working")
+    started = threading.Event()
+    release = threading.Event()
+
+    def callback(case_id: str, active: HumanEvidenceWorkflow) -> None:
+        run_id = active.current_run_id(case_id)
+        assert run_id is not None
+        run_dir = active._run_dir(case_id, run_id)
+        (run_dir / "report_record.json").write_text(json.dumps({"case_id": case_id}), encoding="utf-8")
+        active.set_runtime(case_id, "COMPLETED", "NONE")
+        started.set()
+        release.wait(timeout=2)
+
+    workflow.run_callback = callback
+    _, server, thread, base = running_server(tmp_path, workflow)
+    runner = None
+    try:
+        runner = threading.Thread(target=workflow.start_run, args=("law-exam-working",), daemon=True)
+        runner.start()
+        assert started.wait(timeout=2)
+        run_id = workflow.current_run_id("law-exam-working")
+        assert run_id is not None
+        run_dir = workflow._run_dir("law-exam-working", run_id)
+        original_sources = workflow.repository.load("law-exam-working").sources
+        status, body = request(base, "POST", "/api/samples/reset", {"sampleId": "law-exam"})
+        assert status == 409 and body["code"] == "SAMPLE_BUSY"
+        assert run_dir.exists() and (run_dir / "report_record.json").exists()
+        assert workflow.repository.load("law-exam-working").sources == original_sources
+        release.set()
+        runner.join(timeout=2)
+        for _ in range(100):
+            if workflow.current_run_id("law-exam-working") is None:
+                break
+            time.sleep(0.01)
+        assert workflow.current_run_id("law-exam-working") is None
+        status, _ = request(base, "POST", "/api/samples/reset", {"sampleId": "law-exam"})
+        assert status == 200
+        assert not run_dir.exists()
+        assert workflow.repository.load("law-exam-working").sources == original_sources
+    finally:
+        release.set()
+        if runner is not None:
+            runner.join(timeout=2)
         stop_server(server, thread)
 
 

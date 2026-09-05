@@ -71,17 +71,25 @@ make a reasonable assessment on the actual case.
    builder. The default Turbopack build attempted a restricted worker bind in
    the supported local environment; the webpack build is reproducible and
    passes the production build check.
+4. The tracked historical `data/cases/case-01.json` state was removed from the
+   product runtime and relocated to `tests/fixtures/legacy/case-01.json` for
+   the three tests that intentionally exercise that historical fixture.
+5. Contract-assurance blind-result discovery now accepts an explicit results
+   root. Deterministic tests use temporary controlled roots, so ignored ambient
+   batch results cannot change a clean-checkout result.
+6. vNext student DELETE responses now distinguish missing cases, unknown or
+   cross-case handles, active-run conflicts, sample read-only state, final
+   student protection, and relationship constraints with safe status codes.
+7. Sample reset now treats `_active_runs`, `_in_flight_actor`, and persisted
+   running state as one active-run ownership invariant, closing the
+   successful-but-not-finalized reset race.
 
 ## Validation and limitations
 
 The required validation was run with isolated temporary repositories:
 
 - `uv sync` — passed;
-- `uv run pytest -q` — 482 passed, 1 pre-existing failure in
-  `test_deterministic_runner_is_offline_and_writes_inventory`; the checkout has
-  no committed `experiments/contract_assurance/results/**/batch_manifest.json`
-  inputs, so its legacy assertion that qualified blind failure codes are
-  present cannot hold. No PRE-5A code touches that subsystem;
+- `uv run pytest -q` — 488 passed;
 - `npm ci`;
 - `npm run typecheck` — passed;
 - `npm run build` (`next build --webpack`) — passed;
@@ -109,6 +117,20 @@ outside the live readiness claim.
 
 ## PRE-5A blocker closure
 
+- a tracked legacy `case-01` no longer seeds the runtime catalog; a fresh
+  product repository starts with zero user cases and two public sample choices,
+  while user-created cases with either historical or sample-like titles remain
+  visible;
+- runtime `data/cases/*.json` and case directories are ignored while
+  `.gitkeep` remains tracked; public samples remain package-owned;
+- the deterministic assurance suite has explicit empty-results and
+  controlled-qualified-results coverage, and a sibling ambient results
+  directory does not affect the controlled result;
+- DELETE student API outcomes are truthful and safe, including unknown case,
+  unknown/cross-case handle, final student, sample, active-run, and valid
+  removal paths;
+- sample reset rejects a barrier-controlled successful run while finalization
+  still owns its artifacts, then succeeds after finalization;
 - legacy vNext `/subjects` and alternate sample mutation routes are blocked
   before mutation and return the safe not-found response;
 - canonical sample cases are read-only, excluded from the user catalog by

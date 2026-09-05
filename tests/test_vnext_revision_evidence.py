@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from investigator.graph import GraphNodeType
 from investigator.state import CaseRepository
 from investigator.vnext import (
@@ -11,6 +13,9 @@ from investigator.vnext import (
     ViolationAssessment,
 )
 from investigator.vnext.presets import academic_integrity_core_preset
+
+
+LEGACY_CASE_FIXTURE = Path(__file__).parent / "fixtures" / "legacy" / "case-01.json"
 
 
 def _assessment(source_ids: list[str]) -> InvestigatorAssessment:
@@ -37,7 +42,7 @@ def _assessment(source_ids: list[str]) -> InvestigatorAssessment:
 
 
 def test_case_01_preserves_original_non_observation_and_adds_revision_sources() -> None:
-    state = CaseRepository("data/cases").load("case-01")
+    state = CaseRepository(LEGACY_CASE_FIXTURE.parent).load(LEGACY_CASE_FIXTURE.stem)
 
     assert "I did not hear Candidate A speaking" in state.sources["S29"].content
     assert "S30" in state.sources
@@ -52,7 +57,7 @@ def test_case_01_preserves_original_non_observation_and_adds_revision_sources() 
 
 
 def test_clean_vnext_input_exposes_all_revision_sources_without_prior_graph() -> None:
-    state = CaseRepository("data/cases").load("case-01")
+    state = CaseRepository(LEGACY_CASE_FIXTURE.parent).load(LEGACY_CASE_FIXTURE.stem)
     inputs = run_input_from_case_state(state, academic_integrity_core_preset())
 
     assert {"S23", "S29", "S30", "S31", "S32"}.issubset(inputs.sources)
@@ -63,7 +68,7 @@ def test_clean_vnext_input_exposes_all_revision_sources_without_prior_graph() ->
 
 
 def test_revision_evidence_remains_raw_sources_not_seeded_graph_conclusions() -> None:
-    state = CaseRepository("data/cases").load("case-01")
+    state = CaseRepository(LEGACY_CASE_FIXTURE.parent).load(LEGACY_CASE_FIXTURE.stem)
     inputs = run_input_from_case_state(state, academic_integrity_core_preset())
 
     assert not inputs.human_inputs

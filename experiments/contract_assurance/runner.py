@@ -13,7 +13,13 @@ from .registry import contract_registry
 from .report import coverage_ledger, deterministic_correctness, deterministic_correctness_by_contract, failure_rate_statistics, summarize, summarize_by_contract, write_history
 
 
-def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> dict[str, Any]:
+def run_deterministic(
+    root: Path,
+    output_dir: Path,
+    commit: str = "unknown",
+    *,
+    blind_results_root: Path | None = None,
+) -> dict[str, Any]:
     assert_complete_inventory(root)
     assert_inventory_paths(root)
     assert_dynamic_structured_boundaries(root)
@@ -65,7 +71,7 @@ def run_deterministic(root: Path, output_dir: Path, commit: str = "unknown") -> 
     summary = summarize(results)
     summary["unexpected_accepts"] = sum(item.accepted and item.details.get("intended_code") != "valid" for item in results)
     summary["unexpected_rejects"] = sum((not item.accepted) and item.details.get("intended_code") == "valid" for item in results)
-    blind = blind_compliance_summary(root)
+    blind = blind_compliance_summary(root, results_root=blind_results_root)
     limitations = ["S6 reasoning and semantic quality are not assessed by deterministic schema assurance.", "SmokeResponse is schema-sampled offline; its live Bedrock path is excluded from this offline cycle."]
     report = {"inventory": inventory(root, commit), "prompt_lint": prompt_lint, "deterministic": summary, "deterministic_failure_rate": failure_rate_statistics(results), "deterministic_correctness": deterministic_correctness(results), "deterministic_correctness_by_contract": deterministic_correctness_by_contract(results), "deterministic_by_contract": summarize_by_contract(results), "coverage_ledger": coverage_ledger(results), "blind_results_included": False, "blind_compliance": blind, "human_review_required": summary.get("s5_candidates", 0) > 0, "semantic_limitations": limitations, "changes_made": ["Deterministic fixtures evaluated through registered production-path adapters.", "Registered prompt/schema/template lint runs as a deterministic gate.", "Qualified blind manifests and output metrics aggregated without admitting NOT_BLIND results."], "regressions": {"unexpected_accepts": summary["unexpected_accepts"], "unexpected_rejects": summary["unexpected_rejects"], "status": "clean" if not summary["unexpected_accepts"] and not summary["unexpected_rejects"] else "regressions detected"}, "remaining_risks": ["S6 reasoning and semantic quality require a separate semantic checker.", "SmokeResponse live Bedrock execution remains excluded by the no-AWS constraint.", "Historical NOT_BLIND batches remain excluded from blind compliance statistics."]}
     write_history(output_dir, report)
@@ -90,7 +96,7 @@ def _lint_registered_prompts(root: Path) -> dict[str, Any]:
     return {"status": "clean" if not issues else "failed", "issues": issues}
 
 
-def blind_compliance_summary(root: Path) -> dict[str, Any]:
+def blind_compliance_summary(root: Path, *, results_root: Path | None = None) -> dict[str, Any]:
     """Summarize recorded producer/adversary batches without admitting unqualified results."""
     batches = 0
     excluded = 0
@@ -102,7 +108,8 @@ def blind_compliance_summary(root: Path) -> dict[str, Any]:
     by_role = {"producer": {**role_template, "failure_codes": {}}, "adversary": {**role_template, "failure_codes": {}}}
     by_contract: dict[str, dict[str, int]] = {}
     by_contract_role: dict[str, dict[str, dict[str, int]]] = {}
-    for path in sorted((root / "experiments/contract_assurance/results").glob("**/batch_manifest.json")):
+    scan_root = results_root or (root / "experiments/contract_assurance/results")
+    for path in sorted(scan_root.glob("**/batch_manifest.json")):
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):

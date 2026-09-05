@@ -105,7 +105,7 @@ def reset_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str) -> str:
     case_id = SAMPLE_CASE_IDS[sample_id]
     with workflow._lock:
         state = workflow.repository.require_case(case_id) if workflow.repository.exists(case_id) else None
-        if case_id in workflow._in_flight_actor or (state and state.runtime_status.startswith("RUNNING")):
+        if workflow.has_active_run(case_id, state):
             raise EvidenceRequestConflict("Sample cannot be reset while an assessment is running")
         if workflow.repository.case_artifact_dir(case_id).exists():
             shutil.rmtree(workflow.repository.case_artifact_dir(case_id))
@@ -487,11 +487,29 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
         if self.workflow.run_mode == "vnext" and len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "students":
             try:
                 state = self.workflow.repository.require_case(parts[2])
-                if state.case_kind == "sample":
-                    self._write(409, {"error": "Sample cases are preconfigured. Reset the sample to restore its original evidence.", "code": "SAMPLE_READ_ONLY"})
-                    return
-                student_id = resolve_student_handle(state, parts[4]); self.workflow.remove_subject(parts[2], student_id, self._read_json().get("caseRevision")); self._write(200, self._public_workspace(parts[2]))
-            except (KeyError, ValueError, EvidenceRequestConflict): self._write(404, {"error": "Student not found"})
+            except KeyError:
+                self._write(404, {"error": "Case not found"})
+                return
+            if state.case_kind == "sample":
+                self._write(409, {"error": "Sample cases are preconfigured. Reset the sample to restore its original evidence.", "code": "SAMPLE_READ_ONLY"})
+                return
+            try:
+                student_id = resolve_student_handle(state, parts[4])
+            except (KeyError, ValueError):
+                self._write(404, {"error": "Student not found"})
+                return
+            try:
+                self.workflow.remove_subject(parts[2], student_id, self._read_json().get("caseRevision")); self._write(200, self._public_workspace(parts[2]))
+            except EvidenceRequestConflict as exc:
+                self._write(409, {"error": str(exc), "code": "CASE_MUTATION_CONFLICT"})
+            except ValueError as exc:
+                message = str(exc)
+                if "at least one student" in message:
+                    self._write(422, {"error": "A case must retain at least one student.", "code": "FINAL_STUDENT_REQUIRED"})
+                elif "referenced by a relationship" in message:
+                    self._write(409, {"error": "The student is required by an existing relationship.", "code": "STUDENT_REFERENCED"})
+                else:
+                    self._write(422, {"error": "The student could not be removed.", "code": "INVALID_STUDENT"})
             return
         if len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "subjects":
             try:

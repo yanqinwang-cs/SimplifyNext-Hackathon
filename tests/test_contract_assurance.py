@@ -240,7 +240,7 @@ def test_coverage_ledger_deduplicates_failure_signatures_with_counts():
 
 
 def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
-    report = run_deterministic(Path(__file__).resolve().parents[1], tmp_path, "abc")
+    report = run_deterministic(Path(__file__).resolve().parents[1], tmp_path, "abc", blind_results_root=tmp_path / "empty-results")
     assert report["blind_results_included"] is False
     assert report["prompt_lint"] == {"status": "clean", "issues": []}
     assert "## Prompt/schema/template lint" in render_markdown(report)
@@ -254,7 +254,8 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     assert "| Contract | Total | Accepted | Rejected | Valid pass | Invalid reject | S0 | S1 | S2 | S3 | S4 | S5 | S6 | Unexpected accepts | Unexpected rejects |" in render_markdown(report)
     assert report["regressions"]["status"] == "clean"
     assert report["changes_made"] and report["remaining_risks"]
-    assert report["blind_compliance"]["qualified_failure_codes"]
+    assert report["blind_compliance"]["qualified_batches"] == 0
+    assert report["blind_compliance"]["qualified_failure_codes"] == {}
     assert report["blind_compliance"]["qualified_output_metrics"]["outputs"] == report["blind_compliance"]["qualified_evaluations"]
     # Historical blind batches may be excluded when their frozen package/schema
     # evidence is stale; ensure any reported gap is still a registered contract.
@@ -269,11 +270,44 @@ def test_deterministic_runner_is_offline_and_writes_inventory(tmp_path: Path):
     assert "producer" in report["blind_compliance"]["by_role"]
     assert report["semantic_limitations"] and "S6" in report["semantic_limitations"][0]
     assert report["human_review_required"] is False
-    assert report["blind_compliance"]["by_contract"]
-    assert report["blind_compliance"]["by_contract_role"]
-    assert "| Blind contract/role | Batches | Qualified | Excluded | Evaluations | Accepted | Rejected |" in render_markdown(report)
+    assert report["blind_compliance"]["coverage_gaps"]
+    assert report["blind_compliance"]["by_contract"] == {}
+    assert report["blind_compliance"]["by_contract_role"] == {}
+    assert "## Blind compliance" in render_markdown(report)
     assert (tmp_path / "inventory.json").exists()
     assert (tmp_path / "latest.json").exists()
+
+
+def test_deterministic_blind_results_are_explicit_and_reproducible(tmp_path: Path):
+    root = Path(__file__).resolve().parents[1]
+    controlled = tmp_path / "controlled-results"
+    first = run_deterministic(root, tmp_path / "first", "abc", blind_results_root=controlled)
+    ambient = tmp_path / "ambient-ignored-results"
+    batch = ambient / "unrelated" / "batch"
+    batch.mkdir(parents=True)
+    (batch / "batch_manifest.json").write_text(json.dumps({"status": "BLIND", "audits": []}), encoding="utf-8")
+    (batch / "evaluations.json").write_text("[]", encoding="utf-8")
+    second = run_deterministic(root, tmp_path / "second", "abc", blind_results_root=controlled)
+    assert first["blind_compliance"] == second["blind_compliance"]
+    assert first["blind_compliance"]["qualified_batches"] == 0
+    assert first["blind_compliance"]["coverage_gaps"]
+
+
+def test_controlled_qualified_blind_results_are_aggregated(tmp_path: Path):
+    results_root = tmp_path / "controlled-results" / "nested"
+    results_root.mkdir(parents=True)
+    (results_root / "batch_manifest.json").write_text(json.dumps({
+        "status": "BLIND",
+        "audits": [{"contract": "NextActionResponse", "qualifies_as_blind": True, "worker_id": "isolated-adversary-1"}],
+        "evaluation_count": 1,
+    }), encoding="utf-8")
+    (results_root / "evaluations.json").write_text(json.dumps([{"accepted": False, "code": "S1", "raw_output": "not-json"}]), encoding="utf-8")
+    summary = blind_compliance_summary(tmp_path / "repository", results_root=tmp_path / "controlled-results")
+    assert summary["qualified_batches"] == 1
+    assert summary["qualified_evaluations"] == 1
+    assert summary["qualified_rejected"] == 1
+    assert summary["qualified_failure_codes"] == {"S1": 1}
+    assert summary["qualified_output_metrics"]["outputs"] == 1
 
 
 def test_blind_compliance_scans_nested_batches_and_records_outcomes(tmp_path: Path):

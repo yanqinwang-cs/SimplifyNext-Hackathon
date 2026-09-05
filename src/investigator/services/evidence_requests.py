@@ -145,6 +145,18 @@ class HumanEvidenceWorkflow:
     def current_run_id(self, case_id: str) -> str | None:
         return self._active_runs.get(case_id)
 
+    def has_active_run(self, case_id: str, state: CaseState | None = None) -> bool:
+        """Return whether current-process or persisted state still owns a run."""
+        if case_id in self._active_runs or case_id in self._in_flight_actor:
+            return True
+        if state is None:
+            try:
+                state = self.repository.require_case(case_id)
+            except KeyError:
+                return False
+        current = state
+        return current.runtime_status in {"RUNNING", "RUNNING_INVESTIGATOR", "RUNNING_STEWARD"}
+
     def recover_interrupted_run(self, case_id: str) -> None:
         """Mark a persisted in-flight run interrupted after a process restart."""
         with self._lock:
@@ -1015,7 +1027,7 @@ class HumanEvidenceWorkflow:
             raise EvidenceRequestConflict("The case revision is stale")
 
     def _assert_mutable(self, state: CaseState) -> None:
-        if self.run_mode == "vnext" and (state.runtime_status in {"RUNNING", "RUNNING_INVESTIGATOR", "RUNNING_STEWARD"} or state.case_id in self._in_flight_actor):
+        if self.run_mode == "vnext" and self.has_active_run(state.case_id, state):
             raise EvidenceRequestConflict("Assessment is running; wait for it to finish before changing the case")
 
     def _assert_user_mutable(self, state: CaseState) -> None:
