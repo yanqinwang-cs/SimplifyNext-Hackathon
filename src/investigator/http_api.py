@@ -237,6 +237,11 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
         self._write(404, {"error": "Not found"})
 
     def do_OPTIONS(self) -> None:
+        origin = self.headers.get("Origin")
+        allowed = {item.strip() for item in os.getenv("SIMPLIFYNEXT_ALLOWED_ORIGINS", "http://127.0.0.1:3000,http://localhost:3000").split(",") if item.strip()}
+        if origin and origin not in allowed:
+            self._write(403, {"error": "Origin is not allowed"})
+            return
         self.send_response(204)
         self._cors_headers()
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
