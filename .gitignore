@@ -4,6 +4,9 @@ __pycache__/
 .venv/
 *.egg-info/
 data/cases/*.tmp
+data/cases/*.json
+data/cases/*/
+!data/cases/.gitkeep
 .env
 .env.*
 !.env.example
