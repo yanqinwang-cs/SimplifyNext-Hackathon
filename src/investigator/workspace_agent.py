@@ -328,7 +328,7 @@ class WorkspaceAgent:
         if request.tool == "READ_SOURCE":
             from investigator.public_views import resolve_source_handle, document_format
             source = state.sources[resolve_source_handle(state, str(request.payload.get("sourceHandle")))]
-            return {"caseId": case_id, "source": {"sourceHandle": request.payload["sourceHandle"], "fileName": source.name, "documentFormat": document_format(source.name), "content": source.content or ""}}
+            return {"source": {"sourceHandle": request.payload["sourceHandle"], "fileName": source.name, "documentFormat": document_format(source.name), "content": source.content or ""}}
         if request.tool == "GET_PENDING_REQUEST":
             return {"request": workspace.get("pendingEvidenceRequest")}
         if request.tool == "LIST_REQUEST_HISTORY":

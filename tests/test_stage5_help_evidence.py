@@ -73,6 +73,7 @@ def test_help_context_is_safe_and_source_tools_are_case_bound(tmp_path: Path):
     sources = WorkspaceAgent(workflow).invoke_tool("case-01", {"tool": "LIST_SOURCES", "payload": {}})["sources"]
     assert set(sources[0]) == {"sourceHandle", "fileName", "documentFormat"}
     document = WorkspaceAgent(workflow).invoke_tool("case-01", {"tool": "READ_SOURCE", "payload": {"sourceHandle": sources[0]["sourceHandle"]}})
+    assert set(document) == {"source"}
     assert set(document["source"]) == {"sourceHandle", "fileName", "documentFormat", "content"}
     with pytest.raises((KeyError, ValueError)):
         WorkspaceAgent(workflow).invoke_tool("case-01", {"tool": "READ_SOURCE", "payload": {"sourceHandle": "S1"}})
