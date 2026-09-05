@@ -118,6 +118,10 @@ def test_unknown_node_repair_is_proposal_only_and_preserves_assessment(tmp_path:
     assert len(client.calls) == 2
     assert client.calls[0][1] is InvestigatorAssessment
     assert client.calls[1][1] is InvestigatorProposal
+    run = workflow.get_workspace("case-01")["runs"][0]
+    assert run["model_calls"] == 2
+    assert run["proposal_correction_calls"] == 1
+    assert run["clean_execution_retries"] == 0
     result = workflow.get_traces("case-01")
     assert any(item["event"] == "vnext_corrective_retry_succeeded" for item in result)
     persisted = workflow.repository.load("case-01")

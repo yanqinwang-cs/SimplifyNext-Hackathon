@@ -180,7 +180,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             cases = []
             for case_id in self.workflow.repository.list_case_ids():
                 state = self.workflow.repository.load(case_id)
-                if case_id in {"law-exam-working", "multi-candidate-working"} or (case_id == "case-01" and state.title == "Business Law Tutorial 5"):
+                if state.case_kind == "sample":
                     continue
                 cases.append({"caseId": case_id, "title": state.title})
             self._write(200, {"cases": cases})
@@ -237,6 +237,9 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
         self._write(404, {"error": "Not found"})
 
     def do_OPTIONS(self) -> None:
+        if self._is_blocked_legacy_vnext_route(self._parts()):
+            self._write(404, {"error": "Not found"})
+            return
         origin = self.headers.get("Origin")
         allowed = {item.strip() for item in os.getenv("SIMPLIFYNEXT_ALLOWED_ORIGINS", "http://127.0.0.1:3000,http://localhost:3000").split(",") if item.strip()}
         if origin and origin not in allowed:
@@ -250,6 +253,9 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parts = self._parts()
+        if self._is_blocked_legacy_vnext_route(parts):
+            self._write(404, {"error": "Not found"})
+            return
         if parts == ["api", "runtime-settings", "aws-credentials"]:
             try:
                 payload = self._read_json()
@@ -291,12 +297,14 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 if not self.workflow.repository.require_case(parts[2]).subjects:
                     self._write(409, {"error": "A configured student is required before assessment", "code": "NO_CONFIGURED_STUDENT"})
                     return
-                self.workflow.start_run(parts[2]); run_id = self.workflow.current_run_id(parts[2])
-                if run_id is None: raise RuntimeError("Assessment run was not persisted")
+                run_id, workspace = self.workflow.start_run_with_id(parts[2])
                 run = next(item for item in self.workflow.get_runs(parts[2]) if item.get("run_id") == run_id)
-                self._write(202, {"run": {"runHandle": public_run_handle_for_instance(parts[2], run_id, run.get("run_instance_id")), "state": "running", "startedAt": run.get("started_at")}, "workspace": self._public_workspace(parts[2])})
+                state = str(run.get("outcome_type") or "RUNNING").lower()
+                self._write(202, {"run": {"runHandle": public_run_handle_for_instance(parts[2], run_id, run.get("run_instance_id")), "state": state, "startedAt": run.get("started_at")}, "workspace": self._public_workspace(parts[2])})
             except KeyError: self._write(404, {"error": "Case not found"})
             except EvidenceRequestConflict as exc: self._write(409, {"error": str(exc)})
+            except ValueError: self._write(422, {"error": "Assessment could not be admitted from the current case configuration."})
+            except RuntimeError: self._write(503, {"error": "Assessment could not be started safely."})
             return
         if self.workflow.run_mode == "vnext" and len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"sources", "students"}:
             try:
@@ -313,7 +321,10 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                     student = self.workflow.add_subject(parts[2], {"display_name": str(payload.get("displayName") or "")}, expected)
                     self._write(200, {"student": {"studentHandle": public_student_handle(parts[2], student.subject_id), "displayName": student.display_name, "candidateNumber": student.candidate_number}, "workspace": self._public_workspace(parts[2])})
             except KeyError: self._write(404, {"error": "Case not found"})
-            except (ValueError, EvidenceRequestConflict): self._write(422, {"error": "Invalid request"})
+            except EvidenceRequestConflict as exc: self._write(409, {"error": str(exc)})
+            except ValueError as exc:
+                message = str(exc) if "distinct identifier" in str(exc) or "required" in str(exc) else "Invalid student or source request"
+                self._write(422, {"error": message})
             return
         if self.workflow.run_mode == "vnext" and len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "students" and parts[5] == "rename":
             try:
@@ -323,7 +334,9 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                     return
                 student_id = resolve_student_handle(state, parts[4]); student = self.workflow.rename_subject(parts[2], student_id, str(payload.get("displayName") or ""), payload.get("caseRevision"))
                 self._write(200, {"student": {"studentHandle": public_student_handle(parts[2], student.subject_id), "displayName": student.display_name, "candidateNumber": student.candidate_number}, "workspace": self._public_workspace(parts[2])})
-            except (KeyError, ValueError): self._write(404, {"error": "Student not found"})
+            except KeyError: self._write(404, {"error": "Student not found"})
+            except EvidenceRequestConflict as exc: self._write(409, {"error": str(exc)})
+            except ValueError as exc: self._write(422, {"error": str(exc), "code": "INVALID_STUDENT"})
             return
         if self.workflow.run_mode == "vnext" and parts in (["api", "samples", "open"], ["api", "samples", "reset"]):
             try:
@@ -464,6 +477,9 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
 
     def do_DELETE(self) -> None:
         parts = self._parts()
+        if self._is_blocked_legacy_vnext_route(parts):
+            self._write(404, {"error": "Not found"})
+            return
         if parts == ["api", "runtime-settings", "aws-credentials"]:
             clear_credential_override()
             self._write(200, runtime_settings(workflow=self.workflow))
@@ -534,6 +550,18 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
 
     def _parts(self) -> list[str]:
         return [unquote(part) for part in urlparse(self.path).path.strip("/").split("/") if part]
+
+    def _is_blocked_legacy_vnext_route(self, parts: list[str]) -> bool:
+        """Keep legacy mutation and caller-selected sample routes unreachable in vNext."""
+        if self.workflow.run_mode != "vnext":
+            return False
+        legacy_subjects = (
+            len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "subjects",
+            len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "subjects",
+            len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "subjects" and parts[5] == "rename",
+        )
+        alternate_sample = len(parts) == 4 and parts[0:2] == ["api", "samples"] and parts[3] in {"open", "reset"}
+        return any(legacy_subjects) or alternate_sample
 
     def _read_json(self) -> dict:
         length = int(self.headers.get("Content-Length", "0"))

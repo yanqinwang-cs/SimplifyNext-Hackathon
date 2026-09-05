@@ -3,6 +3,7 @@
 import re
 import json
 import hashlib
+import shutil
 import uuid
 from pathlib import Path
 from threading import RLock
@@ -20,6 +21,7 @@ from investigator.models.assessment import AssessmentSubject, SubjectRelationshi
 from investigator.state.case_state import CaseState
 from investigator.state.repository import CaseRepository
 from investigator.vnext.presets import preset_for_case
+from investigator.vnext.source_applicability import validate_configured_identifiers
 from investigator.llm.bedrock import redact_sensitive_text
 from investigator.reporting import build_input_snapshot, public_report_from_record
 from investigator.public_views import document_format, public_assessment_source_handle, public_run_handle_for_instance
@@ -93,82 +95,112 @@ class HumanEvidenceWorkflow:
     def _run_dir(self, case_id: str, run_id: str) -> Path:
         return self.repository.run_dir(case_id, run_id)
 
-    def begin_run(self, case_id: str, start_revision: int | None = None, preset: Any | None = None) -> str:
+    def _allocate_run_id(self, case_id: str) -> str:
         run_root = self.repository.runs_dir(case_id)
         run_root.mkdir(parents=True, exist_ok=True)
         numbers = [int(match.group(1)) for path in run_root.iterdir() if (match := re.fullmatch(r"run_(\d{6})", path.name))]
-        run_id = f"run_{max(numbers, default=0) + 1:06d}"
-        directory = self._run_dir(case_id, run_id)
+        return f"run_{max(numbers, default=0) + 1:06d}"
+
+    def _prepare_run_artifacts(
+        self,
+        state: CaseState,
+        start_revision: int | None,
+        preset: Any,
+        *,
+        runtime_status: str,
+    ) -> str:
+        run_id = self._allocate_run_id(state.case_id)
+        directory = self._run_dir(state.case_id, run_id)
         directory.mkdir(parents=True)
-        state = self.repository.require_case(case_id)
         run_instance_id = uuid.uuid4().hex
-        if preset is None:
-            try:
-                preset = preset_for_case(state)
-            except ValueError:
-                # Preserve the run admission artifact even when the configured
-                # preset is invalid; the production callback will report the
-                # configuration failure without making a model call.
-                preset = {"preset_id": state.assessment_rule_preset_id, "violations": []}
-        snapshot = build_input_snapshot(state, preset, run_instance_id)
-        self._write_run_result(directory / "assessment_input_snapshot.json", snapshot)
-        started_at = datetime.now(timezone.utc).isoformat()
-        self._write_run_result(directory / "run_result.json", {"run_id": run_id, "run_instance_id": run_instance_id, "started_at": started_at, "ended_at": None, "termination_reason": None, "final_runtime_status": "RUNNING_INVESTIGATOR", "outcome_type": "RUNNING", "originating_actor": "INVESTIGATOR", "start_revision": start_revision, "run_start_revision": start_revision, "latest_safe_revision": start_revision, "final_committed_revision": start_revision, "model_calls": 0, "correction_retries": 0, "final_error": None, "pending_request_id": None, "trace_path": f"/api/cases/{case_id}/runs/{run_id}/raw-traces"})
-        self._active_runs[case_id] = run_id
+        try:
+            snapshot = build_input_snapshot(state, preset, run_instance_id)
+            self._write_run_result(directory / "assessment_input_snapshot.json", snapshot)
+            started_at = datetime.now(timezone.utc).isoformat()
+            self._write_run_result(directory / "run_result.json", {"run_id": run_id, "run_instance_id": run_instance_id, "started_at": started_at, "ended_at": None, "termination_reason": None, "final_runtime_status": runtime_status, "outcome_type": "RUNNING", "originating_actor": "INVESTIGATOR", "start_revision": start_revision, "run_start_revision": start_revision, "latest_safe_revision": start_revision, "final_committed_revision": start_revision, "model_calls": 0, "proposal_correction_calls": 0, "clean_execution_retries": 0, "correction_retries": 0, "final_error": None, "pending_request_id": None, "trace_path": f"/api/cases/{state.case_id}/runs/{run_id}/raw-traces"})
+        except Exception:
+            shutil.rmtree(directory, ignore_errors=True)
+            raise
         return run_id
+
+    def begin_run(self, case_id: str, start_revision: int | None = None, preset: Any | None = None) -> str:
+        """Prepare and register a run for legacy callers.
+
+        vNext admission uses the failure-safe path in ``start_run_with_id``;
+        this method remains a small compatibility boundary for older callers.
+        """
+        with self._lock:
+            state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+            if preset is None:
+                preset = preset_for_case(state)
+            run_id = self._prepare_run_artifacts(
+                state,
+                start_revision,
+                preset,
+                runtime_status="RUNNING" if self.run_mode == "vnext" else "RUNNING_INVESTIGATOR",
+            )
+            self._active_runs[case_id] = run_id
+            return run_id
 
     def current_run_id(self, case_id: str) -> str | None:
         return self._active_runs.get(case_id)
 
     def recover_interrupted_run(self, case_id: str) -> None:
         """Mark a persisted in-flight run interrupted after a process restart."""
-        if case_id in self._active_runs:
-            return
-        state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
-        if state.runtime_status not in {"RUNNING", "RUNNING_INVESTIGATOR", "RUNNING_STEWARD"}:
-            return
-        runs = self.get_runs(case_id)
-        run = next((item for item in reversed(runs) if item.get("outcome_type") == "RUNNING"), None)
-        if run is None:
-            return
-        path = self._run_dir(case_id, str(run["run_id"])) / "run_result.json"
-        result = json.loads(path.read_text(encoding="utf-8"))
-        ended_at = datetime.now(timezone.utc).isoformat()
-        result.update({
-            "ended_at": ended_at,
-            "termination_reason": "process_restart",
-            "final_runtime_status": "INTERRUPTED",
-            "outcome_type": "INTERRUPTED",
-            "final_error": {"failure_category": "PROCESS_RESTART", "message": "The assessment was interrupted when the service restarted."},
-        })
-        self._write_run_result(path, result)
-        state.runtime_status = "INTERRUPTED"
-        state.current_actor = "NONE"
-        state.last_error = result["final_error"]
-        state.last_updated_at = datetime.now(timezone.utc)
-        self.repository.save(state)
+        with self._lock:
+            if case_id in self._active_runs or case_id in self._in_flight_actor:
+                return
+            state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+            if state.runtime_status not in {"RUNNING", "RUNNING_INVESTIGATOR", "RUNNING_STEWARD"}:
+                return
+            runs = self.get_runs(case_id)
+            run = next((item for item in reversed(runs) if item.get("outcome_type") == "RUNNING"), None)
+            error = {"failure_category": "PROCESS_RESTART", "message": "The assessment was interrupted when the service restarted."}
+            if run is not None:
+                path = self._run_dir(case_id, str(run["run_id"])) / "run_result.json"
+                result = json.loads(path.read_text(encoding="utf-8"))
+                result.update({
+                    "ended_at": datetime.now(timezone.utc).isoformat(),
+                    "termination_reason": "process_restart",
+                    "final_runtime_status": "INTERRUPTED",
+                    "outcome_type": "INTERRUPTED",
+                    "final_error": error,
+                })
+                self._write_run_result(path, result)
+            state.runtime_status = "INTERRUPTED"
+            state.current_actor = "NONE"
+            state.last_error = error
+            state.last_updated_at = datetime.now(timezone.utc)
+            self.repository.save(state)
 
-    def finalize_run(self, case_id: str, *, termination_reason: str | None = None, final_error: dict[str, Any] | None = None) -> None:
-        run_id = self._active_runs.pop(case_id, None)
-        if not run_id:
-            return
-        state = self.ensure_case(case_id)
-        path = self._run_dir(case_id, run_id) / "run_result.json"
-        result = json.loads(path.read_text(encoding="utf-8"))
-        pending = next((item for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None)
-        outcome = "WAITING_FOR_EVIDENCE" if pending else {"IDLE": "COMPLETED", "STOPPED": "STOPPED", "FAILED": "FAILED"}.get(state.runtime_status, state.runtime_status)
-        result.update({"ended_at": datetime.now(timezone.utc).isoformat(), "termination_reason": termination_reason or state.runtime_status.lower(), "final_runtime_status": state.runtime_status, "outcome_type": outcome, "final_case_revision": state.revision, "latest_safe_revision": state.revision, "final_committed_revision": state.revision, "final_error": final_error or state.last_error, "pending_request_id": pending.request_id if pending else None, "request_text": pending.information_sought if pending else None})
-        self._write_run_result(path, result)
+    def finalize_run(self, case_id: str, *, expected_run_id: str | None = None, termination_reason: str | None = None, final_error: dict[str, Any] | None = None) -> None:
+        with self._lock:
+            if expected_run_id is not None and self._active_runs.get(case_id) != expected_run_id:
+                return
+            run_id = self._active_runs.pop(case_id, None)
+            if not run_id:
+                return
+            state = self.ensure_case(case_id)
+            path = self._run_dir(case_id, run_id) / "run_result.json"
+            result = json.loads(path.read_text(encoding="utf-8"))
+            pending = next((item for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None)
+            outcome = "WAITING_FOR_EVIDENCE" if pending else {"IDLE": "COMPLETED", "STOPPED": "STOPPED", "FAILED": "FAILED"}.get(state.runtime_status, state.runtime_status)
+            result.update({"ended_at": datetime.now(timezone.utc).isoformat(), "termination_reason": termination_reason or state.runtime_status.lower(), "final_runtime_status": state.runtime_status, "outcome_type": outcome, "final_case_revision": state.revision, "latest_safe_revision": state.revision, "final_committed_revision": state.revision, "final_error": final_error or state.last_error, "pending_request_id": pending.request_id if pending else None, "request_text": pending.information_sought if pending else None})
+            self._write_run_result(path, result)
 
-    def record_model_attempt(self, case_id: str, *, correction: bool = False) -> None:
+    def record_model_attempt(self, case_id: str, *, correction: bool = False, kind: str | None = None) -> None:
         run_id = self.current_run_id(case_id)
         if not run_id:
             return
         path = self._run_dir(case_id, run_id) / "run_result.json"
         result = json.loads(path.read_text(encoding="utf-8"))
         result["model_calls"] = int(result.get("model_calls") or 0) + 1
-        if correction:
+        resolved_kind = kind or ("proposal_correction" if correction else "initial")
+        if resolved_kind == "proposal_correction":
+            result["proposal_correction_calls"] = int(result.get("proposal_correction_calls") or 0) + 1
             result["correction_retries"] = int(result.get("correction_retries") or 0) + 1
+        elif resolved_kind == "clean_execution_retry":
+            result["clean_execution_retries"] = int(result.get("clean_execution_retries") or 0) + 1
         self._write_run_result(path, result)
 
     def record_run_model(self, case_id: str, model: str | None) -> None:
@@ -188,39 +220,68 @@ class HumanEvidenceWorkflow:
         temporary.replace(path)
 
     def start_run(self, case_id: str) -> dict[str, Any]:
+        """Start a run and retain the historical workspace-only return shape."""
+        _, workspace = self.start_run_with_id(case_id)
+        return workspace
+
+    def start_run_with_id(self, case_id: str) -> tuple[str, dict[str, Any]]:
         """Start one backend-owned run through the configured production hook."""
         with self._lock:
             state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
             pending = any(item.status.value == "pending" for item in state.evidence_request_history)
             if self.run_mode == "legacy" and (pending or state.runtime_status == "WAITING_FOR_EVIDENCE"):
                 raise EvidenceRequestConflict("Resolve the pending human evidence request before running")
-            if self.run_mode == "vnext" and state.runtime_status == "WAITING_FOR_EVIDENCE":
-                state.runtime_status = "IDLE"
-                state.current_actor = "NONE"
-                state.last_updated_at = datetime.now(timezone.utc)
-                self.repository.save(state)
-            if state.runtime_status in {"RUNNING", "RUNNING_INVESTIGATOR", "RUNNING_STEWARD"} or case_id in self._in_flight_actor:
+            if state.runtime_status in {"RUNNING", "RUNNING_INVESTIGATOR", "RUNNING_STEWARD"} or case_id in self._in_flight_actor or case_id in self._active_runs:
                 raise EvidenceRequestConflict("Investigation is already running")
             if state.case_status != "ACTIVE":
                 raise EvidenceRequestConflict("Stopped or inactive cases cannot be restarted")
+            if self.run_mode == "vnext":
+                try:
+                    validate_configured_identifiers(state.subjects)
+                except ValueError as exc:
+                    raise EvidenceRequestConflict("Each student must have a distinct identifier.") from exc
             runtime_status = "RUNNING" if self.run_mode == "vnext" else "RUNNING_INVESTIGATOR"
-            self.set_runtime(case_id, runtime_status, "INVESTIGATOR")
             run_preset = None
             callback_owner = getattr(self.run_callback, "__self__", None)
             resolver = getattr(callback_owner, "preset_resolver", None)
             if resolver is not None:
+                run_preset = resolver(state)
+            if run_preset is None:
+                run_preset = preset_for_case(state)
+            previous_state = state.model_copy(deep=True)
+            run_id = self._prepare_run_artifacts(state, state.revision, run_preset, runtime_status=runtime_status)
+            try:
+                state.runtime_status = runtime_status
+                state.current_actor = "INVESTIGATOR"
+                state.last_error = None
+                state.last_trace_step = None
+                state.last_updated_at = datetime.now(timezone.utc)
+                self.repository.save(state)
+                self._active_runs[case_id] = run_id
+                self._in_flight_actor[case_id] = "INVESTIGATOR"
+                thread = __import__("threading").Thread(target=self._execute_run, args=(case_id, run_id), daemon=True)
                 try:
-                    run_preset = resolver(state)
-                except ValueError:
-                    run_preset = None
-            run_id = self.begin_run(case_id, state.revision, run_preset)
-            summary = "Assessment started." if self.run_mode == "vnext" else f"Investigation run {run_id} started from the current verified case state."
-            self.record_workspace_event(case_id, {"type": "run_started", "run_id": run_id, "runtime_status": runtime_status, "case_revision": state.revision, "human_summary": summary})
-        thread = __import__("threading").Thread(target=self._execute_run, args=(case_id,), daemon=True)
-        thread.start()
-        return self.get_workspace(case_id)
+                    thread.start()
+                except Exception:
+                    self._active_runs.pop(case_id, None)
+                    self._in_flight_actor.pop(case_id, None)
+                    self.repository.save(previous_state)
+                    shutil.rmtree(self._run_dir(case_id, run_id), ignore_errors=True)
+                    raise RuntimeError("Assessment could not be started")
+                summary = "Assessment started." if self.run_mode == "vnext" else f"Investigation run {run_id} started from the current verified case state."
+                self.record_workspace_event(case_id, {"type": "run_started", "run_id": run_id, "runtime_status": runtime_status, "case_revision": state.revision, "human_summary": summary})
+            except Exception:
+                if self._active_runs.get(case_id) == run_id:
+                    self._active_runs.pop(case_id, None)
+                self._in_flight_actor.pop(case_id, None)
+                try:
+                    self.repository.save(previous_state)
+                finally:
+                    shutil.rmtree(self._run_dir(case_id, run_id), ignore_errors=True)
+                raise
+        return run_id, self.get_workspace(case_id)
 
-    def _execute_run(self, case_id: str) -> None:
+    def _execute_run(self, case_id: str, run_id: str) -> None:
         try:
             if self.run_callback is None:
                 raise RuntimeError("No production Investigator/Steward orchestration entrypoint is configured")
@@ -229,19 +290,21 @@ class HumanEvidenceWorkflow:
             if state.runtime_status.startswith("RUNNING_"):
                 self.set_runtime(case_id, "IDLE", "NONE")
                 summary = "Assessment completed." if self.run_mode == "vnext" else "The investigation run completed successfully."
-                self.record_workspace_event(case_id, {"type": "run_completed", "run_id": self.current_run_id(case_id), "runtime_status": "IDLE", "case_revision": state.revision, "human_summary": summary})
+                self.record_workspace_event(case_id, {"type": "run_completed", "run_id": run_id, "runtime_status": "IDLE", "case_revision": state.revision, "human_summary": summary})
             elif state.runtime_status == "STOPPED":
-                self.record_workspace_event(case_id, {"type": "run_stopped", "run_id": self.current_run_id(case_id), "runtime_status": "STOPPED", "case_revision": state.revision, "resumable": state.case_status == "ACTIVE", "human_summary": "Autonomous investigation paused for human review. The unresolved issues remain preserved, and the investigation can be resumed or new evidence can be added."})
+                self.record_workspace_event(case_id, {"type": "run_stopped", "run_id": run_id, "runtime_status": "STOPPED", "case_revision": state.revision, "resumable": state.case_status == "ACTIVE", "human_summary": "Autonomous investigation paused for human review. The unresolved issues remain preserved, and the investigation can be resumed or new evidence can be added."})
         except Exception as exc:
+            if self._active_runs.get(case_id) != run_id:
+                return
             category = "ORCHESTRATION_CONFIGURATION_FAILURE" if type(exc).__name__ == "BedrockConfigurationError" else ("CASE_SNAPSHOT_MISMATCH" if isinstance(exc, CaseSnapshotMismatch) else type(exc).__name__)
             state = self.ensure_case(case_id)
             safe_message = redact_sensitive_text(str(exc))
             self.record_trace(case_id, {"event": "failed", "step": state.last_trace_step, "actor": "system", "runtime_status": "FAILED", "case_revision": state.revision, "current_actor": state.current_actor, "failure_category": category, "error": safe_message})
             self.set_runtime(case_id, "FAILED", "NONE", failure_category=category, message=safe_message, step=state.last_trace_step)
             summary = "Assessment could not be completed. Case evidence was unchanged." if self.run_mode == "vnext" else f"The investigation run failed. The failed turn was not committed; earlier successful turns remain preserved at revision {state.revision}."
-            self.record_workspace_event(case_id, {"type": "run_failed", "run_id": self.current_run_id(case_id), "runtime_status": "FAILED", "case_revision": state.revision, "final_case_revision": state.revision, "human_summary": summary})
+            self.record_workspace_event(case_id, {"type": "run_failed", "run_id": run_id, "runtime_status": "FAILED", "case_revision": state.revision, "final_case_revision": state.revision, "human_summary": summary})
         finally:
-            self.finalize_run(case_id)
+            self.finalize_run(case_id, expected_run_id=run_id)
 
     def set_runtime(self, case_id: str, runtime_status: str, actor: str = "NONE", *, failure_category: str | None = None, message: str | None = None, step: int | None = None) -> None:
         """Persist truthful runtime state; RUNNING is also tracked in-process."""
@@ -364,6 +427,8 @@ class HumanEvidenceWorkflow:
         with self._lock:
             state = self.ensure_case(case_id)
             self._check_revision(state, expected_case_revision)
+            if self.run_mode == "vnext" and state.case_kind == "sample":
+                raise EvidenceRequestConflict("Sample cases are read-only; reset the sample to restore its original configuration")
             if case_id in self._model_revision_active:
                 raise EvidenceRequestConflict("A human request cannot be created while an Investigator revision is active")
             if any(item.status.value == "pending" for item in state.evidence_request_history):
@@ -446,7 +511,7 @@ class HumanEvidenceWorkflow:
         """Admit one source for the vNext input workflow without graph mutation."""
         with self._lock:
             state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
-            self._assert_mutable(state)
+            self._assert_user_mutable(state)
             self._check_revision(state, expected_case_revision)
             if not display_name.strip() or not content.strip():
                 raise ValueError("display_name and content are required")
@@ -477,7 +542,7 @@ class HumanEvidenceWorkflow:
         from investigator.models.assessment import AssessmentSubject
         with self._lock:
             state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
-            self._assert_mutable(state)
+            self._assert_user_mutable(state)
             self._check_revision(state, expected_case_revision)
             payload = dict(subject)
             if not payload.get("subject_id"):
@@ -488,7 +553,13 @@ class HumanEvidenceWorkflow:
             item = AssessmentSubject.model_validate(payload)
             if item.subject_id in state.subjects:
                 raise ValueError(f"Duplicate subject ID: {item.subject_id!r}")
-            state.subjects[item.subject_id] = item
+            proposed_subjects = dict(state.subjects)
+            proposed_subjects[item.subject_id] = item
+            try:
+                validate_configured_identifiers(proposed_subjects)
+            except ValueError as exc:
+                raise ValueError("Each student must have a distinct identifier.") from exc
+            state.subjects = proposed_subjects
             state.revision += 1
             state.last_updated_at = datetime.now(timezone.utc)
             self.repository.save(state)
@@ -498,7 +569,7 @@ class HumanEvidenceWorkflow:
     def rename_subject(self, case_id: str, subject_id: str, display_name: str, expected_case_revision: int | None = None) -> AssessmentSubject:
         with self._lock:
             state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
-            self._assert_mutable(state)
+            self._assert_user_mutable(state)
             self._check_revision(state, expected_case_revision)
             item = state.subjects.get(subject_id)
             if item is None:
@@ -506,7 +577,13 @@ class HumanEvidenceWorkflow:
             renamed = item.model_copy(update={"display_name": display_name.strip()})
             if not renamed.display_name:
                 raise ValueError("display_name is required")
-            state.subjects[subject_id] = renamed
+            proposed_subjects = dict(state.subjects)
+            proposed_subjects[subject_id] = renamed
+            try:
+                validate_configured_identifiers(proposed_subjects)
+            except ValueError as exc:
+                raise ValueError("Each student must have a distinct identifier.") from exc
+            state.subjects = proposed_subjects
             state.revision += 1
             state.last_updated_at = datetime.now(timezone.utc)
             self.repository.save(state)
@@ -516,7 +593,7 @@ class HumanEvidenceWorkflow:
     def remove_subject(self, case_id: str, subject_id: str, expected_case_revision: int | None = None) -> None:
         with self._lock:
             state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
-            self._assert_mutable(state)
+            self._assert_user_mutable(state)
             self._check_revision(state, expected_case_revision)
             if subject_id not in state.subjects:
                 raise ValueError(f"Unknown subject ID: {subject_id!r}")
@@ -566,6 +643,8 @@ class HumanEvidenceWorkflow:
         with self._lock:
             state = self.ensure_case(case_id)
             self._check_revision(state, expected_case_revision)
+            if self.run_mode == "vnext" and state.case_kind == "sample":
+                raise EvidenceRequestConflict("Sample cases are read-only; reset the sample to restore its original configuration")
             if case_id in self._model_revision_active:
                 raise EvidenceRequestConflict("Human evidence responses are blocked while an Investigator revision is active")
             pending = next((item for item in state.evidence_request_history if item.request_id == request_id and item.status.value == "pending"), None)
@@ -897,7 +976,7 @@ class HumanEvidenceWorkflow:
                     # A run may be initializing on another thread; omit it until
                     # its first result snapshot is complete.
                     continue
-                runs.append({key: payload.get(key) for key in ("run_id", "run_instance_id", "started_at", "ended_at", "termination_reason", "final_runtime_status", "outcome_type", "originating_actor", "start_revision", "run_start_revision", "latest_safe_revision", "final_case_revision", "final_committed_revision", "final_error", "pending_request_id", "request_text", "trace_path", "vnext_status", "vnext_result_path", "report_record_path", "vnext_furthest_conclusion", "vnext_subject_conclusions", "model", "input_tokens", "output_tokens", "latency_seconds", "finish_reason")})
+                runs.append({key: payload.get(key) for key in ("run_id", "run_instance_id", "started_at", "ended_at", "termination_reason", "final_runtime_status", "outcome_type", "originating_actor", "start_revision", "run_start_revision", "latest_safe_revision", "final_case_revision", "final_committed_revision", "final_error", "pending_request_id", "request_text", "trace_path", "vnext_status", "vnext_result_path", "report_record_path", "vnext_furthest_conclusion", "vnext_subject_conclusions", "model", "model_calls", "proposal_correction_calls", "clean_execution_retries", "correction_retries", "input_tokens", "output_tokens", "latency_seconds", "finish_reason")})
         return runs
 
     def raw_trace_path(self, case_id: str, run_id: str) -> Path:
@@ -938,6 +1017,11 @@ class HumanEvidenceWorkflow:
     def _assert_mutable(self, state: CaseState) -> None:
         if self.run_mode == "vnext" and (state.runtime_status in {"RUNNING", "RUNNING_INVESTIGATOR", "RUNNING_STEWARD"} or state.case_id in self._in_flight_actor):
             raise EvidenceRequestConflict("Assessment is running; wait for it to finish before changing the case")
+
+    def _assert_user_mutable(self, state: CaseState) -> None:
+        self._assert_mutable(state)
+        if self.run_mode == "vnext" and state.case_kind == "sample":
+            raise EvidenceRequestConflict("Sample cases are read-only; reset the sample to restore its original configuration")
 
     def _publish_waiting_run(self, case_id: str, state: CaseState, request: EvidenceRequest) -> None:
         run_id = self.current_run_id(case_id)

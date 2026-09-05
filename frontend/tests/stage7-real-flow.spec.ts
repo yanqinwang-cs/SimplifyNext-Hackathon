@@ -40,7 +40,7 @@ test.beforeAll(async () => {
   testRepository = mkdtempSync(join(tmpdir(), "simplifynext-stage7-browser-"));
   backend = spawn("uv", ["run", "python", "scripts/stage7_fake_server.py", "--repository", testRepository], {
     cwd: repoRoot,
-    env: { ...process.env, AWS_EC2_METADATA_DISABLED: "true", SIMPLIFYNEXT_RUN_MODE: "vnext", SIMPLIFYNEXT_DEBUG_CREDENTIALS: "0" },
+    env: { ...process.env, AWS_EC2_METADATA_DISABLED: "true", SIMPLIFYNEXT_RUN_MODE: "vnext", SIMPLIFYNEXT_DEBUG_CREDENTIALS: "0", STAGE7_FAKE_DELAY_SECONDS: "0.4" },
     stdio: ["ignore", "pipe", "pipe"],
   });
   await waitForBackend();
@@ -114,6 +114,92 @@ test("real vNext zero-evidence and fake-provider assessments publish independent
   expect(providerCalls().every((call) => call.model.includes("anthropic.claude") || call.model === "stage7.fake")).toBeTruthy();
   await expect(page.getByRole("link", { name: "View report" })).toBeVisible();
   expect(zeroCase).not.toBe(modelCase);
+});
+
+test("real status observation failure retains the same run for Retry", async ({ page }) => {
+  const caseId = await createCase(page, "Polling recovery case");
+  await page.locator('input[type="file"]').setInputFiles({ name: "polling-record.txt", mimeType: "text/plain", buffer: Buffer.from("A delayed controlled record.") });
+  await page.getByRole("button", { name: "Add evidence" }).click();
+  let startPosts = 0;
+  let failedStatusRequests = 0;
+  const statusHandles = new Set<string>();
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (request.method() === "POST" && url.pathname === `/api/cases/${caseId}/run`) startPosts += 1;
+    if (url.pathname.includes("/assessment-runs/")) statusHandles.add(url.pathname.split("/").pop() ?? "");
+  });
+  await page.route("**/api/cases/*/assessment-runs/*", async (route) => {
+    if (failedStatusRequests === 0) {
+      failedStatusRequests += 1;
+      await route.abort("failed");
+      return;
+    }
+    await route.continue();
+  });
+  await page.getByRole("button", { name: "Run assessment" }).click();
+  await expect(page.getByText("Could not refresh assessment status. Retry the status check.")).toBeVisible({ timeout: 30_000 });
+  expect(startPosts).toBe(1);
+  await expect(page.getByRole("button", { name: "Retry status check" })).toBeVisible();
+  await page.unroute("**/api/cases/*/assessment-runs/*");
+  await page.getByRole("button", { name: "Retry status check" }).click();
+  await expect(page.getByText("Assessment complete. The current report is up to date.")).toBeVisible({ timeout: 30_000 });
+  expect(startPosts).toBe(1);
+  expect(statusHandles.size).toBe(1);
+  await expect(page.getByRole("button", { name: "Retry status check" })).toHaveCount(0);
+});
+
+test("real Runtime settings uses the actual HTTP backend without changing case state or exposing secrets", async ({ page }, testInfo) => {
+  const caseId = await createCase(page, "Runtime settings case");
+  await page.request.delete("http://127.0.0.1:8000/api/runtime-settings/aws-credentials");
+  await page.request.post("http://127.0.0.1:8000/api/runtime-settings/models/reset", { data: {} });
+  const before = await page.request.get(`http://127.0.0.1:8000/api/cases/${caseId}/workspace`);
+  const beforeWorkspace = await before.json();
+  const providerCount = providerCalls().length;
+  await page.getByRole("button", { name: "Runtime settings" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.locator('select[aria-label="Investigator model"] option')).toHaveCount(2);
+  await expect(page.locator('select[aria-label="Workspace Help model"] option')).toHaveCount(2);
+  await page.getByLabel("AWS Access Key ID").fill("PRE5A_FAKE_ACCESS");
+  await page.getByLabel("AWS Secret Access Key").fill("PRE5A_FAKE_SECRET");
+  await page.getByLabel("AWS Session Token").fill("PRE5A_FAKE_SESSION");
+  await page.getByRole("button", { name: "Apply temporary credentials" }).click();
+  await expect(page.getByText("Temporary AWS credentials loaded for this running session.")).toBeVisible();
+  await expect(page.getByLabel("AWS Access Key ID")).toHaveValue("");
+  await expect(page.getByLabel("AWS Secret Access Key")).toHaveValue("");
+  await expect(page.getByLabel("AWS Session Token")).toHaveValue("");
+  await expect(page.locator("body")).not.toContainText("PRE5A_FAKE_");
+  await page.screenshot({ path: testInfo.outputPath("runtime-credentials-loaded-real-backend.png"), fullPage: true });
+  await page.getByRole("button", { name: "Close Runtime settings" }).click();
+  await page.getByRole("button", { name: "Runtime settings" }).click();
+  await expect(page.getByLabel("AWS Access Key ID")).toHaveValue("");
+  await page.getByRole("button", { name: "Clear temporary credentials" }).click();
+  await expect(page.getByText("Temporary credentials cleared. The default AWS credential chain will be used.")).toBeVisible();
+  await page.getByLabel("Investigator model").selectOption("anthropic.claude-opus-4-5");
+  await expect(page.getByText("Pending change")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("runtime-model-pending-real-backend.png"), fullPage: true });
+  await page.getByRole("button", { name: "Apply model settings" }).click();
+  await expect(page.getByText("Model settings applied for subsequent calls.")).toBeVisible();
+  await page.getByLabel("Workspace Help model").selectOption("anthropic.claude-opus-4-5");
+  await page.getByRole("button", { name: "Apply model settings" }).click();
+  await expect(page.getByText("Model settings applied for subsequent calls.")).toBeVisible();
+  const applied = await page.request.get("http://127.0.0.1:8000/api/runtime-settings");
+  const appliedSettings = await applied.json();
+  expect(appliedSettings.models.investigator.effectiveModel).toBe("anthropic.claude-opus-4-5");
+  expect(appliedSettings.models.workspaceHelp.effectiveModel).toBe("anthropic.claude-opus-4-5");
+  await page.screenshot({ path: testInfo.outputPath("runtime-model-applied-real-backend.png"), fullPage: true });
+  await page.getByRole("button", { name: "Reset defaults" }).click();
+  await expect(page.getByText("Model defaults restored.")).toBeVisible();
+  const reset = await page.request.get("http://127.0.0.1:8000/api/runtime-settings");
+  const resetSettings = await reset.json();
+  expect(resetSettings.models.investigator.effectiveModel).toBe("anthropic.claude-sonnet-4-5");
+  expect(resetSettings.models.workspaceHelp.effectiveModel).toBe("anthropic.claude-sonnet-4-5");
+  await page.screenshot({ path: testInfo.outputPath("runtime-model-reset-real-backend.png"), fullPage: true });
+  const storage = await page.evaluate(() => ({ local: JSON.stringify(localStorage), session: JSON.stringify(sessionStorage), url: location.href }));
+  expect(JSON.stringify(storage)).not.toContain("PRE5A_FAKE_");
+  const after = await page.request.get(`http://127.0.0.1:8000/api/cases/${caseId}/workspace`);
+  expect((await after.json()).caseRevision).toBe(beforeWorkspace.caseRevision);
+  expect(providerCalls()).toHaveLength(providerCount);
+  await expect(page.locator("body")).not.toContainText("Failed to fetch");
 });
 
 test("real sample boundaries and negative HTTP paths remain safe", async ({ page }, testInfo) => {

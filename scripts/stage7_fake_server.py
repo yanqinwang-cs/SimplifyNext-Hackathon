@@ -6,6 +6,8 @@ import argparse
 import json
 import re
 import threading
+import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +33,7 @@ class Stage7FakeModelClient:
         self.model_id = model_id or "stage7.fake"
         self.region = region or "us-east-1"
         self.log_path = log_path
+        self.delay_seconds = float(os.getenv("STAGE7_FAKE_DELAY_SECONDS", "0"))
         self._lock = threading.Lock()
         if log_path and not log_path.exists():
             self._write_log([])
@@ -89,6 +92,8 @@ class Stage7FakeModelClient:
 
     def call(self, input_data: Any, output_schema: type[Any]) -> ModelCallResult:
         self._record("structured")
+        if self.delay_seconds:
+            time.sleep(self.delay_seconds)
         parsed = self._assessment(str(input_data))
         return ModelCallResult(
             parsed=output_schema.model_validate(parsed),

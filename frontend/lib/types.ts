@@ -42,6 +42,10 @@ export interface RunSummary {
   vnext_furthest_conclusion?: string | null;
   vnext_subject_conclusions?: Record<string, string> | null;
   model?: string | null;
+  model_calls?: number;
+  proposal_correction_calls?: number;
+  clean_execution_retries?: number;
+  correction_retries?: number;
   input_tokens?: number | null;
   output_tokens?: number | null;
   latency_seconds?: number | null;

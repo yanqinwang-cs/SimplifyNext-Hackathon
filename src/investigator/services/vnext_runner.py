@@ -80,7 +80,10 @@ class VNextProductionRunner:
                 if not substantive_sources:
                     first_assessment = self._zero_evidence_assessment(run_input)
                 else:
-                    workflow.record_model_attempt(case_id, correction=attempt_number > 1)
+                    workflow.record_model_attempt(
+                        case_id,
+                        kind="initial" if attempt_number == 1 else "clean_execution_retry",
+                    )
                     first_assessment = investigator(run_input)
                 try:
                     result = VNextInvestigationRunner(lambda _: first_assessment).run(run_input)
@@ -116,7 +119,7 @@ class VNextProductionRunner:
                             "validation_issues": issues,
                         },
                     )
-                    workflow.record_model_attempt(case_id, correction=True)
+                    workflow.record_model_attempt(case_id, kind="proposal_correction")
                     repair_call = client.call(
                         build_corrective_prompt(first_assessment, validation_error.issues),
                         InvestigatorProposal,

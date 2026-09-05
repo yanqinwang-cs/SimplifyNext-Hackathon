@@ -35,27 +35,32 @@ export default function CasePage() {
   const [message, setMessage] = useState<string | null>(null);
   const handle = useRef<string | null>(null);
   const generation = useRef(0);
+  const pollHandle = useRef<string | null>(null);
+  const pollAbort = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    void Promise.all([getWorkspace(caseId), getReport(caseId)]).then(([next, nextReport]) => {
+    const controller = new AbortController();
+    void Promise.all([getWorkspace(caseId, controller.signal), getReport(caseId, undefined, controller.signal)]).then(([next, nextReport]) => {
       if (!mounted) return;
       setWorkspace(next); setReport(nextReport); setDraftTitle(next.title); handle.current = next.assessment.activeRun?.runHandle ?? null;
-    }).catch(() => mounted && setError("Could not load this case."));
-    return () => { mounted = false; generation.current += 1; };
+    }).catch((exc) => mounted && !(exc instanceof DOMException && exc.name === "AbortError") && setError("Could not load this case."));
+    return () => { mounted = false; controller.abort(); generation.current += 1; pollAbort.current?.abort(); pollAbort.current = null; pollHandle.current = null; handle.current = null; };
   }, [caseId]);
 
   async function poll(runHandle: string) {
-    const token = ++generation.current; const deadline = Date.now() + 15 * 60 * 1000; handle.current = runHandle; setPolling(true); setStatusError(null);
+    if (pollHandle.current === runHandle) return;
+    pollAbort.current?.abort();
+    const token = ++generation.current; const deadline = Date.now() + 15 * 60 * 1000; const controller = new AbortController(); pollAbort.current = controller; pollHandle.current = runHandle; handle.current = runHandle; setPolling(true); setStatusError(null);
     try {
       while (Date.now() < deadline && token === generation.current) {
-        const next = await getAssessmentRun(caseId, runHandle); setWorkspace(next.workspace);
-        if (terminal.has(next.state)) { if (next.state === "completed") setReport(await getReport(caseId)); else if (next.message) setStatusError(next.message); return; }
+        const next = await getAssessmentRun(caseId, runHandle, controller.signal); if (token !== generation.current) return; setWorkspace(next.workspace);
+        if (terminal.has(next.state)) { handle.current = null; if (next.state === "completed") { const nextReport = await getReport(caseId, undefined, controller.signal); if (token === generation.current) setReport(nextReport); } else if (next.message && token === generation.current) setStatusError(next.message); return; }
         await new Promise((resolve) => window.setTimeout(resolve, 1000));
       }
       if (token === generation.current) setStatusError("Status refresh timed out after 15 minutes. Retry the status check.");
-    } catch { if (token === generation.current) setStatusError("Could not refresh assessment status. Retry the status check."); }
-    finally { if (token === generation.current) { setPolling(false); handle.current = null; } }
+    } catch (exc) { if (token === generation.current && !(exc instanceof DOMException && exc.name === "AbortError")) setStatusError("Could not refresh assessment status. Retry the status check."); }
+    finally { if (token === generation.current) { setPolling(false); pollHandle.current = null; if (pollAbort.current === controller) pollAbort.current = null; } }
   }
 
   useEffect(() => { if (workspace?.assessment.activeRun && !polling && !runBusy) void poll(workspace.assessment.activeRun.runHandle); /* persisted handle resumes after reload */ // eslint-disable-next-line react-hooks/exhaustive-deps

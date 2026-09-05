@@ -106,6 +106,9 @@ def test_product_vnext_success_persists_result_and_never_requests_or_uses_stewar
     assert len(client.calls) == 1
     assert workspace["pendingEvidenceRequest"] is None
     assert run["vnext_status"] == "completed"
+    assert run["model_calls"] == 1
+    assert run["proposal_correction_calls"] == 0
+    assert run["clean_execution_retries"] == 0
     assert (artifact / "vnext_result.json").is_file()
     assert json.loads((artifact / "vnext_result.json").read_text())["result"]["status"] == "completed"
     assert workflow.get_traces("case-01")[-1]["event"] == "vnext_completed"
@@ -117,6 +120,10 @@ def test_sparse_product_vnext_completes_with_zero_graph_updates(tmp_path: Path) 
     result = json.loads((tmp_path / "cases" / "case-01" / "runs" / "run_000001" / "vnext_result.json").read_text())
     assert workflow.get_workspace("case-01")["runtimeStatus"] == "COMPLETED"
     assert result["result"]["metadata"]["proposal_update_count"] == 0
+    run = workflow.get_workspace("case-01")["runs"][0]
+    assert run["model_calls"] == 1
+    assert run["proposal_correction_calls"] == 0
+    assert run["clean_execution_retries"] == 0
     assert workflow.get_workspace("case-01")["pendingEvidenceRequest"] is None
 
 
@@ -132,6 +139,10 @@ def test_product_retry_rebuilds_clean_attempt_and_preserves_failure_trace(tmp_pa
     assert traces[-1]["attempt_number"] == 2
     failed = next(trace for trace in traces if trace["event"] == "vnext_attempt_failed")
     assert failed["raw_output"] == '{"bad": true}'
+    run = workflow.get_workspace("case-01")["runs"][0]
+    assert run["model_calls"] == 2
+    assert run["proposal_correction_calls"] == 0
+    assert run["clean_execution_retries"] == 1
 
 
 def test_product_retry_failure_is_failed_without_successful_result(tmp_path: Path) -> None:
@@ -144,6 +155,9 @@ def test_product_retry_failure_is_failed_without_successful_result(tmp_path: Pat
     assert len(client.calls) == 2
     assert not (artifact / "vnext_result.json").exists()
     assert [trace["attempt_number"] for trace in workflow.get_traces("case-01") if trace["event"] == "vnext_attempt_failed"] == [1, 2]
+    assert run["model_calls"] == 2
+    assert run["proposal_correction_calls"] == 0
+    assert run["clean_execution_retries"] == 1
 
 
 def test_missing_preset_fails_without_model_retry(tmp_path: Path) -> None:
@@ -153,12 +167,10 @@ def test_missing_preset_fails_without_model_retry(tmp_path: Path) -> None:
     state.assessment_rule_preset_id = "missing-preset"
     workflow.repository.save(state)
     workflow.run_callback = VNextProductionRunner(client).run
-    workflow.start_run("case-01")
-    for _ in range(100):
-        if workflow.get_workspace("case-01")["runtimeStatus"] == "FAILED":
-            break
-        time.sleep(0.01)
-    assert workflow.get_workspace("case-01")["runtimeStatus"] == "FAILED"
+    with pytest.raises(ValueError, match="Unknown vNext assessment rule preset"):
+        workflow.start_run("case-01")
+    assert workflow.get_workspace("case-01")["runtimeStatus"] == "IDLE"
+    assert workflow.get_runs("case-01") == []
     assert client.calls == []
 
 
