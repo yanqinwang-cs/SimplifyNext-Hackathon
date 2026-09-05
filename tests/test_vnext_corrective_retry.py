@@ -176,6 +176,9 @@ def test_corrective_prompt_contains_prior_proposal_and_prescriptive_constraints(
     assert "Do NOT re-investigate" in prompt
     assert "Preserve unrelated valid graph updates" in prompt
     assert "Return only a corrected InvestigatorProposal" in prompt
+    assert "COMPLETE LEGAL GRAPH OPERATION CONTRACT" in prompt
+    assert "SUBJECT -> RELATIONSHIP" in prompt
+    assert "HYPOTHESIS -> SUPPORTS -> HYPOTHESIS" in prompt
 
 
 def test_corrective_prompt_prescribes_remove_only_for_self_derivation() -> None:
