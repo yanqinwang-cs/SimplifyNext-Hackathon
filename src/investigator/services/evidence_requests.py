@@ -80,6 +80,34 @@ class HumanEvidenceWorkflow:
     def current_run_id(self, case_id: str) -> str | None:
         return self._active_runs.get(case_id)
 
+    def recover_interrupted_run(self, case_id: str) -> None:
+        """Mark a persisted in-flight run interrupted after a process restart."""
+        if case_id in self._active_runs:
+            return
+        state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+        if state.runtime_status not in {"RUNNING", "RUNNING_INVESTIGATOR", "RUNNING_STEWARD"}:
+            return
+        runs = self.get_runs(case_id)
+        run = next((item for item in reversed(runs) if item.get("outcome_type") == "RUNNING"), None)
+        if run is None:
+            return
+        path = self._run_dir(case_id, str(run["run_id"])) / "run_result.json"
+        result = json.loads(path.read_text(encoding="utf-8"))
+        ended_at = datetime.now(timezone.utc).isoformat()
+        result.update({
+            "ended_at": ended_at,
+            "termination_reason": "process_restart",
+            "final_runtime_status": "INTERRUPTED",
+            "outcome_type": "INTERRUPTED",
+            "final_error": {"failure_category": "PROCESS_RESTART", "message": "The assessment was interrupted when the service restarted."},
+        })
+        self._write_run_result(path, result)
+        state.runtime_status = "INTERRUPTED"
+        state.current_actor = "NONE"
+        state.last_error = result["final_error"]
+        state.last_updated_at = datetime.now(timezone.utc)
+        self.repository.save(state)
+
     def finalize_run(self, case_id: str, *, termination_reason: str | None = None, final_error: dict[str, Any] | None = None) -> None:
         run_id = self._active_runs.pop(case_id, None)
         if not run_id:
@@ -328,7 +356,8 @@ class HumanEvidenceWorkflow:
     ) -> Source:
         """Admit one source for the vNext input workflow without graph mutation."""
         with self._lock:
-            state = self.ensure_case(case_id)
+            state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+            self._assert_mutable(state)
             self._check_revision(state, expected_case_revision)
             if not display_name.strip() or not content.strip():
                 raise ValueError("display_name and content are required")
@@ -358,7 +387,8 @@ class HumanEvidenceWorkflow:
     def add_subject(self, case_id: str, subject: dict[str, Any], expected_case_revision: int | None = None) -> AssessmentSubject:
         from investigator.models.assessment import AssessmentSubject
         with self._lock:
-            state = self.ensure_case(case_id)
+            state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+            self._assert_mutable(state)
             self._check_revision(state, expected_case_revision)
             payload = dict(subject)
             if not payload.get("subject_id"):
@@ -378,7 +408,8 @@ class HumanEvidenceWorkflow:
 
     def rename_subject(self, case_id: str, subject_id: str, display_name: str, expected_case_revision: int | None = None) -> AssessmentSubject:
         with self._lock:
-            state = self.ensure_case(case_id)
+            state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+            self._assert_mutable(state)
             self._check_revision(state, expected_case_revision)
             item = state.subjects.get(subject_id)
             if item is None:
@@ -395,7 +426,8 @@ class HumanEvidenceWorkflow:
 
     def remove_subject(self, case_id: str, subject_id: str, expected_case_revision: int | None = None) -> None:
         with self._lock:
-            state = self.ensure_case(case_id)
+            state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+            self._assert_mutable(state)
             self._check_revision(state, expected_case_revision)
             if subject_id not in state.subjects:
                 raise ValueError(f"Unknown subject ID: {subject_id!r}")
@@ -678,3 +710,7 @@ class HumanEvidenceWorkflow:
     def _check_revision(state: CaseState, expected_case_revision: int | None) -> None:
         if expected_case_revision is not None and expected_case_revision != state.revision:
             raise EvidenceRequestConflict("The case revision is stale")
+
+    def _assert_mutable(self, state: CaseState) -> None:
+        if self.run_mode == "vnext" and (state.runtime_status in {"RUNNING", "RUNNING_INVESTIGATOR", "RUNNING_STEWARD"} or state.case_id in self._in_flight_actor):
+            raise EvidenceRequestConflict("Assessment is running; wait for it to finish before changing the case")

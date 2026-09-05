@@ -45,7 +45,7 @@ export async function getTraces(caseId: string): Promise<TraceEntry[]> {
 export function runInvestigation(caseId: string): Promise<{ run: { runHandle: string; state: string; startedAt: string }; workspace: CaseWorkspaceState }> {
   return request<{ run: { runHandle: string; state: string; startedAt: string }; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/run`, { method: "POST", body: "{}" });
 }
-export function getAssessmentRun(caseId: string, runHandle: string): Promise<{ runHandle: string; state: string; startedAt: string; endedAt: string | null; message: string; reportAvailable: boolean; reportStale: boolean; workspace: CaseWorkspaceState }> { return request(`/api/cases/${encodeURIComponent(caseId)}/assessment-runs/${encodeURIComponent(runHandle)}`); }
+export function getAssessmentRun(caseId: string, runHandle: string): Promise<{ runHandle: string; state: string; startedAt: string; endedAt: string | null; message: string; reportAvailable: boolean; reportStale: boolean; workspace: CaseWorkspaceState }> { return request<{ runHandle: string; state: string; startedAt: string; endedAt: string | null; message: string; reportAvailable: boolean; reportStale: boolean; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/assessment-runs/${encodeURIComponent(runHandle)}`); }
 
 export function sendWorkspaceMessage(caseId: string, message: string): Promise<WorkspaceChatResponse> {
   return request<WorkspaceChatResponse>(`/api/cases/${encodeURIComponent(caseId)}/workspace/chat`, { method: "POST", body: JSON.stringify({ message }) });

@@ -16,6 +16,8 @@ def resolve_run_handle(workflow: Any, case_id: str, handle: str) -> str:
 
 def assessment_view(workflow: Any, case_id: str) -> dict[str, Any]:
     state = workflow.repository.require_case(case_id)
+    workflow.recover_interrupted_run(case_id)
+    state = workflow.repository.require_case(case_id)
     runs = workflow.get_runs(case_id)
     latest = runs[-1] if runs else None
     successful = next((item for item in reversed(runs) if item.get("vnext_status") == "completed"), None)

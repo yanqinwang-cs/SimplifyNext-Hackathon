@@ -36,6 +36,7 @@ export const initialWorkspace: CaseWorkspaceState = {
   ],
   students: [{ studentHandle: "demo-student-1", displayName: "Student 1", candidateNumber: null }],
   report: { state: "unavailable", assessmentIsStale: true },
+  assessment: { state: "not_started", activeRun: null, latestAttempt: null, reportAvailable: false, reportStale: false },
   chatHistory: [],
   activity: [],
   caseStatus: "ACTIVE",

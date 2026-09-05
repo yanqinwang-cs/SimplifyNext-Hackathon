@@ -90,6 +90,7 @@ export interface CaseWorkspaceState {
   sources: PublicSource[];
   students: AssessmentSubject[];
   report: { state: string; assessmentIsStale: boolean };
+  assessment: AssessmentSummary;
   chatHistory: { role: string; text: string }[];
   activity: { type: string; summary: string; createdAt: string }[];
 }
