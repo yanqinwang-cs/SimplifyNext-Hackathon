@@ -153,6 +153,7 @@ class ViolationAssessment(BaseModel):
     violation_id: str = Field(min_length=1)
     status: AssessmentStatus
     supporting_node_ids: list[str] = Field(default_factory=list)
+    conflicting_node_ids: list[str] = Field(default_factory=list)
     mitigating_node_ids: list[str] = Field(default_factory=list)
     unresolved_points: list[str] = Field(default_factory=list)
     reasoning_summary: str = Field(min_length=1)

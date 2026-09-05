@@ -67,7 +67,6 @@ def relationship_scope_prompt_view(scopes: Mapping[str, RunRelationshipScope]) -
 
     return {
         local_ref: {
-            "relationship_ref": local_ref,
             "participants": list(scope.student_ids),
             "relationship_type": scope.relationship_type,
             "source_ids": list(scope.source_ids),

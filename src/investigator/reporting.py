@@ -135,6 +135,7 @@ def build_report_record(
                     "status": AssessmentStatus(item.status).value,
                     "reasoning_summary": _humanize(item.reasoning_summary, snapshot),
                     "supporting_material": [_material(graph, node_id, snapshot, snapshot["run_instance_id"]) for node_id in item.supporting_node_ids],
+                    "conflicting_material": [_material(graph, node_id, snapshot, snapshot["run_instance_id"]) for node_id in item.conflicting_node_ids],
                     "limiting_material": [_material(graph, node_id, snapshot, snapshot["run_instance_id"]) for node_id in item.mitigating_node_ids],
                     "unresolved_points": [_humanize(point, snapshot) for point in item.unresolved_points],
                 }
@@ -217,6 +218,16 @@ def public_report_from_record(
                                     ],
                                 }
                                 for material in finding["limiting_material"]
+                            ],
+                            "conflictingMaterial": [
+                                {
+                                    "statement": material["statement"],
+                                    "sources": [
+                                        {"sourceHandle": source["source_handle"], "fileName": source["file_name"]}
+                                        for source in material["sources"]
+                                    ],
+                                }
+                                for material in finding.get("conflicting_material", [])
                             ],
                             "unresolvedPoints": finding["unresolved_points"],
                         }

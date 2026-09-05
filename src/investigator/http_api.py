@@ -343,7 +343,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                     return
                 if parts[3] == "sources":
                     if set(payload) - {"fileName", "content", "mediaType", "caseRevision"}: raise ValueError("Invalid source request")
-                    source = self.workflow.add_direct_source(parts[2], display_name=str(payload.get("fileName") or ""), content=str(payload.get("content") or ""), source_type=SourceType.DOCUMENT, metadata={"media_type": payload.get("mediaType") or "text/plain"}, assessment_scope=GraphScope(scope_type="case"), expected_case_revision=expected)
+                    source = self.workflow.add_direct_source(parts[2], display_name=str(payload.get("fileName") or ""), content=str(payload.get("content") or ""), source_type=SourceType.DOCUMENT, metadata={"media_type": payload.get("mediaType") or "text/plain"}, expected_case_revision=expected)
                     self._write(200, {"source": {"sourceHandle": public_source_handle(parts[2], source.id), "fileName": source.name, "documentFormat": document_format(source.name)}, "workspace": self._public_workspace(parts[2])})
                 else:
                     if set(payload) - {"displayName", "caseRevision"}: raise ValueError("Invalid student request")

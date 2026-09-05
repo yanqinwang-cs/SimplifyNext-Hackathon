@@ -247,7 +247,7 @@ class VNextInvestigationRunner:
         graph: CaseGraph,
     ) -> ViolationAssessment:
         values = assessment.model_dump()
-        for field_name in ("supporting_node_ids", "mitigating_node_ids"):
+        for field_name in ("supporting_node_ids", "conflicting_node_ids", "mitigating_node_ids"):
             values[field_name] = [cls._resolve_node_id(identifier, local_refs, graph) for identifier in values[field_name]]
         return ViolationAssessment.model_validate(values)
 
@@ -279,14 +279,14 @@ class VNextInvestigationRunner:
                 raise VNextRunValidationError(
                     f"Subject {subject_id!r} status {violation.status.value!r} requires supporting material"
                 )
-            for field_name in ("supporting_node_ids", "mitigating_node_ids"):
+            for field_name in ("supporting_node_ids", "conflicting_node_ids", "mitigating_node_ids"):
                 for node_id in getattr(violation, field_name):
                     node = graph.nodes[node_id]
-                    if field_name == "supporting_node_ids" and node.node_type not in {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}:
+                    if field_name in {"supporting_node_ids", "conflicting_node_ids", "mitigating_node_ids"} and node.node_type not in {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}:
                         raise VNextRunValidationError(
                             f"Subject {subject_id!r} supporting material must resolve to evidence or proposition, not {node.node_type.value}"
                         )
-                    if field_name == "supporting_node_ids" and not source_ancestry(graph, node_id):
+                    if field_name in {"supporting_node_ids", "conflicting_node_ids", "mitigating_node_ids"} and not source_ancestry(graph, node_id):
                         raise VNextRunValidationError(f"Subject {subject_id!r} supporting material {node_id!r} has no admitted source ancestry")
                     scope = node_scope(node.metadata)
                     if not scope_allows_subject(scope, subject_id, dict(relationships)):

@@ -117,7 +117,7 @@ class HumanEvidenceWorkflow:
             snapshot = build_input_snapshot(state, preset, run_instance_id)
             self._write_run_result(directory / "assessment_input_snapshot.json", snapshot)
             started_at = datetime.now(timezone.utc).isoformat()
-            self._write_run_result(directory / "run_result.json", {"run_id": run_id, "run_instance_id": run_instance_id, "started_at": started_at, "ended_at": None, "termination_reason": None, "final_runtime_status": runtime_status, "outcome_type": "RUNNING", "originating_actor": "INVESTIGATOR", "start_revision": start_revision, "run_start_revision": start_revision, "latest_safe_revision": start_revision, "final_committed_revision": start_revision, "model_calls": 0, "proposal_correction_calls": 0, "clean_execution_retries": 0, "correction_retries": 0, "final_error": None, "pending_request_id": None, "trace_path": f"/api/cases/{state.case_id}/runs/{run_id}/raw-traces"})
+            self._write_run_result(directory / "run_result.json", {"run_id": run_id, "run_instance_id": run_instance_id, "started_at": started_at, "ended_at": None, "termination_reason": None, "final_runtime_status": runtime_status, "outcome_type": "RUNNING", "trace_finalized": False, "originating_actor": "INVESTIGATOR", "start_revision": start_revision, "run_start_revision": start_revision, "latest_safe_revision": start_revision, "final_committed_revision": start_revision, "model_calls": 0, "proposal_correction_calls": 0, "clean_execution_retries": 0, "correction_retries": 0, "final_error": None, "pending_request_id": None, "trace_path": f"/api/cases/{state.case_id}/runs/{run_id}/raw-traces"})
         except Exception:
             shutil.rmtree(directory, ignore_errors=True)
             raise
@@ -176,6 +176,7 @@ class HumanEvidenceWorkflow:
                     "termination_reason": "process_restart",
                     "final_runtime_status": "INTERRUPTED",
                     "outcome_type": "INTERRUPTED",
+                    "trace_finalized": True,
                     "final_error": error,
                 })
                 self._write_run_result(path, result)
@@ -197,7 +198,7 @@ class HumanEvidenceWorkflow:
             result = json.loads(path.read_text(encoding="utf-8"))
             pending = next((item for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None)
             outcome = "WAITING_FOR_EVIDENCE" if pending else {"IDLE": "COMPLETED", "STOPPED": "STOPPED", "FAILED": "FAILED"}.get(state.runtime_status, state.runtime_status)
-            result.update({"ended_at": datetime.now(timezone.utc).isoformat(), "termination_reason": termination_reason or state.runtime_status.lower(), "final_runtime_status": state.runtime_status, "outcome_type": outcome, "final_case_revision": state.revision, "latest_safe_revision": state.revision, "final_committed_revision": state.revision, "final_error": final_error or state.last_error, "pending_request_id": pending.request_id if pending else None, "request_text": pending.information_sought if pending else None})
+            result.update({"ended_at": datetime.now(timezone.utc).isoformat(), "termination_reason": termination_reason or state.runtime_status.lower(), "final_runtime_status": state.runtime_status, "outcome_type": outcome, "trace_finalized": outcome in {"COMPLETED", "FAILED", "STOPPED", "INTERRUPTED"}, "final_case_revision": state.revision, "latest_safe_revision": state.revision, "final_committed_revision": state.revision, "final_error": final_error or state.last_error, "pending_request_id": pending.request_id if pending else None, "request_text": pending.information_sought if pending else None})
             self._write_run_result(path, result)
 
     def record_model_attempt(self, case_id: str, *, correction: bool = False, kind: str | None = None) -> None:
@@ -527,17 +528,18 @@ class HumanEvidenceWorkflow:
             self._check_revision(state, expected_case_revision)
             if not display_name.strip() or not content.strip():
                 raise ValueError("display_name and content are required")
-            scope = GraphScope.model_validate(assessment_scope) if assessment_scope is not None else GraphScope(scope_type=GraphScopeType.CASE)
-            if scope.scope_type is GraphScopeType.SUBJECT and scope.subject_id not in state.subjects:
-                raise ValueError(f"Unknown subject ID: {scope.subject_id!r}")
-            if scope.scope_type is GraphScopeType.RELATIONSHIP:
-                relationship = state.subject_relationships.get(scope.relationship_id)
-                if relationship is None:
-                    raise ValueError(f"Unknown relationship ID: {scope.relationship_id!r}")
-                if len(relationship.subject_ids) < 2:
-                    raise ValueError("A relationship scope requires at least two subjects")
             source_metadata = dict(metadata or {})
-            source_metadata["assessment_scope"] = scope.model_dump(mode="json")
+            if assessment_scope is not None:
+                scope = GraphScope.model_validate(assessment_scope)
+                if scope.scope_type is GraphScopeType.SUBJECT and scope.subject_id not in state.subjects:
+                    raise ValueError(f"Unknown subject ID: {scope.subject_id!r}")
+                if scope.scope_type is GraphScopeType.RELATIONSHIP:
+                    relationship = state.subject_relationships.get(scope.relationship_id)
+                    if relationship is None:
+                        raise ValueError(f"Unknown relationship ID: {scope.relationship_id!r}")
+                    if len(relationship.subject_ids) < 2:
+                        raise ValueError("A relationship scope requires at least two subjects")
+                source_metadata["assessment_scope"] = scope.model_dump(mode="json")
             source = SourceRegistry.register_raw_source(
                 state, display_name.strip(), content, source_metadata, add_to_graph=False
             )
@@ -988,7 +990,7 @@ class HumanEvidenceWorkflow:
                     # A run may be initializing on another thread; omit it until
                     # its first result snapshot is complete.
                     continue
-                runs.append({key: payload.get(key) for key in ("run_id", "run_instance_id", "started_at", "ended_at", "termination_reason", "final_runtime_status", "outcome_type", "originating_actor", "start_revision", "run_start_revision", "latest_safe_revision", "final_case_revision", "final_committed_revision", "final_error", "pending_request_id", "request_text", "trace_path", "vnext_status", "vnext_result_path", "report_record_path", "vnext_furthest_conclusion", "vnext_subject_conclusions", "model", "model_calls", "proposal_correction_calls", "clean_execution_retries", "correction_retries", "input_tokens", "output_tokens", "latency_seconds", "finish_reason")})
+                runs.append({key: payload.get(key) for key in ("run_id", "run_instance_id", "started_at", "ended_at", "termination_reason", "final_runtime_status", "outcome_type", "trace_finalized", "originating_actor", "start_revision", "run_start_revision", "latest_safe_revision", "final_case_revision", "final_committed_revision", "final_error", "pending_request_id", "request_text", "trace_path", "vnext_status", "vnext_result_path", "report_record_path", "vnext_furthest_conclusion", "vnext_subject_conclusions", "model", "model_calls", "proposal_correction_calls", "clean_execution_retries", "correction_retries", "input_tokens", "output_tokens", "latency_seconds", "finish_reason")})
         return runs
 
     def raw_trace_path(self, case_id: str, run_id: str) -> Path:
@@ -1073,7 +1075,7 @@ class HumanEvidenceWorkflow:
         run = next((item for item in self.get_runs(case_id) if item.get("run_id") == run_id), None)
         if run is None:
             raise KeyError("Assessment run not found")
-        if run.get("outcome_type") not in {"COMPLETED", "FAILED", "STOPPED", "INTERRUPTED"}:
+        if run.get("outcome_type") not in {"COMPLETED", "FAILED", "STOPPED", "INTERRUPTED"} or run.get("trace_finalized") is not True:
             raise RuntimeError("Assessment trace is not finalized")
         return self.sanitized_raw_trace(case_id, run_id)
 

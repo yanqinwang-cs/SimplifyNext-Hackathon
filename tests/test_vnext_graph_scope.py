@@ -173,5 +173,5 @@ def test_prompt_requires_explicit_scope_and_relationship_discipline() -> None:
     rule = AssessmentRulePreset(preset_id="p", violations=[ViolationDefinition(violation_id="V1", label="V1", rule_text="r", prohibited_conduct="c")])
     run = VNextRunInput(case_id="case-01", sources={"S1": source()}, subjects=subjects(), subject_relationships={key: value.model_copy(update={"source_ids": ["S1"]}) for key, value in relationships().items()}, rule_preset=rule)
     prompt = build_prompt(run)
-    assert "every semantic graph node requires an explicit appropriate scope" in prompt
-    assert "do not invent relationships" in prompt
+    assert "every semantic item must explicitly list" in prompt.lower()
+    assert "do not combine separately restricted student evidence" in prompt.lower()

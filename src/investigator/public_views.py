@@ -43,7 +43,7 @@ def assessment_view(workflow: Any, case_id: str) -> dict[str, Any]:
     def attempt(item: dict[str, Any] | None) -> dict[str, Any] | None:
         if not item: return None
         outcome = str(item.get("outcome_type") or "RUNNING").lower()
-        return {"runHandle": public_run_handle_for_instance(case_id, str(item["run_id"]), item.get("run_instance_id")), "state": outcome, "startedAt": item.get("started_at"), "endedAt": item.get("ended_at"), "message": (item.get("final_error") or {}).get("message", "") if isinstance(item.get("final_error"), dict) else ""}
+        return {"runHandle": public_run_handle_for_instance(case_id, str(item["run_id"]), item.get("run_instance_id")), "state": outcome, "startedAt": item.get("started_at"), "endedAt": item.get("ended_at"), "traceReady": item.get("trace_finalized") is True, "message": (item.get("final_error") or {}).get("message", "") if isinstance(item.get("final_error"), dict) else ""}
     return {"state": public_state, "activeRun": attempt(active), "latestAttempt": attempt(latest), "reportAvailable": successful is not None, "reportStale": public_state == "stale"}
 
 class PublicStudent(BaseModel):

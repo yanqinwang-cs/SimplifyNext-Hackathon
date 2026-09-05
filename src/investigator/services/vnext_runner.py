@@ -588,7 +588,7 @@ class VNextProductionRunner:
         run_summary.update(
             {
                 "final_runtime_status": "COMPLETED",
-                "outcome_type": "COMPLETED",
+                "trace_finalized": False,
                 "vnext_status": result.status.value,
                 "vnext_result_path": str(destination),
                 "report_record_path": str(report_destination),
