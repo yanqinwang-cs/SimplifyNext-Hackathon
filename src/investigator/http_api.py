@@ -147,8 +147,10 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             try:
                 run_id = resolve_run_handle(self.workflow, parts[2], parts[4])
                 body = self.workflow.audit_trace_file(parts[2], run_id, parts[4])
-                filename = f"caselens-{_safe_filename_token(parts[2])}-{_safe_filename_token(parts[4])}-audit-trace.jsonl"
+                filename = f"caselens-{_safe_filename_token(parts[2])}-{_safe_filename_token(parts[4])}-trace.jsonl"
                 self._write_bytes(200, body, "application/x-ndjson; charset=utf-8", f'attachment; filename="{filename}"')
+            except RuntimeError:
+                self._write(409, {"error": "Assessment trace is not finalized"})
             except (KeyError, ValueError):
                 self._write(404, {"error": "Assessment trace not found"})
             return

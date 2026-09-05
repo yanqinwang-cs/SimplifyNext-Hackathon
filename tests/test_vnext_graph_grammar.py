@@ -40,10 +40,9 @@ def test_model_grammar_matches_vnext_operations_and_registry_reference_types() -
                 assert node_type.value.upper() in grammar
 
 
-def test_prompt_contains_complete_grammar_and_demonstrated_prohibitions() -> None:
+def test_prompt_exposes_semantic_ir_not_graph_programming() -> None:
     prompt = build_prompt(_run_input())
-    assert "COMPLETE LEGAL GRAPH OPERATION CONTRACT" in prompt
-    assert "SUBJECT -> RELATIONSHIP" in prompt
-    assert "HYPOTHESIS -> SUPPORTS -> HYPOTHESIS" in prompt
-    assert "add_evidence" in prompt and "add_specialization" in prompt
-    assert "IF YOU ARE UNSURE WHETHER A GRAPH OPERATION IS LEGAL, OMIT IT" in prompt
+    assert "Return meaning-level semantic items only" in prompt
+    assert "InvestigatorSemanticAssessment" in prompt
+    assert "add_evidence" not in prompt
+    assert "OperationSpec" not in prompt

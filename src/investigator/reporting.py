@@ -7,12 +7,13 @@ import hashlib
 import re
 from typing import Any
 
-from investigator.graph import CaseGraph, EdgeRelation
+from investigator.graph import CaseGraph
 from investigator.models.assessment import AssessmentSubject
 from investigator.models.source import Source
 from investigator.public_views import document_format, public_assessment_source_handle
 from investigator.vnext.models import AssessmentRulePreset, AssessmentStatus
 from investigator.vnext.source_applicability import build_source_applicability, source_applicability_snapshot
+from investigator.vnext.provenance import source_ancestry
 
 
 REPORT_SCHEMA_VERSION = 1
@@ -73,21 +74,6 @@ def _humanize(text: str, snapshot: Mapping[str, Any]) -> str:
     return result
 
 
-def _source_ancestry(graph: CaseGraph, node_id: str) -> set[str]:
-    sources: set[str] = set()
-    pending = [node_id]
-    seen: set[str] = set()
-    while pending:
-        current = pending.pop()
-        if current in seen or current not in graph.nodes:
-            continue
-        seen.add(current)
-        node = graph.nodes[current]
-        sources.update(item for item in node.metadata.get("source_ids", []) if isinstance(item, str))
-        pending.extend(edge.target_id for edge in graph.outgoing(current, EdgeRelation.DERIVED_FROM))
-    return sources
-
-
 def _material(
     graph: CaseGraph,
     node_id: str,
@@ -97,7 +83,7 @@ def _material(
     if node_id not in graph.nodes:
         raise ValueError(f"Report references missing graph node {node_id!r}")
     source_by_id = {str(item["source_id"]): item for item in snapshot.get("sources", [])}
-    source_ids = _source_ancestry(graph, node_id)
+    source_ids = source_ancestry(graph, node_id)
     unknown = sorted(source_ids - set(source_by_id))
     if unknown:
         raise ValueError(f"Report references sources outside the admitted snapshot: {unknown}")
@@ -153,6 +139,16 @@ def build_report_record(
                     "unresolved_points": [_humanize(point, snapshot) for point in item.unresolved_points],
                 }
                 for item in findings
+            ],
+            "alternative_explanations": [
+                {
+                    "statement": _humanize(item.statement, snapshot),
+                    "supporting_material": [
+                        _material(graph, node_id, snapshot, snapshot["run_instance_id"])
+                        for node_id in item.source_node_ids
+                    ],
+                }
+                for item in getattr(assessment, "alternative_explanations", [])
             ],
             "furthest_conclusion": _humanize(assessment.furthest_conclusion.statement, snapshot),
         })
@@ -227,6 +223,22 @@ def public_report_from_record(
                         for finding in student["violations"]
                     ],
                     "furthestConclusion": student["furthest_conclusion"],
+                    "alternativeExplanations": [
+                        {
+                            "statement": item["statement"],
+                            "supportingMaterial": [
+                                {
+                                    "statement": material["statement"],
+                                    "sources": [
+                                        {"sourceHandle": source["source_handle"], "fileName": source["file_name"]}
+                                        for source in material["sources"]
+                                    ],
+                                }
+                                for material in item["supporting_material"]
+                            ],
+                        }
+                        for item in student.get("alternative_explanations", [])
+                    ],
                 }
                 for student in record["students"]
             ],

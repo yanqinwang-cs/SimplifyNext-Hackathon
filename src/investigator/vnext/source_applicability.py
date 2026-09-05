@@ -32,9 +32,13 @@ class SourceApplicability(BaseModel):
 
     source_id: str = Field(min_length=1)
     matched_student_ids: list[str] = Field(default_factory=list)
+    identifier_mentions: list[str] = Field(default_factory=list)
     classification: SourceApplicabilityClassification
     basis: str = Field(pattern=r"^(?:trusted_internal_scope|exact_identifier_match|single_student_default|no_identifier_match)$")
     trusted_scope: GraphScope | None = None
+    permitted_subject_ids: list[str] = Field(default_factory=list)
+    permitted_relationship_ids: list[str] = Field(default_factory=list)
+    case_shared_allowed: bool = False
 
     @model_validator(mode="after")
     def matched_ids_are_unique(self) -> "SourceApplicability":
@@ -142,12 +146,34 @@ def build_source_applicability(
                 classification = SourceApplicabilityClassification.MULTI_STUDENT_CANDIDATE
                 relationship = relationships[trusted.relationship_id or ""]
                 matched = sorted(set(relationship.subject_ids))
+        permitted_subject_ids: list[str]
+        permitted_relationship_ids: list[str] = []
+        case_shared_allowed = False
+        if trusted is not None:
+            if trusted.scope_type is GraphScopeType.CASE:
+                permitted_subject_ids = sorted(subjects)
+                case_shared_allowed = True
+            elif trusted.scope_type is GraphScopeType.SUBJECT:
+                permitted_subject_ids = [trusted.subject_id or ""]
+            else:
+                relationship = relationships[trusted.relationship_id or ""]
+                permitted_subject_ids = sorted(relationship.subject_ids)
+                permitted_relationship_ids = [relationship.relationship_id]
+        elif not matched:
+            permitted_subject_ids = sorted(subjects)
+            case_shared_allowed = True
+        else:
+            permitted_subject_ids = list(matched)
         result[source_id] = SourceApplicability(
             source_id=source_id,
             matched_student_ids=matched,
+            identifier_mentions=list(matched),
             classification=classification,
             basis=basis,
             trusted_scope=trusted,
+            permitted_subject_ids=permitted_subject_ids,
+            permitted_relationship_ids=permitted_relationship_ids,
+            case_shared_allowed=case_shared_allowed,
         )
     return result
 
@@ -159,18 +185,7 @@ def source_applies_to_student(
 ) -> bool:
     """Return whether source material may contribute to one student's graph."""
 
-    if applicability.trusted_scope is not None:
-        scope = applicability.trusted_scope
-        if scope.scope_type is GraphScopeType.CASE:
-            return True
-        if scope.scope_type is GraphScopeType.SUBJECT:
-            return scope.subject_id == subject_id
-        return subject_id in (applicability.matched_student_ids or [])
-    if applicability.classification is SourceApplicabilityClassification.SINGLE_STUDENT_DEFAULT:
-        return len(subjects) == 1 and subject_id in subjects
-    if applicability.classification is SourceApplicabilityClassification.CASE_SHARED:
-        return True
-    return subject_id in applicability.matched_student_ids
+    return subject_id in applicability.permitted_subject_ids
 
 
 def source_jointly_identifies(
@@ -182,13 +197,11 @@ def source_jointly_identifies(
 
     if not participant_ids:
         return False
-    if applicability.trusted_scope is not None:
-        scope = applicability.trusted_scope
-        if scope.scope_type is GraphScopeType.RELATIONSHIP:
-            if relationships is not None and scope.relationship_id in relationships:
-                return participant_ids.issubset(set(relationships[scope.relationship_id].subject_ids))
-            return participant_ids.issubset(set(applicability.matched_student_ids))
-    return participant_ids.issubset(set(applicability.matched_student_ids))
+    if applicability.trusted_scope is not None and applicability.trusted_scope.scope_type is GraphScopeType.RELATIONSHIP:
+        if relationships is not None and applicability.trusted_scope.relationship_id in relationships:
+            return participant_ids.issubset(set(relationships[applicability.trusted_scope.relationship_id].subject_ids))
+        return participant_ids.issubset(set(applicability.permitted_subject_ids))
+    return participant_ids.issubset(set(applicability.permitted_subject_ids)) and len(participant_ids) > 1
 
 
 def source_applicability_snapshot(index: Mapping[str, SourceApplicability]) -> dict[str, dict[str, object]]:

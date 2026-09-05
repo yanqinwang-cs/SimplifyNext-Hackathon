@@ -6,7 +6,7 @@ from typing import Any
 
 from investigator.llm import ModelCallResult, ModelClient
 from investigator.vnext.models import InvestigatorAssessment, InvestigatorProposal, VNextRunInput
-from investigator.vnext.graph_grammar import model_facing_graph_grammar
+from investigator.vnext.semantic import InvestigatorSemanticAssessment
 from investigator.vnext.source_applicability import SourceApplicabilityClassification
 from investigator.vnext.relationships import relationship_scope_prompt_view
 from investigator.vnext.warden import ProposalValidationIssue
@@ -56,35 +56,21 @@ def build_prompt(run_input: VNextRunInput) -> str:
     for source_id, source in sorted(run_input.sources.items()):
         item = {"source_id": source_id, "filename": source.name, "content": source.content or ""}
         applicability = run_input.source_applicability[source_id]
-        if applicability.classification is SourceApplicabilityClassification.CASE_SHARED:
+        if applicability.case_shared_allowed:
             sources["case_shared"].append(item)
-        elif applicability.classification is SourceApplicabilityClassification.SINGLE_STUDENT_DEFAULT:
-            sources["student_specific"].setdefault(next(iter(run_input.subjects), "case_subject"), []).append(item)
-        elif applicability.classification is SourceApplicabilityClassification.STUDENT_SPECIFIC:
-            for subject_id in applicability.matched_student_ids:
+        elif applicability.permitted_relationship_ids:
+            sources["multi_student_candidate"].append({**item, "matched_student_ids": applicability.permitted_subject_ids})
+        else:
+            for subject_id in applicability.permitted_subject_ids:
                 bucket = sources["student_specific"].setdefault(subject_id, [])
                 if not any(existing["source_id"] == source_id for existing in bucket):
                     bucket.append(item)
-            if applicability.trusted_scope is not None and applicability.trusted_scope.subject_id:
-                bucket = sources["student_specific"].setdefault(applicability.trusted_scope.subject_id, [])
-                if not any(existing["source_id"] == source_id for existing in bucket):
-                    bucket.append(item)
-        else:
-            sources["multi_student_candidate"].append({**item, "matched_student_ids": applicability.matched_student_ids})
     subjects = {
         subject_id: {"display_name": subject.display_name, "candidate_number": subject.candidate_number}
         for subject_id, subject in sorted(run_input.subjects.items())
     }
     relationships = relationship_scope_prompt_view(run_input.relationship_scopes)
-    schema = InvestigatorAssessment.model_json_schema()
-    graph_scope_schema = schema.get("$defs", {}).get("GraphScope")
-    if isinstance(graph_scope_schema, dict):
-        properties = graph_scope_schema.get("properties")
-        if isinstance(properties, dict):
-            properties.pop("relationship_id", None)
-        required = graph_scope_schema.get("required")
-        if isinstance(required, list) and "relationship_id" in required:
-            required.remove("relationship_id")
+    schema = InvestigatorSemanticAssessment.model_json_schema()
     retry_section = (
         "\nDETERMINISTIC RETRY CONSTRAINTS\n"
         + "\n".join(f"- {constraint}" for constraint in run_input.retry_constraints)
@@ -115,14 +101,13 @@ def build_prompt(run_input: VNextRunInput) -> str:
             "If communication is prohibited, do not require proof of its exact medium or extent.",
             "Evidence discipline: a document is a source; text in it is a source statement or recorded observation, not automatically a true proposition. Reliability, independence, specificity, and conflict matter. A claim is not automatically a fact; contradiction establishes inconsistency, not deception or intent; similarity does not establish copying or collaboration; association does not establish prohibited collaboration; opportunity does not establish use; anomaly does not establish misconduct; credential or device linkage does not establish the human actor; knowledge does not establish guilt; and absence of current support does not establish innocence.",
             "Misconduct requires relevant conduct plus applicable policy context. Policy is normative evaluation criteria, not factual evidence. Assess each student independently; relationship participation never propagates guilt.",
-            "Raw source IDs identify source records, not automatically established facts. Use graph proposals for any E/P/H/U concepts you need, and reference proposal local_ref values in the assessment after proposing them. Relationship scopes use local relationship_ref values such as R1, never persistent relationship IDs.",
+            "Return meaning-level semantic items only. Do not emit graph operations, graph scopes, node IDs, edge directions, validator terms, or internal graph registry details. Every semantic item must declare about_subject_ids and basis_source_ids; propositions may also use basis_item_refs for earlier semantic items. Supporting and limiting references must name semantic item local_refs, not graph nodes.",
             "Return JSON only. Use exactly the current schema below. Do not add fields.",
             "\nCONFIGURED STUDENTS (REPORTING TARGETS ONLY)\n" + json.dumps(subjects, indent=2),
             "\nAPPLICABLE POLICY / CONFIGURED VIOLATIONS (NORMATIVE CONTEXT, NOT FACTUAL EVIDENCE)\n" + json.dumps(run_input.rule_preset.model_dump(mode="json"), indent=2),
             "\nADMITTED EVIDENCE SOURCES — CASE-WIDE / STUDENT-SPECIFIC / MULTI-STUDENT CANDIDATE (SOURCE STATEMENTS ARE NOT AUTOMATICALLY TRUE)\n" + json.dumps(sources, indent=2),
             "\nAVAILABLE INTERNAL RELATIONSHIP SCOPES (LOCAL REFS ONLY; STRUCTURAL SCOPE, NOT FINDINGS)\n" + json.dumps(relationships, indent=2),
             "\nEXPECTED CONFIGURED STUDENT IDS\n" + json.dumps(sorted(run_input.subjects) or ["case_subject"]),
-            "\n" + model_facing_graph_grammar(),
             retry_section,
             "\nEXACT INVESTIGATOR ASSESSMENT JSON SCHEMA\n"
             + json.dumps(schema, indent=2, sort_keys=True),
@@ -146,8 +131,7 @@ def build_corrective_prompt(
             "Do not add new factual predicates, conduct, intent, use, communication, assistance, or certainty to node statements during repair unless that meaning was already present in the frozen first assessment or proposal.",
             "When creating a missing node required only for graph representation, use the narrowest statement needed to represent the existing frozen semantic conclusion.",
             "Interpret issue fields precisely: allowed_types are for the failed field; construction_allowed_types are legal inputs for constructing a missing node; known_illegal_refs are refs illegal for this specific field only, not globally.",
-            "\n" + model_facing_graph_grammar(),
-            "Return only a corrected InvestigatorProposal matching its required schema.",
+                "Return only a corrected InvestigatorProposal matching its required schema.",
             "\nPREVIOUS PROPOSAL\n" + json.dumps(assessment.proposal.model_dump(mode="json"), indent=2),
             "\nDETERMINISTIC VALIDATION ISSUES\n"
             "Each issue is authoritative. Read its operation_index, field, problem, and required_action.\n"

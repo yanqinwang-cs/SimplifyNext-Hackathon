@@ -106,7 +106,8 @@ export interface TraceResponse { caseId: string; runHandle: string; outcome: str
 export interface ReportSourceReference { sourceHandle: string; fileName: string; }
 export interface ReportMaterial { statement: string; sources: ReportSourceReference[]; }
 export interface ReportViolation { label: string; status: string; reasoningSummary: string; supportingMaterial: ReportMaterial[]; limitingMaterial: ReportMaterial[]; unresolvedPoints: string[]; }
-export interface ReportStudent { sectionHandle: string; displayName: string; violations: ReportViolation[]; furthestConclusion: string; }
+export interface ReportAlternative { statement: string; supportingMaterial: ReportMaterial[]; }
+export interface ReportStudent { sectionHandle: string; displayName: string; violations: ReportViolation[]; furthestConclusion: string; alternativeExplanations?: ReportAlternative[]; }
 export interface ReportResponse {
   caseId: string;
   currentCaseName: string;

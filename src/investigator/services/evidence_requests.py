@@ -1073,6 +1073,8 @@ class HumanEvidenceWorkflow:
         run = next((item for item in self.get_runs(case_id) if item.get("run_id") == run_id), None)
         if run is None:
             raise KeyError("Assessment run not found")
+        if run.get("outcome_type") not in {"COMPLETED", "FAILED", "STOPPED", "INTERRUPTED"}:
+            raise RuntimeError("Assessment trace is not finalized")
         return self.sanitized_raw_trace(case_id, run_id)
 
     @staticmethod

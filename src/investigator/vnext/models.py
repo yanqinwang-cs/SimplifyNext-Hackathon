@@ -167,12 +167,20 @@ class FurthestJustifiedConclusion(BaseModel):
     confidence: Confidence
 
 
+class AlternativeExplanation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    statement: str = Field(min_length=1)
+    source_node_ids: list[str] = Field(default_factory=list)
+
+
 class SubjectAssessment(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     subject_id: str = Field(min_length=1)
     violation_assessments: list[ViolationAssessment] = Field(min_length=1)
     furthest_conclusion: FurthestJustifiedConclusion
+    alternative_explanations: list[AlternativeExplanation] = Field(default_factory=list)
 
 
 class InvestigatorAssessment(BaseModel):

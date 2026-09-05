@@ -84,7 +84,7 @@ def test_bedrock_transport_config_is_explicit_and_bounded() -> None:
     config = bedrock_transport_config()
     assert config.connect_timeout == BEDROCK_CONNECT_TIMEOUT_SECONDS == 10
     assert config.read_timeout == BEDROCK_READ_TIMEOUT_SECONDS == 300
-    assert config.retries == {"mode": "standard", "max_attempts": 1}
+    assert config.retries == {"mode": "standard", "total_max_attempts": 1}
 
 
 def test_default_and_temporary_credential_paths_use_the_same_config(monkeypatch) -> None:
@@ -121,7 +121,7 @@ def test_default_and_temporary_credential_paths_use_the_same_config(monkeypatch)
     assert calls[2][1]["service"] == "bedrock-runtime"
     assert calls[0][1]["config"].connect_timeout == calls[2][1]["config"].connect_timeout == 10
     assert calls[0][1]["config"].read_timeout == calls[2][1]["config"].read_timeout == 300
-    assert calls[0][1]["config"].retries == calls[2][1]["config"].retries == {"mode": "standard", "max_attempts": 1}
+    assert calls[0][1]["config"].retries == calls[2][1]["config"].retries == {"mode": "standard", "total_max_attempts": 1}
 
 
 def test_injected_client_does_not_construct_boto3(monkeypatch) -> None:

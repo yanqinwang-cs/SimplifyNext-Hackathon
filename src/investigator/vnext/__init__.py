@@ -3,6 +3,7 @@
 from investigator.vnext.models import (
     AssessmentRulePreset,
     AssessmentStatus,
+    AlternativeExplanation,
     Confidence,
     FurthestJustifiedConclusion,
     InvestigatorAssessment,
@@ -30,6 +31,7 @@ __all__ = [
     "GraphWarden",
     "AssessmentRulePreset",
     "AssessmentStatus",
+    "AlternativeExplanation",
     "Confidence",
     "FurthestJustifiedConclusion",
     "InvestigatorAssessment",

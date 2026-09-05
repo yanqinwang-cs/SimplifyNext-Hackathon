@@ -27,6 +27,8 @@ from investigator.vnext import (
 )
 from investigator.vnext.model import VNextInvestigatorModel, build_corrective_prompt, build_prompt
 from investigator.vnext.models import AssessmentRulePreset, AssessmentStatus, Confidence, FurthestJustifiedConclusion, InvestigatorAssessment, InvestigatorProposal, SubjectAssessment, ViolationAssessment
+from investigator.vnext.semantic import InvestigatorSemanticAssessment, SemanticValidationError, compile_semantic_assessment
+from investigator.vnext.source_applicability import source_applicability_snapshot
 from investigator.vnext.presets import preset_for_case
 from investigator.runtime_settings import effective_model
 from investigator.reporting import build_report_record
@@ -183,6 +185,7 @@ class VNextProductionRunner:
             )
             corrective_attempted = False
             first_assessment: InvestigatorAssessment | None = None
+            semantic_path = substantive_sources
             try:
                 if not substantive_sources:
                     first_assessment = self._zero_evidence_assessment(run_input)
@@ -191,16 +194,61 @@ class VNextProductionRunner:
                         case_id,
                         kind="initial" if attempt_number == 1 else "clean_execution_retry",
                     )
-                    first_assessment = call_model(
+                    semantic_assessment = call_model(
                         investigator,
                         build_prompt(run_input),
-                        InvestigatorAssessment,
+                        InvestigatorSemanticAssessment,
                         attempt_number=attempt_number,
-                        call_kind="initial" if attempt_number == 1 else "clean_execution_retry",
+                        call_kind="semantic_initial" if attempt_number == 1 else "semantic_clean_execution_retry",
                     )
+                    workflow.record_trace(case_id, {
+                        "event": "vnext_semantic_compilation_started",
+                        "actor": "investigator",
+                        "runtime_status": "RUNNING",
+                        "attempt_number": attempt_number,
+                        "run_id": workflow.current_run_id(case_id),
+                        "case_id": case_id,
+                        "evidence_use_map": source_applicability_snapshot(run_input.source_applicability),
+                    })
+                    try:
+                        first_assessment = compile_semantic_assessment(semantic_assessment, run_input, preset=preset)
+                    except SemanticValidationError as semantic_error:
+                        workflow.record_trace(case_id, {
+                            "event": "vnext_semantic_validation_failed",
+                            "actor": "investigator",
+                            "runtime_status": "RUNNING" if attempt_number < self.max_attempts else "FAILED",
+                            "attempt_number": attempt_number,
+                            "run_id": workflow.current_run_id(case_id),
+                            "case_id": case_id,
+                            "failure_category": "SEMANTIC_VALIDATION",
+                            "error": redact_sensitive_text(str(semantic_error)),
+                            "evidence_use_map": source_applicability_snapshot(run_input.source_applicability),
+                        })
+                        raise
+                    workflow.record_trace(case_id, {
+                        "event": "vnext_semantic_compilation_completed",
+                        "actor": "investigator",
+                        "runtime_status": "RUNNING",
+                        "attempt_number": attempt_number,
+                        "run_id": workflow.current_run_id(case_id),
+                        "case_id": case_id,
+                        "compiled_proposal": first_assessment.proposal.model_dump(mode="json"),
+                    })
                 try:
                     result = VNextInvestigationRunner(lambda _: first_assessment).run(run_input)
                 except WardenValidationError as validation_error:
+                    if semantic_path:
+                        workflow.record_trace(case_id, {
+                            "event": "vnext_warden_validation_failed",
+                            "actor": "investigator",
+                            "runtime_status": "FAILED",
+                            "attempt_number": attempt_number,
+                            "run_id": workflow.current_run_id(case_id),
+                            "case_id": case_id,
+                            "validation_issues": [issue.model_dump(mode="json") for issue in validation_error.issues],
+                            "implementation_defect": True,
+                        })
+                        raise
                     failure_class = classify_warden_failure(validation_error)
                     if failure_class is WardenFailureClass.SEMANTIC_AFFECTING:
                         issues = [issue.model_dump(mode="json") for issue in validation_error.issues]
@@ -444,7 +492,7 @@ class VNextProductionRunner:
                         "finish_reason": metadata.finish_reason if metadata else None,
                     },
                 )
-                if corrective_attempted or not self._retryable(exc) or attempt_number == self.max_attempts:
+                if corrective_attempted or (semantic_path and isinstance(exc, WardenValidationError)) or not self._retryable(exc) or attempt_number == self.max_attempts:
                     raise
         raise AssertionError(f"vNext run ended without a result: {last_error}")
 
@@ -474,7 +522,7 @@ class VNextProductionRunner:
     @staticmethod
     def _zero_evidence_assessment(run_input: VNextRunInput) -> InvestigatorAssessment:
         assessments = []
-        for subject_id in sorted(run_input.subjects):
+        for subject_id in run_input.subjects:
             assessments.append(SubjectAssessment(subject_id=subject_id, violation_assessments=[ViolationAssessment(violation_id=item.violation_id, status=AssessmentStatus.NOT_CURRENTLY_SUPPORTED, reasoning_summary="The current record contains no substantive evidence for this assessment.", confidence=Confidence.LOW) for item in run_input.rule_preset.violations], furthest_conclusion=FurthestJustifiedConclusion(statement="The current record does not support a finding on the configured violations.", confidence=Confidence.LOW)))
         return InvestigatorAssessment(proposal=InvestigatorProposal(graph_updates=[]), subject_assessments=assessments)
 
@@ -484,7 +532,7 @@ class VNextProductionRunner:
         # issue a fresh paid request for this ambiguous transport failure.
         if is_provider_timeout(exc):
             return False
-        return isinstance(exc, (ModelParseError, VNextRunValidationError, WardenValidationError, RuntimeError))
+        return isinstance(exc, (ModelParseError, VNextRunValidationError, SemanticValidationError, WardenValidationError, RuntimeError))
 
     @staticmethod
     def _persist_success(

@@ -42,7 +42,7 @@ def bedrock_transport_config() -> Config:
     return Config(
         connect_timeout=BEDROCK_CONNECT_TIMEOUT_SECONDS,
         read_timeout=BEDROCK_READ_TIMEOUT_SECONDS,
-        retries={"mode": "standard", "max_attempts": 1},
+        retries={"mode": "standard", "total_max_attempts": 1},
     )
 
 

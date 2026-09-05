@@ -13,12 +13,13 @@ import json
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from investigator.graph import CaseGraph, EdgeRelation, GraphNode, GraphNodeType, GraphScopeType, node_scope, scope_allows_subject
+from investigator.graph import CaseGraph, GraphNode, GraphNodeType, GraphScopeType, node_scope, scope_allows_subject
 from investigator.models.source import Source
 from investigator.state.case_state import CaseState
 from investigator.vnext.models import (
     AssessmentRulePreset,
     AssessmentStatus,
+    AlternativeExplanation,
     FurthestJustifiedConclusion,
     InvestigatorAssessment,
     SubjectAssessment,
@@ -28,6 +29,7 @@ from investigator.vnext.models import (
 from investigator.models.assessment import SubjectRelationship, validate_vnext_relationship_provenance
 from investigator.vnext.source_applicability import source_applicability_snapshot, source_applies_to_student
 from investigator.vnext.warden import GraphWarden
+from investigator.vnext.provenance import source_ancestry
 
 
 class VNextRunStatus(str, Enum):
@@ -155,6 +157,9 @@ class VNextInvestigationRunner:
                     resolved_by_id[item.violation_id]
                     for item in run_input.rule_preset.violations
                 ],
+                "alternative_explanations": self._resolve_alternatives(
+                    subject.alternative_explanations, applied.local_ref_resolution, applied.graph
+                ),
             })
             self._validate_subject_node_scopes(
                 resolved_subject,
@@ -189,7 +194,7 @@ class VNextInvestigationRunner:
     def _validate_assessment(assessment: InvestigatorAssessment, run_input: VNextRunInput) -> list[SubjectAssessment]:
         preset = run_input.rule_preset
         expected = [item.violation_id for item in preset.violations]
-        expected_subjects = sorted(run_input.subjects) or ["case_subject"]
+        expected_subjects = list(run_input.subjects) or ["case_subject"]
         actual_subjects = [item.subject_id for item in assessment.subject_assessments]
         if len(actual_subjects) != len(set(actual_subjects)):
             raise VNextRunValidationError("InvestigatorAssessment contains duplicate SubjectAssessment subject IDs")
@@ -246,6 +251,20 @@ class VNextInvestigationRunner:
             values[field_name] = [cls._resolve_node_id(identifier, local_refs, graph) for identifier in values[field_name]]
         return ViolationAssessment.model_validate(values)
 
+    @classmethod
+    def _resolve_alternatives(
+        cls,
+        alternatives: list[AlternativeExplanation],
+        local_refs: Mapping[str, str],
+        graph: CaseGraph,
+    ) -> list[AlternativeExplanation]:
+        return [
+            item.model_copy(update={
+                "source_node_ids": [cls._resolve_node_id(identifier, local_refs, graph) for identifier in item.source_node_ids],
+            })
+            for item in alternatives
+        ]
+
     @staticmethod
     def _validate_subject_node_scopes(
         assessment: SubjectAssessment,
@@ -263,12 +282,18 @@ class VNextInvestigationRunner:
             for field_name in ("supporting_node_ids", "mitigating_node_ids"):
                 for node_id in getattr(violation, field_name):
                     node = graph.nodes[node_id]
+                    if field_name == "supporting_node_ids" and node.node_type not in {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}:
+                        raise VNextRunValidationError(
+                            f"Subject {subject_id!r} supporting material must resolve to evidence or proposition, not {node.node_type.value}"
+                        )
+                    if field_name == "supporting_node_ids" and not source_ancestry(graph, node_id):
+                        raise VNextRunValidationError(f"Subject {subject_id!r} supporting material {node_id!r} has no admitted source ancestry")
                     scope = node_scope(node.metadata)
                     if not scope_allows_subject(scope, subject_id, dict(relationships)):
                         raise VNextRunValidationError(
                             f"Subject {subject_id!r} cannot reference graph node {node_id!r} with scope {scope.model_dump(mode='json')}"
                         )
-                    for source_id in VNextInvestigationRunner._source_ancestry(graph, node_id):
+                    for source_id in source_ancestry(graph, node_id):
                         applicability = source_applicability.get(source_id)
                         if applicability is not None and not source_applies_to_student(applicability, subject_id, subjects):
                             raise VNextRunValidationError(
@@ -283,7 +308,7 @@ class VNextInvestigationRunner:
                     any(
                         source_applicability.get(source_id) is not None
                         and getattr(source_applicability[source_id], "classification", None).value != "case_shared"
-                        for source_id in VNextInvestigationRunner._source_ancestry(graph, node_id)
+                        for source_id in source_ancestry(graph, node_id)
                     )
                     for node_id in violation.supporting_node_ids
                 ):
@@ -294,18 +319,4 @@ class VNextInvestigationRunner:
     @staticmethod
     def _source_ancestry(graph: CaseGraph, node_id: str) -> set[str]:
         """Resolve admitted source ancestry without reading node prose."""
-
-        result: set[str] = set()
-        pending = [node_id]
-        seen: set[str] = set()
-        while pending:
-            current = pending.pop()
-            if current in seen or current not in graph.nodes:
-                continue
-            seen.add(current)
-            node = graph.nodes[current]
-            direct = node.metadata.get("source_ids", [])
-            result.update(item for item in direct if isinstance(item, str))
-            for edge in graph.outgoing(current, EdgeRelation.DERIVED_FROM):
-                pending.append(edge.target_id)
-        return result
+        return source_ancestry(graph, node_id)
