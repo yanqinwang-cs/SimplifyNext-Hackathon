@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { spawn, type ChildProcess } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 
@@ -49,7 +49,7 @@ test.beforeAll(async () => {
       AWS_EC2_METADATA_DISABLED: "true",
       SIMPLIFYNEXT_RUN_MODE: "vnext",
       SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API: "1",
-      SIMPLIFYNEXT_ALLOWED_ORIGINS: "http://127.0.0.1:3007",
+      SIMPLIFYNEXT_ALLOWED_ORIGINS: "http://127.0.0.1:3000",
       SIMPLIFYNEXT_DEBUG_CREDENTIALS: "0",
       STAGE7_FAKE_DELAY_SECONDS: "0",
       STAGE7_FAKE_TIMEOUT: "1",
@@ -65,30 +65,50 @@ test.afterAll(async () => {
   rmSync(testRepository, { recursive: true, force: true });
 });
 
-test("successful run exposes a compact operator audit trace", async ({ page }) => {
+test.beforeEach(async ({ page }) => {
+  // The full browser suite also runs the Stage 7 backend on port 8000. Keep
+  // this focused audit backend isolated without changing production API code.
+  await page.route("http://127.0.0.1:8000/**", (route) => route.continue({ url: route.request().url().replace("127.0.0.1:8000", "127.0.0.1:8003") }));
+});
+
+test("successful run exposes a compact operator audit summary and complete trace download", async ({ page }, testInfo) => {
   await createCase(page, "Case 5A successful audit");
   await addEvidence(page, "success-record.txt", "A controlled record.");
   await page.getByRole("button", { name: "Run assessment" }).click();
   await expect(page.getByText("Assessment complete. The current report is up to date.")).toBeVisible({ timeout: 30_000 });
-  await page.getByRole("button", { name: "View audit trace" }).click();
   await expect(page.getByRole("heading", { name: "Assessment audit" })).toBeVisible();
   await expect(page.getByText("completed", { exact: true })).toBeVisible();
-  await expect(page.locator("pre")).toContainText("vnext_completed");
+  await expect(page.getByRole("button", { name: "Download audit trace" })).toBeVisible();
+  await expect(page.locator("pre")).toHaveCount(0);
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download audit trace" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^caselens-case-\d+-assessment-[a-f0-9]+-audit-trace\.jsonl$/);
+  const tracePath = testInfo.outputPath("audit-trace.jsonl");
+  await download.saveAs(tracePath);
+  const traceLines = readFileSync(tracePath, "utf-8").trim().split("\n").map((line) => JSON.parse(line));
+  expect(traceLines.some((item) => item.event === "vnext_completed")).toBeTruthy();
+  expect(traceLines.some((item) => Object.hasOwn(item, "result"))).toBeTruthy();
   await expect(page.locator("body")).not.toContainText("PRE5A_AUDIT_");
 });
 
-test("provider timeout stays failed, is not retried, and is visible only in the audit surface", async ({ page }) => {
+test("provider timeout stays failed, is not retried, and is visible only in the audit surface", async ({ page }, testInfo) => {
   await createCase(page, "Case 5A timeout audit");
   await addEvidence(page, "timeout-record.txt", "TIMEOUT_SENTINEL");
   await page.getByRole("button", { name: "Run assessment" }).click();
   await expect(page.getByRole("paragraph").filter({ hasText: "Assessment could not be completed because the model provider did not return a response in time." })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("link", { name: "View report" })).toHaveCount(0);
-  await page.getByRole("button", { name: "View audit trace" }).click();
   await expect(page.getByRole("heading", { name: "Assessment audit" })).toBeVisible();
   await expect(page.getByText("failed", { exact: true })).toBeVisible();
-  await expect(page.locator("pre")).toContainText("PROVIDER_TIMEOUT");
-  await expect(page.locator("pre")).toContainText("ReadTimeoutError");
-  await expect(page.getByText("modelCalls", { exact: true })).toHaveCount(0);
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download audit trace" }).click();
+  const download = await downloadPromise;
+  const tracePath = testInfo.outputPath("timeout-audit-trace.jsonl");
+  await download.saveAs(tracePath);
+  const trace = readFileSync(tracePath, "utf-8");
+  expect(trace).toContain("PROVIDER_TIMEOUT");
+  expect(trace).toContain("ReadTimeoutError");
+  expect(page.locator("pre")).toHaveCount(0);
   await expect(page.getByText("PRE5A_AUDIT_", { exact: false })).toHaveCount(0);
   await expect(page.locator("body")).not.toContainText("PRE5A_AUDIT_");
 });

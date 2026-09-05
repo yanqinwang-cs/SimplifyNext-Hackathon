@@ -1002,6 +1002,8 @@ class HumanEvidenceWorkflow:
     def sanitized_raw_trace(self, case_id: str, run_id: str) -> bytes:
         """Return trace records with credential-like fields and values redacted."""
         path = self.raw_trace_path(case_id, run_id)
+        if not path.is_file():
+            return b""
         lines = [json.dumps(self._scrub_diagnostic(json.loads(line)), default=str) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
         return ("\n".join(lines) + ("\n" if lines else "")).encode("utf-8")
 
@@ -1063,6 +1065,13 @@ class HumanEvidenceWorkflow:
             "failure": failure,
             "trace": trace,
         }
+
+    def audit_trace_file(self, case_id: str, run_id: str, run_handle: str) -> bytes:
+        """Return the complete sanitized JSONL trace for one resolved run."""
+        run = next((item for item in self.get_runs(case_id) if item.get("run_id") == run_id), None)
+        if run is None:
+            raise KeyError("Assessment run not found")
+        return self.sanitized_raw_trace(case_id, run_id)
 
     @staticmethod
     def _check_revision(state: CaseState, expected_case_revision: int | None) -> None:

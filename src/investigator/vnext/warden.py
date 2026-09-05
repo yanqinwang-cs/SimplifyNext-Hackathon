@@ -2,6 +2,7 @@
 
 from collections.abc import Mapping
 from copy import deepcopy
+from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -50,6 +51,34 @@ class WardenValidationError(ValueError):
     def __init__(self, message: str, *, issues: list[ProposalValidationIssue] | None = None) -> None:
         super().__init__(message)
         self.issues = issues or []
+
+
+class WardenFailureClass(str, Enum):
+    """Deterministic retry-safety classes for Warden proposal failures."""
+
+    STRUCTURAL_REPAIRABLE = "STRUCTURAL_REPAIRABLE"
+    SEMANTIC_AFFECTING = "SEMANTIC_AFFECTING"
+
+
+def classify_warden_failure(error: WardenValidationError) -> WardenFailureClass:
+    """Classify Warden issues without inspecting model-generated prose.
+
+    A DERIVED_FROM scope violation changes the evidence ancestry of a semantic
+    claim. It therefore cannot be repaired by replacing only the graph
+    proposal. Other existing Warden defects retain the bounded structural
+    correction path.
+    """
+
+    for issue in error.issues:
+        if issue.error_code != "INCOMPATIBLE_SCOPE" or issue.relation != EdgeRelation.DERIVED_FROM.value:
+            continue
+        source_scope = issue.source_scope or {}
+        target_scope = issue.target_scope or {}
+        if source_scope.get("scope_type") != GraphScopeType.CASE.value and target_scope.get("scope_type") != GraphScopeType.CASE.value:
+            return WardenFailureClass.SEMANTIC_AFFECTING
+        if source_scope.get("scope_type") in {GraphScopeType.SUBJECT.value, GraphScopeType.RELATIONSHIP.value} and target_scope.get("scope_type") == GraphScopeType.CASE.value:
+            return WardenFailureClass.SEMANTIC_AFFECTING
+    return WardenFailureClass.STRUCTURAL_REPAIRABLE
 
 
 class WardenApplyResult(BaseModel):

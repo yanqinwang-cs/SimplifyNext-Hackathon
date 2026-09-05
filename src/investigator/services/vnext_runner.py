@@ -20,7 +20,9 @@ from investigator.vnext import (
     VNextRunInput,
     VNextRunResult,
     VNextRunValidationError,
+    WardenFailureClass,
     WardenValidationError,
+    classify_warden_failure,
     run_input_from_case_state,
 )
 from investigator.vnext.model import VNextInvestigatorModel, build_corrective_prompt
@@ -56,8 +58,14 @@ class VNextProductionRunner:
         logical_model = model_spec.name if model_spec else None
         workflow.record_run_model(case_id, logical_model)
         last_error: Exception | None = None
+        retry_constraints: list[str] = []
         for attempt_number in range(1, self.max_attempts + 1):
-            run_input = run_input_from_case_state(admitted_state, preset, human_inputs={"zero_evidence": not substantive_sources})
+            run_input = run_input_from_case_state(
+                admitted_state,
+                preset,
+                retry_constraints=retry_constraints,
+                human_inputs={"zero_evidence": not substantive_sources},
+            )
             if not substantive_sources:
                 run_input = run_input.model_copy(update={"sources": {}})
             investigator = VNextInvestigatorModel(client) if client is not None else None
@@ -89,6 +97,57 @@ class VNextProductionRunner:
                 try:
                     result = VNextInvestigationRunner(lambda _: first_assessment).run(run_input)
                 except WardenValidationError as validation_error:
+                    failure_class = classify_warden_failure(validation_error)
+                    if failure_class is WardenFailureClass.SEMANTIC_AFFECTING:
+                        issues = [issue.model_dump(mode="json") for issue in validation_error.issues]
+                        workflow.record_trace(
+                            case_id,
+                            {
+                                "event": "vnext_proposal_validation_failed",
+                                "actor": "investigator",
+                                "runtime_status": "RUNNING" if attempt_number < self.max_attempts else "FAILED",
+                                "attempt_number": attempt_number,
+                                "run_id": workflow.current_run_id(case_id),
+                                "case_id": case_id,
+                                "retry_mode": "clean_execution",
+                                "repairable": False,
+                                "failure_class": failure_class.value,
+                                "validation_issues": issues,
+                            },
+                        )
+                        workflow.record_trace(
+                            case_id,
+                            {
+                                "event": "vnext_semantic_scope_retry_required",
+                                "actor": "investigator",
+                                "runtime_status": "RUNNING" if attempt_number < self.max_attempts else "FAILED",
+                                "attempt_number": attempt_number,
+                                "run_id": workflow.current_run_id(case_id),
+                                "case_id": case_id,
+                                "retry_mode": "clean_execution",
+                                "failure_class": failure_class.value,
+                                "error_codes": sorted({issue.error_code for issue in validation_error.issues}),
+                                "issue_count": len(validation_error.issues),
+                            },
+                        )
+                        if attempt_number < self.max_attempts:
+                            retry_constraints = self._semantic_retry_constraints(validation_error)
+                            workflow.record_trace(
+                                case_id,
+                                {
+                                    "event": "vnext_clean_retry_started",
+                                    "actor": "investigator",
+                                    "runtime_status": "RUNNING",
+                                    "attempt_number": attempt_number + 1,
+                                    "run_id": workflow.current_run_id(case_id),
+                                    "case_id": case_id,
+                                    "retry_mode": "clean_execution",
+                                    "failure_class": failure_class.value,
+                                    "retry_constraints": list(retry_constraints),
+                                },
+                            )
+                            continue
+                        raise
                     if attempt_number != 1 or not validation_error.issues:
                         raise
                     corrective_attempted = True
@@ -224,6 +283,29 @@ class VNextProductionRunner:
                 if corrective_attempted or not self._retryable(exc) or attempt_number == self.max_attempts:
                     raise
         raise AssertionError(f"vNext run ended without a result: {last_error}")
+
+    @staticmethod
+    def _semantic_retry_constraints(error: WardenValidationError) -> list[str]:
+        """Return deterministic scope constraints, never prior model reasoning."""
+
+        constraints = {
+            "Reassess the complete case from the original admitted evidence.",
+            "Do not preserve conclusions from the prior failed execution.",
+        }
+        if any(
+            issue.source_scope
+            and issue.target_scope
+            and issue.source_scope.get("scope_type") == "subject"
+            and issue.target_scope.get("scope_type") == "relationship"
+            for issue in error.issues
+        ):
+            constraints.update(
+                {
+                    "Do not derive a relationship-scoped proposition from separate student-specific evidence.",
+                    "Reassess each student independently from the original admitted evidence.",
+                }
+            )
+        return sorted(constraints)
 
     @staticmethod
     def _zero_evidence_assessment(run_input: VNextRunInput) -> InvestigatorAssessment:

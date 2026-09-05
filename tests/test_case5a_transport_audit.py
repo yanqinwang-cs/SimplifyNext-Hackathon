@@ -72,6 +72,14 @@ def get(url: str) -> tuple[int, dict]:
         return exc.code, json.loads(exc.read())
 
 
+def get_bytes(url: str) -> tuple[int, dict[str, str], bytes]:
+    try:
+        with urlopen(url) as response:
+            return response.status, dict(response.headers.items()), response.read()
+    except HTTPError as exc:
+        return exc.code, dict(exc.headers.items()), exc.read()
+
+
 def test_bedrock_transport_config_is_explicit_and_bounded() -> None:
     config = bedrock_transport_config()
     assert config.connect_timeout == BEDROCK_CONNECT_TIMEOUT_SECONDS == 10
@@ -162,6 +170,7 @@ def test_audit_trace_is_handle_bound_sanitized_and_gated(tmp_path: Path, monkeyp
     try:
         monkeypatch.delenv("SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API", raising=False)
         assert get(url)[0] == 404
+        assert get(f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-01/assessment-runs/{handle}/audit-trace/download")[0] == 404
         monkeypatch.setenv("SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API", "1")
         status, payload = get(url)
         assert status == 200
@@ -176,8 +185,18 @@ def test_audit_trace_is_handle_bound_sanitized_and_gated(tmp_path: Path, monkeyp
         encoded = json.dumps(payload)
         assert "PRE5A_AUDIT_" not in encoded
         assert run["run_id"] not in encoded
+        download_status, headers, body = get_bytes(f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-01/assessment-runs/{handle}/audit-trace/download")
+        assert download_status == 200
+        assert headers["Content-Type"] == "application/x-ndjson; charset=utf-8"
+        assert headers["Content-Disposition"].startswith("attachment; filename=\"caselens-case-01-assessment-")
+        downloaded = [json.loads(line) for line in body.decode().splitlines()]
+        assert any(item["event"] == "vnext_attempt_failed" for item in downloaded)
+        assert any("raw_output" in item for item in downloaded)
+        assert "PRE5A_AUDIT_" not in body.decode()
+        assert get(f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-01/runs/{run['run_id']}/raw-traces")[0] == 404
         assert get(f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-02/assessment-runs/{handle}/audit-trace")[0] == 404
         assert get(f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-01/assessment-runs/not-a-real-handle/audit-trace")[0] == 404
+        assert get(f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-01/assessment-runs/not-a-real-handle/audit-trace/download")[0] == 404
     finally:
         server.shutdown()
         server.server_close()

@@ -107,6 +107,9 @@ class VNextRunInput(BaseModel):
     source_applicability: dict[str, SourceApplicability] = Field(default_factory=dict)
     relationship_scopes: dict[str, RunRelationshipScope] = Field(default_factory=dict)
     rule_preset: AssessmentRulePreset
+    # Deterministic internal constraints for a bounded clean retry. These are
+    # not evidence, graph nodes, or user-provided case context.
+    retry_constraints: list[str] = Field(default_factory=list)
     human_inputs: dict[str, object] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -129,6 +132,7 @@ class VNextRunInput(BaseModel):
         case_state: "CaseState",
         rule_preset: AssessmentRulePreset,
         *,
+        retry_constraints: list[str] | None = None,
         human_inputs: dict[str, object] | None = None,
     ) -> "VNextRunInput":
         return cls(
@@ -138,6 +142,7 @@ class VNextRunInput(BaseModel):
             subject_relationships=case_state.subject_relationships,
             source_applicability=build_source_applicability(case_state.sources, case_state.subjects, case_state.subject_relationships),
             rule_preset=rule_preset,
+            retry_constraints=list(retry_constraints or []),
             human_inputs=dict(human_inputs or {}),
         )
 
