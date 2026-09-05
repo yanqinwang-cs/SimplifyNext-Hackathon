@@ -13,7 +13,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
 
-from investigator.llm import BedrockModelClient, ModelClient, ModelParseError
+from investigator.llm import BedrockModelClient, ModelClient, ModelParseError, failure_category, is_provider_timeout, redact_sensitive_text
 from investigator.services.evidence_requests import HumanEvidenceWorkflow
 from investigator.vnext import (
     VNextInvestigationRunner,
@@ -70,6 +70,7 @@ class VNextProductionRunner:
                     "attempt_number": attempt_number,
                     "run_id": workflow.current_run_id(case_id),
                     "case_id": case_id,
+                    "model": logical_model,
                     "rule_preset_id": preset.preset_id,
                     "source_ids": sorted(run_input.sources),
                 },
@@ -207,8 +208,10 @@ class VNextProductionRunner:
                         "attempt_number": trace_attempt_number,
                         "run_id": workflow.current_run_id(case_id),
                         "case_id": case_id,
+                        "failure_category": failure_category(exc),
+                        "technical_error_type": type(exc).__name__,
                         "error_type": type(exc).__name__,
-                        "error": str(exc),
+                        "error": redact_sensitive_text(str(exc)),
                         "raw_output": getattr(exc, "raw_output", None)
                         or (investigator.last_call.raw_output if investigator and investigator.last_call else None),
                         "model": logical_model,
@@ -231,6 +234,10 @@ class VNextProductionRunner:
 
     @staticmethod
     def _retryable(exc: Exception) -> bool:
+        # A read timeout may occur after Bedrock accepted the inference. Never
+        # issue a fresh paid request for this ambiguous transport failure.
+        if is_provider_timeout(exc):
+            return False
         return isinstance(exc, (ModelParseError, VNextRunValidationError, WardenValidationError, RuntimeError))
 
     @staticmethod

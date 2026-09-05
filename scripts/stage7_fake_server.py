@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from investigator import http_api
+from botocore.exceptions import ReadTimeoutError
 from investigator.llm import ModelCallMetadata, ModelCallResult, ModelNativeCall, ModelTextBlock
 from investigator.model_registry import MODEL_REGISTRY
 from investigator.vnext import (
@@ -92,6 +93,11 @@ class Stage7FakeModelClient:
 
     def call(self, input_data: Any, output_schema: type[Any]) -> ModelCallResult:
         self._record("structured")
+        if os.getenv("STAGE7_FAKE_TIMEOUT") == "1" and "TIMEOUT_SENTINEL" in str(input_data):
+            raise ReadTimeoutError(
+                endpoint_url="https://bedrock-runtime.us-east-1.amazonaws.com/model/fake/converse",
+                error="PRE5A_AUDIT_ACCESS PRE5A_AUDIT_SECRET PRE5A_AUDIT_SESSION",
+            )
         if self.delay_seconds:
             time.sleep(self.delay_seconds)
         parsed = self._assessment(str(input_data))

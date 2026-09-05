@@ -7,6 +7,9 @@ import { resolve, join } from "node:path";
 test.describe.configure({ mode: "serial" });
 
 const repoRoot = resolve(process.cwd(), "..");
+const backendPort = process.env.STAGE7_BACKEND_PORT ?? "8000";
+const backendBase = `http://127.0.0.1:${backendPort}`;
+const frontendOrigin = process.env.STAGE7_FRONTEND_ORIGIN ?? "http://127.0.0.1:3000";
 let backend: ChildProcess | undefined;
 let testRepository: string;
 
@@ -14,7 +17,7 @@ async function waitForBackend(): Promise<void> {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/cases");
+      const response = await fetch(`${backendBase}/api/cases`);
       if (response.ok) return;
     } catch {
       // The backend is still starting.
@@ -38,9 +41,9 @@ function providerCalls(): Array<{ kind: string; model: string; region: string }>
 
 test.beforeAll(async () => {
   testRepository = mkdtempSync(join(tmpdir(), "simplifynext-stage7-browser-"));
-  backend = spawn("uv", ["run", "python", "scripts/stage7_fake_server.py", "--repository", testRepository], {
+  backend = spawn("uv", ["run", "python", "scripts/stage7_fake_server.py", "--repository", testRepository, "--port", backendPort], {
     cwd: repoRoot,
-    env: { ...process.env, AWS_EC2_METADATA_DISABLED: "true", SIMPLIFYNEXT_RUN_MODE: "vnext", SIMPLIFYNEXT_DEBUG_CREDENTIALS: "0", STAGE7_FAKE_DELAY_SECONDS: "0.4" },
+    env: { ...process.env, AWS_EC2_METADATA_DISABLED: "true", SIMPLIFYNEXT_RUN_MODE: "vnext", SIMPLIFYNEXT_DEBUG_CREDENTIALS: "0", SIMPLIFYNEXT_ALLOWED_ORIGINS: frontendOrigin, STAGE7_FAKE_DELAY_SECONDS: "0.4" },
     stdio: ["ignore", "pipe", "pipe"],
   });
   await waitForBackend();
@@ -72,7 +75,7 @@ test("real case creation keeps independent Student 1 state and enforces the fina
   expect(second).not.toBe(first);
   await expect(page.getByText("Student 1", { exact: true })).toBeVisible();
   await expect(page.getByText("Renamed Student", { exact: true })).toHaveCount(0);
-  const secondWorkspace = await page.request.get(`http://127.0.0.1:8000/api/cases/${second}/workspace`);
+  const secondWorkspace = await page.request.get(`${backendBase}/api/cases/${second}/workspace`);
   expect((await secondWorkspace.json()).students).toHaveLength(1);
 });
 
@@ -82,7 +85,7 @@ test("real upload and source reader preserve admitted text without leaking it in
   await page.locator('input[type="file"]').setInputFiles({ name: "unicode-evidence.md", mimeType: "text/markdown", buffer: Buffer.from(content) });
   await page.getByRole("button", { name: "Add evidence" }).click();
   await expect(page.getByRole("link", { name: /unicode-evidence\.md/ })).toBeVisible();
-  const workspaceResponse = await page.request.get(`http://127.0.0.1:8000/api/cases/${caseId}/workspace`);
+  const workspaceResponse = await page.request.get(`${backendBase}/api/cases/${caseId}/workspace`);
   expect(JSON.stringify(await workspaceResponse.json())).not.toContain(content);
   await page.getByRole("link", { name: /unicode-evidence\.md/ }).click();
   await expect(page.getByRole("heading", { name: "unicode-evidence.md" })).toBeVisible();
@@ -98,6 +101,7 @@ test("real vNext zero-evidence and fake-provider assessments publish independent
   await page.getByRole("button", { name: "Run assessment" }).click();
   await expect(page.getByText("Assessment complete. The current report is up to date.")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("link", { name: "View report" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "View audit trace" })).toHaveCount(0);
   expect(providerCalls().filter((call) => call.kind === "structured")).toHaveLength(0);
   await page.getByRole("link", { name: "View report" }).click();
   await expect(page.getByRole("heading", { name: "Findings by student" })).toBeVisible();
@@ -126,7 +130,7 @@ test("real status observation failure retains the same run for Retry", async ({ 
   page.on("request", (request) => {
     const url = new URL(request.url());
     if (request.method() === "POST" && url.pathname === `/api/cases/${caseId}/run`) startPosts += 1;
-    if (url.pathname.includes("/assessment-runs/")) statusHandles.add(url.pathname.split("/").pop() ?? "");
+    if (url.pathname.includes("/assessment-runs/") && !url.pathname.endsWith("/audit-trace")) statusHandles.add(url.pathname.split("/").pop() ?? "");
   });
   await page.route("**/api/cases/*/assessment-runs/*", async (route) => {
     if (failedStatusRequests === 0) {
@@ -150,9 +154,9 @@ test("real status observation failure retains the same run for Retry", async ({ 
 
 test("real Runtime settings uses the actual HTTP backend without changing case state or exposing secrets", async ({ page }, testInfo) => {
   const caseId = await createCase(page, "Runtime settings case");
-  await page.request.delete("http://127.0.0.1:8000/api/runtime-settings/aws-credentials");
-  await page.request.post("http://127.0.0.1:8000/api/runtime-settings/models/reset", { data: {} });
-  const before = await page.request.get(`http://127.0.0.1:8000/api/cases/${caseId}/workspace`);
+  await page.request.delete(`${backendBase}/api/runtime-settings/aws-credentials`);
+  await page.request.post(`${backendBase}/api/runtime-settings/models/reset`, { data: {} });
+  const before = await page.request.get(`${backendBase}/api/cases/${caseId}/workspace`);
   const beforeWorkspace = await before.json();
   const providerCount = providerCalls().length;
   await page.getByRole("button", { name: "Runtime settings" }).click();
@@ -182,21 +186,21 @@ test("real Runtime settings uses the actual HTTP backend without changing case s
   await page.getByLabel("Workspace Help model").selectOption("anthropic.claude-opus-4-5");
   await page.getByRole("button", { name: "Apply model settings" }).click();
   await expect(page.getByText("Model settings applied for subsequent calls.")).toBeVisible();
-  const applied = await page.request.get("http://127.0.0.1:8000/api/runtime-settings");
+  const applied = await page.request.get(`${backendBase}/api/runtime-settings`);
   const appliedSettings = await applied.json();
   expect(appliedSettings.models.investigator.effectiveModel).toBe("anthropic.claude-opus-4-5");
   expect(appliedSettings.models.workspaceHelp.effectiveModel).toBe("anthropic.claude-opus-4-5");
   await page.screenshot({ path: testInfo.outputPath("runtime-model-applied-real-backend.png"), fullPage: true });
   await page.getByRole("button", { name: "Reset defaults" }).click();
   await expect(page.getByText("Model defaults restored.")).toBeVisible();
-  const reset = await page.request.get("http://127.0.0.1:8000/api/runtime-settings");
+  const reset = await page.request.get(`${backendBase}/api/runtime-settings`);
   const resetSettings = await reset.json();
   expect(resetSettings.models.investigator.effectiveModel).toBe("anthropic.claude-sonnet-4-5");
   expect(resetSettings.models.workspaceHelp.effectiveModel).toBe("anthropic.claude-sonnet-4-5");
   await page.screenshot({ path: testInfo.outputPath("runtime-model-reset-real-backend.png"), fullPage: true });
   const storage = await page.evaluate(() => ({ local: JSON.stringify(localStorage), session: JSON.stringify(sessionStorage), url: location.href }));
   expect(JSON.stringify(storage)).not.toContain("PRE5A_FAKE_");
-  const after = await page.request.get(`http://127.0.0.1:8000/api/cases/${caseId}/workspace`);
+  const after = await page.request.get(`${backendBase}/api/cases/${caseId}/workspace`);
   expect((await after.json()).caseRevision).toBe(beforeWorkspace.caseRevision);
   expect(providerCalls()).toHaveLength(providerCount);
   await expect(page.locator("body")).not.toContainText("Failed to fetch");
@@ -215,12 +219,12 @@ test("real sample boundaries and negative HTTP paths remain safe", async ({ page
   await page.goto("/cases");
   await page.getByRole("button", { name: "Multi-Candidate Collaboration Review" }).click();
   for (const letter of ["A", "B", "C", "D", "E"]) await expect(page.getByText(`Candidate ${letter}`, { exact: true })).toBeVisible();
-  const unknown = await page.request.get("http://127.0.0.1:8000/api/cases/case-does-not-exist/workspace");
+  const unknown = await page.request.get(`${backendBase}/api/cases/case-does-not-exist/workspace`);
   expect(unknown.status()).toBe(404);
-  const traversal = await page.request.get("http://127.0.0.1:8000/api/cases/%2E%2E%2Fcase-000001/workspace");
+  const traversal = await page.request.get(`${backendBase}/api/cases/%2E%2E%2Fcase-000001/workspace`);
   expect(traversal.status()).toBe(404);
-  const disallowed = await page.request.get("http://127.0.0.1:8000/api/cases", { headers: { Origin: "https://not-allowed.example" } });
+  const disallowed = await page.request.get(`${backendBase}/api/cases`, { headers: { Origin: "https://not-allowed.example" } });
   expect(disallowed.status()).toBe(403);
-  const disallowedPreflight = await page.request.fetch("http://127.0.0.1:8000/api/cases", { method: "OPTIONS", headers: { Origin: "https://not-allowed.example", "Access-Control-Request-Method": "DELETE" } });
+  const disallowedPreflight = await page.request.fetch(`${backendBase}/api/cases`, { method: "OPTIONS", headers: { Origin: "https://not-allowed.example", "Access-Control-Request-Method": "DELETE" } });
   expect(disallowedPreflight.status()).toBe(403);
 });

@@ -22,7 +22,7 @@ from investigator.state.case_state import CaseState
 from investigator.state.repository import CaseRepository
 from investigator.vnext.presets import preset_for_case
 from investigator.vnext.source_applicability import validate_configured_identifiers
-from investigator.llm.bedrock import redact_sensitive_text
+from investigator.llm.bedrock import failure_category, redact_sensitive_text, safe_failure_message
 from investigator.reporting import build_input_snapshot, public_report_from_record
 from investigator.public_views import document_format, public_assessment_source_handle, public_run_handle_for_instance
 
@@ -308,10 +308,10 @@ class HumanEvidenceWorkflow:
         except Exception as exc:
             if self._active_runs.get(case_id) != run_id:
                 return
-            category = "ORCHESTRATION_CONFIGURATION_FAILURE" if type(exc).__name__ == "BedrockConfigurationError" else ("CASE_SNAPSHOT_MISMATCH" if isinstance(exc, CaseSnapshotMismatch) else type(exc).__name__)
+            category = "ORCHESTRATION_CONFIGURATION_FAILURE" if type(exc).__name__ == "BedrockConfigurationError" else ("CASE_SNAPSHOT_MISMATCH" if isinstance(exc, CaseSnapshotMismatch) else failure_category(exc))
             state = self.ensure_case(case_id)
-            safe_message = redact_sensitive_text(str(exc))
-            self.record_trace(case_id, {"event": "failed", "step": state.last_trace_step, "actor": "system", "runtime_status": "FAILED", "case_revision": state.revision, "current_actor": state.current_actor, "failure_category": category, "error": safe_message})
+            safe_message = safe_failure_message(exc)
+            self.record_trace(case_id, {"event": "failed", "step": state.last_trace_step, "actor": "system", "runtime_status": "FAILED", "case_revision": state.revision, "current_actor": state.current_actor, "failure_category": category, "technical_error_type": type(exc).__name__, "error": safe_message})
             self.set_runtime(case_id, "FAILED", "NONE", failure_category=category, message=safe_message, step=state.last_trace_step)
             summary = "Assessment could not be completed. Case evidence was unchanged." if self.run_mode == "vnext" else f"The investigation run failed. The failed turn was not committed; earlier successful turns remain preserved at revision {state.revision}."
             self.record_workspace_event(case_id, {"type": "run_failed", "run_id": run_id, "runtime_status": "FAILED", "case_revision": state.revision, "final_case_revision": state.revision, "human_summary": summary})
@@ -1000,26 +1000,69 @@ class HumanEvidenceWorkflow:
         return path
 
     def sanitized_raw_trace(self, case_id: str, run_id: str) -> bytes:
-        """Return the exact trace records with credential-like fields redacted."""
+        """Return trace records with credential-like fields and values redacted."""
         path = self.raw_trace_path(case_id, run_id)
-        sensitive = ("access_key", "secret", "session_token", "authorization", "credential")
-
-        def scrub(value: Any, key: str = "") -> Any:
-            if any(term in key.lower() for term in sensitive):
-                return "[REDACTED]"
-            if isinstance(value, dict):
-                return {name: scrub(item, name) for name, item in value.items()}
-            if isinstance(value, list):
-                return [scrub(item, key) for item in value]
-            return value
-
-        lines = []
-        for line in path.read_text(encoding="utf-8").splitlines():
-            try:
-                lines.append(json.dumps(scrub(json.loads(line)), default=str))
-            except json.JSONDecodeError:
-                lines.append(line)
+        lines = [json.dumps(self._scrub_diagnostic(json.loads(line)), default=str) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
         return ("\n".join(lines) + ("\n" if lines else "")).encode("utf-8")
+
+    @classmethod
+    def _scrub_diagnostic(cls, value: Any, key: str = "") -> Any:
+        sensitive = ("access_key", "secret", "session_token", "security_token", "authorization", "credential")
+        if any(term in key.lower() for term in sensitive):
+            return "[REDACTED]"
+        if isinstance(value, dict):
+            return {name: cls._scrub_diagnostic(item, name) for name, item in value.items()}
+        if isinstance(value, list):
+            return [cls._scrub_diagnostic(item, key) for item in value]
+        if isinstance(value, str):
+            return redact_sensitive_text(value)
+        return value
+
+    def audit_trace(self, case_id: str, run_id: str, run_handle: str) -> dict[str, Any]:
+        """Project one run's trace into an operator-only, handle-bound DTO."""
+        run = next((item for item in self.get_runs(case_id) if item.get("run_id") == run_id), None)
+        if run is None:
+            raise KeyError("Assessment run not found")
+        path = self._run_dir(case_id, run_id) / "raw_traces.jsonl"
+        allowed = {
+            "event", "actor", "runtime_status", "attempt_number", "retry_mode",
+            "failure_category", "technical_error_type", "error_type", "error",
+            "model", "input_tokens", "output_tokens", "latency_seconds",
+            "finish_reason", "step", "repairable",
+        }
+        trace: list[dict[str, Any]] = []
+        lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+        for line in lines:
+            try:
+                record = self._scrub_diagnostic(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+            if isinstance(record, dict):
+                trace.append({key: record[key] for key in allowed if key in record})
+        final_error = run.get("final_error") if isinstance(run.get("final_error"), dict) else {}
+        failed_event = next((item for item in reversed(trace) if item.get("event") in {"vnext_attempt_failed", "failed"}), None)
+        category = final_error.get("failure_category") or (failed_event or {}).get("failure_category")
+        technical_type = (failed_event or {}).get("technical_error_type") or (failed_event or {}).get("error_type")
+        failure = None
+        if category or technical_type or final_error.get("message"):
+            failure = {
+                "category": category,
+                "technicalType": technical_type,
+                "message": final_error.get("message") or (failed_event or {}).get("error"),
+            }
+        return {
+            "caseId": case_id,
+            "runHandle": run_handle,
+            "outcome": str(run.get("outcome_type") or "RUNNING").lower(),
+            "model": {"logicalModel": run.get("model")},
+            "counters": {
+                "modelCalls": int(run.get("model_calls") or 0),
+                "proposalCorrectionCalls": int(run.get("proposal_correction_calls") or 0),
+                "cleanExecutionRetries": int(run.get("clean_execution_retries") or 0),
+            },
+            "failure": failure,
+            "trace": trace,
+        }
 
     @staticmethod
     def _check_revision(state: CaseState, expected_case_revision: int | None) -> None:

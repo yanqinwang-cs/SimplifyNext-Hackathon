@@ -134,12 +134,22 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             except RuntimeSettingsError:
                 self._write(422, {"error": "The configured model is not supported by this prototype", "code": "UNSUPPORTED_MODEL_CONFIGURATION"})
             return
-        if self.workflow.run_mode == "vnext" and os.getenv("SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API") != "1" and ((len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"traces", "runs"}) or (len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "runs")):
+        if self.workflow.run_mode == "vnext" and os.getenv("SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API") != "1" and ((len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"traces", "runs"}) or (len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "runs") or (len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5] == "audit-trace")):
             self._write(404, {"error": "Not found"})
             return
         if self.workflow.run_mode == "vnext" and len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "workspace":
             try: self._write(200, self._public_workspace(parts[2]))
             except (KeyError, ValueError): self._write(404, {"error": "Case not found"})
+            return
+        if self.workflow.run_mode == "vnext" and len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5] == "audit-trace":
+            if os.getenv("SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API") != "1":
+                self._write(404, {"error": "Not found"})
+                return
+            try:
+                run_id = resolve_run_handle(self.workflow, parts[2], parts[4])
+                self._write(200, self.workflow.audit_trace(parts[2], run_id, parts[4]))
+            except (KeyError, ValueError):
+                self._write(404, {"error": "Assessment audit trace not found"})
             return
         if self.workflow.run_mode == "vnext" and len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "report":
             try:

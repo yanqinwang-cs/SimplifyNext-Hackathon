@@ -45,6 +45,17 @@ Start the backend in the supported local mode:
 SIMPLIFYNEXT_RUN_MODE=vnext uv run python -m investigator.http_api --repository data/cases --host 127.0.0.1 --port 8000
 ```
 
+For local operator diagnosis only, enable the sanitized run audit boundary:
+
+```bash
+SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API=1 SIMPLIFYNEXT_RUN_MODE=vnext uv run python -m investigator.http_api --repository data/cases --host 127.0.0.1 --port 8000
+```
+
+Diagnostics are operator-only and local; they are not consumed by the normal
+assessor UI and the endpoint does not expose credentials or unsanitized
+provider payloads. A Bedrock read timeout is treated as a provider transport
+failure and is not automatically retried as a new paid inference.
+
 In another terminal, start the frontend:
 
 ```bash

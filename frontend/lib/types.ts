@@ -100,6 +100,9 @@ export interface CaseListItem { caseId: string; title: string; }
 export interface SampleCatalogItem { sampleId: string; title: string; }
 export interface AssessmentSummary { state: "not_started" | "running" | "complete" | "stale" | "failed_no_report" | "failed_previous_report_retained" | "stopped"; activeRun: { runHandle: string; startedAt: string } | null; latestAttempt: { runHandle: string; state: string; startedAt: string; endedAt: string | null; message: string } | null; reportAvailable: boolean; reportStale: boolean; }
 
+export interface AuditTraceEvent { event?: string; actor?: string; runtime_status?: string; attempt_number?: number; retry_mode?: string; failure_category?: string; technical_error_type?: string; error_type?: string; error?: string; model?: string | null; input_tokens?: number | null; output_tokens?: number | null; latency_seconds?: number | null; finish_reason?: string | null; step?: number; repairable?: boolean; }
+export interface AuditTraceResponse { caseId: string; runHandle: string; outcome: string; model: { logicalModel: string | null }; counters: { modelCalls: number; proposalCorrectionCalls: number; cleanExecutionRetries: number }; failure: { category?: string; technicalType?: string; message?: string } | null; trace: AuditTraceEvent[]; }
+
 export interface ReportSourceReference { sourceHandle: string; fileName: string; }
 export interface ReportMaterial { statement: string; sources: ReportSourceReference[]; }
 export interface ReportViolation { label: string; status: string; reasoningSummary: string; supportingMaterial: ReportMaterial[]; limitingMaterial: ReportMaterial[]; unresolvedPoints: string[]; }
