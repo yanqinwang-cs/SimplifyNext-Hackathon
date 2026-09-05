@@ -50,7 +50,6 @@ test.beforeAll(async () => {
       AWS_SESSION_TOKEN: "PRE5A_AUDIT_SESSION",
       AWS_EC2_METADATA_DISABLED: "true",
       SIMPLIFYNEXT_RUN_MODE: "vnext",
-      SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API: "1",
       SIMPLIFYNEXT_ALLOWED_ORIGINS: "http://127.0.0.1:3000",
       SIMPLIFYNEXT_DEBUG_CREDENTIALS: "0",
       STAGE7_FAKE_DELAY_SECONDS: "0",
@@ -73,22 +72,26 @@ test.beforeEach(async ({ page }) => {
   await page.route(`${frontendApiBase}/**`, (route) => route.continue({ url: route.request().url().replace(frontendApiBase, backendBase) }));
 });
 
-test("successful run exposes only the operator trace download and complete trace", async ({ page }, testInfo) => {
+test("successful run exposes the trace download and complete trace", async ({ page }, testInfo) => {
   await createCase(page, "Case 5A successful audit");
   await addEvidence(page, "success-record.txt", "A controlled record.");
   await page.getByRole("button", { name: "Run assessment" }).click();
   await expect(page.getByText("Assessment complete. The current report is up to date.")).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole("heading", { name: "Assessment audit" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Download audit trace" })).toBeVisible();
+  await expect(page.locator("pre")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Download trace" })).toBeVisible();
   await expect(page.locator("pre")).toHaveCount(0);
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download audit trace" }).click();
+  await page.getByRole("button", { name: "Download trace" }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/^caselens-case-\d+-assessment-[a-f0-9]+-audit-trace\.jsonl$/);
+  expect(download.suggestedFilename()).toMatch(/^caselens-case-\d+-assessment-[a-f0-9]+-trace\.jsonl$/);
   const tracePath = testInfo.outputPath("audit-trace.jsonl");
   await download.saveAs(tracePath);
   const traceLines = readFileSync(tracePath, "utf-8").trim().split("\n").map((line) => JSON.parse(line));
   expect(traceLines.some((item) => item.event === "vnext_completed")).toBeTruthy();
+  const modelCallStarted = traceLines.find((item) => item.event === "vnext_model_call_started");
+  const modelCallCompleted = traceLines.find((item) => item.event === "vnext_model_call_completed");
+  expect(modelCallStarted).toMatchObject({ model_call_number: 1, prompt: expect.any(String) });
+  expect(modelCallCompleted).toMatchObject({ model_call_number: 1, raw_output: expect.anything(), parsed_output: expect.anything() });
   expect(traceLines.some((item) => Object.hasOwn(item, "result"))).toBeTruthy();
   await expect(page.locator("body")).not.toContainText("PRE5A_AUDIT_");
 });
@@ -99,9 +102,9 @@ test("provider timeout stays failed, is not retried, and remains downloadable as
   await page.getByRole("button", { name: "Run assessment" }).click();
   await expect(page.getByRole("paragraph").filter({ hasText: "Assessment could not be completed because the model provider did not return a response in time." })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("link", { name: "View report" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Assessment audit" })).toHaveCount(0);
+  await expect(page.locator("pre")).toHaveCount(0);
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download audit trace" }).click();
+  await page.getByRole("button", { name: "Download trace" }).click();
   const download = await downloadPromise;
   const tracePath = testInfo.outputPath("timeout-audit-trace.jsonl");
   await download.saveAs(tracePath);

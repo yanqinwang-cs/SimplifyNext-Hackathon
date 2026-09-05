@@ -101,7 +101,7 @@ test("real vNext zero-evidence and fake-provider assessments publish independent
   await page.getByRole("button", { name: "Run assessment" }).click();
   await expect(page.getByText("Assessment complete. The current report is up to date.")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("link", { name: "View report" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "View audit trace" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "View trace" })).toHaveCount(0);
   expect(providerCalls().filter((call) => call.kind === "structured")).toHaveLength(0);
   await page.getByRole("link", { name: "View report" }).click();
   await expect(page.getByRole("heading", { name: "Findings by student" })).toBeVisible();

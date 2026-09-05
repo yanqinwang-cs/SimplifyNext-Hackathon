@@ -1,4 +1,4 @@
-"""Small durable audit traces for interactive investigations."""
+"""Small durable execution traces for interactive investigations."""
 
 import json
 import os
