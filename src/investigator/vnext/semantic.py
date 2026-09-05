@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from dataclasses import dataclass
 import re
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -98,18 +99,85 @@ class InvestigatorSemanticAssessment(BaseModel):
 
     subject_assessments: list[SemanticSubjectAssessment] = Field(min_length=1)
     semantic_items: list[SemanticItem] = Field(default_factory=list)
-    alternative_explanations: list[SemanticItem] = Field(default_factory=list)
-
-    @model_validator(mode="after")
-    def refs_are_unique(self) -> "InvestigatorSemanticAssessment":
-        refs = [item.local_ref for item in self.semantic_items + self.alternative_explanations]
-        if len(refs) != len(set(refs)):
-            raise ValueError("semantic item local_ref values must be unique")
-        return self
 
 
 class SemanticValidationError(ValueError):
     """The model's semantic assessment cannot be represented safely."""
+
+
+@dataclass(frozen=True)
+class SemanticSymbol:
+    """One canonical semantic definition and its source location."""
+
+    local_ref: str
+    kind: SemanticItemKind
+    definition_location: str
+    item: SemanticItem
+
+
+def build_semantic_symbol_table(items: list[SemanticItem]) -> dict[str, SemanticSymbol]:
+    """Register each semantic definition exactly once, preserving locations."""
+
+    symbols: dict[str, SemanticSymbol] = {}
+    for index, item in enumerate(items):
+        location = f"semantic_items[{index}]"
+        previous = symbols.get(item.local_ref)
+        if previous is not None:
+            raise SemanticValidationError(
+                f"Duplicate semantic item local_ref {item.local_ref!r}. "
+                f"First defined at {previous.definition_location} as {previous.kind.value}. "
+                f"Defined again at {location} as {item.kind.value}."
+            )
+        symbols[item.local_ref] = SemanticSymbol(
+            local_ref=item.local_ref,
+            kind=item.kind,
+            definition_location=location,
+            item=item,
+        )
+    return symbols
+
+
+def _resolve_symbol(
+    symbols: dict[str, SemanticSymbol],
+    local_ref: str,
+    reference_location: str,
+    *,
+    allowed_kinds: set[SemanticItemKind] | None = None,
+) -> SemanticSymbol:
+    symbol = symbols.get(local_ref)
+    if symbol is None:
+        raise SemanticValidationError(
+            f"{reference_location} references unknown semantic item {local_ref!r}"
+        )
+    if allowed_kinds is not None and symbol.kind not in allowed_kinds:
+        required = ", ".join(sorted(kind.value for kind in allowed_kinds))
+        raise SemanticValidationError(
+            f"{reference_location} references {local_ref!r}, defined at "
+            f"{symbol.definition_location}. Actual kind: {symbol.kind.value}. "
+            f"Required kind: {required}."
+        )
+    return symbol
+
+
+def _semantic_definition_order(symbols: dict[str, SemanticSymbol]) -> list[SemanticSymbol]:
+    """Topologically order item dependencies without relying on array order."""
+
+    dependencies = {
+        local_ref: set(item.basis_item_refs) | ({item.target_ref} if item.target_ref else set())
+        for local_ref, symbol in symbols.items()
+        for item in [symbol.item]
+    }
+    ordered: list[SemanticSymbol] = []
+    remaining = set(dependencies)
+    while remaining:
+        ready = [local_ref for local_ref in dependencies if local_ref in remaining and not (dependencies[local_ref] & remaining)]
+        if not ready:
+            cycle = sorted(remaining)
+            raise SemanticValidationError(f"semantic item dependency cycle: {cycle}")
+        for local_ref in sorted(ready, key=lambda ref: int(symbols[ref].definition_location.split("[")[1].rstrip("]"))):
+            ordered.append(symbols[local_ref])
+            remaining.remove(local_ref)
+    return ordered
 
 
 def _scope_for_item(
@@ -207,10 +275,14 @@ def compile_semantic_assessment(assessment: InvestigatorSemanticAssessment, run_
     preset = preset or run_input.rule_preset
     expected_subjects = list(run_input.subjects) or ["case_subject"]
     expected_violations = [item.violation_id for item in preset.violations]
-    items = assessment.semantic_items + assessment.alternative_explanations
-    by_ref = {item.local_ref: item for item in items}
-    if len(by_ref) != len(items):
-        raise SemanticValidationError("semantic item local_ref values must be unique")
+    symbols = build_semantic_symbol_table(assessment.semantic_items)
+    by_ref = {local_ref: symbol.item for local_ref, symbol in symbols.items()}
+    for item_index, item in enumerate(assessment.semantic_items):
+        for ref_index, ref in enumerate(item.basis_item_refs):
+            _resolve_symbol(symbols, ref, f"semantic_items[{item_index}].basis_item_refs[{ref_index}]")
+        if item.target_ref is not None:
+            _resolve_symbol(symbols, item.target_ref, f"semantic_items[{item_index}].target_ref")
+    items = [symbol.item for symbol in _semantic_definition_order(symbols)]
     scopes: dict[str, GraphScope] = {}
     for item in items:
         scopes[item.local_ref] = _scope_for_item(item, run_input, scopes)
@@ -221,10 +293,7 @@ def compile_semantic_assessment(assessment: InvestigatorSemanticAssessment, run_
         violations = by_subject[subject_id].violation_assessments
         if [item.violation_id for item in violations] != expected_violations:
             raise SemanticValidationError(f"{subject_id!r} must cover each configured violation exactly once")
-        for violation in violations:
-            refs = violation.supporting_item_refs + violation.conflicting_item_refs + violation.limiting_item_refs + violation.alternative_item_refs
-            if any(ref not in by_ref for ref in refs):
-                raise SemanticValidationError(f"{subject_id!r}/{violation.violation_id} references an unknown semantic item")
+        for violation_index, violation in enumerate(violations):
             if violation.status in {AssessmentStatus.SUPPORTED, AssessmentStatus.PARTIALLY_SUPPORTED, AssessmentStatus.CONFLICTED} and not violation.supporting_item_refs:
                 raise SemanticValidationError(f"{subject_id!r}/{violation.violation_id} requires supporting material")
             for field_name, allowed_kinds in (
@@ -233,13 +302,11 @@ def compile_semantic_assessment(assessment: InvestigatorSemanticAssessment, run_
                 ("limiting_item_refs", {SemanticItemKind.EVIDENCE_STATEMENT, SemanticItemKind.PROPOSITION}),
                 ("alternative_item_refs", {SemanticItemKind.HYPOTHESIS}),
             ):
-                for ref in getattr(violation, field_name):
-                    item = by_ref[ref]
-                    if item.kind not in allowed_kinds:
-                        label = field_name.removesuffix("_item_refs").replace("_", " ")
-                        raise SemanticValidationError(f"{label} material {ref!r} has invalid semantic item kind")
+                for ref_index, ref in enumerate(getattr(violation, field_name)):
+                    location = f"subject_assessments[{list(expected_subjects).index(subject_id)}].violation_assessments[{violation_index}].{field_name}[{ref_index}]"
+                    item = _resolve_symbol(symbols, ref, location, allowed_kinds=allowed_kinds).item
                     if item.about_subject_ids and subject_id not in item.about_subject_ids:
-                        raise SemanticValidationError(f"{ref!r} is not about subject {subject_id!r}")
+                        raise SemanticValidationError(f"{location} references {ref!r}, which is not about subject {subject_id!r}")
                     if field_name != "alternative_item_refs" and not semantic_item_has_source_ancestry(ref, by_ref):
                         raise SemanticValidationError(f"{field_name} {ref!r} has no admitted source ancestry")
 
@@ -264,7 +331,7 @@ def compile_semantic_assessment(assessment: InvestigatorSemanticAssessment, run_
             updates.append(AddEvidenceCommand(node_id=f"E{evidence_count}", local_ref=ref, statement=item.statement, source_ids=item.basis_source_ids, scope=scope, reason="Record the model-declared source-backed evidence statement."))
         elif item.kind is SemanticItemKind.PROPOSITION:
             if not item.basis_item_refs or any(value not in local_refs for value in item.basis_item_refs):
-                raise SemanticValidationError(f"proposition {item.local_ref!r} requires earlier basis_item_refs")
+                raise SemanticValidationError(f"proposition {item.local_ref!r} has unresolved basis_item_refs")
             proposition_count += 1
             updates.append(AddPropositionCommand(node_id=f"P{proposition_count}", local_ref=ref, statement=item.statement, derived_from_node_ids=[local_refs[value] for value in item.basis_item_refs], scope=scope, reason="Compile the model-declared proposition from earlier semantic material."))
         elif item.kind is SemanticItemKind.HYPOTHESIS:
@@ -272,7 +339,7 @@ def compile_semantic_assessment(assessment: InvestigatorSemanticAssessment, run_
             updates.append(AddHypothesisCommand(node_id=f"H{hypothesis_count}", local_ref=ref, statement=item.statement, scope=scope, reason="Compile the model-declared alternative hypothesis."))
         else:
             if item.target_ref is None or item.target_ref not in local_refs:
-                raise SemanticValidationError(f"uncertainty {item.local_ref!r} requires an earlier target_ref")
+                raise SemanticValidationError(f"uncertainty {item.local_ref!r} has an unresolved target_ref")
             uncertainty_count += 1
             updates.append(AddUncertaintyCommand(node_id=f"U{uncertainty_count}", local_ref=ref, statement=item.statement, target_node_id=local_refs[item.target_ref], scope=scope, reason="Record the model-declared unresolved uncertainty."))
     compiled_subjects: list[SubjectAssessment] = []
@@ -286,16 +353,13 @@ def compile_semantic_assessment(assessment: InvestigatorSemanticAssessment, run_
             for item_ref in violation.conflicting_item_refs:
                 updates.append(AddConflictCommand(source_node_id=local_refs[item_ref], target_node_id=target_ref, reason="Attach explicitly declared conflicting material to the evaluation target."))
             compiled_violations.append(ViolationAssessment(violation_id=violation.violation_id, status=violation.status, supporting_node_ids=[local_refs[item_ref] for item_ref in violation.supporting_item_refs], conflicting_node_ids=[local_refs[item_ref] for item_ref in violation.conflicting_item_refs], mitigating_node_ids=[local_refs[item_ref] for item_ref in violation.limiting_item_refs], unresolved_points=violation.unresolved_points, reasoning_summary=violation.reasoning_summary, confidence=violation.confidence))
-        alternative_refs = list(
-            ref
-            for violation in source_subject.violation_assessments
-            for ref in violation.alternative_item_refs
-        )
-        alternative_refs.extend(
-            item.local_ref
-            for item in assessment.alternative_explanations
-            if subject_id in item.about_subject_ids
-        )
+        alternative_refs: list[str] = []
+        seen_alternatives: set[str] = set()
+        for violation in source_subject.violation_assessments:
+            for ref in violation.alternative_item_refs:
+                if ref not in seen_alternatives:
+                    seen_alternatives.add(ref)
+                    alternative_refs.append(ref)
         alternatives = [
             AlternativeExplanation(
                 statement=by_ref[item_ref].statement,

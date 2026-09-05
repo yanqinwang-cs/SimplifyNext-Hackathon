@@ -53,8 +53,8 @@ def _assessment(*, invalid_support: str | None = None) -> InvestigatorSemanticAs
             SemanticItem(local_ref="e_a", kind=SemanticItemKind.EVIDENCE_STATEMENT, statement="A record says X.", about_subject_ids=["subject_A"], basis_source_ids=["S1"]),
             SemanticItem(local_ref="e_b", kind=SemanticItemKind.EVIDENCE_STATEMENT, statement="B record says Y.", about_subject_ids=["subject_B"], basis_source_ids=["S2"]),
             SemanticItem(local_ref="e_joint", kind=SemanticItemKind.EVIDENCE_STATEMENT, statement="A joint record says Z.", about_subject_ids=["subject_A", "subject_B"], basis_source_ids=["S3"]),
+            SemanticItem(local_ref="alt_a", kind=SemanticItemKind.HYPOTHESIS, statement="An alternative explanation for A.", about_subject_ids=["subject_A"]),
         ],
-        alternative_explanations=[SemanticItem(local_ref="alt_a", kind=SemanticItemKind.HYPOTHESIS, statement="An alternative explanation for A.", about_subject_ids=["subject_A"], basis_source_ids=["S1"])],
         subject_assessments=[
             SemanticSubjectAssessment(subject_id="subject_A", violation_assessments=[SemanticViolationAssessment(violation_id="V1", status=AssessmentStatus.SUPPORTED, supporting_item_refs=[support_ref], limiting_item_refs=["e_joint"], alternative_item_refs=["alt_a"], reasoning_summary="A bounded semantic conclusion.", confidence=Confidence.MODERATE)], furthest_conclusion={"statement": "The record supports a bounded assessment.", "confidence": "moderate"}),
             SemanticSubjectAssessment(subject_id="subject_B", violation_assessments=[SemanticViolationAssessment(violation_id="V1", status=AssessmentStatus.NOT_CURRENTLY_SUPPORTED, reasoning_summary="The record does not currently support the assessment.", confidence=Confidence.LOW)], furthest_conclusion={"statement": "The record remains insufficient.", "confidence": "low"}),
@@ -89,8 +89,77 @@ def test_hypothesis_cannot_be_supporting_material() -> None:
     assessment = _assessment().model_copy(update={
         "subject_assessments": [_assessment().subject_assessments[0].model_copy(update={"violation_assessments": [_assessment().subject_assessments[0].violation_assessments[0].model_copy(update={"supporting_item_refs": ["alt_a"]})]}), _assessment().subject_assessments[1]],
     })
-    with pytest.raises(SemanticValidationError, match="supporting material"):
+    with pytest.raises(SemanticValidationError, match="Required kind"):
         compile_semantic_assessment(assessment, _input())
+
+
+def test_duplicate_semantic_definition_reports_both_locations() -> None:
+    item = SemanticItem(local_ref="alt_a", kind=SemanticItemKind.HYPOTHESIS, statement="Alternative.", about_subject_ids=["subject_A"])
+    assessment = _assessment().model_copy(update={"semantic_items": _assessment().semantic_items + [item]})
+    with pytest.raises(SemanticValidationError, match=r"semantic_items\[3\].*semantic_items\[4\]"):
+        compile_semantic_assessment(assessment, _input())
+
+
+def test_same_semantic_definition_can_be_referenced_multiple_times() -> None:
+    assessment = _assessment().model_copy(update={
+        "subject_assessments": [
+            _assessment().subject_assessments[0].model_copy(update={
+                "violation_assessments": [
+                    _assessment().subject_assessments[0].violation_assessments[0].model_copy(update={
+                        "alternative_item_refs": ["alt_a", "alt_a"],
+                    })
+                ]
+            }),
+            _assessment().subject_assessments[1],
+        ]
+    })
+    compiled = compile_semantic_assessment(assessment, _input())
+    assert len(compiled.subject_assessments[0].alternative_explanations) == 1
+
+
+def test_unknown_reference_reports_exact_location() -> None:
+    assessment = _assessment().model_copy(update={
+        "subject_assessments": [
+            _assessment().subject_assessments[0].model_copy(update={
+                "violation_assessments": [
+                    _assessment().subject_assessments[0].violation_assessments[0].model_copy(update={"alternative_item_refs": ["missing"]})
+                ]
+            }),
+            _assessment().subject_assessments[1],
+        ]
+    })
+    with pytest.raises(SemanticValidationError, match=r"subject_assessments\[0\]\.violation_assessments\[0\]\.alternative_item_refs\[0\]"):
+        compile_semantic_assessment(assessment, _input())
+
+
+def test_wrong_kind_reference_reports_definition_and_required_kind() -> None:
+    assessment = _assessment().model_copy(update={
+        "subject_assessments": [
+            _assessment().subject_assessments[0].model_copy(update={
+                "violation_assessments": [
+                    _assessment().subject_assessments[0].violation_assessments[0].model_copy(update={"alternative_item_refs": ["e_a"]})
+                ]
+            }),
+            _assessment().subject_assessments[1],
+        ]
+    })
+    with pytest.raises(SemanticValidationError, match=r"semantic_items\[0\].*Actual kind: evidence_statement.*Required kind: hypothesis"):
+        compile_semantic_assessment(assessment, _input())
+
+
+def test_basis_reference_resolves_through_symbol_table_without_array_order_requirement() -> None:
+    assessment = _assessment().model_copy(update={
+        "semantic_items": [
+            SemanticItem(local_ref="p_a", kind=SemanticItemKind.PROPOSITION, statement="A derived proposition.", about_subject_ids=["subject_A"], basis_item_refs=["e_a"]),
+            *_assessment().semantic_items,
+        ]
+    })
+    compiled = compile_semantic_assessment(assessment, _input())
+    assert any(getattr(update, "local_ref", None) == "p_a" for update in compiled.proposal.graph_updates)
+
+
+def test_semantic_schema_has_only_one_definition_table() -> None:
+    assert "alternative_explanations" not in InvestigatorSemanticAssessment.model_fields
 
 
 def test_unscoped_upload_uses_identifier_permissions_not_case_trust(tmp_path) -> None:
