@@ -55,14 +55,14 @@ export function runInvestigation(caseId: string): Promise<{ run: { runHandle: st
   return request<{ run: { runHandle: string; state: string; startedAt: string }; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/run`, { method: "POST", body: "{}" });
 }
 export function getAssessmentRun(caseId: string, runHandle: string, signal?: AbortSignal): Promise<{ runHandle: string; state: string; startedAt: string; endedAt: string | null; message: string; reportAvailable: boolean; reportStale: boolean; workspace: CaseWorkspaceState }> { return request<{ runHandle: string; state: string; startedAt: string; endedAt: string | null; message: string; reportAvailable: boolean; reportStale: boolean; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/assessment-runs/${encodeURIComponent(runHandle)}`, { signal }); }
-export function getAuditTraceDownloadUrl(caseId: string, runHandle: string): string { return `${API_BASE}/api/cases/${encodeURIComponent(caseId)}/assessment-runs/${encodeURIComponent(runHandle)}/audit-trace/download`; }
-export async function downloadAuditTrace(caseId: string, runHandle: string): Promise<void> {
-  const response = await fetch(getAuditTraceDownloadUrl(caseId, runHandle));
+export function getTraceDownloadUrl(caseId: string, runHandle: string): string { return `${API_BASE}/api/cases/${encodeURIComponent(caseId)}/assessment-runs/${encodeURIComponent(runHandle)}/audit-trace/download`; }
+export async function downloadTrace(caseId: string, runHandle: string): Promise<void> {
+  const response = await fetch(getTraceDownloadUrl(caseId, runHandle));
   if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? `Request failed (${response.status})`);
   const blobUrl = URL.createObjectURL(await response.blob());
   const link = document.createElement("a");
   link.href = blobUrl;
-  link.download = `caselens-${caseId}-${runHandle}-audit-trace.jsonl`;
+  link.download = `caselens-${caseId}-${runHandle}-trace.jsonl`;
   link.click();
   URL.revokeObjectURL(blobUrl);
 }

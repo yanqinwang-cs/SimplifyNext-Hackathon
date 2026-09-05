@@ -153,7 +153,7 @@ def test_read_timeout_is_terminal_without_clean_retry_or_report(tmp_path: Path) 
     assert "PRE5A_AUDIT_" not in json.dumps(traces)
 
 
-def test_audit_trace_is_handle_bound_sanitized_and_gated(tmp_path: Path, monkeypatch) -> None:
+def test_trace_is_handle_bound_sanitized_and_available_without_diagnostic_flag(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("AWS_ACCESS_KEY_ID", "PRE5A_AUDIT_ACCESS")
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "PRE5A_AUDIT_SECRET")
     monkeypatch.setenv("AWS_SESSION_TOKEN", "PRE5A_AUDIT_SESSION")
@@ -168,10 +168,6 @@ def test_audit_trace_is_handle_bound_sanitized_and_gated(tmp_path: Path, monkeyp
     thread.start()
     url = f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-01/assessment-runs/{handle}/audit-trace"
     try:
-        monkeypatch.delenv("SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API", raising=False)
-        assert get(url)[0] == 404
-        assert get(f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-01/assessment-runs/{handle}/audit-trace/download")[0] == 404
-        monkeypatch.setenv("SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API", "1")
         status, payload = get(url)
         assert status == 200
         assert payload["caseId"] == "case-01"
@@ -201,9 +197,11 @@ def test_audit_trace_is_handle_bound_sanitized_and_gated(tmp_path: Path, monkeyp
         assert download_status == 200
         assert headers["Content-Type"] == "application/x-ndjson; charset=utf-8"
         assert headers["Content-Disposition"].startswith("attachment; filename=\"caselens-case-01-assessment-")
+        assert headers["Content-Disposition"].endswith("-trace.jsonl\"")
         downloaded = [json.loads(line) for line in body.decode().splitlines()]
         assert any(item["event"] == "vnext_attempt_failed" for item in downloaded)
         assert any("raw_output" in item for item in downloaded)
+        assert any("prompt" in item for item in downloaded)
         assert "PRE5A_AUDIT_" not in body.decode()
         assert get(f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-01/runs/{run['run_id']}/raw-traces")[0] == 404
         assert get(f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-02/assessment-runs/{handle}/audit-trace")[0] == 404
@@ -215,7 +213,7 @@ def test_audit_trace_is_handle_bound_sanitized_and_gated(tmp_path: Path, monkeyp
         thread.join(timeout=2)
 
 
-def test_successful_run_also_has_an_operator_audit_trace(tmp_path: Path) -> None:
+def test_successful_run_also_has_a_trace(tmp_path: Path) -> None:
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
     create_case(workflow, {"title": "No evidence"})
     workflow.run_callback = VNextProductionRunner().run

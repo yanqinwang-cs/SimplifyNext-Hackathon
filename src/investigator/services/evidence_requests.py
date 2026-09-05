@@ -1023,7 +1023,7 @@ class HumanEvidenceWorkflow:
         return value
 
     def audit_trace(self, case_id: str, run_id: str, run_handle: str) -> dict[str, Any]:
-        """Project one run's trace into an operator-only, handle-bound DTO."""
+        """Project one run's trace into a sanitized, handle-bound DTO."""
         run = next((item for item in self.get_runs(case_id) if item.get("run_id") == run_id), None)
         if run is None:
             raise KeyError("Assessment run not found")

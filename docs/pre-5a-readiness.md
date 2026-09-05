@@ -31,13 +31,10 @@ assessment.
    repeat.
 5. Preserve the run result, sanitized trace, public report, and the historical
    source-version links produced by that one run.
-6. For operator diagnosis only, start the backend with
-   `SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API=1`. The assessment page then exposes a
-   handle-bound **Download audit trace** control after a completed, failed,
-   interrupted, or stopped run. The downloaded file is the complete sanitized
-   JSONL trace and is the primary audit artifact; no inline audit summary or
-   full trace is rendered. This is a local operator boundary, not normal
-   assessor UI.
+6. After a completed, failed, interrupted, or stopped run, use the
+   handle-bound **Download trace** control in the assessment status section.
+   The downloaded file is the complete sanitized JSONL run artifact; no inline
+   trace panel is rendered.
 
 ## Questions to evaluate after the run
 
@@ -77,9 +74,9 @@ next live Case 5A attempt will succeed. Every vNext model call now has its own
 chronological start, completed/failed, raw-output, parsed-output, metadata, and
 call-kind record before deterministic validation. Retry decisions, complete
 Warden issues, post-apply validation failures, counters, and final results or
-failures remain in the append-only trace. The full sanitized JSONL file is
-operator-only, contains no credentials or evaluator-only material, has no
-arbitrary truncation, and is available for both successful and failed runs;
+failures remain in the append-only trace. The full sanitized JSONL file
+contains no credentials or evaluator-only material, has no arbitrary
+truncation, and is available for both successful and failed runs;
 raw unsanitized traces are never served.
 
 Do not silently retry a failed run, run another model, or interpret
