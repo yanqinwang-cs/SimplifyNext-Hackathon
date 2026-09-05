@@ -33,8 +33,10 @@ assessment.
    source-version links produced by that one run.
 6. For operator diagnosis only, start the backend with
    `SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API=1`. The assessment page then exposes a
-   handle-bound sanitized audit trace after a completed, failed, interrupted,
-   or stopped run. This is a local operator boundary, not normal assessor UI.
+   compact audit summary and a handle-bound **Download audit trace** control
+   after a completed, failed, interrupted, or stopped run. The download is the
+   complete sanitized JSONL trace; the full trace is not rendered inline. This
+   is a local operator boundary, not normal assessor UI.
 
 ## Questions to evaluate after the run
 
@@ -56,6 +58,23 @@ assessment.
 
 A provider timeout is operational transport failure, not a semantic reasoning
 result. Do not silently retry a timed-out paid inference.
+
+The demonstrated Case 5A scope failure is different from a transport failure.
+An `INCOMPATIBLE_SCOPE` `DERIVED_FROM` defect that changes the provenance of a
+semantic claim is classified as semantic-affecting. It receives at most one
+fresh clean Investigator execution from the original admitted evidence. The
+failed assessment, proposal, graph, and conclusions are not reused; only
+deterministic scope constraints are supplied to the fresh prompt. If that
+retry fails with another semantic-affecting defect, the run fails without a
+third model call. Safe structural graph defects retain the existing single
+proposal-only correction path, with no additional investigation and no loop.
+
+This behavior does not weaken the Warden, source-applicability, supporting-
+material, or cross-student validators. It does not accept private A/B evidence
+as relationship provenance, change assessment statuses, or claim that the
+next live Case 5A attempt will succeed. The full sanitized audit JSONL file is
+operator-only and is available for both successful and failed runs; raw
+unsanitized traces are never served.
 
 Do not silently retry a failed run, run another model, or interpret
 `NOT_CURRENTLY_SUPPORTED` as innocence. A later 5B/5C run is not implied by

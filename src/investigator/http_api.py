@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import re
 import shutil
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -25,6 +26,10 @@ from investigator.state.case_state import CaseState
 from investigator.help import product_guide
 from investigator.public_views import assessment_view, workspace_view, public_run_handle_for_instance, public_source_handle, public_student_handle, resolve_run_handle, resolve_source_handle, resolve_student_handle, document_format
 from investigator.runtime_settings import RuntimeSettingsError, settings as runtime_settings, set_model_overrides, reset_model_overrides
+
+
+def _safe_filename_token(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip(".-") or "run"
 
 
 class CaseTitleUpdate(BaseModel):
@@ -134,12 +139,24 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             except RuntimeSettingsError:
                 self._write(422, {"error": "The configured model is not supported by this prototype", "code": "UNSUPPORTED_MODEL_CONFIGURATION"})
             return
-        if self.workflow.run_mode == "vnext" and os.getenv("SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API") != "1" and ((len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"traces", "runs"}) or (len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "runs") or (len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5] == "audit-trace")):
+        if self.workflow.run_mode == "vnext" and os.getenv("SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API") != "1" and ((len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"traces", "runs"}) or (len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "runs") or (len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5] == "audit-trace") or (len(parts) == 7 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5:7] == ["audit-trace", "download"])):
             self._write(404, {"error": "Not found"})
             return
         if self.workflow.run_mode == "vnext" and len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "workspace":
             try: self._write(200, self._public_workspace(parts[2]))
             except (KeyError, ValueError): self._write(404, {"error": "Case not found"})
+            return
+        if self.workflow.run_mode == "vnext" and len(parts) == 7 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5:7] == ["audit-trace", "download"]:
+            if os.getenv("SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API") != "1":
+                self._write(404, {"error": "Not found"})
+                return
+            try:
+                run_id = resolve_run_handle(self.workflow, parts[2], parts[4])
+                body = self.workflow.audit_trace_file(parts[2], run_id, parts[4])
+                filename = f"caselens-{_safe_filename_token(parts[2])}-{_safe_filename_token(parts[4])}-audit-trace.jsonl"
+                self._write_bytes(200, body, "application/x-ndjson; charset=utf-8", f'attachment; filename="{filename}"')
+            except (KeyError, ValueError):
+                self._write(404, {"error": "Assessment audit trace not found"})
             return
         if self.workflow.run_mode == "vnext" and len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5] == "audit-trace":
             if os.getenv("SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API") != "1":
@@ -202,7 +219,10 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self._cors_headers()
             self.end_headers()
-            self.wfile.write(body)
+            try:
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError):
+                return
             return
         if parts == ["api", "debug", "aws-credentials", "status"]:
             if not debug_credentials_enabled():
@@ -232,6 +252,9 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             self._write(200, {"caseId": parts[2], "runs": self.workflow.get_runs(parts[2])})
             return
         if len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "runs" and parts[5] == "raw-traces":
+            if self.workflow.run_mode == "vnext":
+                self._write(404, {"error": "Not found"})
+                return
             try:
                 body = self.workflow.sanitized_raw_trace(parts[2], parts[4])
                 self.send_response(200)
@@ -240,7 +263,10 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", str(len(body)))
                 self._cors_headers()
                 self.end_headers()
-                self.wfile.write(body)
+                try:
+                    self.wfile.write(body)
+                except (BrokenPipeError, ConnectionResetError):
+                    return
             except (KeyError, ValueError):
                 self._write(404, {"error": "Run not found"})
             return
@@ -611,7 +637,23 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
         self.end_headers()
-        self.wfile.write(encoded)
+        try:
+            self.wfile.write(encoded)
+        except (BrokenPipeError, ConnectionResetError):
+            return
+
+    def _write_bytes(self, status: int, body: bytes, content_type: str, content_disposition: str | None = None) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        if content_disposition:
+            self.send_header("Content-Disposition", content_disposition)
+        self._cors_headers()
+        self.end_headers()
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            return
 
     def _cors_headers(self) -> None:
         origin = self.headers.get("Origin")

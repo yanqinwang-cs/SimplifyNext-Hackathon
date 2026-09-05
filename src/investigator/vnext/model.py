@@ -60,6 +60,13 @@ def build_prompt(run_input: VNextRunInput) -> str:
         required = graph_scope_schema.get("required")
         if isinstance(required, list) and "relationship_id" in required:
             required.remove("relationship_id")
+    retry_section = (
+        "\nDETERMINISTIC RETRY CONSTRAINTS\n"
+        + "\n".join(f"- {constraint}" for constraint in run_input.retry_constraints)
+        + "\n"
+        if run_input.retry_constraints
+        else ""
+    )
     return "\n".join(
         [
             "You are the Investigator for one complete finite assessment.",
@@ -90,6 +97,7 @@ def build_prompt(run_input: VNextRunInput) -> str:
             "\nADMITTED EVIDENCE SOURCES — CASE-WIDE / STUDENT-SPECIFIC / MULTI-STUDENT CANDIDATE (SOURCE STATEMENTS ARE NOT AUTOMATICALLY TRUE)\n" + json.dumps(sources, indent=2),
             "\nAVAILABLE INTERNAL RELATIONSHIP SCOPES (LOCAL REFS ONLY; STRUCTURAL SCOPE, NOT FINDINGS)\n" + json.dumps(relationships, indent=2),
             "\nEXPECTED CONFIGURED STUDENT IDS\n" + json.dumps(sorted(run_input.subjects) or ["case_subject"]),
+            retry_section,
             "\nEXACT INVESTIGATOR ASSESSMENT JSON SCHEMA\n"
             + json.dumps(schema, indent=2, sort_keys=True),
         ]

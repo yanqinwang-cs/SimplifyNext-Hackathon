@@ -94,10 +94,16 @@ def run_input_from_case_state(
     case_state: CaseState,
     rule_preset: AssessmentRulePreset,
     *,
+    retry_constraints: list[str] | None = None,
     human_inputs: dict[str, object] | None = None,
 ) -> VNextRunInput:
     """Construct clean-run inputs without copying prior reasoning state."""
-    return VNextRunInput.from_case_state(case_state, rule_preset, human_inputs=human_inputs)
+    return VNextRunInput.from_case_state(
+        case_state,
+        rule_preset,
+        retry_constraints=retry_constraints,
+        human_inputs=human_inputs,
+    )
 
 
 class VNextRunValidationError(ValueError):
