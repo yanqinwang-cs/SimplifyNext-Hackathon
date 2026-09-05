@@ -8,14 +8,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function getWorkspace(caseId: string): Promise<CaseWorkspaceState> {
-  return request<CaseWorkspaceState>(`/api/cases/${encodeURIComponent(caseId)}/workspace`);
+export function getWorkspace(caseId: string, signal?: AbortSignal): Promise<CaseWorkspaceState> {
+  return request<CaseWorkspaceState>(`/api/cases/${encodeURIComponent(caseId)}/workspace`, { signal });
 }
 export function getSourceDocument(caseId: string, sourceHandle: string): Promise<PublicSourceDocument> { return request<PublicSourceDocument>(`/api/cases/${encodeURIComponent(caseId)}/sources/${encodeURIComponent(sourceHandle)}`); }
 
-export function getReport(caseId: string, assessment?: string): Promise<ReportResponse> {
+export function getReport(caseId: string, assessment?: string, signal?: AbortSignal): Promise<ReportResponse> {
   const query = assessment ? `?assessment=${encodeURIComponent(assessment)}` : "";
-  return request<ReportResponse>(`/api/cases/${encodeURIComponent(caseId)}/report${query}`);
+  return request<ReportResponse>(`/api/cases/${encodeURIComponent(caseId)}/report${query}`, { signal });
 }
 
 export function getHistoricalSourceDocument(caseId: string, assessment: string, sourceHandle: string): Promise<PublicSourceDocument & { source: PublicSourceDocument["source"] & { assessmentDate?: string | null } }> {
@@ -54,7 +54,7 @@ export async function getTraces(caseId: string): Promise<TraceEntry[]> {
 export function runInvestigation(caseId: string): Promise<{ run: { runHandle: string; state: string; startedAt: string }; workspace: CaseWorkspaceState }> {
   return request<{ run: { runHandle: string; state: string; startedAt: string }; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/run`, { method: "POST", body: "{}" });
 }
-export function getAssessmentRun(caseId: string, runHandle: string): Promise<{ runHandle: string; state: string; startedAt: string; endedAt: string | null; message: string; reportAvailable: boolean; reportStale: boolean; workspace: CaseWorkspaceState }> { return request<{ runHandle: string; state: string; startedAt: string; endedAt: string | null; message: string; reportAvailable: boolean; reportStale: boolean; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/assessment-runs/${encodeURIComponent(runHandle)}`); }
+export function getAssessmentRun(caseId: string, runHandle: string, signal?: AbortSignal): Promise<{ runHandle: string; state: string; startedAt: string; endedAt: string | null; message: string; reportAvailable: boolean; reportStale: boolean; workspace: CaseWorkspaceState }> { return request<{ runHandle: string; state: string; startedAt: string; endedAt: string | null; message: string; reportAvailable: boolean; reportStale: boolean; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/assessment-runs/${encodeURIComponent(runHandle)}`, { signal }); }
 
 export function sendWorkspaceMessage(caseId: string, message: string): Promise<WorkspaceChatResponse> {
   return request<WorkspaceChatResponse>(`/api/cases/${encodeURIComponent(caseId)}/workspace/chat`, { method: "POST", body: JSON.stringify({ message }) });

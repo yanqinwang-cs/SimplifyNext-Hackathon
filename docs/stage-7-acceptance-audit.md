@@ -1,8 +1,9 @@
 # Stage 7 acceptance audit
 
-This audit covers the merged vNext product at base `18c6967b` and the Stage 7
-acceptance additions. It establishes offline product readiness; it does not
-validate live-model reasoning quality or AWS connectivity.
+This audit covers the merged vNext product at base `18c6967b`, the Stage 7
+acceptance additions, and the PRE-5A blocker-closure patch. It establishes
+offline product readiness; it does not validate live-model reasoning quality or
+AWS connectivity.
 
 ## Acceptance matrix
 
@@ -73,30 +74,66 @@ make a reasonable assessment on the actual case.
 
 ## Validation and limitations
 
-The required offline validation was run with isolated temporary repositories:
+The required validation was run with isolated temporary repositories:
 
-- `uv run pytest -q` — 472 passed;
 - `uv sync` — passed;
+- `uv run pytest -q` — 482 passed, 1 pre-existing failure in
+  `test_deterministic_runner_is_offline_and_writes_inventory`; the checkout has
+  no committed `experiments/contract_assurance/results/**/batch_manifest.json`
+  inputs, so its legacy assertion that qualified blind failure codes are
+  present cannot hold. No PRE-5A code touches that subsystem;
 - `npm ci`;
 - `npm run typecheck` — passed;
 - `npm run build` (`next build --webpack`) — passed;
-- `npx playwright test tests/stage7-real-flow.spec.ts` — 4 passed on two clean runs;
+- `npx playwright test tests/stage7-real-flow.spec.ts` — 6 passed on two clean runs;
+- `npx playwright test` — 10 passed;
 - `uv build` plus isolated wheel install — passed; both packaged public sample manifests were importable;
 - `git diff --check` and `git diff --cached --check` — passed.
 
 Existing backend tests cover bounded corrective/fresh retry behavior, atomic
 failure handling, historical reports, multi-student provenance, Help tool
-permissions, runtime settings, and public-boundary contracts. This audit does
-not claim that every possible loading race, provider outage, backend restart
+permissions, runtime settings, and public-boundary contracts. PRE-5A closure
+also covers blocked legacy routes, read-only sample mutation guards, catalog
+exclusion by `case_kind`, shared configured-identifier validation, failure-safe
+run admission and rollback, orphan recovery, exact run identity, retained
+polling handles, and explicit retry accounting. The real backend browser flow
+was run twice from clean isolated state; the second run included the retained
+run-handle Retry path and the real Runtime Settings path. Inspected screenshots
+were captured under the isolated Playwright `test-results` directory for the
+credentials-loaded, model-applied, model-reset, and new-user-case states.
+
+This audit does not claim that every possible provider outage, backend restart
 during an in-flight run, or live model semantic outcome was exercised in a
 browser. Those are explicitly offline-tested where deterministic and remain
 outside the live readiness claim.
 
+## PRE-5A blocker closure
+
+- legacy vNext `/subjects` and alternate sample mutation routes are blocked
+  before mutation and return the safe not-found response;
+- canonical sample cases are read-only, excluded from the user catalog by
+  `case_kind`, and user cases with sample-like titles remain visible;
+- run admission validates the persisted configuration before `RUNNING`,
+  prepares artifacts before state publication, rolls back failed admission, and
+  recovers orphaned persisted runs as `INTERRUPTED`;
+- every admitted run keeps one exact run ID through worker execution, polling,
+  finalization, and persisted artifacts;
+- configured student identifier validation is shared by add and rename paths;
+- network/timeout polling errors retain the same run handle for Retry, and
+  stale requests are aborted on cleanup or case changes;
+- `model_calls`, `proposal_correction_calls`, and `clean_execution_retries`
+  are persisted separately;
+- the six-test `stage7-real-flow.spec.ts` run passed twice, including the real
+  backend Runtime Settings test and same-run Retry test;
+- no live AWS/model call was made and no paid Case 5A run was executed.
+
 ## Gate result
 
 - offline product acceptance: PASS;
-- unresolved product blockers: none observed;
-- safe to request authorization for one paid Case 5A run: YES;
+- PRE-5A offline blockers: CLOSED;
+- live provider/AWS readiness: NOT ASSESSED;
+- safe to request a separate final pre-5A review: YES;
+- safe to claim paid Case 5A readiness from this audit: NO;
 - paid Case 5A run: NOT EXECUTED;
 - live AWS/model calls: 0;
 - real-model reasoning quality: NOT VALIDATED;
