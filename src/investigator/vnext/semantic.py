@@ -104,6 +104,10 @@ class InvestigatorSemanticAssessment(BaseModel):
 class SemanticValidationError(ValueError):
     """The model's semantic assessment cannot be represented safely."""
 
+    def __init__(self, message: str, *, retry_constraint: str | None = None) -> None:
+        super().__init__(message)
+        self.retry_constraint = retry_constraint
+
 
 @dataclass(frozen=True)
 class SemanticSymbol:
@@ -191,29 +195,28 @@ def _scope_for_item(
     unknown_sources = set(item.basis_source_ids) - set(run_input.sources)
     if unknown_sources:
         raise SemanticValidationError(f"{item.local_ref} references unknown source IDs: {sorted(unknown_sources)}")
+    if item.kind is SemanticItemKind.EVIDENCE_STATEMENT:
+        return _evidence_statement_scope(item, run_input)
     if item.kind is SemanticItemKind.PROPOSITION:
-        unknown_basis = set(item.basis_item_refs) - set(resolved_scopes)
-        if unknown_basis:
-            raise SemanticValidationError(f"{item.local_ref} requires earlier basis_item_refs: {sorted(unknown_basis)}")
         basis_scopes = [resolved_scopes[ref] for ref in item.basis_item_refs]
-        if len(about) > 1:
-            matches = [scope for scope in run_input.relationship_scopes.values() if set(scope.student_ids) == about]
-            if len(matches) != 1:
-                raise SemanticValidationError(f"{item.local_ref} has no exact relationship scope")
-            relationship_scope = GraphScope(scope_type=GraphScopeType.RELATIONSHIP, relationship_ref=matches[0].local_ref)
-            if not any(scope.model_dump(mode="json") == relationship_scope.model_dump(mode="json") for scope in basis_scopes):
-                raise SemanticValidationError(f"{item.local_ref} requires a relationship-valid joint source basis for this participant set")
-            if any(not scope_allows_semantic_scope(scope, about, run_input) for scope in basis_scopes):
-                raise SemanticValidationError(f"{item.local_ref} has a basis item outside its participant scope")
-            return relationship_scope
-        if len(about) == 1:
-            subject_id = next(iter(about))
-            if any(not scope_allows_semantic_scope(scope, about, run_input) for scope in basis_scopes):
-                raise SemanticValidationError(f"{item.local_ref} has a basis item outside subject {subject_id!r}")
-            return GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id=subject_id)
-        if any(scope.scope_type is not GraphScopeType.CASE for scope in basis_scopes):
-            raise SemanticValidationError(f"{item.local_ref} has no case-compatible basis")
-        return GraphScope(scope_type=GraphScopeType.CASE)
+        if not basis_scopes:
+            raise SemanticValidationError(f"{item.local_ref} requires basis_item_refs")
+        first_scope = basis_scopes[0]
+        if any(scope.model_dump(mode="json") != first_scope.model_dump(mode="json") for scope in basis_scopes[1:]):
+            raise SemanticValidationError(
+                f"{item.local_ref} combines incompatible basis scopes; "
+                "private student evidence cannot be widened into relationship or case scope"
+            )
+        if about and not scope_allows_semantic_scope(first_scope, about, run_input):
+            raise SemanticValidationError(f"{item.local_ref} is declared about subjects outside its basis scope")
+        return first_scope
+    if item.kind is SemanticItemKind.UNCERTAINTY and item.target_ref is not None:
+        target_scope = resolved_scopes.get(item.target_ref)
+        if target_scope is None:
+            raise SemanticValidationError(f"{item.local_ref} has an unresolved target_ref")
+        if about and not scope_allows_semantic_scope(target_scope, about, run_input):
+            raise SemanticValidationError(f"{item.local_ref} is declared about subjects outside its target scope")
+        return target_scope
     if len(about) == 1:
         subject_id = next(iter(about))
         if any(not source_applies_to_student(run_input.source_applicability[source_id], subject_id, run_input.subjects) for source_id in item.basis_source_ids):
@@ -229,6 +232,69 @@ def _scope_for_item(
     if not item.basis_source_ids or not all(run_input.source_applicability[source_id].case_shared_allowed for source_id in item.basis_source_ids):
         raise SemanticValidationError(f"{item.local_ref} has no case-compatible basis")
     return GraphScope(scope_type=GraphScopeType.CASE)
+
+
+def _scope_description(scope: GraphScope, run_input: VNextRunInput) -> str:
+    if scope.scope_type is GraphScopeType.CASE:
+        return "case"
+    if scope.scope_type is GraphScopeType.SUBJECT:
+        return f"subject {scope.subject_id}"
+    relationship = next(
+        (item for item in run_input.relationship_scopes.values() if item.local_ref == scope.relationship_ref),
+        None,
+    )
+    participants = ", ".join(relationship.student_ids) if relationship else scope.relationship_ref or "unknown"
+    return f"relationship {scope.relationship_ref} ({participants})"
+
+
+def _source_scope(source_id: str, run_input: VNextRunInput) -> GraphScope:
+    applicability = run_input.source_applicability[source_id]
+    trusted = applicability.trusted_scope
+    if trusted is not None:
+        if trusted.scope_type is GraphScopeType.CASE:
+            return GraphScope(scope_type=GraphScopeType.CASE)
+        if trusted.scope_type is GraphScopeType.SUBJECT:
+            return GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id=trusted.subject_id)
+        relationship = next(
+            (item for item in run_input.relationship_scopes.values() if item.relationship_id == trusted.relationship_id),
+            None,
+        )
+        if relationship is None:
+            raise SemanticValidationError(f"source {source_id!r} has an unknown trusted relationship scope")
+        return GraphScope(scope_type=GraphScopeType.RELATIONSHIP, relationship_ref=relationship.local_ref)
+
+    relationship_scopes = [
+        scope for scope in run_input.relationship_scopes.values() if source_id in scope.source_ids
+    ]
+    if len(relationship_scopes) == 1:
+        return GraphScope(scope_type=GraphScopeType.RELATIONSHIP, relationship_ref=relationship_scopes[0].local_ref)
+    if len(relationship_scopes) > 1:
+        raise SemanticValidationError(f"source {source_id!r} has multiple incompatible relationship scopes")
+    if applicability.case_shared_allowed:
+        return GraphScope(scope_type=GraphScopeType.CASE)
+    if len(applicability.permitted_subject_ids) == 1:
+        return GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id=applicability.permitted_subject_ids[0])
+    raise SemanticValidationError(
+        f"source {source_id!r} has no single legal evidential scope; "
+        "identifier mentions do not establish a relationship scope"
+    )
+
+
+def _evidence_statement_scope(item: SemanticItem, run_input: VNextRunInput) -> GraphScope:
+    source_scopes = [_source_scope(source_id, run_input) for source_id in item.basis_source_ids]
+    if not source_scopes:
+        raise SemanticValidationError(f"{item.local_ref} requires basis_source_ids")
+    first_scope = source_scopes[0]
+    if any(scope.model_dump(mode="json") != first_scope.model_dump(mode="json") for scope in source_scopes[1:]):
+        descriptions = ", ".join(_scope_description(scope, run_input) for scope in source_scopes)
+        raise SemanticValidationError(
+            f"Evidence statement {item.local_ref!r} cites sources with incompatible legal scopes: {descriptions}",
+            retry_constraint=(
+                f"Evidence statement {item.local_ref!r} must inherit one compatible legal scope from its cited sources. "
+                "Do not combine incompatible private student sources or widen them to a relationship."
+            ),
+        )
+    return first_scope
 
 
 def scope_allows_semantic_scope(scope: GraphScope, subjects: set[str], run_input: VNextRunInput) -> bool:
@@ -305,6 +371,16 @@ def compile_semantic_assessment(assessment: InvestigatorSemanticAssessment, run_
                 for ref_index, ref in enumerate(getattr(violation, field_name)):
                     location = f"subject_assessments[{list(expected_subjects).index(subject_id)}].violation_assessments[{violation_index}].{field_name}[{ref_index}]"
                     item = _resolve_symbol(symbols, ref, location, allowed_kinds=allowed_kinds).item
+                    if not scope_allows_semantic_scope(scopes[ref], {subject_id}, run_input):
+                        resolved = _scope_description(scopes[ref], run_input)
+                        display_name = run_input.subjects[subject_id].display_name
+                        raise SemanticValidationError(
+                            f"{location} references {ref!r}, whose legal scope is {resolved}, not subject {subject_id!r}",
+                            retry_constraint=(
+                                f"Evidence or proposition {ref!r} has legal scope {resolved}. "
+                                f"Do not use it as evidence for {display_name}; source mentions do not widen legal scope."
+                            ),
+                        )
                     if item.about_subject_ids and subject_id not in item.about_subject_ids:
                         raise SemanticValidationError(f"{location} references {ref!r}, which is not about subject {subject_id!r}")
                     if field_name != "alternative_item_refs" and not semantic_item_has_source_ancestry(ref, by_ref):

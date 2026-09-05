@@ -12,7 +12,13 @@ from investigator.vnext.model import build_prompt
 
 
 def source(source_id: str = "S1") -> Source:
-    return Source(id=source_id, name=source_id, source_type=SourceType.DOCUMENT, content="subject_A subject_B Candidate A Candidate B record")
+    return Source(
+        id=source_id,
+        name=source_id,
+        source_type=SourceType.DOCUMENT,
+        content="subject_A subject_B Candidate A Candidate B record",
+        metadata={"assessment_scope": {"scope_type": "case"}},
+    )
 
 
 def subjects() -> dict[str, AssessmentSubject]:

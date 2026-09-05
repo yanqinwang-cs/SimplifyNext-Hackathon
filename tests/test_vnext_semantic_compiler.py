@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 from investigator.graph import GraphNodeType, GraphScope, GraphScopeType
@@ -76,13 +78,69 @@ def test_private_source_cross_student_and_joint_private_stitching_are_rejected()
     private_misuse = _assessment(invalid_support="e_bad").model_copy(update={
         "semantic_items": _assessment().semantic_items + [SemanticItem(local_ref="e_bad", kind=SemanticItemKind.EVIDENCE_STATEMENT, statement="Misapplied record.", about_subject_ids=["subject_A"], basis_source_ids=["S2"])],
     })
-    with pytest.raises(SemanticValidationError, match="not permitted"):
+    with pytest.raises(SemanticValidationError, match="legal scope"):
         compile_semantic_assessment(private_misuse, run_input)
     joint_private = _assessment().model_copy(update={
         "semantic_items": _assessment().semantic_items[:2] + [SemanticItem(local_ref="joint", kind=SemanticItemKind.PROPOSITION, statement="Joint conclusion.", about_subject_ids=["subject_A", "subject_B"], basis_source_ids=["S3"], basis_item_refs=["e_a", "e_b"])],
     })
-    with pytest.raises(SemanticValidationError, match="relationship-valid joint source"):
+    with pytest.raises(SemanticValidationError, match="incompatible basis scopes"):
         compile_semantic_assessment(joint_private, run_input)
+
+
+def test_evidence_scope_is_sticky_to_source_not_mentions() -> None:
+    run_input = _input()
+    source = run_input.sources["S1"].model_copy(update={
+        "content": "Candidate A and Candidate B are mentioned in this record.",
+        "metadata": {"assessment_scope": {"scope_type": "subject", "subject_id": "subject_A"}},
+    })
+    sources = {**run_input.sources, "S1": source}
+    run_input = run_input.model_copy(update={
+        "sources": sources,
+        "source_applicability": build_source_applicability(sources, run_input.subjects, run_input.subject_relationships),
+    })
+    item = SemanticItem(
+        local_ref="e_mentions_b",
+        kind=SemanticItemKind.EVIDENCE_STATEMENT,
+        statement="The record describes an event involving Candidate B.",
+        about_subject_ids=["subject_A", "subject_B"],
+        basis_source_ids=["S1"],
+    )
+    assessment = _assessment().model_copy(update={
+        "semantic_items": _assessment().semantic_items + [item],
+        "subject_assessments": [
+            _assessment().subject_assessments[0].model_copy(update={
+                "violation_assessments": [
+                    _assessment().subject_assessments[0].violation_assessments[0].model_copy(update={"supporting_item_refs": ["e_mentions_b"]})
+                ]
+            }),
+            _assessment().subject_assessments[1],
+        ],
+    })
+    compiled = compile_semantic_assessment(assessment, run_input)
+    evidence = next(update for update in compiled.proposal.graph_updates if getattr(update, "local_ref", None) == "e_mentions_b")
+    assert evidence.scope.scope_type is GraphScopeType.SUBJECT
+    assert evidence.scope.subject_id == "subject_A"
+
+
+def test_evidence_scope_cannot_be_widened_to_mentioned_student() -> None:
+    assessment = _assessment().model_copy(update={
+        "subject_assessments": [
+            _assessment().subject_assessments[0],
+            _assessment().subject_assessments[1].model_copy(update={
+                "violation_assessments": [
+                    _assessment().subject_assessments[1].violation_assessments[0].model_copy(update={"supporting_item_refs": ["e_a"], "status": AssessmentStatus.SUPPORTED})
+                ]
+            }),
+        ]
+    })
+    with pytest.raises(SemanticValidationError, match="legal scope"):
+        compile_semantic_assessment(assessment, _input())
+
+
+def test_relationship_scoped_source_is_inherited_by_evidence_item() -> None:
+    compiled = compile_semantic_assessment(_assessment(), _input())
+    evidence = next(update for update in compiled.proposal.graph_updates if getattr(update, "local_ref", None) == "e_joint")
+    assert evidence.scope.scope_type is GraphScopeType.RELATIONSHIP
 
 
 def test_hypothesis_cannot_be_supporting_material() -> None:
@@ -190,6 +248,19 @@ def test_trusted_subject_source_does_not_widen_from_identifier_mentions() -> Non
     assert applicability.permitted_subject_ids == ["subject_A"]
 
 
+def test_multiple_identifier_mentions_do_not_create_student_permissions() -> None:
+    source = Source(
+        id="S5",
+        name="ambiguous.md",
+        source_type=SourceType.DOCUMENT,
+        content="Candidate A and Candidate B are mentioned.",
+    )
+    applicability = build_source_applicability({"S5": source}, _input().subjects, {})["S5"]
+    assert applicability.identifier_mentions == ["subject_A", "subject_B"]
+    assert applicability.permitted_subject_ids == []
+    assert applicability.case_shared_allowed is False
+
+
 def test_limiting_material_is_not_compiled_as_conflict() -> None:
     compiled = compile_semantic_assessment(_assessment(), _input())
     operations = compiled.proposal.graph_updates
@@ -200,6 +271,74 @@ def test_semantic_prompt_excludes_graph_programming_contract() -> None:
     prompt = build_prompt(_input()).lower()
     for forbidden in ("graph node", "graph scope", "relationship_ref", "operations", "operationspec", "warden", "edge direction"):
         assert forbidden not in prompt
+
+
+def test_semantic_prompt_states_sticky_evidence_scope_contract() -> None:
+    prompt = build_prompt(_input())
+    assert "inherit legal scope from their cited source" in prompt
+    assert "who is mentioned in a source does not change" in prompt
+    assert "cannot combine incompatible private student scopes" in prompt
+
+
+def test_semantic_validation_retry_constraint_is_concrete() -> None:
+    error = SemanticValidationError(
+        "Evidence statement 'ev_a' cites source scope subject subject_A but is used for subject_B",
+        retry_constraint="Evidence statement 'ev_a' cites a source scoped to subject subject_A. Do not declare this evidence statement as multi-student.",
+    )
+    constraints = VNextProductionRunner._semantic_validation_retry_constraints(error)
+    assert any("ev_a" in constraint and "subject subject_A" in constraint for constraint in constraints)
+    assert not any("prior model" in constraint.lower() for constraint in constraints)
+
+
+def test_semantic_scope_failure_gets_one_clean_retry_with_concrete_constraint(tmp_path) -> None:
+    run_input = _input()
+    invalid = _assessment().model_copy(update={
+        "subject_assessments": [
+            _assessment().subject_assessments[0],
+            _assessment().subject_assessments[1].model_copy(update={
+                "violation_assessments": [
+                    _assessment().subject_assessments[1].violation_assessments[0].model_copy(update={
+                        "status": AssessmentStatus.SUPPORTED,
+                        "supporting_item_refs": ["e_a"],
+                    })
+                ]
+            }),
+        ]
+    })
+
+    class Client:
+        def __init__(self) -> None:
+            self.responses = [invalid, _assessment()]
+            self.prompts: list[str] = []
+
+        def call(self, prompt, schema):
+            self.prompts.append(str(prompt))
+            response = self.responses.pop(0)
+            return ModelCallResult(
+                parsed=schema.model_validate(response.model_dump(mode="python")),
+                metadata=ModelCallMetadata(provider="offline", model="fixture", latency_seconds=0.001, parse_success=True),
+                raw_output=response.model_dump(mode="json"),
+            )
+
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    state = CaseState(case_id="case-01", title="Semantic scope retry")
+    state.subjects = run_input.subjects
+    state.subject_relationships = run_input.subject_relationships
+    state.sources = run_input.sources
+    workflow.repository.save(state)
+    client = Client()
+    workflow.run_callback = VNextProductionRunner(client, preset_resolver=lambda _: run_input.rule_preset).run
+    workflow.start_run("case-01")
+    for _ in range(100):
+        if workflow.ensure_case("case-01").runtime_status in {"COMPLETED", "FAILED"}:
+            break
+        time.sleep(0.01)
+
+    assert workflow.ensure_case("case-01").runtime_status == "COMPLETED"
+    assert len(client.prompts) == 2
+    assert "source mentions do not widen legal scope" in client.prompts[1]
+    validation = next(item for item in workflow.get_traces("case-01") if item["event"] == "vnext_semantic_validation_failed")
+    assert any("source mentions do not widen legal scope" in item for item in validation["retry_constraints"])
 
 
 def test_normal_semantic_warden_failure_is_terminal_without_model_retry(tmp_path, monkeypatch) -> None:

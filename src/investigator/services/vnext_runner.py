@@ -213,6 +213,8 @@ class VNextProductionRunner:
                     try:
                         first_assessment = compile_semantic_assessment(semantic_assessment, run_input, preset=preset)
                     except SemanticValidationError as semantic_error:
+                        if attempt_number < self.max_attempts:
+                            retry_constraints = self._semantic_validation_retry_constraints(semantic_error)
                         workflow.record_trace(case_id, {
                             "event": "vnext_semantic_validation_failed",
                             "actor": "investigator",
@@ -223,6 +225,7 @@ class VNextProductionRunner:
                             "failure_category": "SEMANTIC_VALIDATION",
                             "error": redact_sensitive_text(str(semantic_error)),
                             "evidence_use_map": source_applicability_snapshot(run_input.source_applicability),
+                            "retry_constraints": list(retry_constraints),
                         })
                         raise
                     workflow.record_trace(case_id, {
@@ -517,6 +520,18 @@ class VNextProductionRunner:
                     "Reassess each student independently from the original admitted evidence.",
                 }
             )
+        return sorted(constraints)
+
+    @staticmethod
+    def _semantic_validation_retry_constraints(error: SemanticValidationError) -> list[str]:
+        """Return concrete semantic constraints without carrying prior reasoning."""
+
+        constraints = {
+            "Reassess the complete case from the original admitted evidence.",
+            "Do not preserve conclusions from the prior failed execution.",
+        }
+        if error.retry_constraint:
+            constraints.add(error.retry_constraint)
         return sorted(constraints)
 
     @staticmethod

@@ -149,6 +149,11 @@ def build_source_applicability(
         permitted_subject_ids: list[str]
         permitted_relationship_ids: list[str] = []
         case_shared_allowed = False
+        explicit_relationships = [
+            relationship
+            for relationship in relationships.values()
+            if source_id in relationship.source_ids
+        ]
         if trusted is not None:
             if trusted.scope_type is GraphScopeType.CASE:
                 permitted_subject_ids = sorted(subjects)
@@ -159,11 +164,20 @@ def build_source_applicability(
                 relationship = relationships[trusted.relationship_id or ""]
                 permitted_subject_ids = sorted(relationship.subject_ids)
                 permitted_relationship_ids = [relationship.relationship_id]
+        elif len(explicit_relationships) == 1:
+            relationship = explicit_relationships[0]
+            permitted_subject_ids = sorted(relationship.subject_ids)
+            permitted_relationship_ids = [relationship.relationship_id]
         elif not matched:
             permitted_subject_ids = sorted(subjects)
             case_shared_allowed = True
-        else:
+        elif len(matched) == 1:
             permitted_subject_ids = list(matched)
+        else:
+            # Multiple textual mentions are provenance only.  Without an
+            # explicit trusted relationship scope, they do not authorize the
+            # source for any particular student.
+            permitted_subject_ids = []
         result[source_id] = SourceApplicability(
             source_id=source_id,
             matched_student_ids=matched,
