@@ -188,6 +188,8 @@ def _scope_for_item(
     item: SemanticItem,
     run_input: VNextRunInput,
     resolved_scopes: dict[str, GraphScope],
+    *,
+    definition_location: str | None = None,
 ) -> GraphScope:
     about = set(item.about_subject_ids)
     if not about.issubset(run_input.subjects):
@@ -196,16 +198,24 @@ def _scope_for_item(
     if unknown_sources:
         raise SemanticValidationError(f"{item.local_ref} references unknown source IDs: {sorted(unknown_sources)}")
     if item.kind is SemanticItemKind.EVIDENCE_STATEMENT:
-        return _evidence_statement_scope(item, run_input)
+        return _evidence_statement_scope(item, run_input, definition_location)
     if item.kind is SemanticItemKind.PROPOSITION:
         basis_scopes = [resolved_scopes[ref] for ref in item.basis_item_refs]
         if not basis_scopes:
             raise SemanticValidationError(f"{item.local_ref} requires basis_item_refs")
         first_scope = basis_scopes[0]
         if any(scope.model_dump(mode="json") != first_scope.model_dump(mode="json") for scope in basis_scopes[1:]):
+            details = ", ".join(
+                f"{ref} -> {_scope_description(scope, run_input)}"
+                for ref, scope in zip(item.basis_item_refs, basis_scopes)
+            )
             raise SemanticValidationError(
-                f"{item.local_ref} combines incompatible basis scopes; "
-                "private student evidence cannot be widened into relationship or case scope"
+                f"Semantic item {item.local_ref!r} at {definition_location or 'semantic_items[?]'} derives from basis items with incompatible scopes: {details}. "
+                "Required action: Keep separate subject-scoped propositions unless one existing relationship-scoped basis already exists.",
+                retry_constraint=(
+                    f"Semantic item {item.local_ref!r} combined separate student-scoped items. "
+                    "Keep separate subject-scoped propositions unless one existing relationship-scoped basis supports a joint item."
+                ),
             )
         if about and not scope_allows_semantic_scope(first_scope, about, run_input):
             raise SemanticValidationError(f"{item.local_ref} is declared about subjects outside its basis scope")
@@ -280,18 +290,29 @@ def _source_scope(source_id: str, run_input: VNextRunInput) -> GraphScope:
     )
 
 
-def _evidence_statement_scope(item: SemanticItem, run_input: VNextRunInput) -> GraphScope:
+def _evidence_statement_scope(
+    item: SemanticItem,
+    run_input: VNextRunInput,
+    definition_location: str | None,
+) -> GraphScope:
     source_scopes = [_source_scope(source_id, run_input) for source_id in item.basis_source_ids]
     if not source_scopes:
         raise SemanticValidationError(f"{item.local_ref} requires basis_source_ids")
     first_scope = source_scopes[0]
     if any(scope.model_dump(mode="json") != first_scope.model_dump(mode="json") for scope in source_scopes[1:]):
-        descriptions = ", ".join(_scope_description(scope, run_input) for scope in source_scopes)
+        descriptions = ", ".join(
+            f"{source_id} -> {_scope_description(scope, run_input)}"
+            for source_id, scope in zip(item.basis_source_ids, source_scopes)
+        )
+        distinct_scope_labels = " and ".join(
+            sorted({_scope_description(scope, run_input) for scope in source_scopes})
+        )
         raise SemanticValidationError(
-            f"Evidence statement {item.local_ref!r} cites sources with incompatible legal scopes: {descriptions}",
+            f"Semantic item {item.local_ref!r} at {definition_location or 'semantic_items[?]'} cites sources with incompatible legal scopes: {descriptions}. "
+            "Required action: Split this into separate semantic items by legal source scope.",
             retry_constraint=(
-                f"Evidence statement {item.local_ref!r} must inherit one compatible legal scope from its cited sources. "
-                "Do not combine incompatible private student sources or widen them to a relationship."
+                f"Semantic item {item.local_ref!r} combined {distinct_scope_labels} sources. "
+                "Split them into separate semantic items. One semantic item may use only sources sharing one legal scope."
             ),
         )
     return first_scope
@@ -350,8 +371,14 @@ def compile_semantic_assessment(assessment: InvestigatorSemanticAssessment, run_
             _resolve_symbol(symbols, item.target_ref, f"semantic_items[{item_index}].target_ref")
     items = [symbol.item for symbol in _semantic_definition_order(symbols)]
     scopes: dict[str, GraphScope] = {}
+    definition_locations = {symbol.local_ref: symbol.definition_location for symbol in symbols.values()}
     for item in items:
-        scopes[item.local_ref] = _scope_for_item(item, run_input, scopes)
+        scopes[item.local_ref] = _scope_for_item(
+            item,
+            run_input,
+            scopes,
+            definition_location=definition_locations[item.local_ref],
+        )
     by_subject = {item.subject_id: item for item in assessment.subject_assessments}
     if set(by_subject) != set(expected_subjects):
         raise SemanticValidationError("semantic assessment must cover exactly the configured students")

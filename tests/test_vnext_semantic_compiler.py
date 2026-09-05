@@ -83,8 +83,61 @@ def test_private_source_cross_student_and_joint_private_stitching_are_rejected()
     joint_private = _assessment().model_copy(update={
         "semantic_items": _assessment().semantic_items[:2] + [SemanticItem(local_ref="joint", kind=SemanticItemKind.PROPOSITION, statement="Joint conclusion.", about_subject_ids=["subject_A", "subject_B"], basis_source_ids=["S3"], basis_item_refs=["e_a", "e_b"])],
     })
-    with pytest.raises(SemanticValidationError, match="incompatible basis scopes"):
+    with pytest.raises(SemanticValidationError, match=r"semantic_items\[2\].*Keep separate subject-scoped propositions") as caught:
         compile_semantic_assessment(joint_private, run_input)
+    assert "e_a -> subject subject_A" in str(caught.value)
+    assert "e_b -> subject subject_B" in str(caught.value)
+
+
+def test_mixed_private_sources_in_one_evidence_item_require_split() -> None:
+    item = SemanticItem(
+        local_ref="mixed_observation",
+        kind=SemanticItemKind.EVIDENCE_STATEMENT,
+        statement="A combined observation.",
+        about_subject_ids=["subject_A", "subject_B"],
+        basis_source_ids=["S1", "S2"],
+    )
+    assessment = _assessment().model_copy(update={"semantic_items": _assessment().semantic_items + [item]})
+    with pytest.raises(SemanticValidationError, match=r"semantic_items\[4\].*Split this into separate semantic items") as caught:
+        compile_semantic_assessment(assessment, _input())
+    assert "S1 -> subject subject_A" in str(caught.value)
+    assert "S2 -> subject subject_B" in str(caught.value)
+
+
+def test_same_subject_sources_can_share_one_evidence_item() -> None:
+    run_input = _input()
+    same_scope_source = run_input.sources["S1"].model_copy(update={"id": "S1_COPY", "name": "A second record"})
+    sources = {**run_input.sources, "S1_COPY": same_scope_source}
+    run_input = run_input.model_copy(update={
+        "sources": sources,
+        "source_applicability": build_source_applicability(sources, run_input.subjects, run_input.subject_relationships),
+    })
+    item = SemanticItem(
+        local_ref="two_a_records",
+        kind=SemanticItemKind.EVIDENCE_STATEMENT,
+        statement="Two records concern Candidate A.",
+        about_subject_ids=["subject_A"],
+        basis_source_ids=["S1", "S1_COPY"],
+    )
+    assessment = _assessment().model_copy(update={"semantic_items": _assessment().semantic_items + [item]})
+    compiled = compile_semantic_assessment(assessment, run_input)
+    evidence = next(update for update in compiled.proposal.graph_updates if getattr(update, "local_ref", None) == "two_a_records")
+    assert evidence.scope.scope_type is GraphScopeType.SUBJECT
+    assert evidence.scope.subject_id == "subject_A"
+
+
+def test_same_relationship_items_can_form_relationship_proposition() -> None:
+    item = SemanticItem(
+        local_ref="joint_proposition",
+        kind=SemanticItemKind.PROPOSITION,
+        statement="The joint record supports a bounded proposition.",
+        about_subject_ids=["subject_A", "subject_B"],
+        basis_item_refs=["e_joint"],
+    )
+    assessment = _assessment().model_copy(update={"semantic_items": _assessment().semantic_items + [item]})
+    compiled = compile_semantic_assessment(assessment, _input())
+    proposition = next(update for update in compiled.proposal.graph_updates if getattr(update, "local_ref", None) == "joint_proposition")
+    assert proposition.scope.scope_type is GraphScopeType.RELATIONSHIP
 
 
 def test_evidence_scope_is_sticky_to_source_not_mentions() -> None:
@@ -278,6 +331,8 @@ def test_semantic_prompt_states_sticky_evidence_scope_contract() -> None:
     assert "inherit legal scope from their cited source" in prompt
     assert "who is mentioned in a source does not change" in prompt
     assert "cannot combine incompatible private student scopes" in prompt
+    assert "create separate semantic items for A and B" in prompt
+    assert "Do not summarize separate A and B sources into one evidence_statement" in prompt
 
 
 def test_semantic_validation_retry_constraint_is_concrete() -> None:
@@ -292,17 +347,22 @@ def test_semantic_validation_retry_constraint_is_concrete() -> None:
 
 def test_semantic_scope_failure_gets_one_clean_retry_with_concrete_constraint(tmp_path) -> None:
     run_input = _input()
+    mixed_item = SemanticItem(
+        local_ref="mixed_retry_item",
+        kind=SemanticItemKind.EVIDENCE_STATEMENT,
+        statement="A mixed private observation.",
+        about_subject_ids=["subject_A", "subject_B"],
+        basis_source_ids=["S1", "S2"],
+    )
     invalid = _assessment().model_copy(update={
+        "semantic_items": _assessment().semantic_items + [mixed_item],
         "subject_assessments": [
-            _assessment().subject_assessments[0],
-            _assessment().subject_assessments[1].model_copy(update={
+            _assessment().subject_assessments[0].model_copy(update={
                 "violation_assessments": [
-                    _assessment().subject_assessments[1].violation_assessments[0].model_copy(update={
-                        "status": AssessmentStatus.SUPPORTED,
-                        "supporting_item_refs": ["e_a"],
-                    })
+                    _assessment().subject_assessments[0].violation_assessments[0].model_copy(update={"supporting_item_refs": ["mixed_retry_item"]})
                 ]
             }),
+            _assessment().subject_assessments[1],
         ]
     })
 
@@ -336,9 +396,9 @@ def test_semantic_scope_failure_gets_one_clean_retry_with_concrete_constraint(tm
 
     assert workflow.ensure_case("case-01").runtime_status == "COMPLETED"
     assert len(client.prompts) == 2
-    assert "source mentions do not widen legal scope" in client.prompts[1]
+    assert "Split them into separate semantic items" in client.prompts[1]
     validation = next(item for item in workflow.get_traces("case-01") if item["event"] == "vnext_semantic_validation_failed")
-    assert any("source mentions do not widen legal scope" in item for item in validation["retry_constraints"])
+    assert any("Split them into separate semantic items" in item for item in validation["retry_constraints"])
 
 
 def test_normal_semantic_warden_failure_is_terminal_without_model_retry(tmp_path, monkeypatch) -> None:
