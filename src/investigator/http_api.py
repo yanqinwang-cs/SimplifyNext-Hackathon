@@ -393,6 +393,8 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 payload = self._read_json()
                 expected_revision = payload.pop("case_revision", None)
                 if parts[3] == "sources":
+                    if "assessment_scope" in payload:
+                        raise ValueError("Source applicability is calculated internally and cannot be supplied through the public upload API")
                     scope = payload.pop("assessment_scope", None)
                     source = self.workflow.add_direct_source(
                         parts[2], display_name=str(payload.pop("display_name", "")), content=str(payload.pop("content", "")),
@@ -403,7 +405,10 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 elif parts[3] == "subjects":
                     subject = self.workflow.add_subject(parts[2], payload, expected_revision)
                     self._write(200, {"subject": subject.model_dump(mode="json"), "workspace": self.workflow.get_workspace(parts[2])})
-                else:
+                elif parts[3] == "relationships":
+                    if self.workflow.run_mode == "vnext":
+                        self._write(404, {"error": "Not found"})
+                        return
                     relationship = self.workflow.add_relationship(parts[2], payload, expected_revision)
                     self._write(200, {"relationship": relationship.model_dump(mode="json"), "workspace": self.workflow.get_workspace(parts[2])})
             except (ValueError, KeyError, EvidenceRequestConflict) as exc:

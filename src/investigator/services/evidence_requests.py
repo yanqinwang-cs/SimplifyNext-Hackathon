@@ -31,6 +31,24 @@ class CaseSnapshotMismatch(EvidenceRequestConflict):
     pass
 
 
+def _public_semantic_text(state: CaseState, value: object) -> str:
+    """Remove internal graph/source identity tokens from model-derived text."""
+
+    text = str(value or "")
+    replacements: list[tuple[str, str]] = []
+    for subject_id, subject in state.subjects.items():
+        replacements.append((subject_id, subject.display_name))
+    for source_id in state.sources:
+        replacements.append((source_id, "the source"))
+    for relationship_id in state.subject_relationships:
+        replacements.append((relationship_id, "the relationship"))
+    replacements.sort(key=lambda item: len(item[0]), reverse=True)
+    for internal, replacement in replacements:
+        text = re.sub(rf"(?<![A-Za-z0-9_]){re.escape(internal)}(?![A-Za-z0-9_])", replacement, text)
+    text = re.sub(r"(?<![A-Za-z0-9_])rel_[a-f0-9]{12,64}(?![A-Za-z0-9_])", "the relationship", text)
+    return text
+
+
 def _state_signature(state: CaseState) -> str:
     graph = state.reasoning_graph.model_dump(mode="json") if state.reasoning_graph is not None else None
     payload = {
@@ -660,16 +678,17 @@ class HumanEvidenceWorkflow:
                 safe_violations.append({
                     "label": labels.get(violation.get("violation_id"), "Configured violation"),
                     "status": violation.get("status"),
-                    "reasoning_summary": violation.get("reasoning_summary", ""),
-                    "unresolved_points": list(violation.get("unresolved_points", [])),
-                    "supporting_material": [{"statement": item.get("statement", ""), "source_labels": list(item.get("source_labels", []))} for item in violation.get("supporting_material", [])],
-                    "limiting_material": [{"statement": item.get("statement", ""), "source_labels": list(item.get("source_labels", []))} for item in violation.get("mitigating_material", [])],
+                    "reasoning_summary": _public_semantic_text(state, violation.get("reasoning_summary", "")),
+                    "unresolved_points": [_public_semantic_text(state, point) for point in violation.get("unresolved_points", [])],
+                    "supporting_material": [{"statement": _public_semantic_text(state, item.get("statement", "")), "source_labels": list(item.get("source_labels", []))} for item in violation.get("supporting_material", [])],
+                    "limiting_material": [{"statement": _public_semantic_text(state, item.get("statement", "")), "source_labels": list(item.get("source_labels", []))} for item in violation.get("mitigating_material", [])],
                 })
+            conclusion = assessment.get("furthest_conclusion") or {}
             assessments.append({
                 "subject_display_name": assessment.get("subject_display_name", "Student"),
                 "subject_candidate_number": assessment.get("subject_candidate_number"),
                 "violation_assessments": safe_violations,
-                "furthest_conclusion": assessment.get("furthest_conclusion", {}),
+                "furthest_conclusion": {**conclusion, "statement": _public_semantic_text(state, conclusion.get("statement", ""))},
             })
         return {
             "case_name": state.title,
@@ -698,15 +717,15 @@ class HumanEvidenceWorkflow:
             student_violations = []
             for item in assessment.get("violation_assessments", []):
                 def materials(key: str) -> list[dict[str, Any]]:
-                    return [{"statement": material.get("statement", ""), "sourceLabels": material.get("source_labels", [])} for material in item.get(key, [])]
+                    return [{"statement": _public_semantic_text(state, material.get("statement", "")), "sourceLabels": material.get("source_labels", [])} for material in item.get(key, [])]
                 student_violations.append({
                     "label": violations.get(item.get("violation_id"), "Configured violation"),
                     "status": item.get("status"),
-                    "reasoningSummary": item.get("reasoning_summary", ""),
+                    "reasoningSummary": _public_semantic_text(state, item.get("reasoning_summary", "")),
                     "supportingMaterial": materials("supporting_material"),
                     "limitingMaterial": materials("mitigating_material"),
                 })
-            students.append({"displayName": student["displayName"], "violations": student_violations, "furthestConclusion": assessment.get("furthest_conclusion", {}).get("statement", "")})
+            students.append({"displayName": student["displayName"], "violations": student_violations, "furthestConclusion": _public_semantic_text(state, assessment.get("furthest_conclusion", {}).get("statement", ""))})
         return {
             "caseId": state.case_id,
             "title": "Law Exam Investigation" if state.title == "Business Law Tutorial 5" else state.title,

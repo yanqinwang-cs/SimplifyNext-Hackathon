@@ -13,6 +13,8 @@ from investigator.roles.investigator import AddEvidenceCommand
 from investigator.models.assessment import AssessmentSubject, SubjectRelationship
 from investigator.models.source import Source
 from investigator.vnext.models import InvestigatorProposal
+from investigator.vnext.relationships import deterministic_relationship_id
+from investigator.vnext.source_applicability import SourceApplicability, build_source_applicability, source_applies_to_student, source_jointly_identifies
 
 
 class ProposalValidationIssue(BaseModel):
@@ -58,6 +60,8 @@ class WardenApplyResult(BaseModel):
     applied_updates: list[dict[str, Any]] = Field(default_factory=list)
     created_node_ids: list[str] = Field(default_factory=list)
     local_ref_resolution: dict[str, str] = Field(default_factory=dict)
+    relationship_registry: dict[str, SubjectRelationship] = Field(default_factory=dict)
+    relationship_ref_resolution: dict[str, str] = Field(default_factory=dict)
 
 
 class GraphWarden:
@@ -70,32 +74,52 @@ class GraphWarden:
         *,
         subjects: Mapping[str, AssessmentSubject] | None = None,
         subject_relationships: Mapping[str, SubjectRelationship] | None = None,
+        source_applicability: Mapping[str, SourceApplicability] | None = None,
+        relationship_refs: Mapping[str, str] | None = None,
+        strict_relationship_refs: bool = False,
     ) -> None:
         self.graph = graph
         self.sources = dict(sources or {})
         self.subjects = dict(subjects or {})
         self.subject_relationships = dict(subject_relationships or {})
+        self.source_applicability = dict(source_applicability or build_source_applicability(self.sources, self.subjects, self.subject_relationships))
+        self.relationship_ref_map = dict(relationship_refs or {
+            f"R{index}": relationship_id
+            for index, relationship_id in enumerate(sorted(self.subject_relationships), start=1)
+        })
+        self.strict_relationship_refs = strict_relationship_refs
 
     def apply(self, proposal: InvestigatorProposal) -> WardenApplyResult:
         """Apply a validated proposal, committing only after the whole batch succeeds."""
         if not isinstance(proposal, InvestigatorProposal):
             raise TypeError("GraphWarden.apply requires an InvestigatorProposal")
 
-        self._validate_source_provenance(proposal)
         before = deepcopy(self.graph)
-        if not proposal.graph_updates:
-            return WardenApplyResult(graph=deepcopy(self.graph))
+        before_relationships = deepcopy(self.subject_relationships)
+        before_refs = dict(self.relationship_ref_map)
+        working_relationships, working_refs = self._prepare_relationship_registry(proposal)
+        self.subject_relationships = working_relationships
+        self.relationship_ref_map = working_refs
 
         try:
+            normalized_proposal = self._normalize_relationship_refs(proposal)
+            normalized_proposal = self._normalize_compatibility_scopes(normalized_proposal)
+            self._validate_source_provenance(normalized_proposal)
+            if not normalized_proposal.graph_updates:
+                self.graph = deepcopy(self.graph)
+                return WardenApplyResult(
+                    graph=deepcopy(self.graph),
+                    relationship_registry=deepcopy(self.subject_relationships),
+                    relationship_ref_resolution={key: value for key, value in self.relationship_ref_map.items()},
+                )
             working = GraphInvestigationCoordinator(
                 deepcopy(self.graph),
                 InvestigationFocus(node_id=next(iter(self.graph.nodes))),
                 full_graph_visibility=True,
             )
-            preflight_issues = self._preflight_issues(proposal, working)
+            preflight_issues = self._preflight_issues(normalized_proposal, working)
             if preflight_issues:
                 raise WardenValidationError("Graph Warden rejected proposal preflight", issues=preflight_issues)
-            normalized_proposal = self._normalize_compatibility_scopes(proposal)
             for operation_index, update in enumerate(normalized_proposal.graph_updates):
                 try:
                     working.apply_investigator_update(update)
@@ -104,6 +128,8 @@ class GraphWarden:
                         raise
                     raise self._issue_error(operation_index, update, exc, working) from exc
         except Exception as exc:
+            self.subject_relationships = before_relationships
+            self.relationship_ref_map = before_refs
             if isinstance(exc, WardenValidationError):
                 raise exc
             raise WardenValidationError(f"Graph Warden rejected proposal: {exc}") from exc
@@ -121,7 +147,102 @@ class GraphWarden:
             applied_updates=[update.model_dump(mode="json") for update in proposal.graph_updates],
             created_node_ids=created_node_ids,
             local_ref_resolution=local_ref_resolution,
+            relationship_registry=deepcopy(self.subject_relationships),
+            relationship_ref_resolution={key: value for key, value in self.relationship_ref_map.items()},
         )
+
+    def _prepare_relationship_registry(
+        self, proposal: InvestigatorProposal
+    ) -> tuple[dict[str, SubjectRelationship], dict[str, str]]:
+        registry = deepcopy(self.subject_relationships)
+        refs = dict(self.relationship_ref_map)
+        declarations = proposal.relationship_scopes
+        if not declarations:
+            return registry, refs
+        used_refs = {
+            update.scope.relationship_ref
+            for update in proposal.graph_updates
+            if getattr(update, "scope", None) is not None
+            and update.scope.scope_type is GraphScopeType.RELATIONSHIP
+            and update.scope.relationship_ref is not None
+        }
+        declared_sets: dict[tuple[str, ...], str] = {}
+        for declaration in declarations:
+            if declaration.local_ref in refs:
+                raise WardenValidationError(
+                    f"Relationship local ref {declaration.local_ref!r} is already allocated",
+                    issues=[self._relationship_issue("DUPLICATE_RELATIONSHIP_REF", declaration.local_ref, "Use one unused local relationship_ref.")],
+                )
+            if declaration.local_ref not in used_refs:
+                raise WardenValidationError(
+                    f"Relationship declaration {declaration.local_ref!r} is unused",
+                    issues=[self._relationship_issue("UNUSED_RELATIONSHIP_DECLARATION", declaration.local_ref, "Use the local_ref in at least one relationship-scoped graph node, or remove the declaration.")],
+                )
+            unknown_students = sorted(set(declaration.student_ids) - set(self.subjects))
+            if unknown_students:
+                raise WardenValidationError(
+                    f"Relationship declaration {declaration.local_ref!r} contains unknown students: {unknown_students}",
+                    issues=[self._relationship_issue("UNKNOWN_RELATIONSHIP_STUDENT", declaration.local_ref, "Use only configured student IDs.")],
+                )
+            participants = tuple(sorted(declaration.student_ids))
+            if participants in declared_sets:
+                raise WardenValidationError(
+                    f"Relationship declarations {declared_sets[participants]!r} and {declaration.local_ref!r} duplicate the participant set",
+                    issues=[self._relationship_issue("DUPLICATE_RELATIONSHIP_PARTICIPANTS", declaration.local_ref, "Declare one relationship scope for each participant set.")],
+                )
+            declared_sets[participants] = declaration.local_ref
+            unknown_sources = sorted(set(declaration.basis_source_ids) - set(self.sources))
+            if unknown_sources:
+                raise WardenValidationError(
+                    f"Relationship declaration {declaration.local_ref!r} contains unknown sources: {unknown_sources}",
+                    issues=[self._relationship_issue("UNKNOWN_RELATIONSHIP_SOURCE", declaration.local_ref, "Use only admitted source IDs.")],
+                )
+            if not any(source_jointly_identifies(self.source_applicability[source_id], set(participants), self.subject_relationships) for source_id in declaration.basis_source_ids):
+                raise WardenValidationError(
+                    f"Relationship declaration {declaration.local_ref!r} lacks one joint source covering all participants",
+                    issues=[self._relationship_issue("MISSING_JOINT_SOURCE", declaration.local_ref, "Use one admitted source that explicitly identifies every proposed participant; do not stitch private sources.")],
+                )
+            relationship_id = deterministic_relationship_id(self.graph.case_id, participants)
+            existing = registry.get(relationship_id)
+            if existing is not None and set(existing.subject_ids) != set(participants):
+                raise WardenValidationError("Deterministic relationship ID collision")
+            if existing is None:
+                registry[relationship_id] = SubjectRelationship(
+                    relationship_id=relationship_id,
+                    subject_ids=list(participants),
+                    relationship_type="evidence_backed_provisional",
+                    source_ids=list(declaration.basis_source_ids),
+                    description="Run-local evidence-backed relationship scope.",
+                )
+            else:
+                registry[relationship_id] = existing.model_copy(update={"source_ids": sorted(set(existing.source_ids) | set(declaration.basis_source_ids))})
+            refs[declaration.local_ref] = relationship_id
+        return registry, refs
+
+    @staticmethod
+    def _relationship_issue(error_code: str, reference: str, required_action: str) -> ProposalValidationIssue:
+        return ProposalValidationIssue(error_code=error_code, reference=reference, problem=error_code, required_action=required_action)
+
+    def _normalize_relationship_refs(self, proposal: InvestigatorProposal) -> InvestigatorProposal:
+        updates = []
+        for update in proposal.graph_updates:
+            scope = getattr(update, "scope", None)
+            if scope is not None and scope.scope_type is GraphScopeType.RELATIONSHIP:
+                if scope.relationship_ref is not None:
+                    relationship_id = self.relationship_ref_map.get(scope.relationship_ref)
+                    if relationship_id is None:
+                        raise WardenValidationError(
+                            f"Unknown relationship_ref {scope.relationship_ref!r}",
+                            issues=[self._relationship_issue("UNKNOWN_RELATIONSHIP_REF", scope.relationship_ref, "Use an available relationship_ref or remove this scoped node.")],
+                        )
+                    update = update.model_copy(update={"scope": scope.model_copy(update={"relationship_ref": None, "relationship_id": relationship_id})})
+                elif self.strict_relationship_refs and scope.relationship_id is not None:
+                    raise WardenValidationError(
+                        "Model-facing graph actions must use relationship_ref, not relationship_id",
+                        issues=[self._relationship_issue("DIRECT_RELATIONSHIP_ID", scope.relationship_id, "Use a local relationship_ref such as R1.")],
+                    )
+            updates.append(update)
+        return InvestigatorProposal(graph_updates=updates, relationship_scopes=proposal.relationship_scopes)
 
     def _validate_source_provenance(self, proposal: InvestigatorProposal) -> None:
         for update in proposal.graph_updates:
@@ -133,6 +254,40 @@ class GraphWarden:
                     raise WardenValidationError(f"Graph Warden rejected unknown raw source ID: {source_id!r}")
                 if source.id != source_id:
                     raise WardenValidationError(f"Graph Warden rejected invalid raw source record: {source_id!r}")
+            if update.scope is not None:
+                scope_error = self._scope_identity_error(update.scope)
+                if scope_error is not None:
+                    raise WardenValidationError(
+                        f"Graph Warden rejected invalid assessment scope: {scope_error}",
+                        issues=[self._relationship_issue("INVALID_SCOPE", update.scope.scope_type.value, "Use a configured student or relationship scope.")],
+                    )
+            self._validate_evidence_scope(update)
+
+    def _validate_evidence_scope(self, update: AddEvidenceCommand) -> None:
+        scope = update.scope
+        if scope is None or not self.subjects:
+            return
+        for source_id in update.source_ids:
+            applicability = self.source_applicability[source_id]
+            if scope.scope_type is GraphScopeType.CASE:
+                if applicability.classification.value in {"student_specific", "multi_student_candidate"} and len(self.subjects) > 1:
+                    raise WardenValidationError(
+                        f"Graph Warden rejected source {source_id!r} widened to CASE scope",
+                        issues=[self._relationship_issue("SOURCE_SCOPE_WIDENING", source_id, "Use the matched student or a validated relationship scope.")],
+                    )
+            elif scope.scope_type is GraphScopeType.SUBJECT:
+                if not source_applies_to_student(applicability, scope.subject_id or "", self.subjects):
+                    raise WardenValidationError(
+                        f"Graph Warden rejected source {source_id!r} for student {scope.subject_id!r}",
+                        issues=[self._relationship_issue("SOURCE_STUDENT_MISMATCH", source_id, "Use only a source applicable to this configured student.")],
+                    )
+            elif scope.scope_type is GraphScopeType.RELATIONSHIP:
+                relationship = self.subject_relationships.get(scope.relationship_id or "")
+                if relationship is None or not source_jointly_identifies(applicability, set(relationship.subject_ids), self.subject_relationships):
+                    raise WardenValidationError(
+                        f"Graph Warden rejected source {source_id!r} for relationship scope",
+                        issues=[self._relationship_issue("SOURCE_RELATIONSHIP_MISMATCH", source_id, "Use one joint source that covers every relationship participant.")],
+                    )
 
     def _normalize_compatibility_scopes(self, proposal: InvestigatorProposal) -> InvestigatorProposal:
         if self.subjects:

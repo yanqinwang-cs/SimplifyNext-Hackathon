@@ -11,20 +11,22 @@ from enum import Enum
 import hashlib
 import json
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
-from investigator.graph import CaseGraph, GraphNode, GraphNodeType, node_scope, scope_allows_subject
+from investigator.graph import CaseGraph, EdgeRelation, GraphNode, GraphNodeType, GraphScopeType, node_scope, scope_allows_subject
 from investigator.models.source import Source
 from investigator.state.case_state import CaseState
 from investigator.vnext.models import (
     AssessmentRulePreset,
+    AssessmentStatus,
     FurthestJustifiedConclusion,
     InvestigatorAssessment,
     SubjectAssessment,
     VNextRunInput,
     ViolationAssessment,
 )
-from investigator.models.assessment import validate_vnext_relationship_provenance
+from investigator.models.assessment import SubjectRelationship, validate_vnext_relationship_provenance
+from investigator.vnext.source_applicability import source_applicability_snapshot, source_applies_to_student
 from investigator.vnext.warden import GraphWarden
 
 
@@ -42,6 +44,8 @@ class VNextRunMetadata(BaseModel):
     proposal_hash: str
     proposal_update_count: int = 0
     completion_state: VNextRunStatus = VNextRunStatus.COMPLETED
+    source_applicability: dict[str, dict[str, object]] = Field(default_factory=dict)
+    relationship_scope_ids: dict[str, str] = Field(default_factory=dict)
 
 
 class VNextRunResult(BaseModel):
@@ -51,6 +55,7 @@ class VNextRunResult(BaseModel):
 
     graph: CaseGraph
     subject_assessments: list[SubjectAssessment]
+    relationship_registry: dict[str, SubjectRelationship] = Field(default_factory=dict)
     status: VNextRunStatus = VNextRunStatus.COMPLETED
     metadata: VNextRunMetadata
 
@@ -126,6 +131,9 @@ class VNextInvestigationRunner:
             run_input.sources,
             subjects=run_input.subjects,
             subject_relationships=run_input.subject_relationships,
+            source_applicability=run_input.source_applicability,
+            relationship_refs={key: value.relationship_id for key, value in run_input.relationship_scopes.items()},
+            strict_relationship_refs=True,
         )
         applied = warden.apply(assessment.proposal)
         resolved_subjects = []
@@ -146,7 +154,9 @@ class VNextInvestigationRunner:
                 resolved_subject,
                 subject.subject_id,
                 applied.graph,
-                run_input.subject_relationships,
+                applied.relationship_registry,
+                run_input.source_applicability,
+                run_input.subjects,
             )
             resolved_subjects.append(resolved_subject)
         proposal_hash = hashlib.sha256(
@@ -159,10 +169,13 @@ class VNextInvestigationRunner:
             subject_ids=[item.subject_id for item in normalized_subjects],
             proposal_hash=proposal_hash,
             proposal_update_count=len(assessment.proposal.graph_updates),
+            source_applicability=source_applicability_snapshot(run_input.source_applicability),
+            relationship_scope_ids=dict(applied.relationship_ref_resolution),
         )
         return VNextRunResult(
             graph=deepcopy(applied.graph),
             subject_assessments=resolved_subjects,
+            relationship_registry=deepcopy(applied.relationship_registry),
             metadata=metadata,
         )
 
@@ -233,12 +246,60 @@ class VNextInvestigationRunner:
         subject_id: str,
         graph: CaseGraph,
         relationships: Mapping[str, object],
+        source_applicability: Mapping[str, object],
+        subjects: Mapping[str, object],
     ) -> None:
         for violation in assessment.violation_assessments:
+            if len(subjects) > 1 and violation.status in {AssessmentStatus.SUPPORTED, AssessmentStatus.PARTIALLY_SUPPORTED, AssessmentStatus.CONFLICTED} and not violation.supporting_node_ids:
+                raise VNextRunValidationError(
+                    f"Subject {subject_id!r} status {violation.status.value!r} requires supporting material"
+                )
             for field_name in ("supporting_node_ids", "mitigating_node_ids"):
                 for node_id in getattr(violation, field_name):
-                    scope = node_scope(graph.nodes[node_id].metadata)
+                    node = graph.nodes[node_id]
+                    scope = node_scope(node.metadata)
                     if not scope_allows_subject(scope, subject_id, dict(relationships)):
                         raise VNextRunValidationError(
                             f"Subject {subject_id!r} cannot reference graph node {node_id!r} with scope {scope.model_dump(mode='json')}"
                         )
+                    for source_id in VNextInvestigationRunner._source_ancestry(graph, node_id):
+                        applicability = source_applicability.get(source_id)
+                        if applicability is not None and not source_applies_to_student(applicability, subject_id, subjects):
+                            raise VNextRunValidationError(
+                                f"Subject {subject_id!r} references private source {source_id!r} through graph node {node_id!r}"
+                            )
+            if len(subjects) > 1 and violation.status in {AssessmentStatus.SUPPORTED, AssessmentStatus.PARTIALLY_SUPPORTED, AssessmentStatus.CONFLICTED}:
+                if not any(node_scope(graph.nodes[node_id].metadata).scope_type is not GraphScopeType.CASE for node_id in violation.supporting_node_ids):
+                    raise VNextRunValidationError(
+                        f"Subject {subject_id!r} cannot be supported by CASE-only material"
+                    )
+                if not any(
+                    any(
+                        source_applicability.get(source_id) is not None
+                        and getattr(source_applicability[source_id], "classification", None).value != "case_shared"
+                        for source_id in VNextInvestigationRunner._source_ancestry(graph, node_id)
+                    )
+                    for node_id in violation.supporting_node_ids
+                ):
+                    raise VNextRunValidationError(
+                        f"Subject {subject_id!r} cannot be supported by an unattributed case-shared source alone"
+                    )
+
+    @staticmethod
+    def _source_ancestry(graph: CaseGraph, node_id: str) -> set[str]:
+        """Resolve admitted source ancestry without reading node prose."""
+
+        result: set[str] = set()
+        pending = [node_id]
+        seen: set[str] = set()
+        while pending:
+            current = pending.pop()
+            if current in seen or current not in graph.nodes:
+                continue
+            seen.add(current)
+            node = graph.nodes[current]
+            direct = node.metadata.get("source_ids", [])
+            result.update(item for item in direct if isinstance(item, str))
+            for edge in graph.outgoing(current, EdgeRelation.DERIVED_FROM):
+                pending.append(edge.target_id)
+        return result

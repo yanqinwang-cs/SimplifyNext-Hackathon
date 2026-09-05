@@ -106,6 +106,7 @@ def test_prompt_contains_structured_identity_context() -> None:
     assert "ASSESSMENT CONTEXT" not in prompt
     assert "assessment-1" not in prompt
     assert "subject_A" in prompt and "subject_B" in prompt
-    assert "rel_AB" in prompt and "observed_communication" in prompt
+    assert "R1" in prompt and "observed_communication" in prompt
+    assert "rel_AB" not in prompt
     assert "subject_id is the authoritative identity key" in prompt
     assert "not automatically prohibited collaboration" in prompt

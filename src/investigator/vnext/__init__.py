@@ -13,6 +13,8 @@ from investigator.vnext.models import (
     ViolationAssessment,
     ViolationDefinition,
 )
+from investigator.vnext.relationships import RelationshipScopeProposal, RunRelationshipScope, deterministic_relationship_id
+from investigator.vnext.source_applicability import SourceApplicability, SourceApplicabilityClassification, build_source_applicability, normalize_identifier
 from investigator.vnext.runner import (
     VNextInvestigationRunner,
     VNextRunMetadata,
@@ -42,6 +44,13 @@ __all__ = [
     "VNextRunValidationError",
     "ViolationAssessment",
     "ViolationDefinition",
+    "RelationshipScopeProposal",
+    "RunRelationshipScope",
+    "deterministic_relationship_id",
+    "SourceApplicability",
+    "SourceApplicabilityClassification",
+    "build_source_applicability",
+    "normalize_identifier",
     "WardenApplyResult",
     "ProposalValidationIssue",
     "WardenValidationError",

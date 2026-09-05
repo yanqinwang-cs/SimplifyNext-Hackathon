@@ -4,6 +4,8 @@ import json
 
 from investigator.llm import ModelCallResult, ModelClient
 from investigator.vnext.models import InvestigatorAssessment, InvestigatorProposal, VNextRunInput
+from investigator.vnext.source_applicability import SourceApplicabilityClassification
+from investigator.vnext.relationships import relationship_scope_prompt_view
 from investigator.vnext.warden import ProposalValidationIssue
 
 
@@ -21,28 +23,43 @@ class VNextInvestigatorModel:
 
 def build_prompt(run_input: VNextRunInput) -> str:
     """Build the exact vNext prompt from the current typed schemas and inputs."""
-    sources = [
-        {
-            "source_id": source_id,
-            "filename": source.name,
-            "content": source.content or "",
-        }
-        for source_id, source in sorted(run_input.sources.items())
-    ]
+    sources = {
+        "case_shared": [],
+        "student_specific": {},
+        "multi_student_candidate": [],
+    }
+    for source_id, source in sorted(run_input.sources.items()):
+        item = {"source_id": source_id, "filename": source.name, "content": source.content or ""}
+        applicability = run_input.source_applicability[source_id]
+        if applicability.classification is SourceApplicabilityClassification.CASE_SHARED:
+            sources["case_shared"].append(item)
+        elif applicability.classification is SourceApplicabilityClassification.SINGLE_STUDENT_DEFAULT:
+            sources["student_specific"].setdefault(next(iter(run_input.subjects), "case_subject"), []).append(item)
+        elif applicability.classification is SourceApplicabilityClassification.STUDENT_SPECIFIC:
+            for subject_id in applicability.matched_student_ids:
+                bucket = sources["student_specific"].setdefault(subject_id, [])
+                if not any(existing["source_id"] == source_id for existing in bucket):
+                    bucket.append(item)
+            if applicability.trusted_scope is not None and applicability.trusted_scope.subject_id:
+                bucket = sources["student_specific"].setdefault(applicability.trusted_scope.subject_id, [])
+                if not any(existing["source_id"] == source_id for existing in bucket):
+                    bucket.append(item)
+        else:
+            sources["multi_student_candidate"].append({**item, "matched_student_ids": applicability.matched_student_ids})
     subjects = {
         subject_id: {"display_name": subject.display_name, "candidate_number": subject.candidate_number}
         for subject_id, subject in sorted(run_input.subjects.items())
     }
-    relationships = {
-        relationship_id: {
-            "participants": relationship.subject_ids,
-            "relationship_type": relationship.relationship_type,
-            "source_ids": relationship.source_ids,
-            "source_filenames": [run_input.sources[source_id].name for source_id in relationship.source_ids if source_id in run_input.sources],
-            "boundary": "structural scope only; not a finding or proof of communication, collaboration, or guilt",
-        }
-        for relationship_id, relationship in sorted(run_input.subject_relationships.items())
-    }
+    relationships = relationship_scope_prompt_view(run_input.relationship_scopes)
+    schema = InvestigatorAssessment.model_json_schema()
+    graph_scope_schema = schema.get("$defs", {}).get("GraphScope")
+    if isinstance(graph_scope_schema, dict):
+        properties = graph_scope_schema.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("relationship_id", None)
+        required = graph_scope_schema.get("required")
+        if isinstance(required, list) and "relationship_id" in required:
+            required.remove("relationship_id")
     return "\n".join(
         [
             "You are the Investigator for one complete finite assessment.",
@@ -50,8 +67,14 @@ def build_prompt(run_input: VNextRunInput) -> str:
             "Return one SubjectAssessment per configured student. subject_id is the supplied reporting key; never merge, rename, or infer students.",
             "subject_id is the authoritative identity key. A recorded relationship is an association or observation, not automatically prohibited collaboration.",
             "Evidence or relationships involving multiple subjects may be relevant to more than one subject, but each subject's violation status must be justified independently.",
+            "Never create or infer a new student. Use only the configured students and their exact supplied identifiers.",
+            "A one-student source cannot support another student. Do not stitch separate A-only and B-only sources into a relationship.",
+            "A relationship scope may be proposed only when one admitted source jointly identifies every proposed participant. A source naming multiple students does not establish collaboration.",
+            "do not invent relationships. Use only the supplied relationship scopes or propose one with the required joint source.",
+            "Relationship participation does not establish knowledge, communication, use, intent, or misconduct. Each participant may receive a different status and must be assessed independently.",
+            "Do not create a relationship merely because scripts are similar or students shared a class, tutor, room, or system. Preserve ambiguity when attribution is unsafe.",
             "Do not omit configured students with no incriminating evidence; assess them as NOT_CURRENTLY_SUPPORTED where appropriate.",
-            "In multi-student runs, every semantic graph node requires an explicit appropriate scope. Use CASE only for truly shared evidence, SUBJECT for one student, and RELATIONSHIP for material inherently concerning participants of a recorded relationship. Never connect private student A material directly to private student B material; use relationship-scoped material for genuine cross-student reasoning, and do not invent relationships.",
+            "In multi-student runs, every semantic graph node requires an explicit appropriate scope. Use CASE only for truly shared evidence, SUBJECT for one student, and RELATIONSHIP for material inherently concerning participants of a validated relationship scope. Never widen private material to CASE or another student.",
             "Do not ask for more evidence, request human input, or produce a follow-up question.",
             "Missing evidence means NOT_CURRENTLY_SUPPORTED, not another enquiry.",
             "A supported narrower violation does not require proof of stronger downstream conduct.",
@@ -60,15 +83,15 @@ def build_prompt(run_input: VNextRunInput) -> str:
             "If communication is prohibited, do not require proof of its exact medium or extent.",
             "Evidence discipline: a document is a source; text in it is a source statement or recorded observation, not automatically a true proposition. Reliability, independence, specificity, and conflict matter. A claim is not automatically a fact; contradiction establishes inconsistency, not deception or intent; similarity does not establish copying or collaboration; association does not establish prohibited collaboration; opportunity does not establish use; anomaly does not establish misconduct; credential or device linkage does not establish the human actor; knowledge does not establish guilt; and absence of current support does not establish innocence.",
             "Misconduct requires relevant conduct plus applicable policy context. Policy is normative evaluation criteria, not factual evidence. Assess each student independently; relationship participation never propagates guilt.",
-            "Raw source IDs identify source records, not automatically established facts. Use graph proposals for any E/P/H/U concepts you need, and reference proposal local_ref values in the assessment after proposing them.",
+            "Raw source IDs identify source records, not automatically established facts. Use graph proposals for any E/P/H/U concepts you need, and reference proposal local_ref values in the assessment after proposing them. Relationship scopes use local relationship_ref values such as R1, never persistent relationship IDs.",
             "Return JSON only. Use exactly the current schema below. Do not add fields.",
             "\nCONFIGURED STUDENTS (REPORTING TARGETS ONLY)\n" + json.dumps(subjects, indent=2),
             "\nAPPLICABLE POLICY / CONFIGURED VIOLATIONS (NORMATIVE CONTEXT, NOT FACTUAL EVIDENCE)\n" + json.dumps(run_input.rule_preset.model_dump(mode="json"), indent=2),
-            "\nADMITTED EVIDENCE SOURCES (SOURCE STATEMENTS ARE NOT AUTOMATICALLY TRUE)\n" + json.dumps(sources, indent=2),
-            "\nRELATIONSHIP SCOPES (SOURCE-BACKED STRUCTURAL SCOPE ONLY, NOT FINDINGS)\n" + json.dumps(relationships, indent=2),
+            "\nADMITTED EVIDENCE SOURCES — CASE-WIDE / STUDENT-SPECIFIC / MULTI-STUDENT CANDIDATE (SOURCE STATEMENTS ARE NOT AUTOMATICALLY TRUE)\n" + json.dumps(sources, indent=2),
+            "\nAVAILABLE INTERNAL RELATIONSHIP SCOPES (LOCAL REFS ONLY; STRUCTURAL SCOPE, NOT FINDINGS)\n" + json.dumps(relationships, indent=2),
             "\nEXPECTED CONFIGURED STUDENT IDS\n" + json.dumps(sorted(run_input.subjects) or ["case_subject"]),
             "\nEXACT INVESTIGATOR ASSESSMENT JSON SCHEMA\n"
-            + json.dumps(InvestigatorAssessment.model_json_schema(), indent=2, sort_keys=True),
+            + json.dumps(schema, indent=2, sort_keys=True),
         ]
     )
 

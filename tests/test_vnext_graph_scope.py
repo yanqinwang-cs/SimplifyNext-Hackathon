@@ -12,7 +12,7 @@ from investigator.vnext.model import build_prompt
 
 
 def source(source_id: str = "S1") -> Source:
-    return Source(id=source_id, name=source_id, source_type=SourceType.DOCUMENT, content="record")
+    return Source(id=source_id, name=source_id, source_type=SourceType.DOCUMENT, content="subject_A subject_B Candidate A Candidate B record")
 
 
 def subjects() -> dict[str, AssessmentSubject]:
@@ -125,7 +125,7 @@ def test_same_turn_private_subject_edge_is_rejected_before_apply() -> None:
     assert issue.source_scope["subject_id"] == "A" and issue.target_scope["subject_id"] == "B"
 
 
-@pytest.mark.parametrize("source_id,target_id,allowed", [("E2", "H1", True), ("E2", "H2", False), ("E2", "H3", True), ("E3", "H3", True), ("E4", "H1", True), ("E4", "H2", True), ("E4", "H4", False), ("E1", "H1", True), ("E1", "H3", True)])
+@pytest.mark.parametrize("source_id,target_id,allowed", [("E2", "H1", True), ("E2", "H2", False), ("E2", "H3", False), ("E3", "H3", False), ("E4", "H1", True), ("E4", "H2", True), ("E4", "H4", False), ("E1", "H1", True), ("E1", "H3", True)])
 def test_scope_compatibility_matrix_for_support(source_id: str, target_id: str, allowed: bool) -> None:
     update = proposal([relation("add_support", source_id, target_id)])
     if allowed:
@@ -147,7 +147,7 @@ def test_subject_assessment_references_enforce_scope_after_resolution() -> None:
     graph_proposal = proposal([
         {"operation": "add_evidence", "local_ref": "a_obs", "statement": "A", "source_ids": ["S1"], "scope": scope(GraphScopeType.SUBJECT, subject="A").model_dump(), "reason": "A"},
         {"operation": "add_evidence", "local_ref": "b_obs", "statement": "B", "source_ids": ["S1"], "scope": scope(GraphScopeType.SUBJECT, subject="B").model_dump(), "reason": "B"},
-        {"operation": "add_evidence", "local_ref": "ab_obs", "statement": "AB", "source_ids": ["S1"], "scope": scope(GraphScopeType.RELATIONSHIP, relationship="AB").model_dump(), "reason": "AB"},
+        {"operation": "add_evidence", "local_ref": "ab_obs", "statement": "AB", "source_ids": ["S1"], "scope": GraphScope(scope_type=GraphScopeType.RELATIONSHIP, relationship_ref="R1").model_dump(), "reason": "AB"},
     ])
     rule = AssessmentRulePreset(preset_id="p", violations=[ViolationDefinition(violation_id="V1", label="V1", rule_text="r", prohibited_conduct="c")])
     def result_for(subject_id: str, refs: list[str]) -> InvestigatorAssessment:
@@ -171,7 +171,7 @@ def test_scope_round_trip_and_single_subject_compatibility() -> None:
 
 def test_prompt_requires_explicit_scope_and_relationship_discipline() -> None:
     rule = AssessmentRulePreset(preset_id="p", violations=[ViolationDefinition(violation_id="V1", label="V1", rule_text="r", prohibited_conduct="c")])
-    run = VNextRunInput(case_id="case-01", sources={"S1": source()}, subjects=subjects(), subject_relationships=relationships(), rule_preset=rule)
+    run = VNextRunInput(case_id="case-01", sources={"S1": source()}, subjects=subjects(), subject_relationships={key: value.model_copy(update={"source_ids": ["S1"]}) for key, value in relationships().items()}, rule_preset=rule)
     prompt = build_prompt(run)
     assert "every semantic graph node requires an explicit appropriate scope" in prompt
     assert "do not invent relationships" in prompt
