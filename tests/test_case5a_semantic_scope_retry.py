@@ -28,6 +28,7 @@ from investigator.vnext import (
     WardenValidationError,
     classify_warden_failure,
 )
+from investigator.public_views import public_run_handle_for_instance
 
 
 def _subjects() -> dict[str, AssessmentSubject]:
@@ -166,8 +167,9 @@ def test_private_to_relationship_derived_from_is_semantic_affecting() -> None:
 
 
 class _SequenceClient:
-    def __init__(self, responses: list[InvestigatorAssessment]) -> None:
+    def __init__(self, responses: list[InvestigatorAssessment], raw_outputs: list[object] | None = None) -> None:
         self.responses = list(responses)
+        self.raw_outputs = list(raw_outputs or [])
         self.calls: list[str] = []
 
     def call(self, prompt: object, schema: type[object]) -> ModelCallResult:
@@ -184,7 +186,7 @@ class _SequenceClient:
                 parse_success=True,
                 finish_reason="stop",
             ),
-            raw_output=response.model_dump(mode="json"),
+            raw_output=self.raw_outputs.pop(0) if self.raw_outputs else response.model_dump(mode="json"),
         )
 
 
@@ -212,7 +214,10 @@ def _workflow(tmp_path: Path, client: _SequenceClient) -> HumanEvidenceWorkflow:
 
 
 def test_semantic_scope_failure_uses_one_fresh_full_retry_and_discards_first_graph(tmp_path: Path) -> None:
-    client = _SequenceClient([_valid_assessment(_bad_proposal()), _valid_assessment(InvestigatorProposal())])
+    client = _SequenceClient(
+        [_valid_assessment(_bad_proposal()), _valid_assessment(InvestigatorProposal())],
+        raw_outputs=["RAW_INITIAL_A", "RAW_SECOND_B"],
+    )
     workflow = _workflow(tmp_path, client)
 
     assert workflow.get_workspace("case-01")["runtimeStatus"] == "COMPLETED"
@@ -232,6 +237,32 @@ def test_semantic_scope_failure_uses_one_fresh_full_retry_and_discards_first_gra
     retry = next(item for item in traces if item["event"] == "vnext_semantic_scope_retry_required")
     assert retry["failure_class"] == "SEMANTIC_AFFECTING"
     assert retry["retry_mode"] == "clean_execution"
+    assert [item["event"] for item in traces if item["event"].startswith("vnext_")] == [
+        "vnext_attempt_started",
+        "vnext_model_call_started",
+        "vnext_model_call_completed",
+        "vnext_proposal_validation_failed",
+        "vnext_semantic_scope_retry_required",
+        "vnext_retry_decision",
+        "vnext_clean_retry_started",
+        "vnext_attempt_started",
+        "vnext_model_call_started",
+        "vnext_model_call_completed",
+        "vnext_completed",
+    ]
+    completed = [item for item in traces if item["event"] == "vnext_model_call_completed"]
+    assert [item["model_call_number"] for item in completed] == [1, 2]
+    assert [item["call_kind"] for item in completed] == ["initial", "clean_execution_retry"]
+    assert [item["raw_output"] for item in completed] == ["RAW_INITIAL_A", "RAW_SECOND_B"]
+    assert all("parsed_output" in item for item in completed)
+    assert traces.index(completed[0]) < traces.index(completed[1])
+    run = workflow.get_runs("case-01")[0]
+    handle = public_run_handle_for_instance("case-01", run["run_id"], run["run_instance_id"])
+    internal = [json.loads(line) for line in (tmp_path / "cases" / "case-01" / "runs" / run["run_id"] / "raw_traces.jsonl").read_text().splitlines()]
+    exported = [json.loads(line) for line in workflow.audit_trace_file("case-01", run["run_id"], handle).decode().splitlines()]
+    assert len(exported) == len(internal)
+    assert [item["event"] for item in exported] == [item["event"] for item in internal]
+    assert [item["raw_output"] for item in exported if item["event"] == "vnext_model_call_completed"] == ["RAW_INITIAL_A", "RAW_SECOND_B"]
 
 
 def test_second_semantic_scope_failure_is_terminal_without_third_call_or_partial_graph(tmp_path: Path) -> None:

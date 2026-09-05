@@ -1,6 +1,8 @@
 """Reusable real-model Investigator adapter for vNext."""
 
 import json
+from collections.abc import Callable
+from typing import Any
 
 from investigator.llm import ModelCallResult, ModelClient
 from investigator.vnext.models import InvestigatorAssessment, InvestigatorProposal, VNextRunInput
@@ -17,8 +19,30 @@ class VNextInvestigatorModel:
         self.last_call: ModelCallResult | None = None
 
     def __call__(self, run_input: VNextRunInput) -> InvestigatorAssessment:
-        self.last_call = self.client.call(build_prompt(run_input), InvestigatorAssessment)
-        return self.last_call.parsed  # type: ignore[return-value]
+        return self.call_prompt(build_prompt(run_input), InvestigatorAssessment)
+
+    def call_prompt(
+        self,
+        prompt: str,
+        output_schema: type[Any],
+        *,
+        on_started: Callable[[str], None] | None = None,
+        on_completed: Callable[[ModelCallResult], None] | None = None,
+        on_failed: Callable[[Exception], None] | None = None,
+    ) -> Any:
+        """Make one call while exposing durable lifecycle boundaries to the runner."""
+
+        if on_started is not None:
+            on_started(prompt)
+        try:
+            self.last_call = self.client.call(prompt, output_schema)
+        except Exception as exc:
+            if on_failed is not None:
+                on_failed(exc)
+            raise
+        if on_completed is not None:
+            on_completed(self.last_call)
+        return self.last_call.parsed
 
 
 def build_prompt(run_input: VNextRunInput) -> str:

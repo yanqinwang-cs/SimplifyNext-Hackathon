@@ -85,7 +85,7 @@ export interface CaseWorkspaceState {
   caseStatus: "ACTIVE" | "HANDED_OFF" | "CLOSED";
   caseKind: "user" | "sample";
   sample: { sampleId: string; title: string } | null;
-  capabilities: { editStudents: boolean; addEvidence: boolean; resetSample: boolean; runAssessment: boolean; useHelp: boolean; viewSources: boolean };
+  capabilities: { editStudents: boolean; addEvidence: boolean; resetSample: boolean; runAssessment: boolean; useHelp: boolean; viewSources: boolean; auditTraceDownload: boolean };
   preloadedSourceCount: number;
   runtimeStatus: "IDLE" | "RUNNING" | "COMPLETED" | "RUNNING_INVESTIGATOR" | "RUNNING_STEWARD" | "WAITING_FOR_EVIDENCE" | "FAILED" | "STOPPED" | "PAUSED";
   currentActor: "INVESTIGATOR" | "STEWARD" | "NONE";

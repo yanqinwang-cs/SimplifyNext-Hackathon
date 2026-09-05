@@ -1,4 +1,4 @@
-import type { AssessmentSummary, ApprovedModel, AuditTraceResponse, AwsCredentialStatus, CaseListItem, CaseWorkspaceState, PublicSource, PublicSourceDocument, ReportResponse, RunSummary, RuntimeSettings, SampleCatalogItem, TraceEntry, WorkspaceChatResponse } from "./types";
+import type { AssessmentSummary, ApprovedModel, AwsCredentialStatus, CaseListItem, CaseWorkspaceState, PublicSource, PublicSourceDocument, ReportResponse, RunSummary, RuntimeSettings, SampleCatalogItem, TraceEntry, WorkspaceChatResponse } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
@@ -55,7 +55,6 @@ export function runInvestigation(caseId: string): Promise<{ run: { runHandle: st
   return request<{ run: { runHandle: string; state: string; startedAt: string }; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/run`, { method: "POST", body: "{}" });
 }
 export function getAssessmentRun(caseId: string, runHandle: string, signal?: AbortSignal): Promise<{ runHandle: string; state: string; startedAt: string; endedAt: string | null; message: string; reportAvailable: boolean; reportStale: boolean; workspace: CaseWorkspaceState }> { return request<{ runHandle: string; state: string; startedAt: string; endedAt: string | null; message: string; reportAvailable: boolean; reportStale: boolean; workspace: CaseWorkspaceState }>(`/api/cases/${encodeURIComponent(caseId)}/assessment-runs/${encodeURIComponent(runHandle)}`, { signal }); }
-export function getAuditTrace(caseId: string, runHandle: string): Promise<AuditTraceResponse> { return request<AuditTraceResponse>(`/api/cases/${encodeURIComponent(caseId)}/assessment-runs/${encodeURIComponent(runHandle)}/audit-trace`); }
 export function getAuditTraceDownloadUrl(caseId: string, runHandle: string): string { return `${API_BASE}/api/cases/${encodeURIComponent(caseId)}/assessment-runs/${encodeURIComponent(runHandle)}/audit-trace/download`; }
 export async function downloadAuditTrace(caseId: string, runHandle: string): Promise<void> {
   const response = await fetch(getAuditTraceDownloadUrl(caseId, runHandle));

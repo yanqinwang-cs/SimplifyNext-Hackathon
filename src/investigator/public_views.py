@@ -1,6 +1,7 @@
 """Strict allow-listed contracts for the normal vNext HTTP boundary."""
 
 import hashlib
+import os
 from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 from investigator.state.case_state import CaseState
@@ -124,7 +125,7 @@ def workspace_view(workflow: Any, case_id: str) -> dict[str, Any]:
     report=PublicReport(state=report["reportState"], assessmentIsStale=report["assessmentIsStale"]),
         caseKind=state.case_kind,
         sample={"sampleId": state.sample_id, "title": state.title} if state.case_kind == "sample" and state.sample_id else None,
-        capabilities={"editStudents": state.case_kind != "sample", "addEvidence": state.case_kind != "sample", "resetSample": state.case_kind == "sample", "runAssessment": True, "useHelp": True, "viewSources": True},
+        capabilities={"editStudents": state.case_kind != "sample", "addEvidence": state.case_kind != "sample", "resetSample": state.case_kind == "sample", "runAssessment": True, "useHelp": True, "viewSources": True, "auditTraceDownload": os.getenv("SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API") == "1"},
         preloadedSourceCount=len(state.sources) if state.case_kind == "sample" else 0,
         assessment=assessment_view(workflow, case_id),
         chatHistory=[{"role": str(item.get("role", "workspace")), "text": str(item.get("text", ""))} for item in workflow._workspace_events.get(case_id, []) if item.get("type") == "chat"],

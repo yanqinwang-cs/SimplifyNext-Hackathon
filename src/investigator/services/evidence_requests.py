@@ -1001,7 +1001,9 @@ class HumanEvidenceWorkflow:
 
     def sanitized_raw_trace(self, case_id: str, run_id: str) -> bytes:
         """Return trace records with credential-like fields and values redacted."""
-        path = self.raw_trace_path(case_id, run_id)
+        if not re.fullmatch(r"run_\d{6}", run_id):
+            raise ValueError("Invalid run ID")
+        path = self._run_dir(case_id, run_id) / "raw_traces.jsonl"
         if not path.is_file():
             return b""
         lines = [json.dumps(self._scrub_diagnostic(json.loads(line)), default=str) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]

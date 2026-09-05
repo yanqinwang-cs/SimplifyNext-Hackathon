@@ -44,6 +44,6 @@ export const initialWorkspace: CaseWorkspaceState = {
   currentActor: "NONE",
   caseKind: "user",
   sample: null,
-  capabilities: { editStudents: true, addEvidence: true, resetSample: false, runAssessment: true, useHelp: true, viewSources: true },
+  capabilities: { editStudents: true, addEvidence: true, resetSample: false, runAssessment: true, useHelp: true, viewSources: true, auditTraceDownload: false },
   preloadedSourceCount: 0,
 };

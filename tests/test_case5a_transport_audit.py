@@ -181,7 +181,19 @@ def test_audit_trace_is_handle_bound_sanitized_and_gated(tmp_path: Path, monkeyp
         assert payload["counters"] == {"modelCalls": 1, "proposalCorrectionCalls": 0, "cleanExecutionRetries": 0}
         assert payload["failure"]["category"] == "PROVIDER_TIMEOUT"
         assert payload["failure"]["technicalType"] == "ReadTimeoutError"
-        assert [item["event"] for item in payload["trace"]] == [item["event"] for item in workflow.get_traces("case-01") if item.get("event") in {"vnext_attempt_started", "vnext_attempt_failed", "failed"}]
+        assert [item["event"] for item in payload["trace"]] == [
+            "vnext_attempt_started",
+            "vnext_model_call_started",
+            "vnext_model_call_failed",
+            "vnext_attempt_failed",
+            "failed",
+        ]
+        trace_events = workflow.get_traces("case-01")
+        assert [item["event"] for item in trace_events if item["event"].startswith("vnext_model_call")] == [
+            "vnext_model_call_started",
+            "vnext_model_call_failed",
+        ]
+        assert not any(item["event"] == "vnext_model_call_completed" for item in trace_events)
         encoded = json.dumps(payload)
         assert "PRE5A_AUDIT_" not in encoded
         assert run["run_id"] not in encoded
