@@ -10,7 +10,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 from urllib.parse import unquote, urlparse, parse_qs
 
-from investigator.services.evidence_requests import EvidenceRequestConflict, HumanEvidenceWorkflow
+from investigator.services.evidence_requests import EvidenceRequestConflict, HumanEvidenceWorkflow, ReportIntegrityError
 from investigator.services.production_runner import default_production_run
 from investigator.llm.bedrock import BedrockModelClient, CredentialOverride, clear_credential_override, credential_status, debug_credentials_enabled, set_credential_override
 from investigator.state.repository import CaseRepository
@@ -23,7 +23,7 @@ from investigator.models.assessment import AssessmentContext, AssessmentSubject,
 from investigator.models.source import Source
 from investigator.state.case_state import CaseState
 from investigator.help import product_guide
-from investigator.public_views import assessment_view, workspace_view, public_run_handle, public_source_handle, public_student_handle, resolve_run_handle, resolve_source_handle, resolve_student_handle, document_format
+from investigator.public_views import assessment_view, workspace_view, public_run_handle_for_instance, public_source_handle, public_student_handle, resolve_run_handle, resolve_source_handle, resolve_student_handle, document_format
 from investigator.runtime_settings import RuntimeSettingsError, settings as runtime_settings, set_model_overrides, reset_model_overrides
 
 
@@ -142,8 +142,26 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             except (KeyError, ValueError): self._write(404, {"error": "Case not found"})
             return
         if self.workflow.run_mode == "vnext" and len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "report":
-            try: self._write(200, self.workflow.get_report(parts[2]))
-            except (KeyError, ValueError): self._write(404, {"error": "Case not found"})
+            try:
+                assessment = parse_qs(urlparse(self.path).query).get("assessment", [None])[0]
+                run_id = resolve_run_handle(self.workflow, parts[2], assessment) if assessment else None
+                self._write(200, self.workflow.get_report(parts[2], run_id))
+            except ReportIntegrityError: self._write(500, {"error": "The assessment report could not be loaded safely."})
+            except (KeyError, ValueError): self._write(404, {"error": "Assessment report not found"})
+            return
+        if self.workflow.run_mode == "vnext" and len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5] == "report":
+            try:
+                run_id = resolve_run_handle(self.workflow, parts[2], parts[4])
+                self._write(200, self.workflow.get_report(parts[2], run_id))
+            except ReportIntegrityError: self._write(500, {"error": "The assessment report could not be loaded safely."})
+            except (KeyError, ValueError): self._write(404, {"error": "Assessment report not found"})
+            return
+        if self.workflow.run_mode == "vnext" and len(parts) == 7 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5] == "sources":
+            try:
+                run_id = resolve_run_handle(self.workflow, parts[2], parts[4])
+                self._write(200, self.workflow.get_historical_source(parts[2], run_id, parts[6]))
+            except ReportIntegrityError: self._write(500, {"error": "The assessment source could not be loaded safely."})
+            except (KeyError, ValueError): self._write(404, {"error": "Historical source not found"})
             return
         if self.workflow.run_mode == "vnext" and len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "sources":
             try:
@@ -270,7 +288,8 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                     return
                 self.workflow.start_run(parts[2]); run_id = self.workflow.current_run_id(parts[2])
                 if run_id is None: raise RuntimeError("Assessment run was not persisted")
-                self._write(202, {"run": {"runHandle": public_run_handle(parts[2], run_id), "state": "running", "startedAt": self.workflow.get_runs(parts[2])[-1].get("started_at")}, "workspace": self._public_workspace(parts[2])})
+                run = next(item for item in self.workflow.get_runs(parts[2]) if item.get("run_id") == run_id)
+                self._write(202, {"run": {"runHandle": public_run_handle_for_instance(parts[2], run_id, run.get("run_instance_id")), "state": "running", "startedAt": run.get("started_at")}, "workspace": self._public_workspace(parts[2])})
             except KeyError: self._write(404, {"error": "Case not found"})
             except EvidenceRequestConflict as exc: self._write(409, {"error": str(exc)})
             return
@@ -393,6 +412,8 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 payload = self._read_json()
                 expected_revision = payload.pop("case_revision", None)
                 if parts[3] == "sources":
+                    if "assessment_scope" in payload:
+                        raise ValueError("Source applicability is calculated internally and cannot be supplied through the public upload API")
                     scope = payload.pop("assessment_scope", None)
                     source = self.workflow.add_direct_source(
                         parts[2], display_name=str(payload.pop("display_name", "")), content=str(payload.pop("content", "")),
@@ -403,7 +424,10 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 elif parts[3] == "subjects":
                     subject = self.workflow.add_subject(parts[2], payload, expected_revision)
                     self._write(200, {"subject": subject.model_dump(mode="json"), "workspace": self.workflow.get_workspace(parts[2])})
-                else:
+                elif parts[3] == "relationships":
+                    if self.workflow.run_mode == "vnext":
+                        self._write(404, {"error": "Not found"})
+                        return
                     relationship = self.workflow.add_relationship(parts[2], payload, expected_revision)
                     self._write(200, {"relationship": relationship.model_dump(mode="json"), "workspace": self.workflow.get_workspace(parts[2])})
             except (ValueError, KeyError, EvidenceRequestConflict) as exc:

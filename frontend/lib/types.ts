@@ -96,9 +96,23 @@ export interface CaseListItem { caseId: string; title: string; }
 export interface SampleCatalogItem { sampleId: string; title: string; }
 export interface AssessmentSummary { state: "not_started" | "running" | "complete" | "stale" | "failed_no_report" | "failed_previous_report_retained" | "stopped"; activeRun: { runHandle: string; startedAt: string } | null; latestAttempt: { runHandle: string; state: string; startedAt: string; endedAt: string | null; message: string } | null; reportAvailable: boolean; reportStale: boolean; }
 
-export interface ReportMaterial { statement: string; sourceLabels: string[]; }
-export interface ReportViolation { label: string; status: string; reasoningSummary: string; supportingMaterial: ReportMaterial[]; limitingMaterial: ReportMaterial[]; }
-export interface ReportResponse { caseId: string; title: string; reportState: "available" | "unavailable"; assessmentIsStale: boolean; latestSuccessfulRun: { completedAt?: string | null } | null; students: Array<{ displayName: string; violations: ReportViolation[]; furthestConclusion: string }>; }
+export interface ReportSourceReference { sourceHandle: string; fileName: string; }
+export interface ReportMaterial { statement: string; sources: ReportSourceReference[]; }
+export interface ReportViolation { label: string; status: string; reasoningSummary: string; supportingMaterial: ReportMaterial[]; limitingMaterial: ReportMaterial[]; unresolvedPoints: string[]; }
+export interface ReportStudent { sectionHandle: string; displayName: string; violations: ReportViolation[]; furthestConclusion: string; }
+export interface ReportResponse {
+  caseId: string;
+  currentCaseName: string;
+  reportState: "available" | "unavailable" | "historical_unavailable";
+  assessmentIsStale: boolean;
+  isLatestSuccessfulAssessment: boolean;
+  message?: string;
+  assessment: { runHandle: string; caseNameAtAssessment: string; completedAt: string; students: ReportStudent[] } | null;
+  /** Legacy fields are accepted only so old mocked API responses remain type-safe. */
+  title?: string;
+  latestSuccessfulRun?: { completedAt?: string | null } | null;
+  students?: Array<{ displayName: string; violations: ReportViolation[]; furthestConclusion: string }>;
+}
 export interface RuntimeSettings { aws: AwsCredentialStatus; models: { investigator: RuntimeRoleSettings; workspaceHelp: RuntimeRoleSettings }; availableModels: Array<{ model: ApprovedModel; label: string }>; }
 
 export interface WorkspaceChatResponse {

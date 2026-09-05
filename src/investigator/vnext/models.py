@@ -10,6 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from investigator.models.source import Source
 from investigator.models.assessment import AssessmentContext, AssessmentSubject, SubjectRelationship, validate_identity_references, validate_vnext_relationship_provenance
+from investigator.vnext.relationships import RelationshipScopeProposal, RunRelationshipScope, existing_relationship_scopes
+from investigator.vnext.source_applicability import SourceApplicability, build_source_applicability
 
 if TYPE_CHECKING:
     from investigator.state.case_state import CaseState
@@ -44,6 +46,7 @@ class InvestigatorProposal(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     graph_updates: list[InvestigatorProposalUpdate] = Field(default_factory=list)
+    relationship_scopes: list[RelationshipScopeProposal] = Field(default_factory=list)
 
 
 class AssessmentStatus(str, Enum):
@@ -100,6 +103,9 @@ class VNextRunInput(BaseModel):
     assessment_context: AssessmentContext | None = None
     subjects: dict[str, AssessmentSubject] = Field(default_factory=dict)
     subject_relationships: dict[str, SubjectRelationship] = Field(default_factory=dict)
+    # Internal run snapshots.  They are never included in public projections.
+    source_applicability: dict[str, SourceApplicability] = Field(default_factory=dict)
+    relationship_scopes: dict[str, RunRelationshipScope] = Field(default_factory=dict)
     rule_preset: AssessmentRulePreset
     human_inputs: dict[str, object] = Field(default_factory=dict)
 
@@ -108,6 +114,13 @@ class VNextRunInput(BaseModel):
         if any(key != source.id for key, source in self.sources.items()):
             raise ValueError("Source mapping keys must match source IDs")
         validate_identity_references(self.subjects, self.subject_relationships, self.sources)
+        validate_vnext_relationship_provenance(self.subject_relationships)
+        if not self.source_applicability:
+            self.source_applicability = build_source_applicability(self.sources, self.subjects, self.subject_relationships)
+        elif set(self.source_applicability) != set(self.sources):
+            raise ValueError("source_applicability must cover exactly the admitted sources")
+        if not self.relationship_scopes:
+            self.relationship_scopes = existing_relationship_scopes(self.subject_relationships)
         return self
 
     @classmethod
@@ -118,12 +131,12 @@ class VNextRunInput(BaseModel):
         *,
         human_inputs: dict[str, object] | None = None,
     ) -> "VNextRunInput":
-        validate_vnext_relationship_provenance(case_state.subject_relationships)
         return cls(
             case_id=case_state.case_id,
             sources=case_state.sources,
             subjects=case_state.subjects,
             subject_relationships=case_state.subject_relationships,
+            source_applicability=build_source_applicability(case_state.sources, case_state.subjects, case_state.subject_relationships),
             rule_preset=rule_preset,
             human_inputs=dict(human_inputs or {}),
         )

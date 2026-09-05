@@ -26,7 +26,7 @@ from investigator.vnext import (
 
 
 def source(source_id: str = "S1") -> Source:
-    return Source(id=source_id, name=f"record-{source_id}", source_type=SourceType.DOCUMENT, content="record")
+    return Source(id=source_id, name=f"record-{source_id}", source_type=SourceType.DOCUMENT, content="subject_A subject_B Candidate A Candidate B record")
 
 
 def preset() -> AssessmentRulePreset:
@@ -58,15 +58,22 @@ def assessment(subject_assessments: list[SubjectAssessment], proposal: Investiga
     return InvestigatorAssessment(proposal=proposal or InvestigatorProposal(), subject_assessments=subject_assessments)
 
 
+def subject_evidence_proposal() -> InvestigatorProposal:
+    return InvestigatorProposal.model_validate({"graph_updates": [
+        {"operation": "add_evidence", "local_ref": "e_a", "statement": "A evidence", "source_ids": ["S1"], "scope": GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id="subject_A"), "reason": "record A"},
+        {"operation": "add_evidence", "local_ref": "e_b", "statement": "B evidence", "source_ids": ["S1"], "scope": GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id="subject_B"), "reason": "record B"},
+    ]})
+
+
 def test_two_subjects_keep_independent_violation_assessments() -> None:
     inputs = run_input(subjects={
         "subject_A": AssessmentSubject(subject_id="subject_A", display_name="Candidate A"),
         "subject_B": AssessmentSubject(subject_id="subject_B", display_name="Candidate B"),
     })
     output = assessment([
-        subject_assessment("subject_B", (AssessmentStatus.NOT_CURRENTLY_SUPPORTED, AssessmentStatus.CONFLICTED)),
-        subject_assessment("subject_A", (AssessmentStatus.SUPPORTED, AssessmentStatus.NOT_CURRENTLY_SUPPORTED)),
-    ])
+        subject_assessment("subject_B", (AssessmentStatus.NOT_CURRENTLY_SUPPORTED, AssessmentStatus.CONFLICTED), refs=("", "e_b")),
+        subject_assessment("subject_A", (AssessmentStatus.SUPPORTED, AssessmentStatus.NOT_CURRENTLY_SUPPORTED), refs=("e_a", "")),
+    ], subject_evidence_proposal())
     result = VNextInvestigationRunner(lambda _: output).run(inputs)
     assert [item.subject_id for item in result.subject_assessments] == ["subject_A", "subject_B"]
     assert [item.status for item in result.subject_assessments[0].violation_assessments] == [AssessmentStatus.SUPPORTED, AssessmentStatus.NOT_CURRENTLY_SUPPORTED]
@@ -114,9 +121,9 @@ def test_conclusion_cannot_reference_unknown_violation_for_one_subject() -> None
 def test_same_violation_id_across_subjects_and_no_evidence_subject_are_valid() -> None:
     subjects = {key: AssessmentSubject(subject_id=key, display_name=key) for key in ("subject_A", "subject_B")}
     output = assessment([
-        subject_assessment("subject_A", (AssessmentStatus.SUPPORTED, AssessmentStatus.NOT_CURRENTLY_SUPPORTED)),
+        subject_assessment("subject_A", (AssessmentStatus.SUPPORTED, AssessmentStatus.NOT_CURRENTLY_SUPPORTED), refs=("e_a", "")),
         subject_assessment("subject_B", (AssessmentStatus.NOT_CURRENTLY_SUPPORTED, AssessmentStatus.NOT_CURRENTLY_SUPPORTED)),
-    ])
+    ], subject_evidence_proposal())
     result = VNextInvestigationRunner(lambda _: output).run(run_input(subjects=subjects))
     assert len(result.subject_assessments[0].violation_assessments) == len(result.subject_assessments[1].violation_assessments) == 2
     assert all(item.status is AssessmentStatus.NOT_CURRENTLY_SUPPORTED for item in result.subject_assessments[1].violation_assessments)
@@ -124,17 +131,14 @@ def test_same_violation_id_across_subjects_and_no_evidence_subject_are_valid() -
 
 def test_subject_and_violation_output_order_is_deterministic() -> None:
     subjects = {key: AssessmentSubject(subject_id=key, display_name=key) for key in ("subject_A", "subject_B")}
-    output = assessment([subject_assessment("subject_B", (AssessmentStatus.CONFLICTED, AssessmentStatus.SUPPORTED)), subject_assessment("subject_A", (AssessmentStatus.SUPPORTED, AssessmentStatus.NOT_CURRENTLY_SUPPORTED))])
+    output = assessment([subject_assessment("subject_B", (AssessmentStatus.CONFLICTED, AssessmentStatus.SUPPORTED), refs=("e_b", "e_b")), subject_assessment("subject_A", (AssessmentStatus.SUPPORTED, AssessmentStatus.NOT_CURRENTLY_SUPPORTED), refs=("e_a", ""))], subject_evidence_proposal())
     result = VNextInvestigationRunner(lambda _: output).run(run_input(subjects=subjects))
     assert [item.subject_id for item in result.subject_assessments] == ["subject_A", "subject_B"]
     assert [item.violation_id for item in result.subject_assessments[0].violation_assessments] == ["V1", "V2"]
 
 
 def test_node_references_resolve_inside_each_subject_assessment() -> None:
-    proposal = InvestigatorProposal.model_validate({"graph_updates": [
-        {"operation": "add_evidence", "local_ref": "e_a", "statement": "A evidence", "source_ids": ["S1"], "scope": GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id="subject_A"), "reason": "record A"},
-        {"operation": "add_evidence", "local_ref": "e_b", "statement": "B evidence", "source_ids": ["S1"], "scope": GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id="subject_B"), "reason": "record B"},
-    ]})
+    proposal = subject_evidence_proposal()
     output = assessment([
         subject_assessment("subject_A", (AssessmentStatus.SUPPORTED, AssessmentStatus.NOT_CURRENTLY_SUPPORTED), refs=("e_a", "")),
         subject_assessment("subject_B", (AssessmentStatus.SUPPORTED, AssessmentStatus.NOT_CURRENTLY_SUPPORTED), refs=("e_b", "")),
@@ -160,8 +164,8 @@ class TwoCallClient:
 def test_corrective_retry_preserves_multi_subject_assessments(tmp_path: Path) -> None:
     subjects = {key: AssessmentSubject(subject_id=key, display_name=key) for key in ("subject_A", "subject_B")}
     malformed = InvestigatorProposal.model_validate({"graph_updates": [{"operation": "add_derivation", "derived_proposition_id": "missing", "source_node_id": "E1", "reason": "repair"}]})
-    repaired = InvestigatorProposal()
-    semantic = assessment([subject_assessment("subject_A", (AssessmentStatus.SUPPORTED, AssessmentStatus.NOT_CURRENTLY_SUPPORTED)), subject_assessment("subject_B", (AssessmentStatus.NOT_CURRENTLY_SUPPORTED, AssessmentStatus.CONFLICTED))], malformed)
+    repaired = subject_evidence_proposal()
+    semantic = assessment([subject_assessment("subject_A", (AssessmentStatus.SUPPORTED, AssessmentStatus.NOT_CURRENTLY_SUPPORTED), refs=("e_a", "")), subject_assessment("subject_B", (AssessmentStatus.NOT_CURRENTLY_SUPPORTED, AssessmentStatus.CONFLICTED), refs=("", "e_b"))], malformed)
     client = TwoCallClient([semantic, repaired])
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
     state = workflow.ensure_case("case-01")
