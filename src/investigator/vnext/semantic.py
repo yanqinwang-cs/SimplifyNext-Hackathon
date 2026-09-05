@@ -424,6 +424,8 @@ def compile_semantic_assessment(assessment: InvestigatorSemanticAssessment, run_
     preset = preset or run_input.rule_preset
     expected_subjects = list(run_input.subjects) or ["case_subject"]
     expected_violations = [item.violation_id for item in preset.violations]
+    if len(expected_violations) != len(set(expected_violations)):
+        raise SemanticValidationError("preset contains duplicate violation IDs")
     items, subject_assessments = _normalize_semantic_input(assessment)
     symbols = build_semantic_symbol_table(items)
     by_ref = {local_ref: symbol.item for local_ref, symbol in symbols.items()}
