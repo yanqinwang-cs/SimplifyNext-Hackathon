@@ -111,7 +111,18 @@ def test_product_vnext_success_persists_result_and_never_requests_or_uses_stewar
     assert run["clean_execution_retries"] == 0
     assert (artifact / "vnext_result.json").is_file()
     assert json.loads((artifact / "vnext_result.json").read_text())["result"]["status"] == "completed"
-    assert workflow.get_traces("case-01")[-1]["event"] == "vnext_completed"
+    traces = workflow.get_traces("case-01")
+    assert [item["event"] for item in traces if item["event"].startswith("vnext_")] == [
+        "vnext_attempt_started",
+        "vnext_model_call_started",
+        "vnext_model_call_completed",
+        "vnext_completed",
+    ]
+    completed = next(item for item in traces if item["event"] == "vnext_model_call_completed")
+    assert completed["model_call_number"] == 1
+    assert completed["call_kind"] == "initial"
+    assert completed["raw_output"]
+    assert completed["parsed_output"]["subject_assessments"]
 
 
 def test_sparse_product_vnext_completes_with_zero_graph_updates(tmp_path: Path) -> None:

@@ -9,7 +9,9 @@ test.describe.configure({ mode: "serial" });
 const repoRoot = resolve(process.cwd(), "..");
 let backend: ChildProcess | undefined;
 let testRepository: string;
-const backendBase = "http://127.0.0.1:8003";
+const backendPort = process.env.CASE5A_BACKEND_PORT ?? "8003";
+const backendBase = `http://127.0.0.1:${backendPort}`;
+const frontendApiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
 async function waitForBackend(): Promise<void> {
   const deadline = Date.now() + 30_000;
@@ -39,7 +41,7 @@ async function addEvidence(page: Page, fileName: string, content: string): Promi
 
 test.beforeAll(async () => {
   testRepository = mkdtempSync(join(tmpdir(), "simplifynext-case5a-audit-browser-"));
-  backend = spawn("uv", ["run", "python", "scripts/stage7_fake_server.py", "--repository", testRepository, "--port", "8003"], {
+  backend = spawn("uv", ["run", "python", "scripts/stage7_fake_server.py", "--repository", testRepository, "--port", backendPort], {
     cwd: repoRoot,
     env: {
       ...process.env,
@@ -68,16 +70,15 @@ test.afterAll(async () => {
 test.beforeEach(async ({ page }) => {
   // The full browser suite also runs the Stage 7 backend on port 8000. Keep
   // this focused audit backend isolated without changing production API code.
-  await page.route("http://127.0.0.1:8000/**", (route) => route.continue({ url: route.request().url().replace("127.0.0.1:8000", "127.0.0.1:8003") }));
+  await page.route(`${frontendApiBase}/**`, (route) => route.continue({ url: route.request().url().replace(frontendApiBase, backendBase) }));
 });
 
-test("successful run exposes a compact operator audit summary and complete trace download", async ({ page }, testInfo) => {
+test("successful run exposes only the operator trace download and complete trace", async ({ page }, testInfo) => {
   await createCase(page, "Case 5A successful audit");
   await addEvidence(page, "success-record.txt", "A controlled record.");
   await page.getByRole("button", { name: "Run assessment" }).click();
   await expect(page.getByText("Assessment complete. The current report is up to date.")).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole("heading", { name: "Assessment audit" })).toBeVisible();
-  await expect(page.getByText("completed", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Assessment audit" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Download audit trace" })).toBeVisible();
   await expect(page.locator("pre")).toHaveCount(0);
   const downloadPromise = page.waitForEvent("download");
@@ -92,14 +93,13 @@ test("successful run exposes a compact operator audit summary and complete trace
   await expect(page.locator("body")).not.toContainText("PRE5A_AUDIT_");
 });
 
-test("provider timeout stays failed, is not retried, and is visible only in the audit surface", async ({ page }, testInfo) => {
+test("provider timeout stays failed, is not retried, and remains downloadable as a trace", async ({ page }, testInfo) => {
   await createCase(page, "Case 5A timeout audit");
   await addEvidence(page, "timeout-record.txt", "TIMEOUT_SENTINEL");
   await page.getByRole("button", { name: "Run assessment" }).click();
   await expect(page.getByRole("paragraph").filter({ hasText: "Assessment could not be completed because the model provider did not return a response in time." })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("link", { name: "View report" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Assessment audit" })).toBeVisible();
-  await expect(page.getByText("failed", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Assessment audit" })).toHaveCount(0);
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download audit trace" }).click();
   const download = await downloadPromise;
