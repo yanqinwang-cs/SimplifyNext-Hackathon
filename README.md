@@ -1,8 +1,8 @@
 # SimplifyNext Investigator
 
-This repository is a deterministic investigation-state kernel. It preserves evidence, provenance, claims, hypotheses, conflicts, and uncertainty as distinct concepts. No LLM or agent architecture has been selected; future AI components will operate on top of this state rather than define it.
+This repository is a deterministic investigation-state kernel and a bounded vNext prototype. It preserves evidence, provenance, claims, hypotheses, conflicts, and uncertainty as distinct concepts. The normal product path is a finite Investigator assessment with deterministic validation and human-facing read-only Help; it is not an autonomous multi-agent system.
 
-The prototype uses typed Pydantic models and local JSON files under `data/cases/`. A minimal model-call abstraction and deterministic mock now support controlled structured experiments. No agent architecture has been selected; Gate 1 experiments will be added separately.
+The prototype uses typed Pydantic models and local JSON files under `data/cases/`. A minimal model-call abstraction and deterministic mock support controlled structured experiments; the product workflow uses a bounded Investigator path rather than an open-ended agent loop.
 
 Structured model outputs must keep identifiers separate from explanatory text: IDs identify existing records, while prose fields explain them. Future experiment schemas should use explicit identifier types or enums, and deterministic code should validate existence and namespace boundaries.
 
@@ -21,9 +21,9 @@ With AWS environment variables and `BEDROCK_MODEL_ID` configured, run one live s
 uv run python scripts/smoke_bedrock.py
 ```
 
-The UI-only Streamlit prototype can be launched with `uv run streamlit run app/streamlit_app.py`. Its chat and review controls use session-state placeholders only; reasoning integration will come later.
+The original Streamlit investigation prototype remains available with `uv run streamlit run app/streamlit_app.py` for compatibility. The supported product workflow is the vNext HTTP/UI path described above.
 
-The reusable `InvestigationSession` / `InvestigationService` cycle is: start → action review → execute → revision review → apply → next action → repeat. Streamlit provides the human review points; the controlled CLI runner auto-approves its first cycle. Free-form steering remains unconnected, and LangGraph is not required.
+The reusable `InvestigationSession` / `InvestigationService` cycle remains available for the earlier deterministic kernel. The vNext product path is finite and report-oriented; LangGraph and autonomous tool loops are not required for local operation.
 
 The state kernel also contains a provisional hypothesis tree. Broad parent hypotheses and narrower evidence-based children are represented structurally; removing or weakening a child leaves its parent unchanged. Hypotheses are never evidence, and `specificity_basis` records evidence IDs that supposedly justify narrowing. This is deterministic state representation, not a graph or search algorithm; semantic adequacy of the basis is deferred to later experiments.
 
@@ -35,4 +35,30 @@ Graph IDs use typed namespaces (`E...` or `A..._RELEASE` for evidence, `P...`, `
 
 The investigator seeds H1 and may pause, stop, correct evidence, or correct interpretation at any UI boundary. Ordinary bounded enquiries and routine revisions proceed autonomously; new hypotheses are reported, while hypothesis removal, conclusions, and unresolved stopping remain human decisions. Initial alternatives declare `competing_root` or `specialization`; specializations require released evidence.
 
-The provisional Case Steward foundation adds typed investigator/steward authority boundaries, deterministic graph-health features, snapshots, and an offline sequential coordinator. It does not add a live steward model, agent loop, or new agent architecture.
+The vNext product path adds explicit runtime state, multi-student source applicability, bounded graph validation, immutable historical report projections, and a local operator UI. Live provider connectivity and real-model reasoning quality are evaluated separately from the offline acceptance suite.
+
+## Run the local vNext prototype
+
+Start the backend in the supported local mode:
+
+```bash
+SIMPLIFYNEXT_RUN_MODE=vnext uv run python -m investigator.http_api --repository data/cases --host 127.0.0.1 --port 8000
+```
+
+In another terminal, start the frontend:
+
+```bash
+cd frontend
+npm ci
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npm run dev -- --hostname 127.0.0.1 --port 3000
+```
+
+Open `http://127.0.0.1:3000`. The supported deployment boundary is a local
+operator process. The API uses an explicit allowed-origin list, but that is not
+authentication. Zero-evidence assessments need no provider credentials; a
+substantive live assessment requires the normal AWS credential chain or the
+temporary process-local credentials in Runtime settings and an approved model
+selection.
+
+The final offline acceptance and pre-live checklist are in
+`docs/stage-7-acceptance-audit.md` and `docs/pre-5a-readiness.md`.
