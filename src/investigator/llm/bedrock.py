@@ -7,6 +7,8 @@ from threading import RLock
 from time import perf_counter
 from typing import Any
 
+from botocore.config import Config
+from botocore.exceptions import ReadTimeoutError
 from pydantic import BaseModel
 
 from investigator.llm.base import (
@@ -24,6 +26,38 @@ from investigator.llm.base import (
 
 class BedrockConfigurationError(ValueError):
     """Raised when the Bedrock adapter lacks required environment configuration."""
+
+
+BEDROCK_CONNECT_TIMEOUT_SECONDS = 10
+BEDROCK_READ_TIMEOUT_SECONDS = 300
+
+
+def bedrock_transport_config() -> Config:
+    """Use one bounded transport policy for every Bedrock credential path.
+
+    ``max_attempts=1`` means Botocore does not issue a second inference
+    request after an ambiguous response timeout.  A read timeout is therefore
+    terminal for this application run and must be handled by the operator.
+    """
+    return Config(
+        connect_timeout=BEDROCK_CONNECT_TIMEOUT_SECONDS,
+        read_timeout=BEDROCK_READ_TIMEOUT_SECONDS,
+        retries={"mode": "standard", "max_attempts": 1},
+    )
+
+
+def is_provider_timeout(exc: BaseException) -> bool:
+    return isinstance(exc, ReadTimeoutError)
+
+
+def failure_category(exc: BaseException) -> str:
+    return "PROVIDER_TIMEOUT" if is_provider_timeout(exc) else type(exc).__name__
+
+
+def safe_failure_message(exc: BaseException) -> str:
+    if is_provider_timeout(exc):
+        return "Assessment could not be completed because the model provider did not return a response in time. No assessment result was produced."
+    return redact_sensitive_text(str(exc))
 
 
 @dataclass(frozen=True)
@@ -79,10 +113,16 @@ def redact_sensitive_text(value: str) -> str:
     """Remove credential values and common credential-shaped fragments from safe diagnostics."""
     override, _ = _credential_snapshot()
     result = value
+    secrets = [
+        os.getenv("AWS_ACCESS_KEY_ID"),
+        os.getenv("AWS_SECRET_ACCESS_KEY"),
+        os.getenv("AWS_SESSION_TOKEN"),
+    ]
     if override:
-        for secret in (override.aws_access_key_id, override.aws_secret_access_key, override.aws_session_token):
-            if secret:
-                result = result.replace(secret, "[REDACTED]")
+        secrets.extend((override.aws_access_key_id, override.aws_secret_access_key, override.aws_session_token))
+    for secret in secrets:
+        if secret:
+            result = result.replace(secret, "[REDACTED]")
     return re.sub(r"(?i)(access[_ -]?key|secret|session[_ -]?token|security[_ -]?token|authorization|credential)(?:\s*[:=]\s*)[^\s,;]+", r"\1=[REDACTED]", result)
 
 
@@ -159,7 +199,7 @@ class BedrockModelClient:
             except ImportError as exc:
                 raise BedrockConfigurationError("boto3 is required for BedrockModelClient") from exc
             if override is None:
-                self.client = boto3.client("bedrock-runtime", region_name=self.region)
+                self.client = boto3.client("bedrock-runtime", region_name=self.region, config=bedrock_transport_config())
             else:
                 session = boto3.Session(
                     aws_access_key_id=override.aws_access_key_id,
@@ -167,7 +207,10 @@ class BedrockModelClient:
                     aws_session_token=override.aws_session_token,
                     region_name=override.region_name or self.region,
                 )
-                self.client = session.client("bedrock-runtime")
+                self.client = session.client(
+                    "bedrock-runtime",
+                    config=bedrock_transport_config(),
+                )
             self._client_generation = generation
         return self.client
 

@@ -172,7 +172,7 @@ def test_bedrock_override_precedence_invalidation_and_clear(monkeypatch) -> None
             sessions.append(kwargs)
             self.label = kwargs["aws_access_key_id"]
 
-        def client(self, _service):
+        def client(self, _service, **_kwargs):
             return FakeClient(self.label)
 
     fake_boto3 = types.SimpleNamespace(
