@@ -49,7 +49,10 @@ class VNextProductionRunner:
         state = workflow.repository.require_case(case_id)
         preset = self.preset_resolver(state)
         substantive_sources = {key: value for key, value in state.sources.items() if (value.content or "").strip()}
-        client = None if not substantive_sources else (self.client or BedrockModelClient(model_id=effective_model("investigator").invocation_id, region=effective_model("investigator").region))
+        model_spec = effective_model("investigator") if substantive_sources else None
+        client = None if not substantive_sources else (self.client or BedrockModelClient(model_id=model_spec.invocation_id, region=model_spec.region))
+        logical_model = model_spec.name if model_spec else None
+        workflow.record_run_model(case_id, logical_model)
         last_error: Exception | None = None
         for attempt_number in range(1, self.max_attempts + 1):
             state = workflow.repository.load(case_id)
@@ -156,7 +159,7 @@ class VNextProductionRunner:
                         },
                     )
                 result_attempt_number = 2 if corrective_attempted else attempt_number
-                self._persist_success(workflow, case_id, result_attempt_number, result, investigator)
+                self._persist_success(workflow, case_id, result_attempt_number, result, investigator, logical_model)
                 metadata = investigator.last_call.metadata if investigator and investigator.last_call else None
                 workflow.record_trace(
                     case_id,
@@ -168,7 +171,7 @@ class VNextProductionRunner:
                         "run_id": workflow.current_run_id(case_id),
                         "case_id": case_id,
                         "result": result.model_dump(mode="json"),
-                        "model": metadata.model if metadata else None,
+                        "model": logical_model,
                         "input_tokens": metadata.input_tokens if metadata else None,
                         "output_tokens": metadata.output_tokens if metadata else None,
                         "latency_seconds": metadata.latency_seconds if metadata else None,
@@ -204,7 +207,7 @@ class VNextProductionRunner:
                         "error": str(exc),
                         "raw_output": getattr(exc, "raw_output", None)
                         or (investigator.last_call.raw_output if investigator and investigator.last_call else None),
-                        "model": metadata.model if metadata else None,
+                        "model": logical_model,
                         "input_tokens": metadata.input_tokens if metadata else None,
                         "output_tokens": metadata.output_tokens if metadata else None,
                         "latency_seconds": metadata.latency_seconds if metadata else None,
@@ -233,6 +236,7 @@ class VNextProductionRunner:
         attempt_number: int,
         result: VNextRunResult,
         investigator: VNextInvestigatorModel | None,
+        logical_model: str | None,
     ) -> None:
         run_id = workflow.current_run_id(case_id)
         if run_id is None:
@@ -244,6 +248,7 @@ class VNextProductionRunner:
             "run_id": run_id,
             "attempt_number": attempt_number,
             "created_at": datetime.now(timezone.utc).isoformat(),
+            "model": logical_model,
             "model_metadata": metadata.model_dump(mode="json") if metadata else None,
             "result": result.model_dump(mode="json"),
         }
@@ -271,7 +276,7 @@ class VNextProductionRunner:
                 "vnext_result_path": str(destination),
                 "vnext_furthest_conclusion": conclusion,
                 "vnext_subject_conclusions": subject_conclusions,
-                "model": metadata.model if metadata else None,
+                "model": logical_model,
                 "input_tokens": metadata.input_tokens if metadata else None,
                 "output_tokens": metadata.output_tokens if metadata else None,
                 "latency_seconds": metadata.latency_seconds if metadata else None,

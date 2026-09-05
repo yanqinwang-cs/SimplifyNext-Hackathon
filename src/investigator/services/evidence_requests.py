@@ -19,6 +19,7 @@ from investigator.models.assessment import AssessmentSubject, SubjectRelationshi
 from investigator.state.case_state import CaseState
 from investigator.state.repository import CaseRepository
 from investigator.vnext.presets import preset_for_case
+from investigator.llm.bedrock import redact_sensitive_text
 
 
 class EvidenceRequestConflict(RuntimeError):
@@ -131,6 +132,15 @@ class HumanEvidenceWorkflow:
             result["correction_retries"] = int(result.get("correction_retries") or 0) + 1
         self._write_run_result(path, result)
 
+    def record_run_model(self, case_id: str, model: str | None) -> None:
+        run_id = self.current_run_id(case_id)
+        if not run_id or not model:
+            return
+        path = self._run_dir(case_id, run_id) / "run_result.json"
+        result = json.loads(path.read_text(encoding="utf-8"))
+        result["model"] = model
+        self._write_run_result(path, result)
+
     @staticmethod
     def _write_run_result(path: Path, result: dict[str, Any]) -> None:
         """Publish a complete run snapshot so readers never see a truncated JSON file."""
@@ -178,8 +188,9 @@ class HumanEvidenceWorkflow:
         except Exception as exc:
             category = "ORCHESTRATION_CONFIGURATION_FAILURE" if type(exc).__name__ == "BedrockConfigurationError" else ("CASE_SNAPSHOT_MISMATCH" if isinstance(exc, CaseSnapshotMismatch) else type(exc).__name__)
             state = self.ensure_case(case_id)
-            self.record_trace(case_id, {"event": "failed", "step": state.last_trace_step, "actor": "system", "runtime_status": "FAILED", "case_revision": state.revision, "current_actor": state.current_actor, "failure_category": category, "error": str(exc)})
-            self.set_runtime(case_id, "FAILED", "NONE", failure_category=category, message=str(exc), step=state.last_trace_step)
+            safe_message = redact_sensitive_text(str(exc))
+            self.record_trace(case_id, {"event": "failed", "step": state.last_trace_step, "actor": "system", "runtime_status": "FAILED", "case_revision": state.revision, "current_actor": state.current_actor, "failure_category": category, "error": safe_message})
+            self.set_runtime(case_id, "FAILED", "NONE", failure_category=category, message=safe_message, step=state.last_trace_step)
             summary = "Assessment could not be completed. Case evidence was unchanged." if self.run_mode == "vnext" else f"The investigation run failed. The failed turn was not committed; earlier successful turns remain preserved at revision {state.revision}."
             self.record_workspace_event(case_id, {"type": "run_failed", "run_id": self.current_run_id(case_id), "runtime_status": "FAILED", "case_revision": state.revision, "final_case_revision": state.revision, "human_summary": summary})
         finally:
@@ -199,6 +210,15 @@ class HumanEvidenceWorkflow:
             else:
                 self._in_flight_actor.pop(case_id, None)
             self.repository.save(state)
+            if runtime_status == "WAITING_FOR_EVIDENCE":
+                run_id = self.current_run_id(case_id)
+                if run_id:
+                    path = self._run_dir(case_id, run_id) / "run_result.json"
+                    if path.is_file():
+                        result = json.loads(path.read_text(encoding="utf-8"))
+                        pending = next((item for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None)
+                        result.update({"final_runtime_status": "WAITING_FOR_EVIDENCE", "outcome_type": "WAITING_FOR_EVIDENCE", "pending_request_id": pending.request_id if pending else None, "request_text": pending.information_sought if pending else None})
+                        self._write_run_result(path, result)
 
     def record_trace(self, case_id: str, trace: dict[str, Any]) -> None:
         with self._lock:
@@ -306,6 +326,7 @@ class HumanEvidenceWorkflow:
             state.last_updated_at = datetime.now(timezone.utc)
             state.revision += 1
             self.repository.save(state)
+            self._publish_waiting_run(case_id, state, request)
             self.record_workspace_event(case_id, {"type": "request_created", "run_id": request.originating_run_id, "request_id": request.request_id, "runtime_status": "WAITING_FOR_EVIDENCE", "case_revision": state.revision, "human_summary": f"The Investigator requested: {request.information_sought}"})
             return request
 
@@ -329,6 +350,7 @@ class HumanEvidenceWorkflow:
             state.last_updated_at = datetime.now(timezone.utc)
             state.revision += 1
             self.repository.save(state)
+            self._publish_waiting_run(case_id, state, request)
             self.record_workspace_event(case_id, {"type": "request_created", "run_id": request.originating_run_id, "request_id": request.request_id, "runtime_status": "WAITING_FOR_EVIDENCE", "case_revision": state.revision, "human_summary": f"The Investigator requested: {request.information_sought}"})
             return request
 
@@ -714,3 +736,14 @@ class HumanEvidenceWorkflow:
     def _assert_mutable(self, state: CaseState) -> None:
         if self.run_mode == "vnext" and (state.runtime_status in {"RUNNING", "RUNNING_INVESTIGATOR", "RUNNING_STEWARD"} or state.case_id in self._in_flight_actor):
             raise EvidenceRequestConflict("Assessment is running; wait for it to finish before changing the case")
+
+    def _publish_waiting_run(self, case_id: str, state: CaseState, request: EvidenceRequest) -> None:
+        run_id = self.current_run_id(case_id)
+        if not run_id:
+            return
+        path = self._run_dir(case_id, run_id) / "run_result.json"
+        if not path.is_file():
+            return
+        result = json.loads(path.read_text(encoding="utf-8"))
+        result.update({"final_runtime_status": "WAITING_FOR_EVIDENCE", "outcome_type": "WAITING_FOR_EVIDENCE", "pending_request_id": request.request_id, "request_text": request.information_sought})
+        self._write_run_result(path, result)

@@ -7,7 +7,7 @@ import shutil
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote, urlparse, parse_qs
 
 from investigator.services.evidence_requests import EvidenceRequestConflict, HumanEvidenceWorkflow
 from investigator.services.production_runner import default_production_run
@@ -23,7 +23,7 @@ from investigator.models.source import Source
 from investigator.state.case_state import CaseState
 from investigator.help import product_guide
 from investigator.public_views import assessment_view, workspace_view, public_run_handle, public_source_handle, public_student_handle, resolve_run_handle, resolve_source_handle, resolve_student_handle, document_format
-from investigator.runtime_settings import settings as runtime_settings, set_model_overrides, reset_model_overrides
+from investigator.runtime_settings import RuntimeSettingsError, settings as runtime_settings, set_model_overrides, reset_model_overrides
 
 
 def sample_cases() -> list[dict[str, str]]:
@@ -118,6 +118,13 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parts = self._parts()
+        if parts == ["api", "runtime-settings"]:
+            try:
+                case_id = parse_qs(urlparse(self.path).query).get("caseId", [None])[0]
+                self._write(200, runtime_settings(case_id=case_id, workflow=self.workflow))
+            except RuntimeSettingsError:
+                self._write(422, {"error": "The configured model is not supported by this prototype", "code": "UNSUPPORTED_MODEL_CONFIGURATION"})
+            return
         if self.workflow.run_mode == "vnext" and os.getenv("SIMPLIFYNEXT_ENABLE_DIAGNOSTIC_API") != "1" and ((len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"traces", "runs"}) or (len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "runs")):
             self._write(404, {"error": "Not found"})
             return
@@ -211,6 +218,31 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parts = self._parts()
+        if parts == ["api", "runtime-settings", "aws-credentials"]:
+            try:
+                payload = self._read_json()
+                required = {"aws_access_key_id", "aws_secret_access_key", "aws_session_token"}
+                if set(payload) != required or any(not isinstance(payload[field], str) or not payload[field].strip() or len(payload[field]) > 4096 for field in required):
+                    raise ValueError("All temporary AWS credential fields are required")
+                set_credential_override(CredentialOverride(**payload))
+                self._write(200, runtime_settings(workflow=self.workflow))
+            except ValueError as exc:
+                self._write(422, {"error": str(exc), "code": "INVALID_CREDENTIAL_INPUT"})
+            return
+        if parts == ["api", "runtime-settings", "models"]:
+            try:
+                payload = self._read_json()
+                if set(payload) != {"investigator", "workspaceHelp"}:
+                    raise RuntimeSettingsError("Investigator and Workspace Help model choices are required")
+                set_model_overrides({"investigator": payload["investigator"], "workspace_help": payload["workspaceHelp"]})
+                self._write(200, runtime_settings(workflow=self.workflow))
+            except RuntimeSettingsError as exc:
+                self._write(422, {"error": str(exc), "code": "INVALID_MODEL_SETTINGS"})
+            return
+        if parts == ["api", "runtime-settings", "models", "reset"]:
+            reset_model_overrides()
+            self._write(200, runtime_settings(workflow=self.workflow))
+            return
         if self.workflow.run_mode == "vnext" and ((len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"relationships", "context"}) or (len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] in {"subjects", "evidence-requests"})):
             self._write(404, {"error": "Not found"})
             return
@@ -394,6 +426,10 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
 
     def do_DELETE(self) -> None:
         parts = self._parts()
+        if parts == ["api", "runtime-settings", "aws-credentials"]:
+            clear_credential_override()
+            self._write(200, runtime_settings(workflow=self.workflow))
+            return
         if self.workflow.run_mode == "vnext" and len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "students":
             try:
                 state = self.workflow.repository.require_case(parts[2])
@@ -487,8 +523,9 @@ def create_server(repository_root: str | Path = "data/cases", host: str = "127.0
     workflow.resume_callback = lambda case_id: workflow.start_run(case_id)
     InvestigatorApiHandler.workflow = workflow
     model = MODEL_REGISTRY["anthropic.claude-opus-4-5"]
-    workspace_model = os.environ.get("WORKSPACE_MODEL_ID") or (MODEL_REGISTRY["anthropic.claude-haiku-4-5"].invocation_id if configured_mode == "vnext" else model.invocation_id)
-    InvestigatorApiHandler.workspace_agent = WorkspaceAgent(workflow, BedrockModelClient(model_id=workspace_model, region=model.region))
+    workspace_model = runtime_settings()["models"]["workspaceHelp"]["effectiveModel"] if configured_mode == "vnext" else model.name
+    workspace_spec = MODEL_REGISTRY[workspace_model]
+    InvestigatorApiHandler.workspace_agent = WorkspaceAgent(workflow, BedrockModelClient(model_id=workspace_spec.invocation_id, region=workspace_spec.region))
     return ThreadingHTTPServer((host, port), InvestigatorApiHandler)
 
 

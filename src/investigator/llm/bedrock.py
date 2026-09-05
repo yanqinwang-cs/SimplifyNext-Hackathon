@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from threading import RLock
@@ -72,6 +73,17 @@ def credential_status() -> dict[str, object]:
 def _credential_snapshot() -> tuple[CredentialOverride | None, int]:
     with _override_lock:
         return _credential_override, _credential_generation
+
+
+def redact_sensitive_text(value: str) -> str:
+    """Remove credential values and common credential-shaped fragments from safe diagnostics."""
+    override, _ = _credential_snapshot()
+    result = value
+    if override:
+        for secret in (override.aws_access_key_id, override.aws_secret_access_key, override.aws_session_token):
+            if secret:
+                result = result.replace(secret, "[REDACTED]")
+    return re.sub(r"(?i)(access[_ -]?key|secret|session[_ -]?token|security[_ -]?token|authorization|credential)(?:\s*[:=]\s*)[^\s,;]+", r"\1=[REDACTED]", result)
 
 
 class BedrockModelClient:

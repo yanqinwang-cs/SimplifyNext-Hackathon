@@ -1,4 +1,4 @@
-import type { AssessmentSummary, AwsCredentialStatus, CaseListItem, CaseWorkspaceState, PublicSource, PublicSourceDocument, ReportResponse, RunSummary, RuntimeSettings, SampleCatalogItem, TraceEntry, WorkspaceChatResponse } from "./types";
+import type { AssessmentSummary, ApprovedModel, AwsCredentialStatus, CaseListItem, CaseWorkspaceState, PublicSource, PublicSourceDocument, ReportResponse, RunSummary, RuntimeSettings, SampleCatalogItem, TraceEntry, WorkspaceChatResponse } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
@@ -84,18 +84,12 @@ export function markUnavailable(caseId: string, requestId: string, caseRevision:
   return request<CaseWorkspaceState>(`/api/cases/${encodeURIComponent(caseId)}/evidence-requests/${encodeURIComponent(requestId)}/unavailable`, { method: "POST", body: JSON.stringify({ case_revision: caseRevision, note: reason }) });
 }
 
-export function getAwsCredentialStatus(): Promise<AwsCredentialStatus> {
-  return request<AwsCredentialStatus>("/api/debug/aws-credentials/status");
-}
+export function getAwsCredentialStatus(): Promise<AwsCredentialStatus> { return request<RuntimeSettings>("/api/runtime-settings").then((settings) => settings.aws); }
 
-export function applyAwsCredentials(credentials: { aws_access_key_id: string; aws_secret_access_key: string; aws_session_token: string }): Promise<AwsCredentialStatus> {
-  return request<AwsCredentialStatus>("/api/debug/aws-credentials", { method: "POST", body: JSON.stringify(credentials) });
-}
+export function applyAwsCredentials(credentials: { aws_access_key_id: string; aws_secret_access_key: string; aws_session_token: string }): Promise<AwsCredentialStatus> { return request<RuntimeSettings>("/api/runtime-settings/aws-credentials", { method: "POST", body: JSON.stringify(credentials) }).then((settings) => settings.aws); }
 
-export function clearAwsCredentials(): Promise<AwsCredentialStatus> {
-  return request<AwsCredentialStatus>("/api/debug/aws-credentials", { method: "DELETE" });
-}
+export function clearAwsCredentials(): Promise<AwsCredentialStatus> { return request<RuntimeSettings>("/api/runtime-settings/aws-credentials", { method: "DELETE" }).then((settings) => settings.aws); }
 
-export function getRuntimeSettings(): Promise<RuntimeSettings> { return request<RuntimeSettings>("/api/debug/runtime-settings"); }
-export function applyModelOverrides(payload: Record<string, string | null>): Promise<RuntimeSettings> { return request<RuntimeSettings>("/api/debug/runtime-settings/models", { method: "POST", body: JSON.stringify(payload) }); }
-export function resetModelOverrides(): Promise<RuntimeSettings> { return request<RuntimeSettings>("/api/debug/runtime-settings/models", { method: "DELETE" }); }
+export function getRuntimeSettings(caseId?: string): Promise<RuntimeSettings> { return request<RuntimeSettings>(`/api/runtime-settings${caseId ? `?caseId=${encodeURIComponent(caseId)}` : ""}`); }
+export function applyModelOverrides(payload: { investigator: ApprovedModel; workspaceHelp: ApprovedModel }): Promise<RuntimeSettings> { return request<RuntimeSettings>("/api/runtime-settings/models", { method: "POST", body: JSON.stringify(payload) }); }
+export function resetModelOverrides(): Promise<RuntimeSettings> { return request<RuntimeSettings>("/api/runtime-settings/models/reset", { method: "POST", body: "{}" }); }

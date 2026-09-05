@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from copy import deepcopy
+from copy import copy
+from datetime import datetime, timezone
 import os
 import re
 from typing import Any
@@ -17,7 +19,8 @@ from investigator.sources import SourceRegistry
 from investigator.model_registry import MODEL_REGISTRY
 from investigator.state.case_state import CaseState
 from investigator.help import product_guide
-from investigator.runtime_settings import effective_model
+from investigator.runtime_settings import effective_model, record_help_model_use
+from investigator.llm.bedrock import BedrockModelClient, redact_sensitive_text
 
 
 class WorkspaceChatRequest(BaseModel):
@@ -130,11 +133,10 @@ class WorkspaceAgent:
         self.client = client
         self.session_store = session_store or WorkspaceSessionStore()
         # Reuse the canonical model-screen registry; this does not make a call.
-        configured_id = os.environ.get("WORKSPACE_MODEL_ID")
-        default_name = "anthropic.claude-haiku-4-5" if workflow.run_mode == "vnext" else "anthropic.claude-opus-4-5"
-        self.model_spec = next((spec for spec in MODEL_REGISTRY.values() if spec.invocation_id == configured_id), None) if configured_id else None
-        self.model_spec = self.model_spec or MODEL_REGISTRY[default_name]
         self.is_vnext = workflow.run_mode == "vnext"
+        configured_id = os.environ.get("WORKSPACE_MODEL_ID")
+        default_name = "anthropic.claude-sonnet-4-5" if self.is_vnext else "anthropic.claude-opus-4-5"
+        self.model_spec = effective_model("workspace_help") if self.is_vnext else (next((spec for spec in MODEL_REGISTRY.values() if spec.invocation_id == configured_id), None) or MODEL_REGISTRY[default_name])
 
     def invoke_tool(self, case_id: str, request: WorkspaceToolRequest | dict[str, Any]) -> dict[str, Any]:
         request = request if isinstance(request, WorkspaceToolRequest) else WorkspaceToolRequest.model_validate(request)
@@ -190,15 +192,14 @@ class WorkspaceAgent:
             session["conversation"].append({"role": "assistant", "text": response})
             self._append_chat(case_id, "workspace", response)
             return WorkspaceChatResponse(response=response)
-        if hasattr(self.client, "model_id"):
-            self.client.model_id = effective_model("workspace_help").invocation_id
-            self.client.region = effective_model("workspace_help").region
-        turn_id = self._begin_workspace_turn(case_id, text)
+        turn_model = effective_model("workspace_help")
+        turn_client = self._client_for_model(turn_model)
+        turn_id = self._begin_workspace_turn(case_id, text, turn_model.name)
         messages: list[dict[str, Any]] = [{"role": "system", "text": self.system_prompt()}, *session["conversation"]]
         try:
             for _ in range(3 if self.is_vnext else 5):
                 self._assert_tool_result_pairing(messages)
-                call = self.client.call_native(messages, self.tool_specs())
+                call = turn_client.call_native(messages, self.tool_specs())
                 self._record_requested_tools(case_id, turn_id, call.tool_uses)
                 if not call.tool_uses:
                     response = " ".join(block.text for block in call.text_blocks).strip()
@@ -206,6 +207,7 @@ class WorkspaceAgent:
                         raise RuntimeError("Workspace model returned neither a response nor a tool call")
                     session["conversation"].append({"role": "assistant", "text": response})
                     self._finish_workspace_turn(case_id, turn_id, "completed", response)
+                    record_help_model_use(case_id, turn_model.name, "completed")
                     self._append_chat(case_id, "workspace", response)
                     return WorkspaceChatResponse(response=response, recovery=self._has_recovery(case_id))
                 assistant_message = {"role": "assistant", "text": " ".join(block.text for block in call.text_blocks), "tool_uses": [use.model_dump(mode="json") for use in call.tool_uses]}
@@ -222,15 +224,31 @@ class WorkspaceAgent:
             raise RuntimeError("Workspace tool loop exceeded the configured safety bound")
         except WorkspaceToolAuthorizationError as exc:
             self._finish_workspace_turn(case_id, turn_id, "failed", "The requested Workspace operation is not authorized.", type(exc).__name__)
+            record_help_model_use(case_id, turn_model.name, "failed")
             raise
         except Exception as exc:
             if self.is_vnext:
+                self._finish_workspace_turn(case_id, turn_id, "failed", "The Workspace assistant could not respond.", type(exc).__name__)
+                record_help_model_use(case_id, turn_model.name, "failed")
                 raise
             response = "The Workspace assistant could not respond. Case operations remain accessible through the workspace controls."
             self._finish_workspace_turn(case_id, turn_id, "failed", response, type(exc).__name__)
             self._append_chat(case_id, "workspace", response)
             self._append_chat(case_id, "system", f"Workspace model failure: {type(exc).__name__}: {exc}")
+            record_help_model_use(case_id, turn_model.name, "failed")
             return WorkspaceChatResponse(response=response)
+
+    def _client_for_model(self, model_spec: Any) -> ModelClient:
+        if self.client is None:
+            raise WorkspaceModelUnavailable("Workspace model is unavailable")
+        if isinstance(self.client, BedrockModelClient):
+            return BedrockModelClient(model_id=model_spec.invocation_id, region=model_spec.region)
+        isolated = copy(self.client)
+        if hasattr(isolated, "model_id"):
+            isolated.model_id = model_spec.invocation_id
+        if hasattr(isolated, "region"):
+            isolated.region = model_spec.region
+        return isolated
 
     def system_prompt(self) -> str:
         tools = sorted(self.VNEXT_READ_TOOLS if self.is_vnext else self.READ_TOOLS | self.ACTION_TOOLS)
@@ -258,8 +276,7 @@ class WorkspaceAgent:
 
     @staticmethod
     def _safe_tool_error(exc: Exception) -> str:
-        summary = f"{type(exc).__name__}: {exc}"
-        return re.sub(r"(?i)(access[_ -]?key|secret|session[_ -]?token|authorization|credential)(?:\s*[:=]\s*)\S+", r"\1=[REDACTED]", summary)
+        return redact_sensitive_text(f"{type(exc).__name__}: {exc}")
 
     @staticmethod
     def _assert_tool_result_pairing(messages: list[dict[str, Any]]) -> None:
@@ -271,10 +288,10 @@ class WorkspaceAgent:
                 if not result or result.get("role") != "tool" or result.get("call_id") != use.get("call_id"):
                     raise RuntimeError(f"Workspace conversation has an unpaired tool use: {use.get('call_id')}")
 
-    def _begin_workspace_turn(self, case_id: str, message: str) -> str:
+    def _begin_workspace_turn(self, case_id: str, message: str, model: str) -> str:
         session = self.session_store.session(case_id)
         turn_id = f"workspace_{len(session['turns']) + 1:06d}"
-        session["turns"].append({"workspace_turn_id": turn_id, "user_message": message, "model_status": "running", "requested_tool_names": [], "tool_execution_status": "pending"})
+        session["turns"].append({"workspace_turn_id": turn_id, "user_message": message, "model_status": "running", "model": model, "started_at": datetime.now(timezone.utc).isoformat(), "requested_tool_names": [], "tool_execution_status": "pending"})
         return turn_id
 
     def _record_requested_tools(self, case_id: str, turn_id: str, uses: list[ModelToolUse]) -> None:
@@ -283,7 +300,7 @@ class WorkspaceAgent:
 
     def _finish_workspace_turn(self, case_id: str, turn_id: str, status: str, summary: str, failure_category: str | None = None) -> None:
         record = next(item for item in reversed(self.session_store.session(case_id)["turns"]) if item["workspace_turn_id"] == turn_id)
-        record.update({"model_status": status, "tool_execution_status": "completed" if status == "completed" else "failed", "failure_category": failure_category, "failure_summary": summary})
+        record.update({"model_status": status, "tool_execution_status": "completed" if status == "completed" else "failed", "failure_category": failure_category, "failure_summary": summary, "ended_at": datetime.now(timezone.utc).isoformat()})
 
     def _read_tool(self, case_id: str, request: WorkspaceToolRequest) -> dict[str, Any]:
         state = self.workflow.repository.require_case(case_id)
