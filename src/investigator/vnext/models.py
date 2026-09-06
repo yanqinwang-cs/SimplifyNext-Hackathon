@@ -182,6 +182,7 @@ class SubjectAssessment(BaseModel):
     violation_assessments: list[ViolationAssessment] = Field(min_length=1)
     furthest_conclusion: FurthestJustifiedConclusion
     alternative_explanations: list[AlternativeExplanation] = Field(default_factory=list)
+    suggested_next_step: str | None = None
 
 
 class InvestigatorAssessment(BaseModel):

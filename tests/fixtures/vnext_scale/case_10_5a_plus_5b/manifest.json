@@ -1,0 +1,22 @@
+{
+  "case_id": "case-10-5a-plus-5b",
+  "title": "Business Law Assessment Review — Ten Candidate Scale",
+  "assessment_rule_preset_id": "academic-integrity-core",
+  "shared_files": ["assessment_context.md", "assessment_rules.md", "marking_guide.md", "seating_plan.md"],
+  "relationships": [
+    {"relationship_id": "rel_A_B_adjacent", "subject_ids": ["subject_A", "subject_B"], "relationship_type": "adjacent_seating", "source_file": "seating_plan.md"},
+    {"relationship_id": "rel_F_G_adjacent", "subject_ids": ["subject_F", "subject_G"], "relationship_type": "adjacent_seating", "source_file": "seating_plan.md"}
+  ],
+  "candidates": {
+    "A": {"candidate_number": "BL-041", "cohort": "5A", "role": "strong_collaboration"},
+    "B": {"candidate_number": "BL-073", "cohort": "5A", "role": "strong_collaboration"},
+    "C": {"candidate_number": "BL-118", "cohort": "5A", "role": "negative"},
+    "D": {"candidate_number": "BL-162", "cohort": "5A", "role": "noisy_negative"},
+    "E": {"candidate_number": "BL-205", "cohort": "5A", "role": "device_positive"},
+    "F": {"candidate_number": "BL-301", "cohort": "5B", "role": "weaker_collaboration"},
+    "G": {"candidate_number": "BL-307", "cohort": "5B", "role": "weaker_collaboration"},
+    "H": {"candidate_number": "BL-314", "cohort": "5B", "role": "negative"},
+    "I": {"candidate_number": "BL-326", "cohort": "5B", "role": "noisy_negative"},
+    "J": {"candidate_number": "BL-335", "cohort": "5B", "role": "device_positive"}
+  }
+}
