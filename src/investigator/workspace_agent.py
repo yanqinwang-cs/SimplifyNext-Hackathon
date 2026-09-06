@@ -13,7 +13,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from investigator.graph import GraphNodeType
-from investigator.llm import ModelClient, ModelToolUse
+from investigator.llm import AnthropicModelClient, ModelClient, ModelToolUse, create_model_client, configured_provider
 from investigator.services.evidence_requests import EvidenceRequestConflict, HumanEvidenceWorkflow
 from investigator.sources import SourceRegistry
 from investigator.model_registry import MODEL_REGISTRY
@@ -187,11 +187,6 @@ class WorkspaceAgent:
         session = self.session_store.session(case_id)
         self._append_chat(case_id, "human", text)
         session["conversation"].append({"role": "user", "text": text})
-        if self.client is None:
-            response = "The Workspace assistant is currently unavailable. Case operations remain accessible through the workspace controls."
-            session["conversation"].append({"role": "assistant", "text": response})
-            self._append_chat(case_id, "workspace", response)
-            return WorkspaceChatResponse(response=response)
         turn_model = effective_model("workspace_help")
         turn_client = self._client_for_model(turn_model)
         turn_id = self._begin_workspace_turn(case_id, text, turn_model.name)
@@ -240,12 +235,12 @@ class WorkspaceAgent:
 
     def _client_for_model(self, model_spec: Any) -> ModelClient:
         if self.client is None:
-            raise WorkspaceModelUnavailable("Workspace model is unavailable")
-        if isinstance(self.client, BedrockModelClient):
-            return BedrockModelClient(model_id=model_spec.invocation_id, region=model_spec.region)
+            return create_model_client(model_spec)
+        if isinstance(self.client, (BedrockModelClient, AnthropicModelClient)):
+            return create_model_client(model_spec, provider=configured_provider())
         isolated = copy(self.client)
         if hasattr(isolated, "model_id"):
-            isolated.model_id = model_spec.invocation_id
+            isolated.model_id = model_spec.provider_model_id(configured_provider())
         if hasattr(isolated, "region"):
             isolated.region = model_spec.region
         return isolated

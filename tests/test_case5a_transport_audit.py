@@ -173,7 +173,7 @@ def test_trace_is_handle_bound_sanitized_and_available_without_diagnostic_flag(t
         assert payload["caseId"] == "case-01"
         assert payload["runHandle"] == handle
         assert payload["outcome"] == "failed"
-        assert payload["model"]["logicalModel"] == "anthropic.claude-sonnet-4-5"
+        assert payload["model"]["logicalModel"] == "anthropic.claude-opus-4-5"
         assert payload["counters"] == {"modelCalls": 1, "proposalCorrectionCalls": 0, "cleanExecutionRetries": 0}
         assert payload["failure"]["category"] == "PROVIDER_TIMEOUT"
         assert payload["failure"]["technicalType"] == "ReadTimeoutError"

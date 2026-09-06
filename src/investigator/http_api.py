@@ -13,7 +13,7 @@ from urllib.parse import unquote, urlparse, parse_qs
 
 from investigator.services.evidence_requests import EvidenceRequestConflict, HumanEvidenceWorkflow, ReportIntegrityError
 from investigator.services.production_runner import default_production_run
-from investigator.llm.bedrock import BedrockModelClient, CredentialOverride, clear_credential_override, credential_status, debug_credentials_enabled, set_credential_override
+from investigator.llm.bedrock import CredentialOverride, clear_credential_override, credential_status, debug_credentials_enabled, set_credential_override
 from investigator.state.repository import CaseRepository
 from investigator.workspace_agent import WorkspaceAgent, WorkspaceChatRequest, WorkspaceToolAuthorizationError
 from investigator.model_registry import MODEL_REGISTRY
@@ -667,10 +667,7 @@ def create_server(repository_root: str | Path = "data/cases", host: str = "127.0
     workflow = HumanEvidenceWorkflow(CaseRepository(repository_root), run_callback=callback, run_mode=configured_mode)
     workflow.resume_callback = lambda case_id: workflow.start_run(case_id)
     InvestigatorApiHandler.workflow = workflow
-    model = MODEL_REGISTRY["anthropic.claude-opus-4-5"]
-    workspace_model = runtime_settings()["models"]["workspaceHelp"]["effectiveModel"] if configured_mode == "vnext" else model.name
-    workspace_spec = MODEL_REGISTRY[workspace_model]
-    InvestigatorApiHandler.workspace_agent = WorkspaceAgent(workflow, BedrockModelClient(model_id=workspace_spec.invocation_id, region=workspace_spec.region))
+    InvestigatorApiHandler.workspace_agent = WorkspaceAgent(workflow)
     return ThreadingHTTPServer((host, port), InvestigatorApiHandler)
 
 

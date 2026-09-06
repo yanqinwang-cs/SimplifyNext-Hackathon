@@ -161,8 +161,8 @@ test("real Runtime settings uses the actual HTTP backend without changing case s
   const providerCount = providerCalls().length;
   await page.getByRole("button", { name: "Runtime settings" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.locator('select[aria-label="Investigator model"] option')).toHaveCount(2);
-  await expect(page.locator('select[aria-label="Workspace Help model"] option')).toHaveCount(2);
+  await expect(page.locator('select[aria-label="Investigator model"] option')).toHaveCount(1);
+  await expect(page.locator('select[aria-label="Workspace Help model"] option')).toHaveCount(1);
   await page.getByLabel("AWS Access Key ID").fill("PRE5A_FAKE_ACCESS");
   await page.getByLabel("AWS Secret Access Key").fill("PRE5A_FAKE_SECRET");
   await page.getByLabel("AWS Session Token").fill("PRE5A_FAKE_SESSION");
@@ -195,8 +195,8 @@ test("real Runtime settings uses the actual HTTP backend without changing case s
   await expect(page.getByText("Model defaults restored.")).toBeVisible();
   const reset = await page.request.get(`${backendBase}/api/runtime-settings`);
   const resetSettings = await reset.json();
-  expect(resetSettings.models.investigator.effectiveModel).toBe("anthropic.claude-sonnet-4-5");
-  expect(resetSettings.models.workspaceHelp.effectiveModel).toBe("anthropic.claude-sonnet-4-5");
+  expect(resetSettings.models.investigator.effectiveModel).toBe("anthropic.claude-opus-4-5");
+  expect(resetSettings.models.workspaceHelp.effectiveModel).toBe("anthropic.claude-opus-4-5");
   await page.screenshot({ path: testInfo.outputPath("runtime-model-reset-real-backend.png"), fullPage: true });
   const storage = await page.evaluate(() => ({ local: JSON.stringify(localStorage), session: JSON.stringify(sessionStorage), url: location.href }));
   expect(JSON.stringify(storage)).not.toContain("PRE5A_FAKE_");

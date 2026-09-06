@@ -68,3 +68,21 @@ selection.
 
 The final offline acceptance and pre-live checklist are in
 `docs/stage-7-acceptance-audit.md` and `docs/pre-5a-readiness.md`.
+
+## Model provider boundary
+
+The deterministic case-state kernel remains the source of truth. The vNext
+model-call boundary defaults to the direct Anthropic provider and exposes only
+Claude Opus 4.5 in the normal UI; Bedrock remains an explicit provider option
+with its existing inference-profile mappings. No automatic Anthropic-to-Bedrock
+fallback is used, and provider credentials stay backend-only.
+
+For a bounded developer validation, use the explicit live flag and call budget:
+
+```bash
+uv run python scripts/live_validate_anthropic.py --live --case-id case-01 --max-provider-calls 2
+```
+
+Later validation commands can reuse the same production vNext path for the
+5-candidate and 10-candidate fixtures by changing `--case-id` and the call
+budget. This patch does not run live calls.

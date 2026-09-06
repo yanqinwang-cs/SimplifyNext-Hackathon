@@ -6,11 +6,12 @@ from threading import RLock
 from typing import Any
 from investigator.model_registry import MODEL_REGISTRY, ModelSpec
 from investigator.llm.bedrock import credential_status
+from investigator.llm.factory import configured_provider
 
-APPROVED_MODELS = ("anthropic.claude-sonnet-4-5", "anthropic.claude-opus-4-5")
-DEFAULT_MODEL = "anthropic.claude-sonnet-4-5"
+APPROVED_MODELS = ("anthropic.claude-opus-4-5",)
+DEFAULT_MODEL = "anthropic.claude-opus-4-5"
 ROLE_KEYS = ("investigator", "workspace_help")
-_LABELS = {"anthropic.claude-sonnet-4-5": "Claude Sonnet 4.5", "anthropic.claude-opus-4-5": "Claude Opus 4.5"}
+_LABELS = {"anthropic.claude-opus-4-5": "Claude Opus 4.5"}
 _lock = RLock()
 _overrides: dict[str, str | None] = dict.fromkeys(ROLE_KEYS)
 _help_last_used: dict[str, dict[str, Any]] = {}
@@ -88,14 +89,14 @@ def settings(*, case_id: str | None = None, workflow: Any | None = None) -> dict
             models[public_role]["noModelCallRequired"] = no_model_call
     status = credential_status()
     temporary = bool(status["override_active"])
-    return {"aws": {"mode": "temporary_credentials" if temporary else "default_chain", "statusLabel": "Temporary AWS credentials loaded" if temporary else "Default AWS credential chain", "lastUpdatedAt": status["last_updated_at"], "region": status["region"]}, "models": models, "availableModels": available_models()}
+    return {"provider": configured_provider(), "aws": {"mode": "temporary_credentials" if temporary else "default_chain", "statusLabel": "Temporary AWS credentials loaded" if temporary else "Default AWS credential chain", "lastUpdatedAt": status["last_updated_at"], "region": status["region"]}, "models": models, "availableModels": available_models()}
 
 def set_model_overrides(payload: dict[str, Any]) -> dict[str, Any]:
     if set(payload) != set(ROLE_KEYS):
         raise RuntimeSettingsError("Both Investigator and Workspace Help models are required")
     values = {role: payload[role] for role in ROLE_KEYS}
     if any(not isinstance(value, str) or value not in APPROVED_MODELS for value in values.values()):
-        raise RuntimeSettingsError("Only Claude Sonnet 4.5 and Claude Opus 4.5 are supported")
+        raise RuntimeSettingsError("Only Claude Opus 4.5 is supported")
     with _lock:
         _overrides.update(values)
     return settings()

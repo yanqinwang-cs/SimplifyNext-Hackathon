@@ -38,9 +38,9 @@ def test_normal_runtime_settings_exposes_only_approved_roles_and_models(tmp_path
     try:
         status, _, payload = request(base, "GET", "/api/runtime-settings")
         assert status == 200
-        assert [item["model"] for item in payload["availableModels"]] == ["anthropic.claude-sonnet-4-5", "anthropic.claude-opus-4-5"]
+        assert [item["model"] for item in payload["availableModels"]] == ["anthropic.claude-opus-4-5"]
         assert set(payload["models"]) == {"investigator", "workspaceHelp"}
-        assert payload["models"]["investigator"]["effectiveModel"] == "anthropic.claude-sonnet-4-5"
+        assert payload["models"]["investigator"]["effectiveModel"] == "anthropic.claude-opus-4-5"
         serialized = json.dumps(payload)
         for forbidden in ("steward", "Steward", "Warden", "haiku", "nova", "deepseek", "qwen", "glm", "kimi", "gpt-oss"):
             assert forbidden not in serialized.lower()
@@ -54,12 +54,12 @@ def test_model_update_is_atomic_and_rejects_unapproved_values(tmp_path):
         status, _, _ = request(base, "POST", "/api/runtime-settings/models", {"investigator": "anthropic.claude-opus-4-5", "workspaceHelp": "anthropic.claude-haiku-4-5"})
         assert status == 422
         _, _, payload = request(base, "GET", "/api/runtime-settings")
-        assert payload["models"]["investigator"]["effectiveModel"] == "anthropic.claude-sonnet-4-5"
-        assert payload["models"]["workspaceHelp"]["effectiveModel"] == "anthropic.claude-sonnet-4-5"
-        status, _, payload = request(base, "POST", "/api/runtime-settings/models", {"investigator": "anthropic.claude-opus-4-5", "workspaceHelp": "anthropic.claude-sonnet-4-5"})
+        assert payload["models"]["investigator"]["effectiveModel"] == "anthropic.claude-opus-4-5"
+        assert payload["models"]["workspaceHelp"]["effectiveModel"] == "anthropic.claude-opus-4-5"
+        status, _, payload = request(base, "POST", "/api/runtime-settings/models", {"investigator": "anthropic.claude-opus-4-5", "workspaceHelp": "anthropic.claude-opus-4-5"})
         assert status == 200 and payload["models"]["investigator"]["effectiveModel"] == "anthropic.claude-opus-4-5"
         status, _, payload = request(base, "POST", "/api/runtime-settings/models/reset", {})
-        assert status == 200 and all(item["effectiveModel"] == "anthropic.claude-sonnet-4-5" for item in payload["models"].values())
+        assert status == 200 and all(item["effectiveModel"] == "anthropic.claude-opus-4-5" for item in payload["models"].values())
     finally:
         instance.shutdown(); instance.server_close(); thread.join(timeout=2)
 
