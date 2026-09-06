@@ -58,6 +58,35 @@ def test_workspace_uses_canonical_opus_registry_without_calling_model(tmp_path):
     assert WorkspaceChatRequest(message="Explain the case").message
 
 
+def test_vnext_workspace_help_is_concise_by_default_without_forcing_short_output(tmp_path):
+    workflow = make_workflow(tmp_path)
+    workflow.run_mode = "vnext"
+    agent = WorkspaceAgent(workflow, FakeWorkspaceClient([]))
+    prompt = agent.system_prompt()
+    assert "simplify the case, not reproduce the report" in prompt
+    assert "simplest accurate answer" in prompt
+    assert "plain language" in prompt
+    assert "There is no minimum response length" in prompt
+    assert "one sentence answers the question accurately" in prompt
+    assert "Do not mention every candidate unless needed" in prompt
+    assert "candidate-by-candidate report summary" in prompt
+    assert "mirror/reproduce the report structure by default" in prompt
+    assert "explicitly asks for more detail" in prompt
+    assert "Preserve accuracy and evidence discipline" in prompt
+    assert "hard maximum" not in prompt.lower()
+    assert "always answer in" not in prompt.lower()
+
+
+def test_vnext_help_tools_and_conversation_boundary_remain_unchanged(tmp_path):
+    workflow = make_workflow(tmp_path)
+    workflow.run_mode = "vnext"
+    agent = WorkspaceAgent(workflow, FakeWorkspaceClient([]))
+    assert {tool["name"] for tool in agent.tool_specs()} == {
+        "GET_CASE_GUIDANCE_CONTEXT", "GET_PRODUCT_GUIDE", "LIST_SOURCES", "READ_SOURCE"
+    }
+    assert "must never mutate the case" in agent.system_prompt()
+
+
 def test_workspace_latest_failure_uses_two_native_model_turns_and_one_tool(tmp_path):
     workflow = make_workflow(tmp_path)
     state = workflow.ensure_case("case-01")
