@@ -21,13 +21,20 @@ def load_scale_fixture_case_state(fixture_root: str | Path) -> CaseState:
     filenames = sorted(path.name for path in source_root.glob("*.md"))
     source_ids = {filename: f"S{index:03d}" for index, filename in enumerate(filenames, start=1)}
     shared = set(manifest["shared_files"])
+    relationship_by_file = {
+        item["source_file"]: item["relationship_id"] for item in manifest.get("relationships", [])
+    }
     sources: dict[str, Source] = {}
     for filename in filenames:
         path = source_root / filename
         stem = path.stem.replace("_", " ")
         if filename in shared:
             name = stem.title()
-            scope = {"scope_type": "case", "subject_id": None, "relationship_id": None}
+            scope = {
+                "scope_type": "relationship" if filename in relationship_by_file else "case",
+                "subject_id": None,
+                "relationship_id": relationship_by_file.get(filename),
+            }
         else:
             letter = filename.split("_")[1]
             name = f"Candidate {letter} {filename.split('_', 2)[2].removesuffix('.md').replace('_', ' ')}"

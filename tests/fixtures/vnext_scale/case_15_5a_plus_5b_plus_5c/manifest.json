@@ -1,0 +1,125 @@
+{
+  "case_id": "case-15-5a-plus-5b-plus-5c",
+  "title": "Business Law Assessment Review \u2014 Fifteen Candidate Scale",
+  "assessment_rule_preset_id": "academic-integrity-core",
+  "shared_files": [
+    "cohort_5a_assessment_context.md",
+    "cohort_5a_assessment_rules.md",
+    "cohort_5a_marking_guide.md",
+    "cohort_5a_seating_plan.md",
+    "cohort_5b_assessment_context.md",
+    "cohort_5b_assessment_rules.md",
+    "cohort_5b_marking_guide.md",
+    "cohort_5b_seating_plan.md",
+    "cohort_5c_assessment_context.md",
+    "cohort_5c_assessment_rules.md",
+    "cohort_5c_marking_guide.md",
+    "cohort_5c_seating_plan.md"
+  ],
+  "relationships": [
+    {
+      "relationship_id": "rel_A_B_adjacent",
+      "subject_ids": [
+        "subject_A",
+        "subject_B"
+      ],
+      "relationship_type": "adjacent_seating",
+      "source_file": "cohort_5a_seating_plan.md"
+    },
+    {
+      "relationship_id": "rel_F_G_adjacent",
+      "subject_ids": [
+        "subject_F",
+        "subject_G"
+      ],
+      "relationship_type": "adjacent_seating",
+      "source_file": "cohort_5b_seating_plan.md"
+    },
+    {
+      "relationship_id": "rel_K_L_adjacent",
+      "subject_ids": [
+        "subject_K",
+        "subject_L"
+      ],
+      "relationship_type": "adjacent_seating",
+      "source_file": "cohort_5c_seating_plan.md"
+    }
+  ],
+  "candidates": {
+    "A": {
+      "candidate_number": "BL-041",
+      "cohort": "5A",
+      "role": "strong_collaboration"
+    },
+    "B": {
+      "candidate_number": "BL-073",
+      "cohort": "5A",
+      "role": "strong_collaboration"
+    },
+    "C": {
+      "candidate_number": "BL-118",
+      "cohort": "5A",
+      "role": "negative"
+    },
+    "D": {
+      "candidate_number": "BL-162",
+      "cohort": "5A",
+      "role": "negative"
+    },
+    "E": {
+      "candidate_number": "BL-205",
+      "cohort": "5A",
+      "role": "device_positive"
+    },
+    "F": {
+      "candidate_number": "BL-301",
+      "cohort": "5B",
+      "role": "weaker_collaboration"
+    },
+    "G": {
+      "candidate_number": "BL-307",
+      "cohort": "5B",
+      "role": "weaker_collaboration"
+    },
+    "H": {
+      "candidate_number": "BL-314",
+      "cohort": "5B",
+      "role": "negative"
+    },
+    "I": {
+      "candidate_number": "BL-326",
+      "cohort": "5B",
+      "role": "negative"
+    },
+    "J": {
+      "candidate_number": "BL-335",
+      "cohort": "5B",
+      "role": "device_positive"
+    },
+    "K": {
+      "candidate_number": "BL-401",
+      "cohort": "5C",
+      "role": "weaker_behavior"
+    },
+    "L": {
+      "candidate_number": "BL-407",
+      "cohort": "5C",
+      "role": "weaker_behavior"
+    },
+    "M": {
+      "candidate_number": "BL-414",
+      "cohort": "5C",
+      "role": "negative"
+    },
+    "N": {
+      "candidate_number": "BL-426",
+      "cohort": "5C",
+      "role": "negative"
+    },
+    "O": {
+      "candidate_number": "BL-435",
+      "cohort": "5C",
+      "role": "device_positive"
+    }
+  }
+}
