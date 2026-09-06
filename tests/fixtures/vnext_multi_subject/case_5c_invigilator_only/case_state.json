@@ -266,7 +266,7 @@
       "id": "S19",
       "name": "Candidate E invigilator report",
       "source_type": "document",
-      "content": "# Invigilator Observation Record — Candidate E\n\n**Candidate number:** BL-205  \n**Invigilator ID:** I-01\n\n- At approximately 10:36, Candidate E placed one hand below desk level for several seconds.\n- When the invigilator moved closer, Candidate E was adjusting the strap of a bag positioned beside the chair.\n- No device or note was seen.\n- No interaction with another candidate was observed.\n",
+      "content": "# Invigilator Observation Record — Candidate E\n\n**Candidate number:** BL-205  \n**Invigilator ID:** I-01\n\n- At approximately 10:36, Candidate E removed a smartphone from the bag beside the chair and held it below desk level.\n- The device screen was illuminated.\n- The invigilator approached and instructed Candidate E to surrender the device.\n- Candidate E handed the smartphone to the invigilator.\n- The device was retained for the remainder of the assessment.\n- No communication with another candidate was observed at that time.\n",
       "metadata": {
         "filename": "candidate_E_invigilator_report.md",
         "author_role": "invigilator",
