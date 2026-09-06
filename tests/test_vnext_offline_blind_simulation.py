@@ -338,7 +338,7 @@ def test_adversarial_scope_and_reference_boundaries() -> None:
     with pytest.raises(SemanticValidationError, match=r"limiting_item_refs\[0\]"):
         compile_semantic_assessment(unknown, run_input)
     wrong_kind = _update_subject_a_first_violation(base, alternative_item_refs=["e_a_marker"])
-    with pytest.raises(SemanticValidationError, match="Actual kind: evidence_statement.*Required kind: hypothesis"):
+    with pytest.raises(SemanticValidationError, match=r"alternative_item_refs contains 'e_a_marker' \(kind=evidence_statement\).*hypothesis items only"):
         compile_semantic_assessment(wrong_kind, run_input)
 
 
