@@ -43,7 +43,7 @@ test.beforeAll(async () => {
   testRepository = mkdtempSync(join(tmpdir(), "simplifynext-stage7-browser-"));
   backend = spawn("uv", ["run", "python", "scripts/stage7_fake_server.py", "--repository", testRepository, "--port", backendPort], {
     cwd: repoRoot,
-    env: { ...process.env, AWS_EC2_METADATA_DISABLED: "true", SIMPLIFYNEXT_RUN_MODE: "vnext", SIMPLIFYNEXT_DEBUG_CREDENTIALS: "0", SIMPLIFYNEXT_ALLOWED_ORIGINS: frontendOrigin, STAGE7_FAKE_DELAY_SECONDS: "0.4" },
+    env: { ...process.env, AWS_EC2_METADATA_DISABLED: "true", SIMPLIFYNEXT_RUN_MODE: "vnext", SIMPLIFYNEXT_DEBUG_CREDENTIALS: "1", SIMPLIFYNEXT_ALLOWED_ORIGINS: frontendOrigin, STAGE7_FAKE_DELAY_SECONDS: "0.4" },
     stdio: ["ignore", "pipe", "pipe"],
   });
   await waitForBackend();
