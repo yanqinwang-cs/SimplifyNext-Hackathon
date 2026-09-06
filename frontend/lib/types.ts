@@ -121,7 +121,7 @@ export interface ReportResponse {
   latestSuccessfulRun?: { completedAt?: string | null } | null;
   students?: Array<{ displayName: string; violations: ReportViolation[]; furthestConclusion: string }>;
 }
-export interface RuntimeSettings { provider: "anthropic" | "bedrock"; aws: AwsCredentialStatus; models: { investigator: RuntimeRoleSettings; workspaceHelp: RuntimeRoleSettings }; availableModels: Array<{ model: ApprovedModel; label: string }>; }
+export interface RuntimeSettings { provider: "anthropic" | "bedrock"; debugCredentialsEnabled: boolean; aws: AwsCredentialStatus; models: { investigator: RuntimeRoleSettings; workspaceHelp: RuntimeRoleSettings }; availableModels: Array<{ model: ApprovedModel; label: string }>; }
 
 export interface WorkspaceChatResponse {
   response: string;

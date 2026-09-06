@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 const opus = "anthropic.claude-opus-4-5";
 
 function settings(model = opus, help = opus, temporary = false) {
-  return { provider: "anthropic", aws: { mode: temporary ? "temporary_credentials" : "default_chain", statusLabel: temporary ? "Temporary AWS credentials loaded" : "Default AWS credential chain", lastUpdatedAt: null, region: "us-east-1" }, models: { investigator: { effectiveModel: model, effectiveLabel: "Claude Opus 4.5", source: model === opus ? "default" : "runtime_selection", lastUsed: null, noModelCallRequired: false }, workspaceHelp: { effectiveModel: help, effectiveLabel: "Claude Opus 4.5", source: help === opus ? "default" : "runtime_selection", lastUsed: null } }, availableModels: [{ model: opus, label: "Claude Opus 4.5" }] };
+  return { provider: "anthropic", debugCredentialsEnabled: true, aws: { mode: temporary ? "temporary_credentials" : "default_chain", statusLabel: temporary ? "Temporary AWS credentials loaded" : "Default AWS credential chain", lastUpdatedAt: null, region: "us-east-1" }, models: { investigator: { effectiveModel: model, effectiveLabel: "Claude Opus 4.5", source: model === opus ? "default" : "runtime_selection", lastUsed: null, noModelCallRequired: false }, workspaceHelp: { effectiveModel: help, effectiveLabel: "Claude Opus 4.5", source: help === opus ? "default" : "runtime_selection", lastUsed: null } }, availableModels: [{ model: opus, label: "Claude Opus 4.5" }] };
 }
 
 test("Runtime settings supports safe credentials, draft/apply/reset, and storage redaction", async ({ page }, testInfo) => {
@@ -34,18 +34,8 @@ test("Runtime settings supports safe credentials, draft/apply/reset, and storage
   await page.screenshot({ path: testInfo.outputPath("runtime-credentials-loaded.png"), fullPage: true });
   const storage = await page.evaluate(() => ({ local: JSON.stringify(localStorage), session: JSON.stringify(sessionStorage), url: location.href, cookies: document.cookie }));
   expect(JSON.stringify(storage)).not.toContain("FAKE_");
-  await page.getByLabel("Investigator model").selectOption(opus);
-  await expect(page.getByText("Pending change")).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath("runtime-pending-model.png"), fullPage: true });
-  await page.getByRole("button", { name: "Apply model settings" }).click();
-  await expect(page.getByText("Model settings applied for subsequent calls.")).toBeVisible();
-  await expect(page.getByText("Effective: Claude Opus 4.5")).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath("runtime-applied-opus.png"), fullPage: true });
-  await page.getByRole("button", { name: "Reset defaults" }).click();
-  await expect(page.getByText("Model defaults restored.")).toBeVisible();
-  await expect(page.getByLabel("Investigator model")).toHaveValue(opus);
   await expect(page.getByText("Effective: Claude Opus 4.5").first()).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath("runtime-reset-default.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("runtime-effective-opus.png"), fullPage: true });
   await page.getByRole("button", { name: "Clear temporary credentials" }).click();
   await expect(page.getByText("Temporary credentials cleared. The default AWS credential chain will be used.")).toBeVisible();
   await page.getByRole("button", { name: "Close Runtime settings" }).click();

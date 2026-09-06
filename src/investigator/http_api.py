@@ -286,6 +286,9 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             self._write(404, {"error": "Not found"})
             return
         if parts == ["api", "runtime-settings", "aws-credentials"]:
+            if not debug_credentials_enabled():
+                self._write(404, {"error": "Debug credential endpoints are disabled"})
+                return
             try:
                 payload = self._read_json()
                 required = {"aws_access_key_id", "aws_secret_access_key", "aws_session_token"}
@@ -510,6 +513,9 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             self._write(404, {"error": "Not found"})
             return
         if parts == ["api", "runtime-settings", "aws-credentials"]:
+            if not debug_credentials_enabled():
+                self._write(404, {"error": "Debug credential endpoints are disabled"})
+                return
             clear_credential_override()
             self._write(200, runtime_settings(workflow=self.workflow))
             return

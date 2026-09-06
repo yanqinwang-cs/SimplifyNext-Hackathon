@@ -42,7 +42,8 @@ The vNext product path adds explicit runtime state, multi-student source applica
 Start the backend in the supported local mode:
 
 ```bash
-SIMPLIFYNEXT_RUN_MODE=vnext uv run python -m investigator.http_api --repository data/cases --host 127.0.0.1 --port 8000
+CASELENS_MODEL_PROVIDER=anthropic SIMPLIFYNEXT_RUN_MODE=vnext \
+  uv run python -m investigator.http_api --repository data/cases --host 127.0.0.1 --port 8000
 ```
 
 Every assessment run records a sanitized execution trace. The latest run can
@@ -61,10 +62,12 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npm run dev -- --hostname 127.0.0
 
 Open `http://127.0.0.1:3000`. The supported deployment boundary is a local
 operator process. The API uses an explicit allowed-origin list, but that is not
-authentication. Zero-evidence assessments need no provider credentials; a
-substantive live assessment requires the normal AWS credential chain or the
-temporary process-local credentials in Runtime settings and an approved model
-selection.
+authentication. Zero-evidence assessments need no provider credentials. For the
+normal demo path, configure `ANTHROPIC_API_KEY` in the backend environment and
+set `CASELENS_MODEL_PROVIDER=anthropic`; the normal UI uses Claude Opus 4.5.
+Bedrock remains an explicit backend/operator fallback. Temporary AWS credentials
+are process-local debug controls and are only exposed when
+`SIMPLIFYNEXT_DEBUG_CREDENTIALS=1`.
 
 The final offline acceptance and pre-live checklist are in
 `docs/stage-7-acceptance-audit.md` and `docs/pre-5a-readiness.md`.

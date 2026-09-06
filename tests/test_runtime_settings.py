@@ -38,6 +38,7 @@ def test_normal_runtime_settings_exposes_only_approved_roles_and_models(tmp_path
     try:
         status, _, payload = request(base, "GET", "/api/runtime-settings")
         assert status == 200
+        assert payload["debugCredentialsEnabled"] is False
         assert [item["model"] for item in payload["availableModels"]] == ["anthropic.claude-opus-4-5"]
         assert set(payload["models"]) == {"investigator", "workspaceHelp"}
         assert payload["models"]["investigator"]["effectiveModel"] == "anthropic.claude-opus-4-5"
@@ -64,20 +65,19 @@ def test_model_update_is_atomic_and_rejects_unapproved_values(tmp_path):
         instance.shutdown(); instance.server_close(); thread.join(timeout=2)
 
 
-def test_normal_credential_routes_are_safe_and_cors_is_allow_listed(tmp_path):
+def test_normal_credential_routes_are_debug_gated_and_cors_is_allow_listed(tmp_path):
     instance, thread, base = server(tmp_path)
     secrets = {"aws_access_key_id": "FAKE_ACCESS_SECRET", "aws_secret_access_key": "FAKE_SECRET_VALUE", "aws_session_token": "FAKE_TOKEN_VALUE"}
     try:
         status, headers, payload = request(base, "OPTIONS", "/api/runtime-settings/models", origin="http://127.0.0.1:3000")
         assert status == 204 and "POST" in headers["Access-Control-Allow-Methods"] and "DELETE" in headers["Access-Control-Allow-Methods"]
         status, _, payload = request(base, "POST", "/api/runtime-settings/aws-credentials", secrets)
-        assert status == 200 and payload["aws"]["mode"] == "temporary_credentials"
-        assert all(secret not in json.dumps(payload) for secret in secrets.values())
+        assert status == 404 and "disabled" in payload["error"]
         status, _, payload = request(base, "GET", "/api/runtime-settings")
-        assert status == 200 and payload["aws"]["mode"] == "temporary_credentials"
+        assert status == 200 and payload["aws"]["mode"] == "default_chain"
         assert all(secret not in json.dumps(payload) for secret in secrets.values())
         status, _, payload = request(base, "DELETE", "/api/runtime-settings/aws-credentials")
-        assert status == 200 and payload["aws"]["mode"] == "default_chain"
+        assert status == 404 and "disabled" in payload["error"]
         _, disallowed_headers, _ = request(base, "OPTIONS", "/api/runtime-settings", origin="https://not-allowed.example")
         assert "Access-Control-Allow-Origin" not in disallowed_headers
     finally:
