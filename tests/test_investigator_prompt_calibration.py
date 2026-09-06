@@ -93,7 +93,7 @@ def test_calibration_examples_remain_qualitative_and_non_deterministic() -> None
         "same observations + affirmative counterevidence": "conflicted",
     }
     prompt = build_prompt(_run_input())
-    assert "Do not introduce numerical probabilities" not in prompt
+    assert "do not introduce numerical probabilities" in prompt.lower()
     assert "PARTIALLY_SUPPORTED" in prompt and "SUPPORTED" in prompt and "CONFLICTED" in prompt
     assert set(scenarios.values()) == {
         "not_currently_supported",
