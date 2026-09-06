@@ -97,6 +97,7 @@ class SemanticSubjectAssessment(BaseModel):
     subject_id: str = Field(min_length=1)
     violation_assessments: list[SemanticViolationAssessment] = Field(min_length=1)
     furthest_conclusion: FurthestJustifiedConclusion
+    suggested_next_step: str | None = None
 
 
 class InvestigatorSemanticAssessment(BaseModel):
@@ -563,5 +564,6 @@ def compile_semantic_assessment(assessment: InvestigatorSemanticAssessment, run_
             violation_assessments=compiled_violations,
             furthest_conclusion=source_subject.furthest_conclusion,
             alternative_explanations=alternatives,
+            suggested_next_step=source_subject.suggested_next_step,
         ))
     return InvestigatorAssessment(proposal=InvestigatorProposal(graph_updates=updates), subject_assessments=compiled_subjects)

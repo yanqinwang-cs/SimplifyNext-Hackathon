@@ -1,0 +1,17 @@
+{
+  "warning": "Do not supply this directory to the Investigator.",
+  "roles": {
+    "subject_A": "strong cumulative collaboration pattern",
+    "subject_B": "strong cumulative collaboration pattern assessed independently",
+    "subject_C": "negative control",
+    "subject_D": "noisy negative control",
+    "subject_E": "unauthorized_device supported/high; no automatic communication, assistance, or collaboration finding",
+    "subject_F": "weaker marker-only collaboration concern",
+    "subject_G": "weaker marker-only collaboration concern assessed independently",
+    "subject_H": "negative control",
+    "subject_I": "noisy negative control",
+    "subject_J": "unauthorized_device supported/high; no automatic communication, assistance, or collaboration finding"
+  },
+  "expected_assessment_count": 40,
+  "relationship_boundaries": [["subject_A", "subject_B"], ["subject_F", "subject_G"]]
+}

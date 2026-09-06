@@ -152,6 +152,7 @@ def build_report_record(
                 for item in getattr(assessment, "alternative_explanations", [])
             ],
             "furthest_conclusion": _humanize(assessment.furthest_conclusion.statement, snapshot),
+            "suggested_next_step": _humanize(assessment.suggested_next_step, snapshot) if assessment.suggested_next_step else None,
         })
     return {
         "schema_version": REPORT_SCHEMA_VERSION,
@@ -234,6 +235,7 @@ def public_report_from_record(
                         for finding in student["violations"]
                     ],
                     "furthestConclusion": student["furthest_conclusion"],
+                    "suggestedNextStep": student.get("suggested_next_step"),
                     "alternativeExplanations": [
                         {
                             "statement": item["statement"],
