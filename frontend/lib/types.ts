@@ -61,7 +61,7 @@ export interface WorkspaceEvent {
   request_id?: string | null;
 }
 
-export type ApprovedModel = "anthropic.claude-sonnet-4-5" | "anthropic.claude-opus-4-5";
+export type ApprovedModel = "anthropic.claude-opus-4-5";
 export interface AwsCredentialStatus { mode: "default_chain" | "temporary_credentials"; statusLabel: string; lastUpdatedAt: string | null; region: string; }
 export interface RuntimeModelUse { model: ApprovedModel; label: string; usedAt: string | null; outcome: "completed" | "failed"; }
 export interface RuntimeRoleSettings { effectiveModel: ApprovedModel; effectiveLabel: string; source: "default" | "environment" | "runtime_selection"; lastUsed: RuntimeModelUse | null; noModelCallRequired?: boolean; }
@@ -121,7 +121,7 @@ export interface ReportResponse {
   latestSuccessfulRun?: { completedAt?: string | null } | null;
   students?: Array<{ displayName: string; violations: ReportViolation[]; furthestConclusion: string }>;
 }
-export interface RuntimeSettings { aws: AwsCredentialStatus; models: { investigator: RuntimeRoleSettings; workspaceHelp: RuntimeRoleSettings }; availableModels: Array<{ model: ApprovedModel; label: string }>; }
+export interface RuntimeSettings { provider: "anthropic" | "bedrock"; aws: AwsCredentialStatus; models: { investigator: RuntimeRoleSettings; workspaceHelp: RuntimeRoleSettings }; availableModels: Array<{ model: ApprovedModel; label: string }>; }
 
 export interface WorkspaceChatResponse {
   response: string;

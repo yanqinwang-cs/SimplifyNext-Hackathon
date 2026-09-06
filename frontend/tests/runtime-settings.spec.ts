@@ -1,10 +1,9 @@
 import { test, expect } from "@playwright/test";
 
-const sonnet = "anthropic.claude-sonnet-4-5";
 const opus = "anthropic.claude-opus-4-5";
 
-function settings(model = sonnet, help = sonnet, temporary = false) {
-  return { aws: { mode: temporary ? "temporary_credentials" : "default_chain", statusLabel: temporary ? "Temporary AWS credentials loaded" : "Default AWS credential chain", lastUpdatedAt: null, region: "us-east-1" }, models: { investigator: { effectiveModel: model, effectiveLabel: model === opus ? "Claude Opus 4.5" : "Claude Sonnet 4.5", source: model === sonnet ? "default" : "runtime_selection", lastUsed: null, noModelCallRequired: false }, workspaceHelp: { effectiveModel: help, effectiveLabel: help === opus ? "Claude Opus 4.5" : "Claude Sonnet 4.5", source: help === sonnet ? "default" : "runtime_selection", lastUsed: null } }, availableModels: [{ model: sonnet, label: "Claude Sonnet 4.5" }, { model: opus, label: "Claude Opus 4.5" }] };
+function settings(model = opus, help = opus, temporary = false) {
+  return { provider: "anthropic", aws: { mode: temporary ? "temporary_credentials" : "default_chain", statusLabel: temporary ? "Temporary AWS credentials loaded" : "Default AWS credential chain", lastUpdatedAt: null, region: "us-east-1" }, models: { investigator: { effectiveModel: model, effectiveLabel: "Claude Opus 4.5", source: model === opus ? "default" : "runtime_selection", lastUsed: null, noModelCallRequired: false }, workspaceHelp: { effectiveModel: help, effectiveLabel: "Claude Opus 4.5", source: help === opus ? "default" : "runtime_selection", lastUsed: null } }, availableModels: [{ model: opus, label: "Claude Opus 4.5" }] };
 }
 
 test("Runtime settings supports safe credentials, draft/apply/reset, and storage redaction", async ({ page }, testInfo) => {
@@ -44,8 +43,8 @@ test("Runtime settings supports safe credentials, draft/apply/reset, and storage
   await page.screenshot({ path: testInfo.outputPath("runtime-applied-opus.png"), fullPage: true });
   await page.getByRole("button", { name: "Reset defaults" }).click();
   await expect(page.getByText("Model defaults restored.")).toBeVisible();
-  await expect(page.getByLabel("Investigator model")).toHaveValue(sonnet);
-  await expect(page.getByText("Effective: Claude Sonnet 4.5").first()).toBeVisible();
+  await expect(page.getByLabel("Investigator model")).toHaveValue(opus);
+  await expect(page.getByText("Effective: Claude Opus 4.5").first()).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("runtime-reset-default.png"), fullPage: true });
   await page.getByRole("button", { name: "Clear temporary credentials" }).click();
   await expect(page.getByText("Temporary credentials cleared. The default AWS credential chain will be used.")).toBeVisible();

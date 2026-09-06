@@ -10,6 +10,8 @@ from investigator.llm.base import (
     normalize_json_text,
 )
 from investigator.llm.mock import MockModelClient
+from investigator.llm.anthropic import AnthropicConfigurationError, AnthropicModelClient
+from investigator.llm.factory import ModelProviderConfigurationError, configured_provider, create_model_client
 from investigator.llm.bedrock import (
     BedrockConfigurationError,
     BedrockModelClient,
@@ -30,6 +32,7 @@ from investigator.llm.bedrock import (
 __all__ = [
     "MessageInput", "ModelCallMetadata", "ModelCallResult", "ModelClient", "ModelNativeCall", "ModelTextBlock", "ModelToolUse",
     "ModelParseError", "MockModelClient", "normalize_json_text",
+    "AnthropicConfigurationError", "AnthropicModelClient", "ModelProviderConfigurationError", "configured_provider", "create_model_client",
     "BedrockConfigurationError", "BedrockModelClient", "CredentialOverride",
     "BEDROCK_CONNECT_TIMEOUT_SECONDS", "BEDROCK_READ_TIMEOUT_SECONDS", "bedrock_transport_config",
     "failure_category", "is_provider_timeout", "redact_sensitive_text", "safe_failure_message",

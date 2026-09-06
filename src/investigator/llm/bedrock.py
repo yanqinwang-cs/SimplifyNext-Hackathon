@@ -47,7 +47,7 @@ def bedrock_transport_config() -> Config:
 
 
 def is_provider_timeout(exc: BaseException) -> bool:
-    return isinstance(exc, ReadTimeoutError)
+    return isinstance(exc, (ReadTimeoutError, TimeoutError)) or type(exc).__name__ in {"APITimeoutError", "TimeoutException"}
 
 
 def failure_category(exc: BaseException) -> str:
@@ -117,12 +117,14 @@ def redact_sensitive_text(value: str) -> str:
         os.getenv("AWS_ACCESS_KEY_ID"),
         os.getenv("AWS_SECRET_ACCESS_KEY"),
         os.getenv("AWS_SESSION_TOKEN"),
+        os.getenv("ANTHROPIC_API_KEY"),
     ]
     if override:
         secrets.extend((override.aws_access_key_id, override.aws_secret_access_key, override.aws_session_token))
     for secret in secrets:
         if secret:
             result = result.replace(secret, "[REDACTED]")
+    result = re.sub(r"sk-ant-[A-Za-z0-9_-]+", "[REDACTED]", result)
     return re.sub(r"(?i)(access[_ -]?key|secret|session[_ -]?token|security[_ -]?token|authorization|credential)(?:\s*[:=]\s*)[^\s,;]+", r"\1=[REDACTED]", result)
 
 

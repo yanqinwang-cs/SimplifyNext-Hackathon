@@ -13,7 +13,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
 
-from investigator.llm import BedrockModelClient, ModelClient, ModelParseError, failure_category, is_provider_timeout, redact_sensitive_text
+from investigator.llm import ModelClient, ModelParseError, create_model_client, failure_category, is_provider_timeout, redact_sensitive_text
 from investigator.services.evidence_requests import HumanEvidenceWorkflow
 from investigator.vnext import (
     VNextInvestigationRunner,
@@ -56,7 +56,7 @@ class VNextProductionRunner:
         preset = self.preset_resolver(state)
         substantive_sources = {key: value for key, value in state.sources.items() if (value.content or "").strip()}
         model_spec = effective_model("investigator") if substantive_sources else None
-        client = None if not substantive_sources else (self.client or BedrockModelClient(model_id=model_spec.invocation_id, region=model_spec.region))
+        client = None if not substantive_sources else (self.client or create_model_client(model_spec))
         logical_model = model_spec.name if model_spec else None
         workflow.record_run_model(case_id, logical_model)
         last_error: Exception | None = None
