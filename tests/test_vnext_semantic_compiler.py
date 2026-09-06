@@ -251,7 +251,7 @@ def test_wrong_kind_reference_reports_definition_and_required_kind() -> None:
             _assessment().subject_assessments[1],
         ]
     })
-    with pytest.raises(SemanticValidationError, match=r"semantic_items\[0\].*Actual kind: evidence_statement.*Required kind: hypothesis"):
+    with pytest.raises(SemanticValidationError, match=r"subject_A / V1: alternative_item_refs contains 'e_a' \(kind=evidence_statement\).*hypothesis items only"):
         compile_semantic_assessment(assessment, _input())
 
 

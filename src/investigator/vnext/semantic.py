@@ -82,10 +82,10 @@ class SemanticViolationAssessment(BaseModel):
 
     violation_id: str = Field(min_length=1)
     status: AssessmentStatus
-    supporting_item_refs: list[str] = Field(default_factory=list)
-    conflicting_item_refs: list[str] = Field(default_factory=list)
-    limiting_item_refs: list[str] = Field(default_factory=list)
-    alternative_item_refs: list[str] = Field(default_factory=list)
+    supporting_item_refs: list[str] = Field(default_factory=list, description="References to evidence_statement or proposition semantic items.")
+    conflicting_item_refs: list[str] = Field(default_factory=list, description="References to evidence_statement or proposition semantic items.")
+    limiting_item_refs: list[str] = Field(default_factory=list, description="References to evidence_statement or proposition semantic items.")
+    alternative_item_refs: list[str] = Field(default_factory=list, description="References to hypothesis semantic items only.")
     unresolved_points: list[str] = Field(default_factory=list)
     reasoning_summary: str = Field(min_length=1)
     confidence: Confidence
@@ -477,7 +477,23 @@ def compile_semantic_assessment(assessment: InvestigatorSemanticAssessment, run_
             ):
                 for ref_index, ref in enumerate(getattr(violation, field_name)):
                     location = f"subject_assessments[{list(expected_subjects).index(subject_id)}].violation_assessments[{violation_index}].{field_name}[{ref_index}]"
-                    item = _resolve_symbol(symbols, ref, location, allowed_kinds=allowed_kinds).item
+                    try:
+                        item = _resolve_symbol(symbols, ref, location, allowed_kinds=allowed_kinds).item
+                    except SemanticValidationError:
+                        symbol = symbols.get(ref)
+                        if field_name == "alternative_item_refs" and symbol is not None and symbol.kind is not SemanticItemKind.HYPOTHESIS:
+                            raise SemanticValidationError(
+                                f"{subject_id} / {violation.violation_id}: alternative_item_refs contains {ref!r} "
+                                f"(kind={symbol.kind.value}), but this field accepts hypothesis items only. "
+                                "Create or reference a hypothesis item for the competing explanation; do not reuse a proposition ref.",
+                                retry_constraint=(
+                                    "IMPORTANT CORRECTION: alternative_item_refs accepts hypothesis refs only. "
+                                    "Do not reuse a proposition ref there. If the intended alternative explanation is "
+                                    "currently represented as a proposition, create a separate hypothesis item and "
+                                    "reference the hypothesis. Rebuild the complete semantic assessment cleanly."
+                                ),
+                            ) from None
+                        raise
                     if not scope_allows_semantic_scope(scopes[ref], {subject_id}, run_input):
                         resolved = _scope_description(scopes[ref], run_input)
                         display_name = run_input.subjects[subject_id].display_name
