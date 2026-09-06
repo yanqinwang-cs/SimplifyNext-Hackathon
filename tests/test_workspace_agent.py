@@ -68,6 +68,12 @@ def test_vnext_workspace_help_is_concise_by_default_without_forcing_short_output
     assert "plain language" in prompt
     assert "There is no minimum response length" in prompt
     assert "one sentence answers the question accurately" in prompt
+    assert "explicitly asks for the shortest summary" in prompt
+    assert "exactly one sentence" in prompt
+    assert "single most important remaining uncertainty" in prompt
+    assert "omit evidence recap" in prompt
+    assert "next steps" in prompt
+    assert "only to explicit shortest-summary requests" in prompt
     assert "Do not mention every candidate unless needed" in prompt
     assert "candidate-by-candidate report summary" in prompt
     assert "mirror/reproduce the report structure by default" in prompt
