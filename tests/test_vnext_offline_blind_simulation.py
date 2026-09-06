@@ -99,6 +99,7 @@ def _row(
     violation_id: str,
     *,
     status: AssessmentStatus = AssessmentStatus.NOT_CURRENTLY_SUPPORTED,
+    confidence: Confidence | None = None,
     supporting: list[str] | None = None,
     conflicting: list[str] | None = None,
     limiting: list[str] | None = None,
@@ -114,7 +115,7 @@ def _row(
         alternative_item_refs=alternatives or [],
         unresolved_points=unresolved or [],
         reasoning_summary="The available record supports a bounded assessment without treating opportunity or association as proof.",
-        confidence=Confidence.LOW if status is AssessmentStatus.NOT_CURRENTLY_SUPPORTED else Confidence.MODERATE,
+        confidence=confidence or (Confidence.LOW if status is AssessmentStatus.NOT_CURRENTLY_SUPPORTED else Confidence.MODERATE),
     )
 
 
@@ -187,10 +188,22 @@ def _blind_assessment(state: CaseState, case_name: str) -> InvestigatorSemanticA
             marker_refs[subject_id] = prop_ref
             invigilator_refs[subject_id] = invig_ref
             rows_by_subject[subject_id] = [
-                _row(violation_ids[0], limiting=[invig_ref]),
+                _row(
+                    violation_ids[0],
+                    status=AssessmentStatus.SUPPORTED,
+                    supporting=[invig_ref],
+                    confidence=Confidence.HIGH,
+                ) if subject_id == "subject_E" else _row(violation_ids[0], limiting=[invig_ref]),
                 _row(violation_ids[1], limiting=[invig_ref], unresolved=["Whether the recorded behavior had any communicative content."] if subject_id in {"subject_A", "subject_B"} else []),
                 _row(violation_ids[2], supporting=[prop_ref] if case_name in {"case_5a_combined", "case_5b_marker_only"} and subject_id in {"subject_A", "subject_B"} else [], limiting=[invig_ref]),
-                _row(violation_ids[3], supporting=[prop_ref] if case_name in {"case_5a_combined", "case_5b_marker_only"} and subject_id in {"subject_A", "subject_B"} else [], limiting=[invig_ref], alternatives=["h_ab_alternative"] if subject_id in {"subject_A", "subject_B"} and case_name == "case_5a_combined" else [], unresolved=["Whether separate observations can be connected to prohibited collaboration rather than proximity or independent work."] if subject_id in {"subject_A", "subject_B"} else []),
+                _row(
+                    violation_ids[3],
+                    status=AssessmentStatus.PARTIALLY_SUPPORTED if case_name == "case_5a_combined" and subject_id in {"subject_A", "subject_B"} else AssessmentStatus.NOT_CURRENTLY_SUPPORTED,
+                    supporting=[prop_ref] if case_name in {"case_5a_combined", "case_5b_marker_only"} and subject_id in {"subject_A", "subject_B"} else [],
+                    limiting=[invig_ref],
+                    alternatives=["h_ab_alternative"] if subject_id in {"subject_A", "subject_B"} and case_name == "case_5a_combined" else [],
+                    unresolved=["Whether separate observations can be connected to prohibited collaboration rather than proximity or independent work."] if subject_id in {"subject_A", "subject_B"} else [],
+                ),
             ]
         context_id = _source_id(state, "Assessment rules")
         items.insert(0, _evidence("e_context", context_id, "The assessment rules record the individual assessment setting and applicable conduct boundaries."))
@@ -256,6 +269,43 @@ def test_blind_inputs_exclude_evaluator_only_material() -> None:
         assert not any("hidden_ground_truth" in source.name or "expected_comparison" in source.name for source in run_input.sources.values())
         assert "hidden_ground_truth" not in prompt
         assert "expected_comparison" not in prompt
+
+
+@pytest.mark.parametrize("case_name", ["case_5a_combined", "case_5b_marker_only", "case_5c_invigilator_only"])
+def test_candidate_e_is_a_bounded_device_positive_control(case_name: str) -> None:
+    state, result, _, _ = _run_blind(case_name)
+    e_assessment = next(item for item in result.subject_assessments if item.subject_id == "subject_E")
+    by_violation = {item.violation_id: item for item in e_assessment.violation_assessments}
+    device = by_violation["unauthorized_device"]
+    assert device.status is AssessmentStatus.SUPPORTED
+    assert device.confidence is Confidence.HIGH
+    assert device.supporting_node_ids
+    assert all(
+        by_violation[violation_id].status is AssessmentStatus.NOT_CURRENTLY_SUPPORTED
+        for violation_id in ("unauthorized_external_communication", "unauthorized_assistance", "prohibited_collaboration")
+    )
+    assert "smartphone" in next(source.content for source in state.sources.values() if source.name == "Candidate E invigilator report")
+
+
+def test_case_5a_collaboration_is_at_least_partial_for_a_and_b() -> None:
+    _, result, _, _ = _run_blind("case_5a_combined")
+    allowed = {AssessmentStatus.PARTIALLY_SUPPORTED, AssessmentStatus.SUPPORTED}
+    for subject_id in ("subject_A", "subject_B"):
+        subject = next(item for item in result.subject_assessments if item.subject_id == subject_id)
+        collaboration = next(item for item in subject.violation_assessments if item.violation_id == "prohibited_collaboration")
+        assert collaboration.status in allowed
+
+
+def test_candidate_e_device_source_is_identical_across_variants_and_public_sample_has_14_files() -> None:
+    variants = ("case_5a_combined", "case_5b_marker_only", "case_5c_invigilator_only")
+    contents = [
+        (MULTI_FIXTURES / variant / "sources" / "candidate_E_invigilator_report.md").read_text(encoding="utf-8")
+        for variant in variants
+    ]
+    assert len(set(contents)) == 1
+    assert "No device or note was seen" not in contents[0]
+    assert "surrender the device" in contents[0]
+    assert len(list((ROOT / "tests" / "fixtures" / "public_samples" / "multi_candidate" / "sources").glob("*"))) == 14
 
 
 def test_adversarial_schema_boundaries() -> None:
