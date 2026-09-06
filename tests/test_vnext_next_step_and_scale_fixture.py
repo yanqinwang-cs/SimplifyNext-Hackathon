@@ -6,9 +6,10 @@ from pathlib import Path
 import pytest
 
 from investigator.graph import GraphScopeType
-from investigator.models import AssessmentContext, AssessmentSubject, Source, SourceType, SubjectRelationship
+from investigator.models import Source
 from investigator.reporting import build_input_snapshot, build_report_record, public_report_from_record
 from investigator.state import CaseState
+from investigator.test_fixtures import load_scale_fixture_case_state
 from investigator.vnext import (
     AssessmentStatus,
     Confidence,
@@ -26,56 +27,7 @@ SCALE_ROOT = ROOT / "tests" / "fixtures" / "vnext_scale" / "case_10_5a_plus_5b"
 
 
 def _scale_state() -> CaseState:
-    manifest = json.loads((SCALE_ROOT / "manifest.json").read_text(encoding="utf-8"))
-    sources: dict[str, Source] = {}
-    filenames = sorted(path.name for path in (SCALE_ROOT / "sources").glob("*.md"))
-    source_ids = {filename: f"S{index:03d}" for index, filename in enumerate(filenames, start=1)}
-    shared = set(manifest["shared_files"])
-    for filename in filenames:
-        path = SCALE_ROOT / "sources" / filename
-        stem = path.stem.replace("_", " ")
-        if filename in shared:
-            name = stem.title()
-            scope = {"scope_type": "case", "subject_id": None, "relationship_id": None}
-        else:
-            letter = filename.split("_")[1]
-            name = f"Candidate {letter} {filename.split('_', 2)[2].removesuffix('.md').replace('_', ' ')}"
-            scope = {"scope_type": "subject", "subject_id": f"subject_{letter}", "relationship_id": None}
-        sources[source_ids[filename]] = Source(
-            id=source_ids[filename],
-            name=name,
-            source_type=SourceType.DOCUMENT,
-            content=path.read_text(encoding="utf-8"),
-            metadata={"filename": filename, "assessment_scope": scope},
-        )
-    subjects = {
-        f"subject_{letter}": AssessmentSubject(
-            subject_id=f"subject_{letter}",
-            display_name=f"Candidate {letter}",
-            candidate_number=details["candidate_number"],
-        )
-        for letter, details in manifest["candidates"].items()
-    }
-    relationships = {
-        item["relationship_id"]: SubjectRelationship(
-            relationship_id=item["relationship_id"],
-            subject_ids=item["subject_ids"],
-            relationship_type=item["relationship_type"],
-            source_ids=[source_ids[item["source_file"]]],
-            description=f"{item['subject_ids'][0]} and {item['subject_ids'][1]} are adjacent.",
-        )
-        for item in manifest["relationships"]
-    }
-    return CaseState(
-        case_id=manifest["case_id"],
-        title=manifest["title"],
-        description="Controlled ten-candidate validation fixture.",
-        assessment_rule_preset_id=manifest["assessment_rule_preset_id"],
-        assessment_context=AssessmentContext(assessment_id="BL-ICA2-2026-SCALE", title="Business Law Ten Candidate Scale", assessment_type="closed-notes individual assessment", venue="Seminar Room 4"),
-        subjects=subjects,
-        subject_relationships=relationships,
-        sources=sources,
-    )
+    return load_scale_fixture_case_state(SCALE_ROOT)
 
 
 def _source_id(state: CaseState, filename: str) -> str:
