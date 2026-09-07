@@ -26,6 +26,7 @@ from investigator.state.case_state import CaseState
 from investigator.help import product_guide
 from investigator.public_views import assessment_view, workspace_view, public_run_handle_for_instance, public_source_handle, public_student_handle, resolve_run_handle, resolve_source_handle, resolve_student_handle, document_format
 from investigator.runtime_settings import RuntimeSettingsError, settings as runtime_settings, set_model_overrides, reset_model_overrides
+from investigator.public_samples.scale import load_scale_fixture_case_state
 
 
 def _safe_filename_token(value: str) -> str:
@@ -40,13 +41,18 @@ class CaseTitleUpdate(BaseModel):
 def sample_cases() -> list[dict[str, str]]:
     return [
         {"sampleId": "law-exam", "title": "Law Exam Investigation"},
-        {"sampleId": "multi-candidate", "title": "Multi-Candidate Collaboration Review"},
+        {"sampleId": "multi-candidate-5", "title": "Multi-Candidate Collaboration Review — 5 Candidates"},
+        {"sampleId": "multi-candidate-10", "title": "Multi-Candidate Collaboration Review — 10 Candidates"},
     ]
 
 
 def allocate_case_id(repository: CaseRepository) -> str:
     numbers = [int(case_id.removeprefix("case-")) for case_id in repository.list_case_ids() if case_id.removeprefix("case-").isdigit()]
     return f"case-{max(numbers, default=0) + 1:06d}"
+
+
+def _canonical_sample_id(sample_id: str) -> str:
+    return "multi-candidate-5" if sample_id == "multi-candidate" else sample_id
 
 
 def create_case(workflow: HumanEvidenceWorkflow, payload: dict[str, Any]) -> dict[str, Any]:
@@ -64,16 +70,17 @@ def create_case(workflow: HumanEvidenceWorkflow, payload: dict[str, Any]) -> dic
 
 
 def seed_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str, case_id: str) -> dict[str, Any]:
+    sample_id = _canonical_sample_id(sample_id)
     samples = {item["sampleId"]: item for item in sample_cases()}
     if sample_id not in samples:
         raise ValueError(f"Unknown sample case: {sample_id!r}")
     fixture_root = Path(__file__).resolve().parent / "public_samples"
-    descriptions = {"law-exam": "A rich single-case investigation with multiple records.", "multi-candidate": "A controlled five-subject assessment."}
+    descriptions = {"law-exam": "A rich single-case investigation with multiple records.", "multi-candidate-5": "A controlled five-candidate assessment.", "multi-candidate-10": "A controlled ten-candidate assessment."}
     if sample_id == "law-exam":
         source_root = fixture_root / "law_exam" / "sources"
         sources = {f"S{index}": Source(id=f"S{index}", name=path.name, source_type=SourceType.DOCUMENT, content=path.read_text(encoding="utf-8"), metadata={"filename": path.name, "assessment_scope": GraphScope(scope_type="case").model_dump(mode="json")}) for index, path in enumerate(sorted(source_root.glob("*.md")), start=1)}
         state = CaseState(case_id=case_id, title="Law Exam Investigation", description=descriptions[sample_id], case_kind="sample", sample_id=sample_id, assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Business Law Individual In-Class Assessment 2", assessment_type="closed-notes individual assessment"), subjects={"subject_A": AssessmentSubject(subject_id="subject_A", display_name="Candidate A", candidate_number="BL-041")}, sources=sources)
-    elif sample_id == "multi-candidate":
+    elif sample_id == "multi-candidate-5":
         source_root = fixture_root / "multi_candidate" / "sources"
         subjects = {f"subject_{letter}": AssessmentSubject(subject_id=f"subject_{letter}", display_name=f"Candidate {letter}", candidate_number=number) for letter, number in (("A", "BL-041"), ("B", "BL-073"), ("C", "BL-118"), ("D", "BL-162"), ("E", "BL-205"))}
         sources = {}
@@ -84,7 +91,13 @@ def seed_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str, case_id: s
         seating_source = next((source for source in sources.values() if source.name == "seating_plan.md"), None)
         if seating_source is None:
             raise ValueError("The Multi-Candidate sample requires seating_plan.md for relationship provenance")
-        state = CaseState(case_id=case_id, title="Multi-Candidate Collaboration Review", description=descriptions[sample_id], case_kind="sample", sample_id=sample_id, assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Business Law Individual In-Class Assessment 2", assessment_type="closed-notes individual assessment", venue="Seminar Room 4"), subjects=subjects, subject_relationships={"rel_A_B_adjacent": SubjectRelationship(relationship_id="rel_A_B_adjacent", subject_ids=["subject_A", "subject_B"], relationship_type="adjacent_seating", source_ids=[seating_source.id], description="Candidate A and Candidate B were seated next to one another.")}, sources=sources)
+        state = CaseState(case_id=case_id, title=samples[sample_id]["title"], description=descriptions[sample_id], case_kind="sample", sample_id=sample_id, assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Business Law Individual In-Class Assessment 2", assessment_type="closed-notes individual assessment", venue="Seminar Room 4"), subjects=subjects, subject_relationships={"rel_A_B_adjacent": SubjectRelationship(relationship_id="rel_A_B_adjacent", subject_ids=["subject_A", "subject_B"], relationship_type="adjacent_seating", source_ids=[seating_source.id], description="Candidate A and Candidate B were seated next to one another.")}, sources=sources)
+    elif sample_id == "multi-candidate-10":
+        scale_root = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "vnext_scale" / "case_10_5a_plus_5b"
+        if not scale_root.is_dir():
+            raise ValueError("The ten-candidate sample fixture is unavailable")
+        fixture_state = load_scale_fixture_case_state(scale_root)
+        state = fixture_state.model_copy(update={"case_id": case_id, "title": samples[sample_id]["title"], "description": descriptions[sample_id], "case_kind": "sample", "sample_id": sample_id, "assessment_context": fixture_state.assessment_context.model_copy(update={"assessment_id": f"{case_id}-assessment"})})
     else:
         raise ValueError(f"Unknown sample case: {sample_id!r}")
     workflow.repository.save(state)
@@ -92,10 +105,11 @@ def seed_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str, case_id: s
     return workflow.get_workspace(case_id)
 
 
-SAMPLE_CASE_IDS = {"law-exam": "law-exam-working", "multi-candidate": "multi-candidate-working"}
+SAMPLE_CASE_IDS = {"law-exam": "law-exam-working", "multi-candidate": "multi-candidate-working", "multi-candidate-5": "multi-candidate-5-working", "multi-candidate-10": "multi-candidate-10-working"}
 
 
 def open_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str) -> str:
+    sample_id = _canonical_sample_id(sample_id)
     case_id = SAMPLE_CASE_IDS[sample_id]
     if workflow.repository.exists(case_id):
         state = workflow.repository.require_case(case_id)
@@ -107,6 +121,7 @@ def open_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str) -> str:
 
 
 def reset_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str) -> str:
+    sample_id = _canonical_sample_id(sample_id)
     case_id = SAMPLE_CASE_IDS[sample_id]
     with workflow._lock:
         state = workflow.repository.require_case(case_id) if workflow.repository.exists(case_id) else None

@@ -50,7 +50,7 @@ def test_fresh_product_catalog_has_only_samples_until_users_create_cases(tmp_pat
         status, payload = request(base, "GET", "/api/cases")
         assert status == 200 and payload["cases"] == []
         status, payload = request(base, "GET", "/api/samples")
-        assert status == 200 and len(payload["samples"]) == 2
+        assert status == 200 and len(payload["samples"]) == 3
         for title in ("Business Law Tutorial 5", "Law Exam Investigation"):
             status, created = request(base, "POST", "/api/cases", {"title": title})
             assert status == 201

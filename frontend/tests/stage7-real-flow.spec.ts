@@ -208,6 +208,9 @@ test("real Runtime settings uses the actual HTTP backend without changing case s
 
 test("real sample boundaries and negative HTTP paths remain safe", async ({ page }, testInfo) => {
   await page.goto("/cases");
+  await expect(page.getByRole("button", { name: "Law Exam Investigation" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Multi-Candidate Collaboration Review — 5 Candidates" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Multi-Candidate Collaboration Review — 10 Candidates" })).toBeVisible();
   await page.getByRole("button", { name: "Law Exam Investigation" }).click();
   await expect(page.getByText("Law Exam Investigation", { exact: true })).toBeVisible();
   await expect(page.getByText("Candidate A", { exact: true })).toBeVisible();
@@ -217,8 +220,11 @@ test("real sample boundaries and negative HTTP paths remain safe", async ({ page
   await expect(page.getByRole("heading", { name: "Law Exam Investigation" })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("real-law-sample-narrow.png"), fullPage: true });
   await page.goto("/cases");
-  await page.getByRole("button", { name: "Multi-Candidate Collaboration Review" }).click();
+  await page.getByRole("button", { name: "Multi-Candidate Collaboration Review — 5 Candidates" }).click();
   for (const letter of ["A", "B", "C", "D", "E"]) await expect(page.getByText(`Candidate ${letter}`, { exact: true })).toBeVisible();
+  await page.goto("/cases");
+  await page.getByRole("button", { name: "Multi-Candidate Collaboration Review — 10 Candidates" }).click();
+  for (const letter of ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]) await expect(page.getByText(`Candidate ${letter}`, { exact: true })).toBeVisible();
   const unknown = await page.request.get(`${backendBase}/api/cases/case-does-not-exist/workspace`);
   expect(unknown.status()).toBe(404);
   const traversal = await page.request.get(`${backendBase}/api/cases/%2E%2E%2Fcase-000001/workspace`);

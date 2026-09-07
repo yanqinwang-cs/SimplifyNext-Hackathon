@@ -5,7 +5,7 @@ import time
 import pytest
 
 from investigator.cycle import RequestEvidence
-from investigator.http_api import create_case, product_guide, sample_cases, seed_sample_case
+from investigator.http_api import create_case, product_guide, reset_sample_case, sample_cases, seed_sample_case
 from investigator.graph import GraphNode, GraphNodeType
 from investigator.llm import ModelCallMetadata, ModelNativeCall, ModelTextBlock
 from investigator.models.evidence_request import EvidenceRequestStatus
@@ -170,7 +170,7 @@ def test_case_creation_and_public_sample_catalog_are_minimal(tmp_path: Path) -> 
     workspace = create_case(workflow, {"title": "New review", "description": "Context", "assessment": {"title": "Assessment", "assessment_type": "closed notes"}})
     assert workspace["caseId"] == "case-000001"
     assert workspace["assessmentContext"]["title"] == "Assessment"
-    assert [item["title"] for item in sample_cases()] == ["Law Exam Investigation", "Multi-Candidate Collaboration Review"]
+    assert [item["title"] for item in sample_cases()] == ["Law Exam Investigation", "Multi-Candidate Collaboration Review — 5 Candidates", "Multi-Candidate Collaboration Review — 10 Candidates"]
     assert "evaluator_only" not in product_guide()
 
 
@@ -182,6 +182,25 @@ def test_public_samples_seed_real_visible_sources_without_hidden_material(tmp_pa
     assert all("source" not in item["name"].lower() or "source 1" not in item["name"].lower() for item in multi["visibleSources"])
     assert len(multi["visibleSources"]) == 14
     assert all("evaluator_only" not in item["content"] for item in multi["visibleSources"])
+    scale = seed_sample_case(workflow, "multi-candidate-10", "multi-candidate-10-working")
+    assert len(scale["visibleSources"]) == 24
+    assert [item["display_name"] for item in scale["subjects"]] == [f"Candidate {letter}" for letter in "ABCDEFGHIJ"]
+    assert all("evaluator_only" not in source.content for source in workflow.repository.load("multi-candidate-10-working").sources.values())
+
+
+def test_ten_candidate_sample_opens_and_resets_as_a_clean_public_sample(tmp_path: Path) -> None:
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    opened = seed_sample_case(workflow, "multi-candidate-10", "multi-candidate-10-working")
+    state = workflow.repository.load("multi-candidate-10-working")
+    assert state.case_kind == "sample"
+    assert state.sample_id == "multi-candidate-10"
+    assert len(opened["subjects"]) == 10
+    reset_case_id = reset_sample_case(workflow, "multi-candidate-10")
+    assert reset_case_id == "multi-candidate-10-working"
+    clean = workflow.get_workspace(reset_case_id)
+    assert len(clean["visibleSources"]) == 24
+    assert clean["runs"] == []
+    assert all("evaluator_only" not in source.content for source in workflow.repository.load(reset_case_id).sources.values())
 
 
 def test_public_sample_fixture_integrity() -> None:
