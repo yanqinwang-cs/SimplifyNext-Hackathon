@@ -68,7 +68,7 @@ def test_imported_case_is_visible_through_normal_repository_and_samples_unchange
     workflow = HumanEvidenceWorkflow(repository)
     assert "scale-10-working" in repository.list_case_ids()
     assert [item["title"] for item in sample_cases()] == [
-        "Law Exam Investigation", "Multi-Candidate Collaboration Review"
+        "Law Exam Investigation", "Multi-Candidate Collaboration Review — 5 Candidates", "Multi-Candidate Collaboration Review — 10 Candidates"
     ]
     seed_sample_case(workflow, "multi-candidate", SAMPLE_CASE_IDS["multi-candidate"])
     public_sample = repository.load(SAMPLE_CASE_IDS["multi-candidate"])

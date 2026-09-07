@@ -24,7 +24,7 @@ export default function ReportPage() {
   if (!report) return <main className="min-h-screen bg-slate-50 p-8 text-slate-900">Loading report…</main>;
   const assessmentView = report.assessment;
   return <main className="min-h-screen bg-slate-50 px-5 py-10 text-slate-900"><article className="mx-auto max-w-5xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-    <Link href={`/cases/${encodeURIComponent(caseId)}`} className="text-sm font-bold text-blue-700">← Back to case</Link>
+    <div className="flex items-center justify-between gap-4"><Link href={`/cases/${encodeURIComponent(caseId)}`} className="text-sm font-bold text-blue-700">← Back to case</Link><img src="/caselens-logo.png" alt="CaseLens" className="h-9 w-auto object-contain"/></div>
     <div className="mt-5 flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-3xl font-black">Investigation report</h1><p className="mt-1 text-sm text-slate-500">{assessmentView?.caseNameAtAssessment ?? report.currentCaseName ?? report.title}</p>{assessmentView?.completedAt && <p className="mt-1 text-xs text-slate-500">Assessment date: {new Date(assessmentView.completedAt).toLocaleString()}</p>}</div>{report.assessmentIsStale && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">Assessment out of date</span>}</div>
     {report.reportState === "unavailable" && <p className="mt-8 text-sm text-slate-600">No assessment available. Run an assessment before viewing the report.</p>}
     {report.reportState === "historical_unavailable" && <p className="mt-8 text-sm text-slate-600">{report.message}</p>}
