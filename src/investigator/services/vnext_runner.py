@@ -507,16 +507,16 @@ class VNextProductionRunner:
             "Reassess the complete case from the original admitted evidence.",
             "Do not preserve conclusions from the prior failed execution.",
         }
-        if any(
-            issue.source_scope
-            and issue.target_scope
-            and issue.source_scope.get("scope_type") == "subject"
-            and issue.target_scope.get("scope_type") == "relationship"
-            for issue in error.issues
-        ):
+        incompatible_scope_issues = [
+            issue for issue in error.issues
+            if issue.error_code == "INCOMPATIBLE_SCOPE" and issue.source_scope and issue.target_scope
+        ]
+        if incompatible_scope_issues:
             constraints.update(
                 {
-                    "Do not derive a relationship-scoped proposition from separate student-specific evidence.",
+                    "Split mixed incompatible source scopes into separate legal semantic items; do not partially preserve the invalid merged item.",
+                    "Do not fuse private evidence for different students into one relationship-scoped proposition without an admissible joint or case-scoped basis.",
+                    "Scope compatibility alone is not semantic relevance; preserve only ancestry that is relevant to the proposition.",
                     "Reassess each student independently from the original admitted evidence.",
                 }
             )
