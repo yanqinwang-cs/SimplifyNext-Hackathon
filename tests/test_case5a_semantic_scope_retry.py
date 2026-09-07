@@ -4,31 +4,23 @@ from pathlib import Path
 
 import pytest
 
-from investigator.graph import CaseGraph, GraphNode, GraphNodeType
 from investigator.llm import ModelCallMetadata, ModelCallResult
 from investigator.models.assessment import AssessmentSubject, SubjectRelationship
 from investigator.models.source import Source, SourceType
+from investigator.public_views import public_run_handle_for_instance
 from investigator.services.evidence_requests import HumanEvidenceWorkflow
 from investigator.services.vnext_runner import VNextProductionRunner
 from investigator.state import CaseRepository
-from investigator.vnext import (
-    AssessmentRulePreset,
-    AssessmentStatus,
-    Confidence,
-    FurthestJustifiedConclusion,
-    GraphWarden,
-    InvestigatorAssessment,
-    InvestigatorProposal,
-    SubjectAssessment,
-    VNextInvestigationRunner,
-    VNextRunInput,
-    ViolationAssessment,
-    ViolationDefinition,
-    WardenFailureClass,
-    WardenValidationError,
-    classify_warden_failure,
+from investigator.vnext import AssessmentRulePreset, AssessmentStatus, Confidence, FurthestJustifiedConclusion, VNextRunInput, ViolationDefinition
+from investigator.vnext.semantic import (
+    InvestigatorSemanticAssessment,
+    SemanticItem,
+    SemanticItemKind,
+    SemanticSubjectAssessment,
+    SemanticValidationError,
+    SemanticViolationAssessment,
+    compile_semantic_assessment,
 )
-from investigator.public_views import public_run_handle_for_instance
 
 
 def _subjects() -> dict[str, AssessmentSubject]:
@@ -70,46 +62,6 @@ def _preset() -> AssessmentRulePreset:
     )
 
 
-def _bad_proposal() -> InvestigatorProposal:
-    return InvestigatorProposal.model_validate(
-        {
-            "graph_updates": [
-                {
-                    "operation": "add_proposition",
-                    "local_ref": "relationship_claim",
-                    "statement": "A relationship-level proposition.",
-                    "derived_from_node_ids": ["S1", "S2"],
-                    "scope": {"scope_type": "relationship", "relationship_ref": "R1"},
-                    "reason": "Illustrate the invalid ancestry.",
-                }
-            ]
-        }
-    )
-
-
-def _valid_assessment(proposal: InvestigatorProposal) -> InvestigatorAssessment:
-    return InvestigatorAssessment(
-        proposal=proposal,
-        subject_assessments=[
-            SubjectAssessment(
-                subject_id=subject_id,
-                violation_assessments=[
-                    ViolationAssessment(
-                        violation_id="V1",
-                        status=AssessmentStatus.NOT_CURRENTLY_SUPPORTED,
-                        reasoning_summary="The record does not currently support this finding.",
-                        confidence=Confidence.LOW,
-                    )
-                ],
-                furthest_conclusion=FurthestJustifiedConclusion(
-                    statement="No supported conclusion is currently justified.", confidence=Confidence.LOW
-                ),
-            )
-            for subject_id in ("subject_A", "subject_B")
-        ],
-    )
-
-
 def _run_input() -> VNextRunInput:
     return VNextRunInput(
         case_id="case5a-scope",
@@ -127,47 +79,57 @@ def _run_input() -> VNextRunInput:
     )
 
 
-def test_private_to_relationship_derived_from_is_semantic_affecting() -> None:
-    graph = CaseGraph(
-        case_id="case5a-scope",
-        nodes={
-            source_id: GraphNode(
-                id=source_id,
-                node_type=GraphNodeType.SOURCE,
-                statement=source_id,
-                metadata={"assessment_scope": source.metadata["assessment_scope"]}
-                if "assessment_scope" in source.metadata
-                else {},
+def _semantic_assessment(*, semantic_items: list[object] | None = None) -> InvestigatorSemanticAssessment:
+    return InvestigatorSemanticAssessment(
+        semantic_items=semantic_items or [],
+        subject_assessments=[
+            SemanticSubjectAssessment(
+                subject_id=subject_id,
+                violation_assessments=[
+                    SemanticViolationAssessment(
+                        violation_id="V1",
+                        status=AssessmentStatus.NOT_CURRENTLY_SUPPORTED,
+                        reasoning_summary="The record does not currently support this finding.",
+                        confidence=Confidence.LOW,
+                    )
+                ],
+                furthest_conclusion=FurthestJustifiedConclusion(
+                    statement="No supported conclusion is currently justified.", confidence=Confidence.LOW
+                ),
             )
-            for source_id, source in _sources().items()
-        },
-        edges={},
+            for subject_id in ("subject_A", "subject_B")
+        ],
     )
-    with pytest.raises(WardenValidationError) as caught:
-        GraphWarden(
-            graph,
-            _sources(),
-            subjects=_subjects(),
-            subject_relationships={
-                "rel_AB": SubjectRelationship(
-                    relationship_id="rel_AB",
-                    subject_ids=["subject_A", "subject_B"],
-                    relationship_type="joint_record",
-                    source_ids=["S3"],
-                )
-            },
-            relationship_refs={"R1": "rel_AB"},
-            strict_relationship_refs=True,
-        ).apply(_bad_proposal())
-    issue = next(item for item in caught.value.issues if item.error_code == "INCOMPATIBLE_SCOPE")
-    assert issue.relation == "derived_from"
-    assert issue.source_scope == {"scope_type": "subject", "subject_id": "subject_A", "relationship_id": None, "relationship_ref": None}
-    assert issue.target_scope == {"scope_type": "relationship", "subject_id": None, "relationship_id": "rel_AB", "relationship_ref": None}
-    assert classify_warden_failure(caught.value) is WardenFailureClass.SEMANTIC_AFFECTING
+
+
+def _invalid_semantic_assessment() -> InvestigatorSemanticAssessment:
+    return _semantic_assessment(
+        semantic_items=[
+            SemanticItem(
+                local_ref="private_a",
+                kind=SemanticItemKind.EVIDENCE_STATEMENT,
+                statement="A private observation.",
+                basis_source_ids=["S1"],
+            ),
+            SemanticItem(
+                local_ref="private_b",
+                kind=SemanticItemKind.EVIDENCE_STATEMENT,
+                statement="B private observation.",
+                basis_source_ids=["S2"],
+            ),
+            SemanticItem(
+                local_ref="relationship_claim",
+                kind=SemanticItemKind.PROPOSITION,
+                statement="A relationship-level proposition.",
+                about_subject_ids=["subject_A", "subject_B"],
+                basis_item_refs=["private_a", "private_b"],
+            ),
+        ]
+    )
 
 
 class _SequenceClient:
-    def __init__(self, responses: list[InvestigatorAssessment], raw_outputs: list[object] | None = None) -> None:
+    def __init__(self, responses: list[InvestigatorSemanticAssessment], raw_outputs: list[object] | None = None) -> None:
         self.responses = list(responses)
         self.raw_outputs = list(raw_outputs or [])
         self.calls: list[str] = []
@@ -213,9 +175,14 @@ def _workflow(tmp_path: Path, client: _SequenceClient) -> HumanEvidenceWorkflow:
     raise AssertionError("assessment did not reach a terminal state")
 
 
+def test_private_to_relationship_semantic_construction_is_rejected_before_compile() -> None:
+    with pytest.raises(SemanticValidationError, match="Keep separate subject-scoped propositions"):
+        compile_semantic_assessment(_invalid_semantic_assessment(), _run_input())
+
+
 def test_semantic_scope_failure_uses_one_fresh_full_retry_and_discards_first_graph(tmp_path: Path) -> None:
     client = _SequenceClient(
-        [_valid_assessment(_bad_proposal()), _valid_assessment(InvestigatorProposal())],
+        [_invalid_semantic_assessment(), _semantic_assessment()],
         raw_outputs=["RAW_INITIAL_A", "RAW_SECOND_B"],
     )
     workflow = _workflow(tmp_path, client)
@@ -224,35 +191,33 @@ def test_semantic_scope_failure_uses_one_fresh_full_retry_and_discards_first_gra
     assert len(client.calls) == 2
     assert "DETERMINISTIC RETRY CONSTRAINTS" not in client.calls[0]
     assert "DETERMINISTIC RETRY CONSTRAINTS" in client.calls[1]
-    assert "relationship_claim" not in client.calls[1]
+    assert "A relationship-level proposition." not in client.calls[1]
     run = workflow.get_workspace("case-01")["runs"][0]
     assert run["model_calls"] == 2
     assert run["clean_execution_retries"] == 1
     assert run["proposal_correction_calls"] == 0
     result = json.loads((tmp_path / "cases" / "case-01" / "runs" / run["run_id"] / "vnext_result.json").read_text())
-    assert set(result["result"]["graph"]["nodes"]) == {"S1", "S2", "S3"}
+    assert set(result["result"]["graph"]["nodes"]) == {"S1", "S2", "S3", "H1", "H2"}
     traces = workflow.get_traces("case-01")
-    required = {"vnext_semantic_scope_retry_required", "vnext_clean_retry_started", "vnext_completed"}
+    required = {"vnext_semantic_validation_failed", "vnext_attempt_failed", "vnext_completed"}
     assert required.issubset({item["event"] for item in traces})
-    retry = next(item for item in traces if item["event"] == "vnext_semantic_scope_retry_required")
-    assert retry["failure_class"] == "SEMANTIC_AFFECTING"
-    assert retry["retry_mode"] == "clean_execution"
     assert [item["event"] for item in traces if item["event"].startswith("vnext_")] == [
         "vnext_attempt_started",
         "vnext_model_call_started",
         "vnext_model_call_completed",
-        "vnext_proposal_validation_failed",
-        "vnext_semantic_scope_retry_required",
-        "vnext_retry_decision",
-        "vnext_clean_retry_started",
+        "vnext_semantic_compilation_started",
+        "vnext_semantic_validation_failed",
+        "vnext_attempt_failed",
         "vnext_attempt_started",
         "vnext_model_call_started",
         "vnext_model_call_completed",
+        "vnext_semantic_compilation_started",
+        "vnext_semantic_compilation_completed",
         "vnext_completed",
     ]
     completed = [item for item in traces if item["event"] == "vnext_model_call_completed"]
     assert [item["model_call_number"] for item in completed] == [1, 2]
-    assert [item["call_kind"] for item in completed] == ["initial", "clean_execution_retry"]
+    assert [item["call_kind"] for item in completed] == ["semantic_initial", "semantic_clean_execution_retry"]
     assert [item["raw_output"] for item in completed] == ["RAW_INITIAL_A", "RAW_SECOND_B"]
     assert all("parsed_output" in item for item in completed)
     assert traces.index(completed[0]) < traces.index(completed[1])
@@ -266,7 +231,7 @@ def test_semantic_scope_failure_uses_one_fresh_full_retry_and_discards_first_gra
 
 
 def test_second_semantic_scope_failure_is_terminal_without_third_call_or_partial_graph(tmp_path: Path) -> None:
-    client = _SequenceClient([_valid_assessment(_bad_proposal()), _valid_assessment(_bad_proposal())])
+    client = _SequenceClient([_invalid_semantic_assessment(), _invalid_semantic_assessment()])
     workflow = _workflow(tmp_path, client)
 
     assert workflow.get_workspace("case-01")["runtimeStatus"] == "FAILED"
@@ -281,5 +246,5 @@ def test_second_semantic_scope_failure_is_terminal_without_third_call_or_partial
 
 
 def test_clean_runner_rejects_demonstrated_scope_failure_before_any_graph_commit() -> None:
-    with pytest.raises(WardenValidationError):
-        VNextInvestigationRunner(lambda _: _valid_assessment(_bad_proposal())).run(_run_input())
+    with pytest.raises(SemanticValidationError):
+        compile_semantic_assessment(_invalid_semantic_assessment(), _run_input())
