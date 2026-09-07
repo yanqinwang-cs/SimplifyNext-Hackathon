@@ -23,6 +23,7 @@ from investigator.vnext.semantic import (
     compile_semantic_assessment,
 )
 from investigator.vnext.model import build_prompt
+from investigator.vnext.warden import ProposalValidationIssue, WardenValidationError
 
 
 def _input() -> VNextRunInput:
@@ -342,6 +343,45 @@ def test_semantic_validation_retry_constraint_is_concrete() -> None:
     assert not any("prior model" in constraint.lower() for constraint in constraints)
 
 
+def test_supported_status_without_support_has_clean_retry_guidance() -> None:
+    assessment = _assessment().model_copy(update={
+        "subject_assessments": [
+            _assessment().subject_assessments[0].model_copy(update={
+                "violation_assessments": [
+                    _assessment().subject_assessments[0].violation_assessments[0].model_copy(update={
+                        "status": AssessmentStatus.SUPPORTED,
+                        "supporting_item_refs": [],
+                    })
+                ]
+            }),
+            _assessment().subject_assessments[1],
+        ]
+    })
+    with pytest.raises(SemanticValidationError) as caught:
+        compile_semantic_assessment(assessment, _input())
+    constraints = VNextProductionRunner._semantic_validation_retry_constraints(caught.value)
+    assert any("without admissible supporting material" in constraint for constraint in constraints)
+    assert any("same legal scope" in constraint for constraint in constraints)
+
+
+def test_warden_scope_retry_guidance_is_explicit_and_deterministic() -> None:
+    error = WardenValidationError(
+        "scope mismatch",
+        issues=[ProposalValidationIssue(
+            error_code="INCOMPATIBLE_SCOPE",
+            relation="derived_from",
+            source_scope={"scope_type": "subject", "subject_id": "subject_A"},
+            target_scope={"scope_type": "relationship", "relationship_ref": "R1"},
+            problem="private-to-relationship ancestry",
+            required_action="preserve separation",
+        )],
+    )
+    constraints = VNextProductionRunner._semantic_retry_constraints(error)
+    assert any("Split mixed incompatible source scopes" in constraint for constraint in constraints)
+    assert any("admissible joint or case-scoped basis" in constraint for constraint in constraints)
+    assert any("semantic relevance" in constraint for constraint in constraints)
+
+
 def test_semantic_scope_failure_gets_one_clean_retry_with_concrete_constraint(tmp_path) -> None:
     run_input = _input()
     mixed_item = SemanticItem(
@@ -393,6 +433,9 @@ def test_semantic_scope_failure_gets_one_clean_retry_with_concrete_constraint(tm
     assert workflow.ensure_case("case-01").runtime_status == "COMPLETED"
     assert len(client.prompts) == 2
     assert "Split them into separate semantic items" in client.prompts[1]
+    assert "DETERMINISTIC RETRY CONSTRAINTS" not in client.prompts[0]
+    assert "Do not partially preserve the invalid merged item" in client.prompts[1]
+    assert "A mixed private observation." not in client.prompts[1]
     validation = next(item for item in workflow.get_traces("case-01") if item["event"] == "vnext_semantic_validation_failed")
     assert any("Split them into separate semantic items" in item for item in validation["retry_constraints"])
 

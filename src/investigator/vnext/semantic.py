@@ -348,7 +348,7 @@ def _evidence_statement_scope(
             "Required action: Split this into separate semantic items by legal source scope.",
             retry_constraint=(
                 f"Semantic item {item.local_ref!r} combined {distinct_scope_labels} sources. "
-                "Split them into separate semantic items. One semantic item may use only sources sharing one legal scope."
+                "Split them into separate semantic items. One semantic item may use only sources sharing one legal scope. Do not partially preserve the invalid merged item."
             ),
         )
     return first_scope
@@ -466,7 +466,13 @@ def compile_semantic_assessment(assessment: InvestigatorSemanticAssessment, run_
         by_subject[subject_id] = by_subject[subject_id].model_copy(update={"violation_assessments": violations})
         for violation_index, violation in enumerate(violations):
             if violation.status in {AssessmentStatus.SUPPORTED, AssessmentStatus.PARTIALLY_SUPPORTED, AssessmentStatus.CONFLICTED} and not violation.supporting_item_refs:
-                raise SemanticValidationError(f"{subject_id!r}/{violation.violation_id} requires supporting material")
+                raise SemanticValidationError(
+                    f"{subject_id!r}/{violation.violation_id} requires supporting material",
+                    retry_constraint=(
+                        f"{subject_id!r}/{violation.violation_id} is marked {violation.status.value} without admissible supporting material. "
+                        "Use a supported status only when the current student's violation has admissible support in the same legal scope; otherwise choose the appropriate unsupported or conflicted status."
+                    ),
+                )
             if violation.status is AssessmentStatus.CONFLICTED and not violation.conflicting_item_refs:
                 raise SemanticValidationError(f"{subject_id!r}/{violation.violation_id} requires conflicting material")
             for field_name, allowed_kinds in (

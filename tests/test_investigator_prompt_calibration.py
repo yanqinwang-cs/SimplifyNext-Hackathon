@@ -73,6 +73,18 @@ def test_prompt_allows_relationship_hypotheses_without_joint_evidence_basis() ->
     assert "every multi-student" not in prompt.lower()
 
 
+def test_prompt_states_semantic_scope_invariants_and_compact_example() -> None:
+    prompt = build_prompt(_run_input())
+    assert "One semantic item must use one compatible legal scope" in prompt
+    assert "Subject-private evidence stays subject-private" in prompt
+    assert "legitimate joint basis" in prompt
+    assert "ancestry must also be semantically relevant" in prompt
+    assert "Behavioral observations do not establish textual identity" in prompt
+    assert "CORRECT: separate A-private and B-private observations" in prompt
+    assert "INCORRECT: combine A-private + B-private observations" in prompt
+    assert "Prefer the smaller valid semantic set" in prompt
+
+
 def test_prompt_removes_categorical_circumstantial_cautions() -> None:
     prompt = build_prompt(_run_input()).lower()
     for stale in (
