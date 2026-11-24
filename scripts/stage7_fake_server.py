@@ -143,7 +143,7 @@ def main() -> None:
     client = Stage7FakeModelClient(default_spec.invocation_id, default_spec.region, log_path=log_path)
     http_api.BedrockModelClient = Stage7FakeModelClient
     callback = VNextProductionRunner(client=client).run
-    server = http_api.create_server(args.repository, args.host, args.port, run_callback=callback, run_mode="vnext")
+    server = http_api.create_server(args.repository, args.host, args.port, run_callback=callback)
     print(f"Stage 7 fake API listening on http://{args.host}:{args.port}", flush=True)
     try:
         server.serve_forever()

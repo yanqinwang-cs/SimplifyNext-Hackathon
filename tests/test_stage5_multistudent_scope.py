@@ -186,9 +186,9 @@ def test_directional_scope_matrix_does_not_widen_private_material() -> None:
 
 
 def test_public_http_upload_cannot_supply_trusted_scope_or_relationship_endpoint(tmp_path: Path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     create_case(workflow, {"title": "Public case"})
-    server = create_server(tmp_path / "cases", port=0, run_mode="vnext")
+    server = create_server(tmp_path / "cases", port=0)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     base = f"http://127.0.0.1:{server.server_address[1]}"
@@ -211,7 +211,7 @@ def test_public_http_upload_cannot_supply_trusted_scope_or_relationship_endpoint
 
 
 def test_public_samples_keep_their_explicit_student_sets(tmp_path: Path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     seed_sample_case(workflow, "law-exam", "law-working")
     seed_sample_case(workflow, "multi-candidate", "multi-working")
     law = workflow.repository.load("law-working")

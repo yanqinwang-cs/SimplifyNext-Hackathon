@@ -33,7 +33,7 @@ class FakeAnthropicClient:
 
 
 def test_harness_admits_and_finalizes_normal_vnext_run_offline(tmp_path):
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     state = workflow.ensure_case("case-01")
     state.sources["S1"] = Source(id="S1", name="record.md", source_type=SourceType.DOCUMENT, content="A substantive record")
     workflow.repository.save(state)

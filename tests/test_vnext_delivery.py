@@ -7,8 +7,8 @@ from investigator.state import CaseRepository
 from investigator.workspace_agent import WorkspaceAgent, WorkspaceToolAuthorizationError
 
 
-def make_workflow(tmp_path, *, mode="vnext"):
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode=mode)
+def make_workflow(tmp_path):
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     state = workflow.ensure_case("case-01")
     state.subjects = {"A": AssessmentSubject(subject_id="A", display_name="Candidate A"), "B": AssessmentSubject(subject_id="B", display_name="Candidate B")}
     state.subject_relationships = {"AB": SubjectRelationship(relationship_id="AB", subject_ids=["A", "B"], relationship_type="communication")}

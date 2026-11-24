@@ -12,7 +12,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from urllib.parse import unquote, urlparse, parse_qs
 
 from investigator.services.evidence_requests import EvidenceRequestConflict, HumanEvidenceWorkflow, ReportIntegrityError
-from investigator.services.production_runner import default_production_run
 from investigator.llm.bedrock import CredentialOverride, clear_credential_override, credential_status, debug_credentials_enabled, set_credential_override
 from investigator.state.repository import CaseRepository
 from investigator.workspace_agent import WorkspaceAgent, WorkspaceChatRequest, WorkspaceToolAuthorizationError
@@ -93,7 +92,7 @@ def seed_sample_case(workflow: HumanEvidenceWorkflow, sample_id: str, case_id: s
             raise ValueError("The Multi-Candidate sample requires seating_plan.md for relationship provenance")
         state = CaseState(case_id=case_id, title=samples[sample_id]["title"], description=descriptions[sample_id], case_kind="sample", sample_id=sample_id, assessment_context=AssessmentContext(assessment_id=f"{case_id}-assessment", title="Business Law Individual In-Class Assessment 2", assessment_type="closed-notes individual assessment", venue="Seminar Room 4"), subjects=subjects, subject_relationships={"rel_A_B_adjacent": SubjectRelationship(relationship_id="rel_A_B_adjacent", subject_ids=["subject_A", "subject_B"], relationship_type="adjacent_seating", source_ids=[seating_source.id], description="Candidate A and Candidate B were seated next to one another.")}, sources=sources)
     elif sample_id == "multi-candidate-10":
-        scale_root = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "vnext_scale" / "case_10_5a_plus_5b"
+        scale_root = Path(__file__).resolve().parent / "public_samples" / "multi_candidate_10"
         if not scale_root.is_dir():
             raise ValueError("The ten-candidate sample fixture is unavailable")
         fixture_state = load_scale_fixture_case_state(scale_root)
@@ -154,11 +153,11 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             except RuntimeSettingsError:
                 self._write(422, {"error": "The configured model is not supported by this prototype", "code": "UNSUPPORTED_MODEL_CONFIGURATION"})
             return
-        if self.workflow.run_mode == "vnext" and len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "workspace":
+        if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "workspace":
             try: self._write(200, self._public_workspace(parts[2]))
             except (KeyError, ValueError): self._write(404, {"error": "Case not found"})
             return
-        if self.workflow.run_mode == "vnext" and len(parts) == 7 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5:7] == ["audit-trace", "download"]:
+        if len(parts) == 7 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5:7] == ["audit-trace", "download"]:
             try:
                 run_id = resolve_run_handle(self.workflow, parts[2], parts[4])
                 body = self.workflow.audit_trace_file(parts[2], run_id, parts[4])
@@ -169,14 +168,14 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             except (KeyError, ValueError):
                 self._write(404, {"error": "Assessment trace not found"})
             return
-        if self.workflow.run_mode == "vnext" and len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5] == "audit-trace":
+        if len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5] == "audit-trace":
             try:
                 run_id = resolve_run_handle(self.workflow, parts[2], parts[4])
                 self._write(200, self.workflow.audit_trace(parts[2], run_id, parts[4]))
             except (KeyError, ValueError):
                 self._write(404, {"error": "Assessment trace not found"})
             return
-        if self.workflow.run_mode == "vnext" and len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "report":
+        if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "report":
             try:
                 assessment = parse_qs(urlparse(self.path).query).get("assessment", [None])[0]
                 run_id = resolve_run_handle(self.workflow, parts[2], assessment) if assessment else None
@@ -184,27 +183,27 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             except ReportIntegrityError: self._write(500, {"error": "The assessment report could not be loaded safely."})
             except (KeyError, ValueError): self._write(404, {"error": "Assessment report not found"})
             return
-        if self.workflow.run_mode == "vnext" and len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5] == "report":
+        if len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5] == "report":
             try:
                 run_id = resolve_run_handle(self.workflow, parts[2], parts[4])
                 self._write(200, self.workflow.get_report(parts[2], run_id))
             except ReportIntegrityError: self._write(500, {"error": "The assessment report could not be loaded safely."})
             except (KeyError, ValueError): self._write(404, {"error": "Assessment report not found"})
             return
-        if self.workflow.run_mode == "vnext" and len(parts) == 7 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5] == "sources":
+        if len(parts) == 7 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs" and parts[5] == "sources":
             try:
                 run_id = resolve_run_handle(self.workflow, parts[2], parts[4])
                 self._write(200, self.workflow.get_historical_source(parts[2], run_id, parts[6]))
             except ReportIntegrityError: self._write(500, {"error": "The assessment source could not be loaded safely."})
             except (KeyError, ValueError): self._write(404, {"error": "Historical source not found"})
             return
-        if self.workflow.run_mode == "vnext" and len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "sources":
+        if len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "sources":
             try:
                 state = self.workflow.repository.require_case(parts[2]); source_id = resolve_source_handle(state, parts[4]); source = state.sources[source_id]
                 self._write(200, {"caseId": parts[2], "source": {"sourceHandle": parts[4], "fileName": source.name, "documentFormat": document_format(source.name), "content": source.content or ""}})
             except (KeyError, ValueError): self._write(404, {"error": "Source not found"})
             return
-        if self.workflow.run_mode == "vnext" and len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs":
+        if len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "assessment-runs":
             try:
                 run_id = resolve_run_handle(self.workflow, parts[2], parts[4])
                 run = next(item for item in self.workflow.get_runs(parts[2]) if item.get("run_id") == run_id)
@@ -259,25 +258,6 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
         if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "runs":
             self._write(200, {"caseId": parts[2], "runs": self.workflow.get_runs(parts[2])})
             return
-        if len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "runs" and parts[5] == "raw-traces":
-            if self.workflow.run_mode == "vnext":
-                self._write(404, {"error": "Not found"})
-                return
-            try:
-                body = self.workflow.sanitized_raw_trace(parts[2], parts[4])
-                self.send_response(200)
-                self.send_header("Content-Type", "application/x-ndjson")
-                self.send_header("Content-Disposition", 'inline; filename="raw_traces.jsonl"')
-                self.send_header("Content-Length", str(len(body)))
-                self._cors_headers()
-                self.end_headers()
-                try:
-                    self.wfile.write(body)
-                except (BrokenPipeError, ConnectionResetError):
-                    return
-            except (KeyError, ValueError):
-                self._write(404, {"error": "Run not found"})
-            return
         self._write(404, {"error": "Not found"})
 
     def do_OPTIONS(self) -> None:
@@ -328,10 +308,10 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             reset_model_overrides()
             self._write(200, runtime_settings(workflow=self.workflow))
             return
-        if self.workflow.run_mode == "vnext" and ((len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"relationships", "context"}) or (len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] in {"subjects", "evidence-requests"})):
+        if ((len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"relationships", "context"}) or (len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] in {"subjects", "evidence-requests"})):
             self._write(404, {"error": "Not found"})
             return
-        if self.workflow.run_mode == "vnext" and parts == ["api", "cases"]:
+        if parts == ["api", "cases"]:
             try:
                 payload = self._read_json()
                 if set(payload) - {"title"}: raise ValueError("Only title is supported")
@@ -339,7 +319,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 self._write(201, {"caseId": created["caseId"], "workspace": self._public_workspace(created["caseId"])})
             except (ValueError, KeyError): self._write(422, {"error": "Invalid case request"})
             return
-        if self.workflow.run_mode == "vnext" and len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "run":
+        if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "run":
             try:
                 if not self.workflow.repository.require_case(parts[2]).subjects:
                     self._write(409, {"error": "A configured student is required before assessment", "code": "NO_CONFIGURED_STUDENT"})
@@ -353,7 +333,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             except ValueError: self._write(422, {"error": "Assessment could not be admitted from the current case configuration."})
             except RuntimeError: self._write(503, {"error": "Assessment could not be started safely."})
             return
-        if self.workflow.run_mode == "vnext" and len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"sources", "students"}:
+        if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"sources", "students"}:
             try:
                 state = self.workflow.repository.require_case(parts[2]); payload = self._read_json(); expected = payload.get("caseRevision")
                 if state.case_kind == "sample":
@@ -373,7 +353,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 message = str(exc) if "distinct identifier" in str(exc) or "required" in str(exc) else "Invalid student or source request"
                 self._write(422, {"error": message})
             return
-        if self.workflow.run_mode == "vnext" and len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "students" and parts[5] == "rename":
+        if len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "students" and parts[5] == "rename":
             try:
                 state = self.workflow.repository.require_case(parts[2]); payload = self._read_json()
                 if state.case_kind == "sample":
@@ -385,7 +365,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             except EvidenceRequestConflict as exc: self._write(409, {"error": str(exc)})
             except ValueError as exc: self._write(422, {"error": str(exc), "code": "INVALID_STUDENT"})
             return
-        if self.workflow.run_mode == "vnext" and parts in (["api", "samples", "open"], ["api", "samples", "reset"]):
+        if parts in (["api", "samples", "open"], ["api", "samples", "reset"]):
             try:
                 payload = self._read_json()
                 if set(payload) != {"sampleId"}: raise ValueError("Invalid sample request")
@@ -472,7 +452,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             except EvidenceRequestConflict as exc:
                 self._write(409, {"error": str(exc)})
             return
-        if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"sources", "subjects", "relationships"}:
+        if len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"sources", "subjects"}:
             try:
                 payload = self._read_json()
                 expected_revision = payload.pop("case_revision", None)
@@ -489,12 +469,6 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 elif parts[3] == "subjects":
                     subject = self.workflow.add_subject(parts[2], payload, expected_revision)
                     self._write(200, {"subject": subject.model_dump(mode="json"), "workspace": self.workflow.get_workspace(parts[2])})
-                elif parts[3] == "relationships":
-                    if self.workflow.run_mode == "vnext":
-                        self._write(404, {"error": "Not found"})
-                        return
-                    relationship = self.workflow.add_relationship(parts[2], payload, expected_revision)
-                    self._write(200, {"relationship": relationship.model_dump(mode="json"), "workspace": self.workflow.get_workspace(parts[2])})
             except (ValueError, KeyError, EvidenceRequestConflict) as exc:
                 self._write(409 if isinstance(exc, EvidenceRequestConflict) else 422, {"error": str(exc)})
             return
@@ -534,7 +508,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             clear_credential_override()
             self._write(200, runtime_settings(workflow=self.workflow))
             return
-        if self.workflow.run_mode == "vnext" and len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "students":
+        if len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "students":
             try:
                 state = self.workflow.repository.require_case(parts[2])
             except KeyError:
@@ -586,7 +560,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
 
     def do_PATCH(self) -> None:
         parts = self._parts()
-        if self.workflow.run_mode != "vnext" or len(parts) != 3 or parts[0:2] != ["api", "cases"]:
+        if len(parts) != 3 or parts[0:2] != ["api", "cases"]:
             self._write(404, {"error": "Not found"})
             return
         try:
@@ -601,28 +575,13 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             self._write(422, {"error": str(exc), "code": "INVALID_CASE_NAME"})
 
     def do_PUT(self) -> None:
-        parts = self._parts()
-        if self.workflow.run_mode == "vnext":
-            self._write(404, {"error": "Not found"})
-            return
-        if len(parts) != 4 or parts[0:2] != ["api", "cases"] or parts[3] != "context":
-            self._write(404, {"error": "Not found"})
-            return
-        try:
-            payload = self._read_json()
-            expected_revision = payload.pop("case_revision", None)
-            context = self.workflow.update_context(parts[2], payload, expected_revision)
-            self._write(200, {"context": context.model_dump(mode="json"), "workspace": self.workflow.get_workspace(parts[2])})
-        except (ValueError, KeyError, EvidenceRequestConflict) as exc:
-            self._write(409 if isinstance(exc, EvidenceRequestConflict) else 422, {"error": str(exc)})
+        self._write(404, {"error": "Not found"})
 
     def _parts(self) -> list[str]:
         return [unquote(part) for part in urlparse(self.path).path.strip("/").split("/") if part]
 
     def _is_blocked_legacy_vnext_route(self, parts: list[str]) -> bool:
         """Keep legacy mutation and caller-selected sample routes unreachable in vNext."""
-        if self.workflow.run_mode != "vnext":
-            return False
         legacy_subjects = (
             len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] == "subjects",
             len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "subjects",
@@ -680,12 +639,9 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
         return
 
 
-def create_server(repository_root: str | Path = "data/cases", host: str = "127.0.0.1", port: int = 8000, run_callback=None, run_mode: str | None = None) -> ThreadingHTTPServer:
-    configured_mode = run_mode or os.environ.get("SIMPLIFYNEXT_RUN_MODE") or ("legacy" if run_callback is not None else "vnext")
-    if configured_mode not in {"vnext", "legacy"}:
-        raise ValueError("SIMPLIFYNEXT_RUN_MODE must be either 'vnext' or 'legacy'")
-    callback = run_callback or (VNextProductionRunner().run if configured_mode == "vnext" else default_production_run)
-    workflow = HumanEvidenceWorkflow(CaseRepository(repository_root), run_callback=callback, run_mode=configured_mode)
+def create_server(repository_root: str | Path = "data/cases", host: str = "127.0.0.1", port: int = 8000, run_callback=None) -> ThreadingHTTPServer:
+    callback = run_callback or VNextProductionRunner().run
+    workflow = HumanEvidenceWorkflow(CaseRepository(repository_root), run_callback=callback)
     workflow.resume_callback = lambda case_id: workflow.start_run(case_id)
     InvestigatorApiHandler.workflow = workflow
     InvestigatorApiHandler.workspace_agent = WorkspaceAgent(workflow)

@@ -305,7 +305,7 @@ def test_candidate_e_device_source_is_identical_across_variants_and_public_sampl
     assert len(set(contents)) == 1
     assert "No device or note was seen" not in contents[0]
     assert "surrender the device" in contents[0]
-    assert len(list((ROOT / "tests" / "fixtures" / "public_samples" / "multi_candidate" / "sources").glob("*"))) == 14
+    assert len(list((ROOT / "src" / "investigator" / "public_samples" / "multi_candidate" / "sources").glob("*"))) == 14
 
 
 def test_adversarial_schema_boundaries() -> None:

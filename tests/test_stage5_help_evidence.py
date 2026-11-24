@@ -29,7 +29,7 @@ class NoCallClient:
 
 
 def make_case(tmp_path: Path, *, case_id: str = "case-01", source_text: str = "Observed record") -> HumanEvidenceWorkflow:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     state = CaseState(
         case_id=case_id,
         title="Administrative title",
@@ -156,9 +156,9 @@ def _request(base: str, method: str, path: str, payload: dict | None = None):
 
 
 def test_case_name_http_update_preserves_substantive_revision_and_sample_read_only(tmp_path: Path):
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     create_case(workflow, {"title": "Original"})
-    server = create_server(tmp_path / "cases", port=0, run_callback=lambda *_: None, run_mode="vnext")
+    server = create_server(tmp_path / "cases", port=0, run_callback=lambda *_: None)
     thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
     base = f"http://127.0.0.1:{server.server_address[1]}"
     try:

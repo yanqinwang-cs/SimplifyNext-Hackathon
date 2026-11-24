@@ -153,7 +153,7 @@ class _SequenceClient:
 
 
 def _workflow(tmp_path: Path, client: _SequenceClient) -> HumanEvidenceWorkflow:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     state = workflow.ensure_case("case-01")
     state.subjects = _subjects()
     state.subject_relationships = {

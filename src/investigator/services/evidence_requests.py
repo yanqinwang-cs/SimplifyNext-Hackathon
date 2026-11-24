@@ -78,12 +78,9 @@ def _state_signature(state: CaseState) -> str:
 class HumanEvidenceWorkflow:
     """Single-pending-request application boundary backed by CaseRepository."""
 
-    def __init__(self, repository: CaseRepository, resume_callback: Callable[[str], None] | None = None, run_callback: Callable[[str, "HumanEvidenceWorkflow"], None] | None = None, run_mode: str = "legacy") -> None:
-        if run_mode not in {"legacy", "vnext"}:
-            raise ValueError("SIMPLIFYNEXT_RUN_MODE must be either 'vnext' or 'legacy'")
+    def __init__(self, repository: CaseRepository, resume_callback: Callable[[str], None] | None = None, run_callback: Callable[[str, "HumanEvidenceWorkflow"], None] | None = None) -> None:
         self.repository = repository
         self.resume_callback = resume_callback
-        self.run_mode = run_mode
         self._lock = RLock()
         self._model_revision_active: set[str] = set()
         self._in_flight_actor: dict[str, str] = {}
@@ -130,14 +127,14 @@ class HumanEvidenceWorkflow:
         this method remains a small compatibility boundary for older callers.
         """
         with self._lock:
-            state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+            state = self.repository.require_case(case_id)
             if preset is None:
                 preset = preset_for_case(state)
             run_id = self._prepare_run_artifacts(
                 state,
                 start_revision,
                 preset,
-                runtime_status="RUNNING" if self.run_mode == "vnext" else "RUNNING_INVESTIGATOR",
+                runtime_status="RUNNING",
             )
             self._active_runs[case_id] = run_id
             return run_id
@@ -162,7 +159,7 @@ class HumanEvidenceWorkflow:
         with self._lock:
             if case_id in self._active_runs or case_id in self._in_flight_actor:
                 return
-            state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+            state = self.repository.require_case(case_id)
             if state.runtime_status not in {"RUNNING", "RUNNING_INVESTIGATOR", "RUNNING_STEWARD"}:
                 return
             runs = self.get_runs(case_id)
@@ -240,20 +237,16 @@ class HumanEvidenceWorkflow:
     def start_run_with_id(self, case_id: str) -> tuple[str, dict[str, Any]]:
         """Start one backend-owned run through the configured production hook."""
         with self._lock:
-            state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
-            pending = any(item.status.value == "pending" for item in state.evidence_request_history)
-            if self.run_mode == "legacy" and (pending or state.runtime_status == "WAITING_FOR_EVIDENCE"):
-                raise EvidenceRequestConflict("Resolve the pending human evidence request before running")
+            state = self.repository.require_case(case_id)
             if state.runtime_status in {"RUNNING", "RUNNING_INVESTIGATOR", "RUNNING_STEWARD"} or case_id in self._in_flight_actor or case_id in self._active_runs:
                 raise EvidenceRequestConflict("Investigation is already running")
             if state.case_status != "ACTIVE":
                 raise EvidenceRequestConflict("Stopped or inactive cases cannot be restarted")
-            if self.run_mode == "vnext":
-                try:
-                    validate_configured_identifiers(state.subjects)
-                except ValueError as exc:
-                    raise EvidenceRequestConflict("Each student must have a distinct identifier.") from exc
-            runtime_status = "RUNNING" if self.run_mode == "vnext" else "RUNNING_INVESTIGATOR"
+            try:
+                validate_configured_identifiers(state.subjects)
+            except ValueError as exc:
+                raise EvidenceRequestConflict("Each student must have a distinct identifier.") from exc
+            runtime_status = "RUNNING"
             run_preset = None
             callback_owner = getattr(self.run_callback, "__self__", None)
             resolver = getattr(callback_owner, "preset_resolver", None)
@@ -281,7 +274,7 @@ class HumanEvidenceWorkflow:
                     self.repository.save(previous_state)
                     shutil.rmtree(self._run_dir(case_id, run_id), ignore_errors=True)
                     raise RuntimeError("Assessment could not be started")
-                summary = "Assessment started." if self.run_mode == "vnext" else f"Investigation run {run_id} started from the current verified case state."
+                summary = "Assessment started."
                 self.record_workspace_event(case_id, {"type": "run_started", "run_id": run_id, "runtime_status": runtime_status, "case_revision": state.revision, "human_summary": summary})
             except Exception:
                 if self._active_runs.get(case_id) == run_id:
@@ -302,7 +295,7 @@ class HumanEvidenceWorkflow:
             state = self.ensure_case(case_id)
             if state.runtime_status.startswith("RUNNING_"):
                 self.set_runtime(case_id, "IDLE", "NONE")
-                summary = "Assessment completed." if self.run_mode == "vnext" else "The investigation run completed successfully."
+                summary = "Assessment completed."
                 self.record_workspace_event(case_id, {"type": "run_completed", "run_id": run_id, "runtime_status": "IDLE", "case_revision": state.revision, "human_summary": summary})
             elif state.runtime_status == "STOPPED":
                 self.record_workspace_event(case_id, {"type": "run_stopped", "run_id": run_id, "runtime_status": "STOPPED", "case_revision": state.revision, "resumable": state.case_status == "ACTIVE", "human_summary": "Autonomous investigation paused for human review. The unresolved issues remain preserved, and the investigation can be resumed or new evidence can be added."})
@@ -314,7 +307,7 @@ class HumanEvidenceWorkflow:
             safe_message = safe_failure_message(exc)
             self.record_trace(case_id, {"event": "failed", "step": state.last_trace_step, "actor": "system", "runtime_status": "FAILED", "case_revision": state.revision, "current_actor": state.current_actor, "failure_category": category, "technical_error_type": type(exc).__name__, "error": safe_message})
             self.set_runtime(case_id, "FAILED", "NONE", failure_category=category, message=safe_message, step=state.last_trace_step)
-            summary = "Assessment could not be completed. Case evidence was unchanged." if self.run_mode == "vnext" else f"The investigation run failed. The failed turn was not committed; earlier successful turns remain preserved at revision {state.revision}."
+            summary = "Assessment could not be completed. Case evidence was unchanged."
             self.record_workspace_event(case_id, {"type": "run_failed", "run_id": run_id, "runtime_status": "FAILED", "case_revision": state.revision, "final_case_revision": state.revision, "human_summary": summary})
         finally:
             self.finalize_run(case_id, expected_run_id=run_id)
@@ -372,7 +365,7 @@ class HumanEvidenceWorkflow:
 
     def assert_turn_snapshot_current(self, case_id: str, snapshot: TurnSnapshot) -> None:
         """Optimistic concurrency gate; never supplies a replacement apply baseline."""
-        state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+        state = self.repository.require_case(case_id)
         expected_revision = snapshot.repository_revision if snapshot.repository_revision is not None else snapshot.case_revision
         if state.revision != expected_revision:
             raise CaseSnapshotMismatch("Turn snapshot is stale: canonical case revision changed")
@@ -402,7 +395,7 @@ class HumanEvidenceWorkflow:
     def update_case_title(self, case_id: str, title: str) -> CaseState:
         """Update only administrative case naming; substantive revision is unchanged."""
         with self._lock:
-            state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+            state = self.repository.require_case(case_id)
             if state.case_kind == "sample":
                 raise EvidenceRequestConflict("Sample case names are fixed")
             cleaned = title.strip()
@@ -440,7 +433,7 @@ class HumanEvidenceWorkflow:
         with self._lock:
             state = self.ensure_case(case_id)
             self._check_revision(state, expected_case_revision)
-            if self.run_mode == "vnext" and state.case_kind == "sample":
+            if state.case_kind == "sample":
                 raise EvidenceRequestConflict("Sample cases are read-only; reset the sample to restore its original configuration")
             if case_id in self._model_revision_active:
                 raise EvidenceRequestConflict("A human request cannot be created while an Investigator revision is active")
@@ -500,7 +493,7 @@ class HumanEvidenceWorkflow:
             return request
 
     def current_pending_request(self, case_id: str) -> EvidenceRequest:
-        state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+        state = self.repository.require_case(case_id)
         pending = [item for item in state.evidence_request_history if item.status.value == "pending"]
         if len(pending) != 1:
             raise EvidenceRequestConflict(f"Expected exactly one pending evidence request, found {len(pending)}")
@@ -523,7 +516,7 @@ class HumanEvidenceWorkflow:
     ) -> Source:
         """Admit one source for the vNext input workflow without graph mutation."""
         with self._lock:
-            state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+            state = self.repository.require_case(case_id)
             self._assert_user_mutable(state)
             self._check_revision(state, expected_case_revision)
             if not display_name.strip() or not content.strip():
@@ -555,7 +548,7 @@ class HumanEvidenceWorkflow:
     def add_subject(self, case_id: str, subject: dict[str, Any], expected_case_revision: int | None = None) -> AssessmentSubject:
         from investigator.models.assessment import AssessmentSubject
         with self._lock:
-            state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+            state = self.repository.require_case(case_id)
             self._assert_user_mutable(state)
             self._check_revision(state, expected_case_revision)
             payload = dict(subject)
@@ -582,7 +575,7 @@ class HumanEvidenceWorkflow:
 
     def rename_subject(self, case_id: str, subject_id: str, display_name: str, expected_case_revision: int | None = None) -> AssessmentSubject:
         with self._lock:
-            state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+            state = self.repository.require_case(case_id)
             self._assert_user_mutable(state)
             self._check_revision(state, expected_case_revision)
             item = state.subjects.get(subject_id)
@@ -606,7 +599,7 @@ class HumanEvidenceWorkflow:
 
     def remove_subject(self, case_id: str, subject_id: str, expected_case_revision: int | None = None) -> None:
         with self._lock:
-            state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+            state = self.repository.require_case(case_id)
             self._assert_user_mutable(state)
             self._check_revision(state, expected_case_revision)
             if subject_id not in state.subjects:
@@ -657,7 +650,7 @@ class HumanEvidenceWorkflow:
         with self._lock:
             state = self.ensure_case(case_id)
             self._check_revision(state, expected_case_revision)
-            if self.run_mode == "vnext" and state.case_kind == "sample":
+            if state.case_kind == "sample":
                 raise EvidenceRequestConflict("Sample cases are read-only; reset the sample to restore its original configuration")
             if case_id in self._model_revision_active:
                 raise EvidenceRequestConflict("Human evidence responses are blocked while an Investigator revision is active")
@@ -719,12 +712,9 @@ class HumanEvidenceWorkflow:
         pending = next((item for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None)
         runtime_status = state.runtime_status
         current_actor = state.current_actor
-        if case_id in self._in_flight_actor and self.run_mode == "vnext":
+        if case_id in self._in_flight_actor:
             current_actor = "INVESTIGATOR"
             runtime_status = "RUNNING"
-        elif case_id in self._in_flight_actor:
-            current_actor = self._in_flight_actor[case_id]
-            runtime_status = f"RUNNING_{current_actor}"
         messages: list[dict[str, Any]] = []
         if pending:
             request_payload = self._public_request(pending)
@@ -737,10 +727,10 @@ class HumanEvidenceWorkflow:
 
     def _assessment_guidance(self, case_id: str) -> dict[str, Any]:
         """Build internal report material before projecting it for Help."""
-        state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+        state = self.repository.require_case(case_id)
         runs = self.get_runs(case_id)
         latest = next((run for run in reversed(runs) if run.get("vnext_status") == "completed"), None)
-        if latest and self.run_mode == "vnext":
+        if latest:
             try:
                 record = self._report_record(case_id, latest)
             except (FileNotFoundError, ReportIntegrityError):
@@ -831,7 +821,7 @@ class HumanEvidenceWorkflow:
         """Return only human-facing, read-only context for the vNext Help Agent."""
         from investigator.public_views import document_format
 
-        state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+        state = self.repository.require_case(case_id)
         internal = self._assessment_guidance(case_id)
         preset_payload = internal.get("preset")
         labels = {item["violation_id"]: item["label"] for item in preset_payload.get("violations", [])} if isinstance(preset_payload, dict) and preset_payload.get("violations") else {item.violation_id: item.label for item in preset_for_case(state).violations}
@@ -893,7 +883,7 @@ class HumanEvidenceWorkflow:
 
     def get_report(self, case_id: str, run_id: str | None = None) -> dict[str, Any]:
         """Project one immutable successful assessment behind a safe public DTO."""
-        state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+        state = self.repository.require_case(case_id)
         run = self._successful_run(case_id, run_id)
         if run is None:
             return {
@@ -929,7 +919,7 @@ class HumanEvidenceWorkflow:
 
     def get_historical_source(self, case_id: str, run_id: str, source_handle: str) -> dict[str, Any]:
         """Read exactly one source version admitted by a selected report."""
-        state = self.repository.require_case(case_id) if self.run_mode == "vnext" else self.ensure_case(case_id)
+        state = self.repository.require_case(case_id)
         del state  # The selected report, not current CaseState, is authoritative here.
         run = self._successful_run(case_id, run_id)
         if run is None:
@@ -1085,12 +1075,12 @@ class HumanEvidenceWorkflow:
             raise EvidenceRequestConflict("The case revision is stale")
 
     def _assert_mutable(self, state: CaseState) -> None:
-        if self.run_mode == "vnext" and self.has_active_run(state.case_id, state):
+        if self.has_active_run(state.case_id, state):
             raise EvidenceRequestConflict("Assessment is running; wait for it to finish before changing the case")
 
     def _assert_user_mutable(self, state: CaseState) -> None:
         self._assert_mutable(state)
-        if self.run_mode == "vnext" and state.case_kind == "sample":
+        if state.case_kind == "sample":
             raise EvidenceRequestConflict("Sample cases are read-only; reset the sample to restore its original configuration")
 
     def _publish_waiting_run(self, case_id: str, state: CaseState, request: EvidenceRequest) -> None:

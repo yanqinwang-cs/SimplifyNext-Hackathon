@@ -82,7 +82,7 @@ def _assessment(proposal: InvestigatorProposal, *, support_ref: str = "p_device"
 
 
 def _workflow(tmp_path: Path, client: RepairClient) -> HumanEvidenceWorkflow:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     state = workflow.ensure_case("case-01")
     state.sources["S1"] = _source()
     workflow.repository.save(state)

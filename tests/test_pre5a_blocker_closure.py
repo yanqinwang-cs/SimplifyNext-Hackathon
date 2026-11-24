@@ -30,8 +30,8 @@ def request(base: str, method: str, path: str, payload: dict | None = None) -> t
 
 
 def running_server(tmp_path: Path, workflow: HumanEvidenceWorkflow | None = None):
-    active = workflow or HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
-    server = create_server(tmp_path / "api-cases", port=0, run_callback=lambda _case_id, _workflow: None, run_mode="vnext")
+    active = workflow or HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
+    server = create_server(tmp_path / "api-cases", port=0, run_callback=lambda _case_id, _workflow: None)
     server.RequestHandlerClass.workflow = active
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -90,7 +90,7 @@ def test_legacy_vnext_routes_are_rejected_before_mutation(tmp_path: Path) -> Non
 
 
 def test_sample_mutation_services_are_read_only_and_catalog_keeps_real_user_case(tmp_path: Path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     user = create_case(workflow, {"title": "Law Exam Investigation"})
     seed_sample_case(workflow, "law-exam", "law-exam-working")
     sample_before = workflow.repository.load("law-exam-working").model_dump(mode="json")
@@ -114,7 +114,7 @@ def test_sample_mutation_services_are_read_only_and_catalog_keeps_real_user_case
 
 
 def test_student_mutations_validate_the_full_proposed_registry(tmp_path: Path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     workspace = create_case(workflow, {"title": "Students"})
     case_id = workspace["caseId"]
     state_before = workflow.repository.load(case_id)
@@ -148,7 +148,7 @@ def test_student_mutations_validate_the_full_proposed_registry(tmp_path: Path) -
 
 
 def test_delete_student_maps_case_handle_and_mutation_errors_truthfully(tmp_path: Path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     first = create_case(workflow, {"title": "First"})
     second = create_case(workflow, {"title": "Second"})
     second_student = workflow.add_subject(second["caseId"], {"display_name": "Student 2"})
@@ -206,7 +206,7 @@ def test_delete_student_maps_case_handle_and_mutation_errors_truthfully(tmp_path
 
 
 def test_sample_reset_rejects_finalizing_run_until_active_owner_releases(tmp_path: Path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     seed_sample_case(workflow, "law-exam", "law-exam-working")
     started = threading.Event()
     release = threading.Event()
@@ -256,7 +256,7 @@ def test_sample_reset_rejects_finalizing_run_until_active_owner_releases(tmp_pat
 def test_snapshot_admission_failure_does_not_publish_running_state_or_partial_run(tmp_path: Path, monkeypatch) -> None:
     import investigator.services.evidence_requests as evidence_requests
 
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     create_case(workflow, {"title": "Admission"})
     before = workflow.repository.load("case-000001")
     monkeypatch.setattr(evidence_requests, "build_input_snapshot", lambda *_args: (_ for _ in ()).throw(RuntimeError("snapshot failed")))
@@ -269,7 +269,7 @@ def test_snapshot_admission_failure_does_not_publish_running_state_or_partial_ru
 
 
 def test_initial_run_record_write_failure_does_not_publish_running_state(tmp_path: Path, monkeypatch) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     create_case(workflow, {"title": "Admission"})
     original = workflow._write_run_result
 
@@ -297,7 +297,7 @@ def test_case_running_state_write_failure_rolls_back_admission(tmp_path: Path) -
             super().save(case_state)
 
     repository = FailingRepository(tmp_path / "cases")
-    workflow = HumanEvidenceWorkflow(repository, run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(repository)
     create_case(workflow, {"title": "Admission"})
     with pytest.raises(OSError, match="case state failed"):
         workflow.start_run("case-000001")
@@ -307,7 +307,7 @@ def test_case_running_state_write_failure_rolls_back_admission(tmp_path: Path) -
 
 
 def test_worker_start_failure_rolls_back_admission(tmp_path: Path, monkeypatch) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     create_case(workflow, {"title": "Admission"})
 
     class FailingThread:
@@ -326,7 +326,7 @@ def test_worker_start_failure_rolls_back_admission(tmp_path: Path, monkeypatch) 
 
 
 def test_duplicate_admission_and_terminal_cleanup_keep_one_owner(tmp_path: Path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     create_case(workflow, {"title": "Admission"})
     started = threading.Event()
     release = threading.Event()
@@ -366,7 +366,7 @@ def test_invalid_persisted_student_registry_is_rejected_before_running(tmp_path:
         },
     )
     repository.save(state)
-    workflow = HumanEvidenceWorkflow(repository, run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(repository)
     with pytest.raises(EvidenceRequestConflict, match="distinct identifier"):
         workflow.start_run("case-01")
     assert repository.load("case-01").runtime_status == "IDLE"
@@ -374,7 +374,7 @@ def test_invalid_persisted_student_registry_is_rejected_before_running(tmp_path:
 
 
 def test_orphaned_running_state_is_reconciled_without_provider_call(tmp_path: Path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     state = CaseState(case_id="case-01", title="Orphan")
     state.subjects = {"subject_1": AssessmentSubject(subject_id="subject_1", display_name="Student 1")}
     state.runtime_status = "RUNNING"
@@ -387,7 +387,7 @@ def test_orphaned_running_state_is_reconciled_without_provider_call(tmp_path: Pa
 
 
 def test_fast_completion_returns_the_exact_admitted_run_identity(tmp_path: Path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     create_case(workflow, {"title": "Fast"})
 
     def complete(case_id: str, active: HumanEvidenceWorkflow) -> None:

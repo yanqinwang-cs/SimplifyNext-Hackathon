@@ -1,7 +1,6 @@
 """Product adapter for clean, finite vNext runs.
 
-This adapter is intentionally separate from the legacy production runner. A
-vNext attempt calls the Investigator once and retries only by rebuilding a
+A vNext attempt calls the Investigator once and retries only by rebuilding a
 clean input; it never resumes an unfinished reasoning graph.
 """
 

@@ -167,7 +167,7 @@ def test_corrective_retry_preserves_multi_subject_assessments(tmp_path: Path) ->
     repaired = subject_evidence_proposal()
     semantic = assessment([subject_assessment("subject_A", (AssessmentStatus.SUPPORTED, AssessmentStatus.NOT_CURRENTLY_SUPPORTED), refs=("e_a", "")), subject_assessment("subject_B", (AssessmentStatus.NOT_CURRENTLY_SUPPORTED, AssessmentStatus.CONFLICTED), refs=("", "e_b"))], malformed)
     client = TwoCallClient([semantic, repaired])
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     state = workflow.ensure_case("case-01")
     state.sources["S1"] = source()
     state.subjects = subjects

@@ -81,7 +81,7 @@ def test_historical_report_and_source_api_are_read_only(tmp_path: Path) -> None:
     report = workflow.get_report("case-01")
     record = json.loads((tmp_path / "cases/case-01/runs/run_000001/report_record.json").read_text())
     source_handle = public_assessment_source_handle("case-01", record["run_instance_id"], "S1")
-    server = create_server(tmp_path / "cases", host="127.0.0.1", port=0, run_callback=lambda *_: None, run_mode="vnext")
+    server = create_server(tmp_path / "cases", host="127.0.0.1", port=0, run_callback=lambda *_: None)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:

@@ -10,9 +10,6 @@ from investigator.cycle import InvestigatorObservation
 from investigator.cycle_prompt import build_investigator_cycle_prompt
 from investigator.roles import InvestigationFocus, ProductionStewardDecision, StewardDecision, render_production_steward_contract
 from investigator.llm import ModelCallMetadata, MockModelClient, ModelParseError
-from investigator.services.evidence_requests import HumanEvidenceWorkflow
-from investigator.services.production_runner import ProductionInvestigationRunner, StewardEnvelope
-from investigator.state.repository import CaseRepository
 
 
 def investigator_prompt() -> str:
@@ -69,18 +66,6 @@ def test_production_steward_rejects_decision_discriminator_and_accepts_stop() ->
         adapter.validate_python({"decision": "stop_unresolved", "assessment": "x", "reason": "x", "important_unresolved_ids": ["U1"], "reopening_conditions": "new evidence"})
     parsed = adapter.validate_python({"operation": "stop_unresolved", "assessment": "x", "reason": "x", "important_unresolved_ids": ["U1"], "reopening_conditions": "new evidence"})
     assert parsed.operation == "stop_unresolved"
-
-
-def test_steward_correction_prompt_repeats_exact_contract_for_wrong_discriminator(tmp_path) -> None:
-    payload = {"decision": "stop_unresolved", "assessment": "x", "reason": "x", "important_unresolved_ids": ["U1"], "reopening_conditions": "new evidence"}
-    client = MockModelClient(payload, ModelCallMetadata(provider="mock", model="test", latency_seconds=0, parse_success=True))
-    runner = ProductionInvestigationRunner(HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases")), client)
-    with pytest.raises(RuntimeError):
-        runner._call_with_retry("initial prompt", StewardEnvelope, lambda value: TypeAdapter(ProductionStewardDecision).validate_python(value.root), {}, "Steward", contract=render_production_steward_contract())
-    correction_prompt = client.calls[1][0]
-    assert 'exactly "operation"' in correction_prompt
-    assert '"stop_unresolved"' in correction_prompt
-    assert 'DO NOT USE "decision"' in correction_prompt
 
 
 def test_investigator_prompt_states_both_discriminators() -> None:

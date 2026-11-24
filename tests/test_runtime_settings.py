@@ -26,7 +26,7 @@ def request(base: str, method: str, path: str, payload: dict | None = None, orig
 def server(tmp_path: Path):
     clear_credential_override()
     reset_model_overrides()
-    instance = create_server(tmp_path / "cases", port=0, run_callback=lambda *_: None, run_mode="vnext")
+    instance = create_server(tmp_path / "cases", port=0, run_callback=lambda *_: None)
     thread = threading.Thread(target=instance.serve_forever, daemon=True)
     thread.start()
     return instance, thread, f"http://127.0.0.1:{instance.server_address[1]}"

@@ -21,8 +21,6 @@ With AWS environment variables and `BEDROCK_MODEL_ID` configured, run one live s
 uv run python scripts/smoke_bedrock.py
 ```
 
-The original Streamlit investigation prototype remains available with `uv run streamlit run app/streamlit_app.py` for compatibility. The supported product workflow is the vNext HTTP/UI path described above.
-
 The reusable `InvestigationSession` / `InvestigationService` cycle remains available for the earlier deterministic kernel. The vNext product path is finite and report-oriented; LangGraph and autonomous tool loops are not required for local operation.
 
 The state kernel also contains a provisional hypothesis tree. Broad parent hypotheses and narrower evidence-based children are represented structurally; removing or weakening a child leaves its parent unchanged. Hypotheses are never evidence, and `specificity_basis` records evidence IDs that supposedly justify narrowing. This is deterministic state representation, not a graph or search algorithm; semantic adequacy of the basis is deferred to later experiments.
@@ -42,7 +40,7 @@ The vNext product path adds explicit runtime state, multi-student source applica
 Start the backend in the supported local mode:
 
 ```bash
-CASELENS_MODEL_PROVIDER=anthropic SIMPLIFYNEXT_RUN_MODE=vnext \
+CASELENS_MODEL_PROVIDER=anthropic \
   uv run python -m investigator.http_api --repository data/cases --host 127.0.0.1 --port 8000
 ```
 

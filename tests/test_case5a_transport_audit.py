@@ -54,7 +54,7 @@ def wait_for(workflow: HumanEvidenceWorkflow, case_id: str = "case-01") -> None:
 
 
 def start_timeout_workflow(tmp_path: Path) -> tuple[HumanEvidenceWorkflow, TimeoutClient]:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     workflow.ensure_case("case-01")
     add_source(workflow)
     client = TimeoutClient()
@@ -162,7 +162,7 @@ def test_trace_is_handle_bound_sanitized_and_available_without_diagnostic_flag(t
     handle = public_run_handle_for_instance("case-01", run["run_id"], run["run_instance_id"])
     assert client.calls == 1
 
-    server = create_server(tmp_path / "api-cases", port=0, run_callback=lambda *_: None, run_mode="vnext")
+    server = create_server(tmp_path / "api-cases", port=0, run_callback=lambda *_: None)
     server.RequestHandlerClass.workflow = workflow
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -214,7 +214,7 @@ def test_trace_is_handle_bound_sanitized_and_available_without_diagnostic_flag(t
 
 
 def test_successful_run_also_has_a_trace(tmp_path: Path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     create_case(workflow, {"title": "No evidence"})
     workflow.run_callback = VNextProductionRunner().run
     workflow.start_run("case-000001")
