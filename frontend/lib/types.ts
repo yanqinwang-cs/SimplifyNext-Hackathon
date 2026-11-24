@@ -1,4 +1,11 @@
-export type WorkspaceStatus = "processing" | "waiting_for_evidence" | "ready" | "stopped" | "running" | "completed" | "failed";
+export type WorkspaceStatus =
+  | "processing"
+  | "waiting_for_evidence"
+  | "ready"
+  | "stopped"
+  | "running"
+  | "completed"
+  | "failed";
 export type EvidenceRequestStatus = "pending" | "fulfilled" | "unavailable";
 
 export interface EvidenceRequest {
@@ -11,11 +18,25 @@ export interface EvidenceRequest {
   resumed_run_id?: string | null;
 }
 
-export interface PublicSource { sourceHandle: string; fileName: string; documentFormat: string; }
-export interface PublicSourceDocument { caseId: string; source: PublicSource & { content: string }; }
+export interface PublicSource {
+  sourceHandle: string;
+  fileName: string;
+  documentFormat: string;
+}
+export interface PublicSourceDocument {
+  caseId: string;
+  source: PublicSource & { content: string };
+}
 
-export interface AssessmentSubject { studentHandle: string; displayName: string; candidateNumber?: string | null; }
-export interface GuidanceMaterial { statement: string; source_labels?: string[]; }
+export interface AssessmentSubject {
+  studentHandle: string;
+  displayName: string;
+  candidateNumber?: string | null;
+}
+export interface GuidanceMaterial {
+  statement: string;
+  source_labels?: string[];
+}
 
 export interface TraceEntry {
   step?: number;
@@ -62,9 +83,25 @@ export interface WorkspaceEvent {
 }
 
 export type ApprovedModel = "anthropic.claude-opus-4-5";
-export interface AwsCredentialStatus { mode: "default_chain" | "temporary_credentials"; statusLabel: string; lastUpdatedAt: string | null; region: string; }
-export interface RuntimeModelUse { model: ApprovedModel; label: string; usedAt: string | null; outcome: "completed" | "failed"; }
-export interface RuntimeRoleSettings { effectiveModel: ApprovedModel; effectiveLabel: string; source: "default" | "environment" | "runtime_selection"; lastUsed: RuntimeModelUse | null; noModelCallRequired?: boolean; }
+export interface AwsCredentialStatus {
+  mode: "default_chain" | "temporary_credentials";
+  statusLabel: string;
+  lastUpdatedAt: string | null;
+  region: string;
+}
+export interface RuntimeModelUse {
+  model: ApprovedModel;
+  label: string;
+  usedAt: string | null;
+  outcome: "completed" | "failed";
+}
+export interface RuntimeRoleSettings {
+  effectiveModel: ApprovedModel;
+  effectiveLabel: string;
+  source: "default" | "environment" | "runtime_selection";
+  lastUsed: RuntimeModelUse | null;
+  noModelCallRequired?: boolean;
+}
 
 export interface WorkspaceMessage {
   id: string;
@@ -85,9 +122,25 @@ export interface CaseWorkspaceState {
   caseStatus: "ACTIVE" | "HANDED_OFF" | "CLOSED";
   caseKind: "user" | "sample";
   sample: { sampleId: string; title: string } | null;
-  capabilities: { editStudents: boolean; addEvidence: boolean; resetSample: boolean; runAssessment: boolean; useHelp: boolean; viewSources: boolean };
+  capabilities: {
+    editStudents: boolean;
+    addEvidence: boolean;
+    resetSample: boolean;
+    runAssessment: boolean;
+    useHelp: boolean;
+    viewSources: boolean;
+  };
   preloadedSourceCount: number;
-  runtimeStatus: "IDLE" | "RUNNING" | "COMPLETED" | "RUNNING_INVESTIGATOR" | "RUNNING_STEWARD" | "WAITING_FOR_EVIDENCE" | "FAILED" | "STOPPED" | "PAUSED";
+  runtimeStatus:
+    | "IDLE"
+    | "RUNNING"
+    | "COMPLETED"
+    | "RUNNING_INVESTIGATOR"
+    | "RUNNING_STEWARD"
+    | "WAITING_FOR_EVIDENCE"
+    | "FAILED"
+    | "STOPPED"
+    | "PAUSED";
   currentActor: "INVESTIGATOR" | "STEWARD" | "NONE";
   sources: PublicSource[];
   students: AssessmentSubject[];
@@ -96,18 +149,93 @@ export interface CaseWorkspaceState {
   chatHistory: { role: string; text: string }[];
   activity: { type: string; summary: string; createdAt: string }[];
 }
-export interface CaseListItem { caseId: string; title: string; }
-export interface SampleCatalogItem { sampleId: string; title: string; }
-export interface AssessmentSummary { state: "not_started" | "running" | "complete" | "stale" | "failed_no_report" | "failed_previous_report_retained" | "stopped"; activeRun: { runHandle: string; startedAt: string; traceReady?: boolean } | null; latestAttempt: { runHandle: string; state: string; startedAt: string; endedAt: string | null; traceReady: boolean; message: string } | null; reportAvailable: boolean; reportStale: boolean; }
+export interface CaseListItem {
+  caseId: string;
+  title: string;
+}
+export interface SampleCatalogItem {
+  sampleId: string;
+  title: string;
+}
+export interface AssessmentSummary {
+  state:
+    | "not_started"
+    | "running"
+    | "complete"
+    | "stale"
+    | "failed_no_report"
+    | "failed_previous_report_retained"
+    | "stopped";
+  activeRun: { runHandle: string; startedAt: string; traceReady?: boolean } | null;
+  latestAttempt: {
+    runHandle: string;
+    state: string;
+    startedAt: string;
+    endedAt: string | null;
+    traceReady: boolean;
+    message: string;
+  } | null;
+  reportAvailable: boolean;
+  reportStale: boolean;
+}
 
-export interface TraceEvent { event?: string; actor?: string; runtime_status?: string; attempt_number?: number; retry_mode?: string; failure_category?: string; technical_error_type?: string; error_type?: string; error?: string; model?: string | null; input_tokens?: number | null; output_tokens?: number | null; latency_seconds?: number | null; finish_reason?: string | null; step?: number; repairable?: boolean; }
-export interface TraceResponse { caseId: string; runHandle: string; outcome: string; model: { logicalModel: string | null }; counters: { modelCalls: number; proposalCorrectionCalls: number; cleanExecutionRetries: number }; failure: { category?: string; technicalType?: string; message?: string } | null; trace: TraceEvent[]; }
+export interface TraceEvent {
+  event?: string;
+  actor?: string;
+  runtime_status?: string;
+  attempt_number?: number;
+  retry_mode?: string;
+  failure_category?: string;
+  technical_error_type?: string;
+  error_type?: string;
+  error?: string;
+  model?: string | null;
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  latency_seconds?: number | null;
+  finish_reason?: string | null;
+  step?: number;
+  repairable?: boolean;
+}
+export interface TraceResponse {
+  caseId: string;
+  runHandle: string;
+  outcome: string;
+  model: { logicalModel: string | null };
+  counters: { modelCalls: number; proposalCorrectionCalls: number; cleanExecutionRetries: number };
+  failure: { category?: string; technicalType?: string; message?: string } | null;
+  trace: TraceEvent[];
+}
 
-export interface ReportSourceReference { sourceHandle: string; fileName: string; }
-export interface ReportMaterial { statement: string; sources: ReportSourceReference[]; }
-export interface ReportViolation { label: string; status: string; reasoningSummary: string; supportingMaterial: ReportMaterial[]; conflictingMaterial?: ReportMaterial[]; limitingMaterial: ReportMaterial[]; unresolvedPoints: string[]; }
-export interface ReportAlternative { statement: string; supportingMaterial: ReportMaterial[]; }
-export interface ReportStudent { sectionHandle: string; displayName: string; violations: ReportViolation[]; furthestConclusion: string; suggestedNextStep?: string | null; alternativeExplanations?: ReportAlternative[]; }
+export interface ReportSourceReference {
+  sourceHandle: string;
+  fileName: string;
+}
+export interface ReportMaterial {
+  statement: string;
+  sources: ReportSourceReference[];
+}
+export interface ReportViolation {
+  label: string;
+  status: string;
+  reasoningSummary: string;
+  supportingMaterial: ReportMaterial[];
+  conflictingMaterial?: ReportMaterial[];
+  limitingMaterial: ReportMaterial[];
+  unresolvedPoints: string[];
+}
+export interface ReportAlternative {
+  statement: string;
+  supportingMaterial: ReportMaterial[];
+}
+export interface ReportStudent {
+  sectionHandle: string;
+  displayName: string;
+  violations: ReportViolation[];
+  furthestConclusion: string;
+  suggestedNextStep?: string | null;
+  alternativeExplanations?: ReportAlternative[];
+}
 export interface ReportResponse {
   caseId: string;
   currentCaseName: string;
@@ -115,13 +243,28 @@ export interface ReportResponse {
   assessmentIsStale: boolean;
   isLatestSuccessfulAssessment: boolean;
   message?: string;
-  assessment: { runHandle: string; caseNameAtAssessment: string; completedAt: string; students: ReportStudent[] } | null;
+  assessment: {
+    runHandle: string;
+    caseNameAtAssessment: string;
+    completedAt: string;
+    students: ReportStudent[];
+  } | null;
   /** Legacy fields are accepted only so old mocked API responses remain type-safe. */
   title?: string;
   latestSuccessfulRun?: { completedAt?: string | null } | null;
-  students?: Array<{ displayName: string; violations: ReportViolation[]; furthestConclusion: string }>;
+  students?: Array<{
+    displayName: string;
+    violations: ReportViolation[];
+    furthestConclusion: string;
+  }>;
 }
-export interface RuntimeSettings { provider: "anthropic" | "bedrock"; debugCredentialsEnabled: boolean; aws: AwsCredentialStatus; models: { investigator: RuntimeRoleSettings; workspaceHelp: RuntimeRoleSettings }; availableModels: Array<{ model: ApprovedModel; label: string }>; }
+export interface RuntimeSettings {
+  provider: "anthropic" | "bedrock";
+  debugCredentialsEnabled: boolean;
+  aws: AwsCredentialStatus;
+  models: { investigator: RuntimeRoleSettings; workspaceHelp: RuntimeRoleSettings };
+  availableModels: Array<{ model: ApprovedModel; label: string }>;
+}
 
 export interface WorkspaceChatResponse {
   response: string;

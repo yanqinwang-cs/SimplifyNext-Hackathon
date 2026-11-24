@@ -1,4 +1,5 @@
 """One-turn live Bedrock runner for the Investigator diagnostic screen."""
+
 from __future__ import annotations
 
 import argparse
@@ -14,7 +15,7 @@ from pydantic import TypeAdapter
 from experiments.investigator_screen.evaluate import evaluate_payload
 from experiments.investigator_screen.audit import observation_fingerprint
 from experiments.investigator_screen.fixtures import all_fixtures
-from experiments.steward_screen.models import MODEL_REGISTRY
+from investigator.model_registry import MODEL_REGISTRY
 from investigator.cycle import InvestigatorTurnResponse
 from investigator.cycle_prompt import build_investigator_cycle_prompt
 from investigator.llm import ModelCallResult, ModelParseError
@@ -47,9 +48,7 @@ def current_manifest(model_name: str | None = None) -> dict[str, Any]:
     root = Path(__file__).parents[2]
     fixtures = all_fixtures()
     prompt_hashes = {
-        fixture.fixture_id: _sha_bytes(
-            build_investigator_cycle_prompt(fixture.observation).encode("utf-8")
-        )
+        fixture.fixture_id: _sha_bytes(build_investigator_cycle_prompt(fixture.observation).encode("utf-8"))
         for fixture in fixtures
     }
     manifest: dict[str, Any] = {
@@ -128,13 +127,15 @@ def run_model(model_name: str, fixtures: list[Any], output_dir: Path) -> dict[st
         }
         try:
             call: ModelCallResult = client.call(prompt, InvestigatorTurnResponse)
-            trace.update({
-                "raw_output": call.raw_output,
-                "latency_seconds": call.metadata.latency_seconds,
-                "input_tokens": call.metadata.input_tokens,
-                "output_tokens": call.metadata.output_tokens,
-                "parse_success": call.metadata.parse_success,
-            })
+            trace.update(
+                {
+                    "raw_output": call.raw_output,
+                    "latency_seconds": call.metadata.latency_seconds,
+                    "input_tokens": call.metadata.input_tokens,
+                    "output_tokens": call.metadata.output_tokens,
+                    "parse_success": call.metadata.parse_success,
+                }
+            )
             result = evaluate_payload(fixture, call.parsed.model_dump(mode="json"))
             trace.update(_result_fields(result))
             trace["failure_stage"] = "semantic_evaluator" if not result.semantic_pass else None
@@ -149,8 +150,15 @@ def run_model(model_name: str, fixtures: list[Any], output_dir: Path) -> dict[st
     manifest = current_manifest(model_name)
     manifest.update({"run_id": run_id, "selected_fixture_ids": [fixture.fixture_id for fixture in fixtures]})
     (output_dir / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    (output_dir / "raw_traces.jsonl").write_text("\n".join(json.dumps(trace, sort_keys=True) for trace in traces) + "\n", encoding="utf-8")
-    return {"run_id": run_id, "manifest": output_dir / "manifest.json", "raw_traces": output_dir / "raw_traces.jsonl", "traces": traces}
+    (output_dir / "raw_traces.jsonl").write_text(
+        "\n".join(json.dumps(trace, sort_keys=True) for trace in traces) + "\n", encoding="utf-8"
+    )
+    return {
+        "run_id": run_id,
+        "manifest": output_dir / "manifest.json",
+        "raw_traces": output_dir / "raw_traces.jsonl",
+        "traces": traces,
+    }
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -171,18 +179,33 @@ def main() -> None:
         parser.error(f"unknown fixtures: {unknown}; expected INV1-INV12")
     selected = [fixture_map[identifier] for identifier in args.fixtures]
     if args.dry_run:
-        print(json.dumps({
-            "dry_run": True,
-            "models": [{"name": name, "invocation_id": MODEL_REGISTRY[name].invocation_id, "region": MODEL_REGISTRY[name].region} for name in args.models],
-            "selected_fixtures": [fixture.fixture_id for fixture in selected],
-            "output_dir": str(args.output_dir.resolve()),
-            "provenance": current_manifest(),
-            "aws_calls": 0,
-        }, indent=2, sort_keys=True))
+        print(
+            json.dumps(
+                {
+                    "dry_run": True,
+                    "models": [
+                        {
+                            "name": name,
+                            "invocation_id": MODEL_REGISTRY[name].invocation_id,
+                            "region": MODEL_REGISTRY[name].region,
+                        }
+                        for name in args.models
+                    ],
+                    "selected_fixtures": [fixture.fixture_id for fixture in selected],
+                    "output_dir": str(args.output_dir.resolve()),
+                    "provenance": current_manifest(),
+                    "aws_calls": 0,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
         return
 
     for model_name in args.models:
-        run_root = args.output_dir / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") / model_name.replace("/", "_")
+        run_root = (
+            args.output_dir / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") / model_name.replace("/", "_")
+        )
         result = run_model(model_name, selected, run_root)
         print("Completed Investigator one-turn run.")
         print(f"\nModel: {model_name}")

@@ -51,6 +51,7 @@ class CaseService:
         def add(state: CaseState) -> EvidenceItem:
             self._require(state.sources, evidence.source_id, "source")
             return self._add(state.evidence, evidence, evidence.id)
+
         return self._mutate(case_id, add)
 
     def add_entity(self, case_id: str, entity: Entity) -> Entity:
@@ -63,6 +64,7 @@ class CaseService:
             for evidence_id in claim.evidence_ids:
                 self._require(state.evidence, evidence_id, "evidence")
             return self._add(state.claims, claim, claim.id)
+
         return self._mutate(case_id, add)
 
     def add_hypothesis(self, case_id: str, hypothesis: Hypothesis) -> Hypothesis:
@@ -70,14 +72,13 @@ class CaseService:
             if hypothesis.parent_hypothesis_id:
                 self._require(state.hypotheses, hypothesis.parent_hypothesis_id, "hypothesis")
             for evidence_id in (
-                hypothesis.supporting_evidence_ids
-                + hypothesis.conflicting_evidence_ids
-                + hypothesis.specificity_basis
+                hypothesis.supporting_evidence_ids + hypothesis.conflicting_evidence_ids + hypothesis.specificity_basis
             ):
                 self._require(state.evidence, evidence_id, "evidence")
             for issue_id in hypothesis.unresolved_issue_ids:
                 self._require(state.uncertainties, issue_id, "uncertainty")
             return self._add(state.hypotheses, hypothesis, hypothesis.id)
+
         return self._mutate(case_id, add)
 
     def add_uncertainty(self, case_id: str, uncertainty: Uncertainty) -> Uncertainty:
@@ -85,6 +86,7 @@ class CaseService:
             for evidence_id in uncertainty.evidence_ids:
                 self._require(state.evidence, evidence_id, "evidence")
             return self._add(state.uncertainties, uncertainty, uncertainty.id)
+
         return self._mutate(case_id, add)
 
     def add_conflict(self, case_id: str, conflict: Conflict) -> Conflict:
@@ -94,6 +96,7 @@ class CaseService:
             for evidence_id in conflict.evidence_ids:
                 self._require(state.evidence, evidence_id, "evidence")
             return self._add(state.conflicts, conflict, conflict.id)
+
         return self._mutate(case_id, add)
 
     def link_supporting_evidence(self, case_id: str, hypothesis_id: str, evidence_id: str) -> None:
@@ -102,6 +105,7 @@ class CaseService:
             self._require(state.evidence, evidence_id, "evidence")
             if evidence_id not in hypothesis.supporting_evidence_ids:
                 hypothesis.supporting_evidence_ids.append(evidence_id)
+
         self._mutate(case_id, link)
 
     def link_conflicting_evidence(self, case_id: str, hypothesis_id: str, evidence_id: str) -> None:
@@ -110,14 +114,18 @@ class CaseService:
             self._require(state.evidence, evidence_id, "evidence")
             if evidence_id not in hypothesis.conflicting_evidence_ids:
                 hypothesis.conflicting_evidence_ids.append(evidence_id)
+
         self._mutate(case_id, link)
 
     def change_hypothesis_status(self, case_id: str, hypothesis_id: str, status: HypothesisStatus) -> None:
         def change(state: CaseState) -> None:
             self._require(state.hypotheses, hypothesis_id, "hypothesis").status = HypothesisStatus(status)
+
         self._mutate(case_id, change)
 
-    def add_hypothesis_transformation(self, case_id: str, transformation: HypothesisTransformation) -> HypothesisTransformation:
+    def add_hypothesis_transformation(
+        self, case_id: str, transformation: HypothesisTransformation
+    ) -> HypothesisTransformation:
         def add(state: CaseState) -> HypothesisTransformation:
             self._require(state.hypotheses, transformation.parent_hypothesis_id, "hypothesis")
             self._require(state.hypotheses, transformation.child_hypothesis_id, "hypothesis")
@@ -129,4 +137,5 @@ class CaseService:
                 raise ValueError("Duplicate hypothesis transformation")
             state.transformations.append(transformation)
             return transformation
+
         return self._mutate(case_id, add)

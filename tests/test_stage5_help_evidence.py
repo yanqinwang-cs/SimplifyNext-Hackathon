@@ -11,7 +11,7 @@ from investigator.http_api import create_server, seed_sample_case, create_case
 from investigator.llm import ModelNativeCall, ModelTextBlock, ModelCallMetadata
 from investigator.models.assessment import AssessmentContext, AssessmentSubject, SubjectRelationship
 from investigator.models.source import Source, SourceType
-from investigator.services.evidence_requests import HumanEvidenceWorkflow
+from investigator.services.evidence_requests import EvidenceRequestConflict, HumanEvidenceWorkflow
 from investigator.state import CaseRepository, CaseState
 from investigator.vnext import run_input_from_case_state
 from investigator.vnext.model import build_prompt
@@ -25,19 +25,38 @@ class NoCallClient:
 
     def call_native(self, messages, tools):
         self.calls.append((messages, tools))
-        return ModelNativeCall(text_blocks=[ModelTextBlock(text="unexpected")], metadata=ModelCallMetadata(provider="fake", model="fake", latency_seconds=0, parse_success=True))
+        return ModelNativeCall(
+            text_blocks=[ModelTextBlock(text="unexpected")],
+            metadata=ModelCallMetadata(provider="fake", model="fake", latency_seconds=0, parse_success=True),
+        )
 
 
-def make_case(tmp_path: Path, *, case_id: str = "case-01", source_text: str = "Observed record") -> HumanEvidenceWorkflow:
+def make_case(
+    tmp_path: Path, *, case_id: str = "case-01", source_text: str = "Observed record"
+) -> HumanEvidenceWorkflow:
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     state = CaseState(
         case_id=case_id,
         title="Administrative title",
         description="Administrative description",
-        assessment_context=AssessmentContext(assessment_id="assessment-1", title="Administrative assessment", assessment_type="exam", venue="Room 1"),
+        assessment_context=AssessmentContext(
+            assessment_id="assessment-1", title="Administrative assessment", assessment_type="exam", venue="Room 1"
+        ),
         subjects={"subject_A": AssessmentSubject(subject_id="subject_A", display_name="Candidate A")},
-        sources={"S1": Source(id="S1", name="record.md", source_type=SourceType.DOCUMENT, content=source_text, metadata={"internal_marker": "INTERNAL_SOURCE_METADATA"})},
-        reasoning_graph=CaseGraph(case_id=case_id, nodes={"U1": GraphNode(id="U1", node_type=GraphNodeType.UNCERTAINTY, statement="Unresolved")}, edges={}),
+        sources={
+            "S1": Source(
+                id="S1",
+                name="record.md",
+                source_type=SourceType.DOCUMENT,
+                content=source_text,
+                metadata={"internal_marker": "INTERNAL_SOURCE_METADATA"},
+            )
+        },
+        reasoning_graph=CaseGraph(
+            case_id=case_id,
+            nodes={"U1": GraphNode(id="U1", node_type=GraphNodeType.UNCERTAINTY, statement="Unresolved")},
+            edges={},
+        ),
     )
     workflow.repository.save(state)
     return workflow
@@ -72,14 +91,18 @@ def test_help_context_is_safe_and_source_tools_are_case_bound(tmp_path: Path):
     assert "record.md" in serialized
     sources = WorkspaceAgent(workflow).invoke_tool("case-01", {"tool": "LIST_SOURCES", "payload": {}})["sources"]
     assert set(sources[0]) == {"sourceHandle", "fileName", "documentFormat"}
-    document = WorkspaceAgent(workflow).invoke_tool("case-01", {"tool": "READ_SOURCE", "payload": {"sourceHandle": sources[0]["sourceHandle"]}})
+    document = WorkspaceAgent(workflow).invoke_tool(
+        "case-01", {"tool": "READ_SOURCE", "payload": {"sourceHandle": sources[0]["sourceHandle"]}}
+    )
     assert set(document) == {"source"}
     assert set(document["source"]) == {"sourceHandle", "fileName", "documentFormat", "content"}
     with pytest.raises((KeyError, ValueError)):
         WorkspaceAgent(workflow).invoke_tool("case-01", {"tool": "READ_SOURCE", "payload": {"sourceHandle": "S1"}})
     other = make_case(tmp_path / "other", case_id="case-02")
     with pytest.raises((KeyError, ValueError)):
-        WorkspaceAgent(other).invoke_tool("case-02", {"tool": "READ_SOURCE", "payload": {"sourceHandle": sources[0]["sourceHandle"]}})
+        WorkspaceAgent(other).invoke_tool(
+            "case-02", {"tool": "READ_SOURCE", "payload": {"sourceHandle": sources[0]["sourceHandle"]}}
+        )
 
 
 def test_administrative_fields_do_not_change_investigator_prompt(tmp_path: Path):
@@ -89,10 +112,19 @@ def test_administrative_fields_do_not_change_investigator_prompt(tmp_path: Path)
     after = before.model_copy(deep=True)
     after.title = "Changed title"
     after.description = "Changed description"
-    after.assessment_context = AssessmentContext(assessment_id="assessment-2", title="Changed assessment", assessment_type="oral", venue="Room 99")
+    after.assessment_context = AssessmentContext(
+        assessment_id="assessment-2", title="Changed assessment", assessment_type="oral", venue="Room 99"
+    )
     second = build_prompt(run_input_from_case_state(after, preset_for_case(after)))
     assert second == first
-    for administrative in ("Administrative title", "Administrative description", "Administrative assessment", "Changed title", "Changed description", "Room 99"):
+    for administrative in (
+        "Administrative title",
+        "Administrative description",
+        "Administrative assessment",
+        "Changed title",
+        "Changed description",
+        "Room 99",
+    ):
         assert administrative not in first
     assert "APPLICABLE POLICY / CONFIGURED VIOLATIONS" in first
     assert "ADMITTED EVIDENCE SOURCES" in first
@@ -110,7 +142,15 @@ def test_semantic_inputs_change_for_evidence_student_and_policy(tmp_path: Path):
     student.subjects["subject_A"].display_name = "Candidate Renamed"
     assert build_prompt(run_input_from_case_state(student, preset_for_case(student))) != baseline
     from investigator.vnext.models import AssessmentRulePreset, ViolationDefinition
-    custom = AssessmentRulePreset(preset_id="different-policy", violations=[ViolationDefinition(violation_id="new", label="New policy", rule_text="New rule", prohibited_conduct="New conduct")])
+
+    custom = AssessmentRulePreset(
+        preset_id="different-policy",
+        violations=[
+            ViolationDefinition(
+                violation_id="new", label="New policy", rule_text="New rule", prohibited_conduct="New conduct"
+            )
+        ],
+    )
     assert build_prompt(run_input_from_case_state(state, custom)) != baseline
 
 
@@ -132,7 +172,7 @@ def test_title_update_is_administrative_and_sample_relationship_is_source_backed
     assert len(relationship.source_ids) == 1
     assert sample_state.sources[relationship.source_ids[0]].name == "seating_plan.md"
     assert "guilt" not in relationship.description.lower()
-    with pytest.raises(Exception):
+    with pytest.raises(EvidenceRequestConflict):
         workflow.update_case_title("multi-candidate-working", "Changed sample")
 
 
@@ -140,14 +180,18 @@ def test_unsourced_relationship_is_rejected_from_normal_vnext_input(tmp_path: Pa
     workflow = make_case(tmp_path)
     state = workflow.repository.load("case-01")
     state.subjects["subject_B"] = AssessmentSubject(subject_id="subject_B", display_name="Candidate B")
-    state.subject_relationships["AB"] = SubjectRelationship(relationship_id="AB", subject_ids=["subject_A", "subject_B"], relationship_type="adjacent")
+    state.subject_relationships["AB"] = SubjectRelationship(
+        relationship_id="AB", subject_ids=["subject_A", "subject_B"], relationship_type="adjacent"
+    )
     with pytest.raises(ValueError, match="source provenance"):
         run_input_from_case_state(state, preset_for_case(state))
 
 
 def _request(base: str, method: str, path: str, payload: dict | None = None):
     body = json.dumps(payload).encode() if payload is not None else None
-    request = urllib.request.Request(base + path, data=body, method=method, headers={"Content-Type": "application/json"})
+    request = urllib.request.Request(
+        base + path, data=body, method=method, headers={"Content-Type": "application/json"}
+    )
     try:
         with urllib.request.urlopen(request) as response:
             return response.status, json.loads(response.read())
@@ -159,11 +203,14 @@ def test_case_name_http_update_preserves_substantive_revision_and_sample_read_on
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     create_case(workflow, {"title": "Original"})
     server = create_server(tmp_path / "cases", port=0, run_callback=lambda *_: None)
-    thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
     base = f"http://127.0.0.1:{server.server_address[1]}"
     try:
         status, payload = _request(base, "PATCH", "/api/cases/case-000001", {"title": "  Updated  "})
-        assert status == 200 and payload["workspace"]["title"] == "Updated" and payload["workspace"]["caseRevision"] == 0
+        assert (
+            status == 200 and payload["workspace"]["title"] == "Updated" and payload["workspace"]["caseRevision"] == 0
+        )
         status, _ = _request(base, "PATCH", "/api/cases/case-000001", {"title": "   "})
         assert status == 422
         status, _ = _request(base, "PATCH", "/api/cases/case-000001", {"title": "x" * 161})
@@ -171,4 +218,6 @@ def test_case_name_http_update_preserves_substantive_revision_and_sample_read_on
         status, _ = _request(base, "PATCH", "/api/cases/missing", {"title": "Nope"})
         assert status == 404
     finally:
-        server.shutdown(); server.server_close(); thread.join(timeout=2)
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)

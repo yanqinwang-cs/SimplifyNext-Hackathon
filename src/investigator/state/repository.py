@@ -8,6 +8,7 @@ from investigator.state.case_state import CaseState
 class CaseRepository:
     CASE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
     RUN_ID_RE = re.compile(r"^run_\d{6}$")
+
     def __init__(self, root: str | Path = "data/cases") -> None:
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)

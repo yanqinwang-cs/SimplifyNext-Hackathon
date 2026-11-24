@@ -86,7 +86,12 @@ def make_edge_id(source_id: str, relation: EdgeRelation, target_id: str) -> str:
 
 
 def _valid_id(value: str) -> bool:
-    return bool(value == value.strip() and "\n" not in value and "\t" not in value and re.fullmatch(r"(?:[A-Z][A-Za-z0-9_.:]*|node_[0-9a-f]{12,64})", value))
+    return bool(
+        value == value.strip()
+        and "\n" not in value
+        and "\t" not in value
+        and re.fullmatch(r"(?:[A-Z][A-Za-z0-9_.:]*|node_[0-9a-f]{12,64})", value)
+    )
 
 
 def _valid_node_id(node_id: str, node_type: GraphNodeType) -> bool:

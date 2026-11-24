@@ -13,6 +13,8 @@ _CANONICAL_PLACEHOLDERS = {
 def _is_placeholder(value: str) -> bool:
     normalized = value.strip()
     return normalized.startswith("REPLACE_WITH_") or normalized in _CANONICAL_PLACEHOLDERS
+
+
 from investigator.models.identifiers import EvidenceId, HypothesisId, UncertaintyId
 
 
@@ -105,7 +107,10 @@ class HypothesisTransition(BaseModel):
     @field_validator("why_existing_operations_do_not_fit")
     @classmethod
     def substantive_operation_reasons(cls, value: dict[str, str] | None) -> dict[str, str] | None:
-        if value is not None and any(not key.strip() or not text.strip() or _is_placeholder(key) or _is_placeholder(text) for key, text in value.items()):
+        if value is not None and any(
+            not key.strip() or not text.strip() or _is_placeholder(key) or _is_placeholder(text)
+            for key, text in value.items()
+        ):
             raise ValueError("Substantive text cannot be empty or a template placeholder")
         return value
 
@@ -115,7 +120,11 @@ class HypothesisTransition(BaseModel):
         if self.transition is HypothesisTransitionType.OTHER:
             if any(value is None for value in other_fields):
                 raise ValueError("Hypothesis transition 'other' requires requested operation details")
-            if self.add_supporting_evidence_ids or self.add_conflicting_evidence_ids or self.add_specificity_basis_evidence_ids:
+            if (
+                self.add_supporting_evidence_ids
+                or self.add_conflicting_evidence_ids
+                or self.add_specificity_basis_evidence_ids
+            ):
                 raise ValueError("Hypothesis transition 'other' cannot carry evidence-update fields")
         elif any(value is not None for value in other_fields):
             raise ValueError("OTHER-only hypothesis fields require transition='other'")
@@ -152,7 +161,10 @@ class UncertaintyTransition(BaseModel):
     @field_validator("why_existing_operations_do_not_fit")
     @classmethod
     def substantive_operation_reasons(cls, value: dict[str, str] | None) -> dict[str, str] | None:
-        if value is not None and any(not key.strip() or not text.strip() or _is_placeholder(key) or _is_placeholder(text) for key, text in value.items()):
+        if value is not None and any(
+            not key.strip() or not text.strip() or _is_placeholder(key) or _is_placeholder(text)
+            for key, text in value.items()
+        ):
             raise ValueError("Substantive text cannot be empty or a template placeholder")
         return value
 

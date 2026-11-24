@@ -7,7 +7,17 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from investigator.graph import CaseGraph, EdgeRelation, GraphNodeType, GraphScope, GraphScopeType, GraphStatus, OperationSpecRegistry, node_scope, scopes_compatible
+from investigator.graph import (
+    CaseGraph,
+    EdgeRelation,
+    GraphNodeType,
+    GraphScope,
+    GraphScopeType,
+    GraphStatus,
+    OperationSpecRegistry,
+    node_scope,
+    scopes_compatible,
+)
 from investigator.roles.coordinator import GraphInvestigationCoordinator
 from investigator.roles.focus import InvestigationFocus
 from investigator.roles.investigator import AddEvidenceCommand
@@ -15,7 +25,12 @@ from investigator.models.assessment import AssessmentSubject, SubjectRelationshi
 from investigator.models.source import Source
 from investigator.vnext.models import InvestigatorProposal
 from investigator.vnext.relationships import deterministic_relationship_id
-from investigator.vnext.source_applicability import SourceApplicability, build_source_applicability, source_applies_to_student, source_jointly_identifies
+from investigator.vnext.source_applicability import (
+    SourceApplicability,
+    build_source_applicability,
+    source_applies_to_student,
+    source_jointly_identifies,
+)
 
 
 class ProposalValidationIssue(BaseModel):
@@ -74,9 +89,15 @@ def classify_warden_failure(error: WardenValidationError) -> WardenFailureClass:
             continue
         source_scope = issue.source_scope or {}
         target_scope = issue.target_scope or {}
-        if source_scope.get("scope_type") != GraphScopeType.CASE.value and target_scope.get("scope_type") != GraphScopeType.CASE.value:
+        if (
+            source_scope.get("scope_type") != GraphScopeType.CASE.value
+            and target_scope.get("scope_type") != GraphScopeType.CASE.value
+        ):
             return WardenFailureClass.SEMANTIC_AFFECTING
-        if source_scope.get("scope_type") in {GraphScopeType.SUBJECT.value, GraphScopeType.RELATIONSHIP.value} and target_scope.get("scope_type") == GraphScopeType.CASE.value:
+        if (
+            source_scope.get("scope_type") in {GraphScopeType.SUBJECT.value, GraphScopeType.RELATIONSHIP.value}
+            and target_scope.get("scope_type") == GraphScopeType.CASE.value
+        ):
             return WardenFailureClass.SEMANTIC_AFFECTING
     return WardenFailureClass.STRUCTURAL_REPAIRABLE
 
@@ -111,11 +132,16 @@ class GraphWarden:
         self.sources = dict(sources or {})
         self.subjects = dict(subjects or {})
         self.subject_relationships = dict(subject_relationships or {})
-        self.source_applicability = dict(source_applicability or build_source_applicability(self.sources, self.subjects, self.subject_relationships))
-        self.relationship_ref_map = dict(relationship_refs or {
-            f"R{index}": relationship_id
-            for index, relationship_id in enumerate(sorted(self.subject_relationships), start=1)
-        })
+        self.source_applicability = dict(
+            source_applicability or build_source_applicability(self.sources, self.subjects, self.subject_relationships)
+        )
+        self.relationship_ref_map = dict(
+            relationship_refs
+            or {
+                f"R{index}": relationship_id
+                for index, relationship_id in enumerate(sorted(self.subject_relationships), start=1)
+            }
+        )
         self.strict_relationship_refs = strict_relationship_refs
 
     def apply(self, proposal: InvestigatorProposal) -> WardenApplyResult:
@@ -200,36 +226,73 @@ class GraphWarden:
             if declaration.local_ref in refs:
                 raise WardenValidationError(
                     f"Relationship local ref {declaration.local_ref!r} is already allocated",
-                    issues=[self._relationship_issue("DUPLICATE_RELATIONSHIP_REF", declaration.local_ref, "Use one unused local relationship_ref.")],
+                    issues=[
+                        self._relationship_issue(
+                            "DUPLICATE_RELATIONSHIP_REF",
+                            declaration.local_ref,
+                            "Use one unused local relationship_ref.",
+                        )
+                    ],
                 )
             if declaration.local_ref not in used_refs:
                 raise WardenValidationError(
                     f"Relationship declaration {declaration.local_ref!r} is unused",
-                    issues=[self._relationship_issue("UNUSED_RELATIONSHIP_DECLARATION", declaration.local_ref, "Use the local_ref in at least one relationship-scoped graph node, or remove the declaration.")],
+                    issues=[
+                        self._relationship_issue(
+                            "UNUSED_RELATIONSHIP_DECLARATION",
+                            declaration.local_ref,
+                            "Use the local_ref in at least one relationship-scoped graph node, or remove the declaration.",
+                        )
+                    ],
                 )
             unknown_students = sorted(set(declaration.student_ids) - set(self.subjects))
             if unknown_students:
                 raise WardenValidationError(
                     f"Relationship declaration {declaration.local_ref!r} contains unknown students: {unknown_students}",
-                    issues=[self._relationship_issue("UNKNOWN_RELATIONSHIP_STUDENT", declaration.local_ref, "Use only configured student IDs.")],
+                    issues=[
+                        self._relationship_issue(
+                            "UNKNOWN_RELATIONSHIP_STUDENT", declaration.local_ref, "Use only configured student IDs."
+                        )
+                    ],
                 )
             participants = tuple(sorted(declaration.student_ids))
             if participants in declared_sets:
                 raise WardenValidationError(
                     f"Relationship declarations {declared_sets[participants]!r} and {declaration.local_ref!r} duplicate the participant set",
-                    issues=[self._relationship_issue("DUPLICATE_RELATIONSHIP_PARTICIPANTS", declaration.local_ref, "Declare one relationship scope for each participant set.")],
+                    issues=[
+                        self._relationship_issue(
+                            "DUPLICATE_RELATIONSHIP_PARTICIPANTS",
+                            declaration.local_ref,
+                            "Declare one relationship scope for each participant set.",
+                        )
+                    ],
                 )
             declared_sets[participants] = declaration.local_ref
             unknown_sources = sorted(set(declaration.basis_source_ids) - set(self.sources))
             if unknown_sources:
                 raise WardenValidationError(
                     f"Relationship declaration {declaration.local_ref!r} contains unknown sources: {unknown_sources}",
-                    issues=[self._relationship_issue("UNKNOWN_RELATIONSHIP_SOURCE", declaration.local_ref, "Use only admitted source IDs.")],
+                    issues=[
+                        self._relationship_issue(
+                            "UNKNOWN_RELATIONSHIP_SOURCE", declaration.local_ref, "Use only admitted source IDs."
+                        )
+                    ],
                 )
-            if not any(source_jointly_identifies(self.source_applicability[source_id], set(participants), self.subject_relationships) for source_id in declaration.basis_source_ids):
+            if not any(
+                source_jointly_identifies(
+                    self.source_applicability[source_id], set(participants), self.subject_relationships
+                )
+                for source_id in declaration.basis_source_ids
+            ):
                 raise WardenValidationError(
                     f"Relationship declaration {declaration.local_ref!r} lacks one joint source covering all participants",
-                    issues=[self._relationship_issue("MISSING_JOINT_SOURCE", declaration.local_ref, "Use one admitted source that explicitly identifies every proposed participant; do not stitch private sources.")],
+                    issues=[
+                        self._relationship_issue(
+                            "MISSING_JOINT_SOURCE",
+                            declaration.local_ref,
+                            "Use one admitted source that explicitly identifies every proposed participant; do not stitch private sources.",
+                        )
+                    ],
                 )
             relationship_id = deterministic_relationship_id(self.graph.case_id, participants)
             existing = registry.get(relationship_id)
@@ -244,13 +307,17 @@ class GraphWarden:
                     description="Run-local evidence-backed relationship scope.",
                 )
             else:
-                registry[relationship_id] = existing.model_copy(update={"source_ids": sorted(set(existing.source_ids) | set(declaration.basis_source_ids))})
+                registry[relationship_id] = existing.model_copy(
+                    update={"source_ids": sorted(set(existing.source_ids) | set(declaration.basis_source_ids))}
+                )
             refs[declaration.local_ref] = relationship_id
         return registry, refs
 
     @staticmethod
     def _relationship_issue(error_code: str, reference: str, required_action: str) -> ProposalValidationIssue:
-        return ProposalValidationIssue(error_code=error_code, reference=reference, problem=error_code, required_action=required_action)
+        return ProposalValidationIssue(
+            error_code=error_code, reference=reference, problem=error_code, required_action=required_action
+        )
 
     def _normalize_relationship_refs(self, proposal: InvestigatorProposal) -> InvestigatorProposal:
         updates = []
@@ -262,13 +329,31 @@ class GraphWarden:
                     if relationship_id is None:
                         raise WardenValidationError(
                             f"Unknown relationship_ref {scope.relationship_ref!r}",
-                            issues=[self._relationship_issue("UNKNOWN_RELATIONSHIP_REF", scope.relationship_ref, "Use an available relationship_ref or remove this scoped node.")],
+                            issues=[
+                                self._relationship_issue(
+                                    "UNKNOWN_RELATIONSHIP_REF",
+                                    scope.relationship_ref,
+                                    "Use an available relationship_ref or remove this scoped node.",
+                                )
+                            ],
                         )
-                    update = update.model_copy(update={"scope": scope.model_copy(update={"relationship_ref": None, "relationship_id": relationship_id})})
+                    update = update.model_copy(
+                        update={
+                            "scope": scope.model_copy(
+                                update={"relationship_ref": None, "relationship_id": relationship_id}
+                            )
+                        }
+                    )
                 elif self.strict_relationship_refs and scope.relationship_id is not None:
                     raise WardenValidationError(
                         "Model-facing graph actions must use relationship_ref, not relationship_id",
-                        issues=[self._relationship_issue("DIRECT_RELATIONSHIP_ID", scope.relationship_id, "Use a local relationship_ref such as R1.")],
+                        issues=[
+                            self._relationship_issue(
+                                "DIRECT_RELATIONSHIP_ID",
+                                scope.relationship_id,
+                                "Use a local relationship_ref such as R1.",
+                            )
+                        ],
                     )
             updates.append(update)
         return InvestigatorProposal(graph_updates=updates, relationship_scopes=proposal.relationship_scopes)
@@ -288,7 +373,13 @@ class GraphWarden:
                 if scope_error is not None:
                     raise WardenValidationError(
                         f"Graph Warden rejected invalid assessment scope: {scope_error}",
-                        issues=[self._relationship_issue("INVALID_SCOPE", update.scope.scope_type.value, "Use a configured student or relationship scope.")],
+                        issues=[
+                            self._relationship_issue(
+                                "INVALID_SCOPE",
+                                update.scope.scope_type.value,
+                                "Use a configured student or relationship scope.",
+                            )
+                        ],
                     )
             self._validate_evidence_scope(update)
 
@@ -305,20 +396,40 @@ class GraphWarden:
                 if trusted_scope is not None or not applicability.case_shared_allowed:
                     raise WardenValidationError(
                         f"Graph Warden rejected source {source_id!r} widened to CASE scope",
-                        issues=[self._relationship_issue("SOURCE_SCOPE_WIDENING", source_id, "Use the matched student or a validated relationship scope.")],
+                        issues=[
+                            self._relationship_issue(
+                                "SOURCE_SCOPE_WIDENING",
+                                source_id,
+                                "Use the matched student or a validated relationship scope.",
+                            )
+                        ],
                     )
             elif scope.scope_type is GraphScopeType.SUBJECT:
                 if not source_applies_to_student(applicability, scope.subject_id or "", self.subjects):
                     raise WardenValidationError(
                         f"Graph Warden rejected source {source_id!r} for student {scope.subject_id!r}",
-                        issues=[self._relationship_issue("SOURCE_STUDENT_MISMATCH", source_id, "Use only a source applicable to this configured student.")],
+                        issues=[
+                            self._relationship_issue(
+                                "SOURCE_STUDENT_MISMATCH",
+                                source_id,
+                                "Use only a source applicable to this configured student.",
+                            )
+                        ],
                     )
             elif scope.scope_type is GraphScopeType.RELATIONSHIP:
                 relationship = self.subject_relationships.get(scope.relationship_id or "")
-                if relationship is None or not source_jointly_identifies(applicability, set(relationship.subject_ids), self.subject_relationships):
+                if relationship is None or not source_jointly_identifies(
+                    applicability, set(relationship.subject_ids), self.subject_relationships
+                ):
                     raise WardenValidationError(
                         f"Graph Warden rejected source {source_id!r} for relationship scope",
-                        issues=[self._relationship_issue("SOURCE_RELATIONSHIP_MISMATCH", source_id, "Use one joint source that covers every relationship participant.")],
+                        issues=[
+                            self._relationship_issue(
+                                "SOURCE_RELATIONSHIP_MISMATCH",
+                                source_id,
+                                "Use one joint source that covers every relationship participant.",
+                            )
+                        ],
                     )
 
     def _normalize_compatibility_scopes(self, proposal: InvestigatorProposal) -> InvestigatorProposal:
@@ -350,85 +461,117 @@ class GraphWarden:
             scope = self._effective_scope(update)
             if hasattr(update, "scope"):
                 if update.scope is None and self.subjects:
-                    issues.append(ProposalValidationIssue(
-                        operation_index=operation_index,
-                        field=f"{update.operation}.scope",
-                        error_code="MISSING_SCOPE",
-                        problem=f"Operation {operation_index} ({update.operation}) creates a semantic node without an explicit assessment scope.",
-                        required_action="Add an explicit CASE, SUBJECT, or RELATIONSHIP scope for this node; do not infer scope from prose.",
-                    ))
+                    issues.append(
+                        ProposalValidationIssue(
+                            operation_index=operation_index,
+                            field=f"{update.operation}.scope",
+                            error_code="MISSING_SCOPE",
+                            problem=f"Operation {operation_index} ({update.operation}) creates a semantic node without an explicit assessment scope.",
+                            required_action="Add an explicit CASE, SUBJECT, or RELATIONSHIP scope for this node; do not infer scope from prose.",
+                        )
+                    )
                 elif scope is not None:
                     scope_error = self._scope_identity_error(scope)
                     if scope_error is not None:
-                        issues.append(ProposalValidationIssue(
-                            operation_index=operation_index,
-                            field=f"{update.operation}.scope",
-                            error_code="INVALID_SCOPE",
-                            problem=f"Operation {operation_index} ({update.operation}) uses invalid assessment scope: {scope_error}.",
-                            required_action="Use CASE, a configured SUBJECT, or a recorded RELATIONSHIP scope; do not invent identities.",
-                        ))
+                        issues.append(
+                            ProposalValidationIssue(
+                                operation_index=operation_index,
+                                field=f"{update.operation}.scope",
+                                error_code="INVALID_SCOPE",
+                                problem=f"Operation {operation_index} ({update.operation}) uses invalid assessment scope: {scope_error}.",
+                                required_action="Use CASE, a configured SUBJECT, or a recorded RELATIONSHIP scope; do not invent identities.",
+                            )
+                        )
             for reference, field, allowed, item_index in cls._reference_specs(update):
                 node = known.get(coordinator._resolve_ref(reference)) or known.get(reference)
                 field_label = f"{update.operation}.{field}{f'[{item_index}]' if item_index is not None else ''}"
                 if node is None:
                     future = future_refs.get(reference)
-                    code = "INVALID_SAME_TURN_REFERENCE" if future and future[0] > operation_index else "UNRESOLVED_REFERENCE"
+                    code = (
+                        "INVALID_SAME_TURN_REFERENCE"
+                        if future and future[0] > operation_index
+                        else "UNRESOLVED_REFERENCE"
+                    )
                     construction = "add_proposition" if GraphNodeType.PROPOSITION in allowed else None
                     construction_types = sorted(item.value for item in cls._construction_types(construction))
                     available, illegal = cls._reference_hints(known, allowed)
                     required = f"Create {reference!r} earlier in this proposal with the intended add_* operation, then preserve this reference; otherwise remove only this operation. Preserve unrelated valid operations."
                     if construction:
                         required += f" If creating it as a proposition, derived_from_node_ids may use only: {', '.join(construction_types)}."
-                    issues.append(ProposalValidationIssue(
-                        operation_index=operation_index, field=field_label, error_code=code, reference=reference,
-                        allowed_types=sorted(item.value for item in allowed), construction_operation=construction,
-                        construction_allowed_types=construction_types, available_refs=available, known_illegal_refs=illegal,
-                        problem=f"Operation {operation_index} ({field_label}) references {reference!r}, but that graph node is unavailable here.",
-                        required_action=required,
-                    ))
+                    issues.append(
+                        ProposalValidationIssue(
+                            operation_index=operation_index,
+                            field=field_label,
+                            error_code=code,
+                            reference=reference,
+                            allowed_types=sorted(item.value for item in allowed),
+                            construction_operation=construction,
+                            construction_allowed_types=construction_types,
+                            available_refs=available,
+                            known_illegal_refs=illegal,
+                            problem=f"Operation {operation_index} ({field_label}) references {reference!r}, but that graph node is unavailable here.",
+                            required_action=required,
+                        )
+                    )
                     continue
                 if node.node_type not in allowed:
                     allowed_names = sorted(item.value for item in allowed)
-                    issues.append(ProposalValidationIssue(
-                        operation_index=operation_index, field=field_label, error_code="INVALID_REFERENCE_TYPE", reference=reference,
-                        actual_type=node.node_type.value, actual_status=node.status.value, allowed_types=allowed_names,
-                        allowed_statuses=[GraphStatus.ACTIVE.value],
-                        problem=f"Operation {operation_index} ({field_label}) references {reference!r}, which has type {node.node_type.value.upper()}; this field accepts {', '.join(name.upper() for name in allowed_names)}.",
-                        required_action=f"Replace {reference!r} with an active legal node of type {', '.join(allowed_names)}, or remove only this operation if no legal basis exists. Preserve unrelated valid operations.",
-                    ))
+                    issues.append(
+                        ProposalValidationIssue(
+                            operation_index=operation_index,
+                            field=field_label,
+                            error_code="INVALID_REFERENCE_TYPE",
+                            reference=reference,
+                            actual_type=node.node_type.value,
+                            actual_status=node.status.value,
+                            allowed_types=allowed_names,
+                            allowed_statuses=[GraphStatus.ACTIVE.value],
+                            problem=f"Operation {operation_index} ({field_label}) references {reference!r}, which has type {node.node_type.value.upper()}; this field accepts {', '.join(name.upper() for name in allowed_names)}.",
+                            required_action=f"Replace {reference!r} with an active legal node of type {', '.join(allowed_names)}, or remove only this operation if no legal basis exists. Preserve unrelated valid operations.",
+                        )
+                    )
                 elif node.status is not GraphStatus.ACTIVE:
-                    issues.append(ProposalValidationIssue(
-                        operation_index=operation_index, field=field_label, error_code="INVALID_REFERENCE_STATUS", reference=reference,
-                        actual_type=node.node_type.value, actual_status=node.status.value,
-                        allowed_types=sorted(item.value for item in allowed), allowed_statuses=[GraphStatus.ACTIVE.value],
-                        problem=f"Operation {operation_index} ({field_label}) references {reference!r} with allowed type {node.node_type.value.upper()} but current status {node.status.value.upper()} is not ACTIVE.",
-                        required_action=f"Use an active legal {node.node_type.value} node, correct same-turn dependency ordering if applicable, or remove only this operation. Preserve unrelated valid operations.",
-                    ))
+                    issues.append(
+                        ProposalValidationIssue(
+                            operation_index=operation_index,
+                            field=field_label,
+                            error_code="INVALID_REFERENCE_STATUS",
+                            reference=reference,
+                            actual_type=node.node_type.value,
+                            actual_status=node.status.value,
+                            allowed_types=sorted(item.value for item in allowed),
+                            allowed_statuses=[GraphStatus.ACTIVE.value],
+                            problem=f"Operation {operation_index} ({field_label}) references {reference!r} with allowed type {node.node_type.value.upper()} but current status {node.status.value.upper()} is not ACTIVE.",
+                            required_action=f"Use an active legal {node.node_type.value} node, correct same-turn dependency ordering if applicable, or remove only this operation. Preserve unrelated valid operations.",
+                        )
+                    )
             if update.operation == "add_derivation":
                 derived_id = coordinator._resolve_ref(update.derived_proposition_id)
                 source_id = coordinator._resolve_ref(update.source_node_id)
                 derived_node = known.get(derived_id) or known.get(update.derived_proposition_id)
                 source_node = known.get(source_id) or known.get(update.source_node_id)
                 if derived_node is not None and source_node is not None and derived_id == source_id:
-                    issues.append(ProposalValidationIssue(
-                        operation_index=operation_index,
-                        field="add_derivation",
-                        error_code="SELF_DERIVATION",
-                        reference=update.source_node_id,
-                        actual_type=GraphNodeType.PROPOSITION.value,
-                        allowed_types=[GraphNodeType.EVIDENCE.value, GraphNodeType.PROPOSITION.value],
-                        problem=(
-                            f"Operation {operation_index} derives proposition "
-                            f"{update.derived_proposition_id!r} from itself."
-                        ),
-                        required_action=(
-                            "The proposition cannot be derived from itself. This proposition already declares its "
-                            "legal derivation basis through derived_from_node_ids. Remove only this redundant "
-                            "add_derivation operation, or replace its source with a distinct legal EVIDENCE or "
-                            "PROPOSITION basis if a separate derivation is actually needed. Preserve unrelated "
-                            "valid operations."
-                        ),
-                    ))
+                    issues.append(
+                        ProposalValidationIssue(
+                            operation_index=operation_index,
+                            field="add_derivation",
+                            error_code="SELF_DERIVATION",
+                            reference=update.source_node_id,
+                            actual_type=GraphNodeType.PROPOSITION.value,
+                            allowed_types=[GraphNodeType.EVIDENCE.value, GraphNodeType.PROPOSITION.value],
+                            problem=(
+                                f"Operation {operation_index} derives proposition "
+                                f"{update.derived_proposition_id!r} from itself."
+                            ),
+                            required_action=(
+                                "The proposition cannot be derived from itself. This proposition already declares its "
+                                "legal derivation basis through derived_from_node_ids. Remove only this redundant "
+                                "add_derivation operation, or replace its source with a distinct legal EVIDENCE or "
+                                "PROPOSITION basis if a separate derivation is actually needed. Preserve unrelated "
+                                "valid operations."
+                            ),
+                        )
+                    )
             for source, relation, target, field in cls._planned_relations(update, known):
                 relation_key = (source, relation.value, target)
                 if relation is EdgeRelation.DERIVED_FROM and source == target:
@@ -446,20 +589,22 @@ class GraphWarden:
                             "Remove only this redundant add_derivation operation. Preserve the add_proposition and "
                             "its existing derived_from_node_ids. Preserve unrelated valid operations."
                         )
-                    issues.append(ProposalValidationIssue(
-                        operation_index=operation_index,
-                        field=field,
-                        error_code="DUPLICATE_RELATION",
-                        relation=relation.value,
-                        source=source,
-                        target=target,
-                        first_operation_index=first_index,
-                        problem=(
-                            f"Operation {operation_index} attempts to add {relation.value.upper()}({source}, {target}), "
-                            f"but that relation is already created by {first_description}."
-                        ),
-                        required_action=required,
-                    ))
+                    issues.append(
+                        ProposalValidationIssue(
+                            operation_index=operation_index,
+                            field=field,
+                            error_code="DUPLICATE_RELATION",
+                            relation=relation.value,
+                            source=source,
+                            target=target,
+                            first_operation_index=first_index,
+                            problem=(
+                                f"Operation {operation_index} attempts to add {relation.value.upper()}({source}, {target}), "
+                                f"but that relation is already created by {first_description}."
+                            ),
+                            required_action=required,
+                        )
+                    )
                 else:
                     relations[relation_key] = (
                         operation_index,
@@ -467,31 +612,46 @@ class GraphWarden:
                     )
                 source_scope = self._reference_scope(source, known, update, scope)
                 target_scope = self._reference_scope(target, known, update, scope)
-                if source_scope is not None and target_scope is not None and not scopes_compatible(source_scope, target_scope, self.subject_relationships):
-                    issues.append(ProposalValidationIssue(
-                        operation_index=operation_index,
-                        field=field,
-                        error_code="INCOMPATIBLE_SCOPE",
-                        relation=relation.value,
-                        source=source,
-                        target=target,
-                        source_scope=source_scope.model_dump(mode="json"),
-                        target_scope=target_scope.model_dump(mode="json"),
-                        problem=(
-                            f"Operation {operation_index} attempts {relation.value.upper()} from {source!r} "
-                            f"({source_scope.scope_type.value} scope) to {target!r} ({target_scope.scope_type.value} scope), "
-                            "but their assessment scopes are incompatible."
-                        ),
-                        required_action=(
-                            "Preserve subject separation; remove this edge or represent genuinely cross-subject "
-                            "evidence through an existing relationship containing both subjects. Do not create a "
-                            "relationship automatically."
-                        ),
-                    ))
+                if (
+                    source_scope is not None
+                    and target_scope is not None
+                    and not scopes_compatible(source_scope, target_scope, self.subject_relationships)
+                ):
+                    issues.append(
+                        ProposalValidationIssue(
+                            operation_index=operation_index,
+                            field=field,
+                            error_code="INCOMPATIBLE_SCOPE",
+                            relation=relation.value,
+                            source=source,
+                            target=target,
+                            source_scope=source_scope.model_dump(mode="json"),
+                            target_scope=target_scope.model_dump(mode="json"),
+                            problem=(
+                                f"Operation {operation_index} attempts {relation.value.upper()} from {source!r} "
+                                f"({source_scope.scope_type.value} scope) to {target!r} ({target_scope.scope_type.value} scope), "
+                                "but their assessment scopes are incompatible."
+                            ),
+                            required_action=(
+                                "Preserve subject separation; remove this edge or represent genuinely cross-subject "
+                                "evidence through an existing relationship containing both subjects. Do not create a "
+                                "relationship automatically."
+                            ),
+                        )
+                    )
             created_type = OperationSpecRegistry.contract(update.operation).created_type
             local_ref = getattr(update, "local_ref", None)
             if local_ref and created_type:
-                known[local_ref] = type("PlannedNode", (), {"node_type": created_type, "status": GraphStatus.ACTIVE, "semantic_key": local_ref, "scope": scope})()
+                known[local_ref] = type(
+                    "PlannedNode",
+                    (),
+                    {
+                        "node_type": created_type,
+                        "status": GraphStatus.ACTIVE,
+                        "semantic_key": local_ref,
+                        "scope": scope,
+                    },
+                )()
         return issues
 
     def _effective_scope(self, update: object) -> GraphScope | None:
@@ -518,7 +678,9 @@ class GraphWarden:
             return None
         return None
 
-    def _reference_scope(self, reference: str, known: Mapping[str, object], update: object, current_scope: GraphScope | None) -> GraphScope | None:
+    def _reference_scope(
+        self, reference: str, known: Mapping[str, object], update: object, current_scope: GraphScope | None
+    ) -> GraphScope | None:
         node = known.get(reference)
         if node is not None:
             return getattr(node, "scope", node_scope(getattr(node, "metadata", {})))
@@ -540,9 +702,7 @@ class GraphWarden:
         return result
 
     @staticmethod
-    def _planned_relations(
-        update: object, known: Mapping[str, object]
-    ) -> list[tuple[str, EdgeRelation, str, str]]:
+    def _planned_relations(update: object, known: Mapping[str, object]) -> list[tuple[str, EdgeRelation, str, str]]:
         def identity(reference: str) -> str:
             node = known.get(reference)
             return getattr(node, "semantic_key", None) or getattr(node, "id", None) or reference
@@ -556,18 +716,33 @@ class GraphWarden:
                 for reference in update.derived_from_node_ids
             ]
         if update.operation == "add_derivation":
-            return [(
-                identity(update.source_node_id), EdgeRelation.DERIVED_FROM,
-                identity(update.derived_proposition_id), "add_derivation",
-            )]
+            return [
+                (
+                    identity(update.source_node_id),
+                    EdgeRelation.DERIVED_FROM,
+                    identity(update.derived_proposition_id),
+                    "add_derivation",
+                )
+            ]
         if update.operation in {"add_support", "add_conflict"}:
             relation = EdgeRelation.SUPPORTS if update.operation == "add_support" else EdgeRelation.CONFLICTS
             return [(identity(update.source_node_id), relation, identity(update.target_node_id), update.operation)]
         if update.operation == "add_uncertainty":
             source = getattr(update, "local_ref", None) or getattr(update, "node_id", None)
-            return [] if source is None else [(source, EdgeRelation.TARGETS, identity(update.target_node_id), "target_node_id")]
+            return (
+                []
+                if source is None
+                else [(source, EdgeRelation.TARGETS, identity(update.target_node_id), "target_node_id")]
+            )
         if update.operation == "add_specialization":
-            return [(identity(update.child_hypothesis_id), EdgeRelation.SPECIALIZES, identity(update.parent_hypothesis_id), "add_specialization")]
+            return [
+                (
+                    identity(update.child_hypothesis_id),
+                    EdgeRelation.SPECIALIZES,
+                    identity(update.parent_hypothesis_id),
+                    "add_specialization",
+                )
+            ]
         return []
 
     @staticmethod
@@ -575,7 +750,9 @@ class GraphWarden:
         return OperationSpecRegistry.allowed_types_for(operation, "derived_from_node_ids") if operation else frozenset()
 
     @staticmethod
-    def _reference_hints(known: Mapping[str, object], allowed: set[GraphNodeType]) -> tuple[dict[str, str], dict[str, str]]:
+    def _reference_hints(
+        known: Mapping[str, object], allowed: set[GraphNodeType]
+    ) -> tuple[dict[str, str], dict[str, str]]:
         available: dict[str, str] = {}
         illegal: dict[str, str] = {}
         for reference, node in known.items():
@@ -592,13 +769,17 @@ class GraphWarden:
         for spec in contract.references:
             value = getattr(update, spec.field)
             if spec.itemized:
-                references.extend((item, spec.field, set(spec.allowed_types), index) for index, item in enumerate(value))
+                references.extend(
+                    (item, spec.field, set(spec.allowed_types), index) for index, item in enumerate(value)
+                )
             else:
                 references.append((value, spec.field, set(spec.allowed_types), None))
         return references
 
     @classmethod
-    def _issue_error(cls, operation_index: int, update: object, exc: Exception, coordinator: GraphInvestigationCoordinator) -> WardenValidationError:
+    def _issue_error(
+        cls, operation_index: int, update: object, exc: Exception, coordinator: GraphInvestigationCoordinator
+    ) -> WardenValidationError:
         message = str(exc)
         reference = cls._reference_for_error(update, message)
         if "Unknown graph node ID" in message:
@@ -618,11 +799,18 @@ class GraphWarden:
             code = "ILLEGAL_RELATION_ENDPOINT"
             required = "Preserve the intended specialization only with active hypothesis parent and child nodes; otherwise remove this relation."
         else:
-            code = "ILLEGAL_RELATION_ENDPOINT" if "edge" in message.lower() or "relation" in message.lower() else "GRAPH_CONTRACT_FAILURE"
+            code = (
+                "ILLEGAL_RELATION_ENDPOINT"
+                if "edge" in message.lower() or "relation" in message.lower()
+                else "GRAPH_CONTRACT_FAILURE"
+            )
             required = "Repair only this graph-contract defect using the existing operation contract; preserve unrelated valid operations."
         issue = ProposalValidationIssue(
-            operation_index=operation_index, error_code=code, reference=reference,
-            problem=message, required_action=required,
+            operation_index=operation_index,
+            error_code=code,
+            reference=reference,
+            problem=message,
+            required_action=required,
         )
         return WardenValidationError(f"Graph Warden rejected proposal: {message}", issues=[issue])
 
@@ -632,8 +820,11 @@ class GraphWarden:
         if isinstance(derived_ids, list) and derived_ids:
             return derived_ids[0]
         for field in (
-            "derived_proposition_id", "source_node_id", "target_node_id",
-            "child_hypothesis_id", "parent_hypothesis_id",
+            "derived_proposition_id",
+            "source_node_id",
+            "target_node_id",
+            "child_hypothesis_id",
+            "parent_hypothesis_id",
         ):
             value = getattr(update, field, None)
             if isinstance(value, str) and (value in message or "Unknown graph node ID" in message):

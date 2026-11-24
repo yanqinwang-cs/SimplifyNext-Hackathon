@@ -41,26 +41,50 @@ function providerCalls(): Array<{ kind: string; model: string; region: string }>
 
 test.beforeAll(async () => {
   testRepository = mkdtempSync(join(tmpdir(), "simplifynext-stage7-browser-"));
-  backend = spawn("uv", ["run", "python", "scripts/stage7_fake_server.py", "--repository", testRepository, "--port", backendPort], {
-    cwd: repoRoot,
-    env: { ...process.env, AWS_EC2_METADATA_DISABLED: "true", SIMPLIFYNEXT_DEBUG_CREDENTIALS: "1", SIMPLIFYNEXT_ALLOWED_ORIGINS: frontendOrigin, STAGE7_FAKE_DELAY_SECONDS: "0.4" },
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+  backend = spawn(
+    "uv",
+    [
+      "run",
+      "python",
+      "scripts/offline_demo_server.py",
+      "--repository",
+      testRepository,
+      "--port",
+      backendPort,
+    ],
+    {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        AWS_EC2_METADATA_DISABLED: "true",
+        SIMPLIFYNEXT_DEBUG_CREDENTIALS: "1",
+        SIMPLIFYNEXT_ALLOWED_ORIGINS: frontendOrigin,
+        STAGE7_FAKE_DELAY_SECONDS: "0.4",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
   await waitForBackend();
 });
 
 test.afterAll(async () => {
   if (backend && !backend.killed) backend.kill("SIGTERM");
-  await new Promise<void>((resolvePromise) => backend?.once("exit", () => resolvePromise()) ?? resolvePromise());
+  await new Promise<void>(
+    (resolvePromise) => backend?.once("exit", () => resolvePromise()) ?? resolvePromise(),
+  );
   rmSync(testRepository, { recursive: true, force: true });
 });
 
-test("real case creation keeps independent Student 1 state and enforces the final-student guard", async ({ page }, testInfo) => {
+test("real case creation keeps independent Student 1 state and enforces the final-student guard", async ({
+  page,
+}, testInfo) => {
   const first = await createCase(page, "Acceptance case A");
   await expect(page.getByText("Student 1", { exact: true })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("real-user-case.png"), fullPage: true });
   await page.getByRole("button", { name: "What remains uncertain?" }).click();
-  await expect(page.getByText("controlled Workspace Help provider returned a read-only response.")).toBeVisible();
+  await expect(
+    page.getByText("controlled Workspace Help provider returned a read-only response."),
+  ).toBeVisible();
   await page.getByLabel("Add student").fill("Student 2");
   await page.getByRole("button", { name: "Add", exact: true }).click();
   await expect(page.getByText("Student 2", { exact: true })).toBeVisible();
@@ -79,10 +103,16 @@ test("real case creation keeps independent Student 1 state and enforces the fina
   expect((await secondWorkspace.json()).students).toHaveLength(1);
 });
 
-test("real upload and source reader preserve admitted text without leaking it in workspace", async ({ page }, testInfo) => {
+test("real upload and source reader preserve admitted text without leaking it in workspace", async ({
+  page,
+}, testInfo) => {
   const caseId = await createCase(page, "Evidence acceptance case");
   const content = "# Unicode heading\n\nAccented — text and a second line.";
-  await page.locator('input[type="file"]').setInputFiles({ name: "unicode-evidence.md", mimeType: "text/markdown", buffer: Buffer.from(content) });
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "unicode-evidence.md",
+    mimeType: "text/markdown",
+    buffer: Buffer.from(content),
+  });
   await page.getByRole("button", { name: "Add evidence" }).click();
   await expect(page.getByRole("link", { name: /unicode-evidence\.md/ })).toBeVisible();
   const workspaceResponse = await page.request.get(`${backendBase}/api/cases/${caseId}/workspace`);
@@ -96,10 +126,14 @@ test("real upload and source reader preserve admitted text without leaking it in
   await expect(page).toHaveURL(new RegExp(`/cases/${caseId}$`));
 });
 
-test("real vNext zero-evidence and fake-provider assessments publish independent reports", async ({ page }, testInfo) => {
+test("real vNext zero-evidence and fake-provider assessments publish independent reports", async ({
+  page,
+}, testInfo) => {
   const zeroCase = await createCase(page, "Zero evidence acceptance case");
   await page.getByRole("button", { name: "Run assessment" }).click();
-  await expect(page.getByText("Assessment complete. The current report is up to date.")).toBeVisible({ timeout: 30_000 });
+  await expect(
+    page.getByText("Assessment complete. The current report is up to date."),
+  ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("link", { name: "View report" })).toBeVisible();
   await expect(page.getByRole("button", { name: "View trace" })).toHaveCount(0);
   expect(providerCalls().filter((call) => call.kind === "structured")).toHaveLength(0);
@@ -107,22 +141,37 @@ test("real vNext zero-evidence and fake-provider assessments publish independent
   await expect(page.getByRole("heading", { name: "Findings by student" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Student 1" })).toBeVisible();
   await expect(page.getByText("Not currently supported").first()).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath("real-zero-evidence-report.png"), fullPage: true });
+  await page.screenshot({
+    path: testInfo.outputPath("real-zero-evidence-report.png"),
+    fullPage: true,
+  });
 
   const modelCase = await createCase(page, "Model boundary acceptance case");
-  await page.locator('input[type="file"]').setInputFiles({ name: "record.txt", mimeType: "text/plain", buffer: Buffer.from("A controlled record.") });
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "record.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("A controlled record."),
+  });
   await page.getByRole("button", { name: "Add evidence" }).click();
   await page.getByRole("button", { name: "Run assessment" }).click();
-  await expect(page.getByText("Assessment complete. The current report is up to date.")).toBeVisible({ timeout: 30_000 });
+  await expect(
+    page.getByText("Assessment complete. The current report is up to date."),
+  ).toBeVisible({ timeout: 30_000 });
   expect(providerCalls().filter((call) => call.kind === "structured")).toHaveLength(1);
-  expect(providerCalls().every((call) => call.model.includes("anthropic.claude") || call.model === "stage7.fake")).toBeTruthy();
+  expect(
+    providerCalls().every((call) => call.model.includes("claude") || call.model === "stage7.fake"),
+  ).toBeTruthy();
   await expect(page.getByRole("link", { name: "View report" })).toBeVisible();
   expect(zeroCase).not.toBe(modelCase);
 });
 
 test("real status observation failure retains the same run for Retry", async ({ page }) => {
   const caseId = await createCase(page, "Polling recovery case");
-  await page.locator('input[type="file"]').setInputFiles({ name: "polling-record.txt", mimeType: "text/plain", buffer: Buffer.from("A delayed controlled record.") });
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "polling-record.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("A delayed controlled record."),
+  });
   await page.getByRole("button", { name: "Add evidence" }).click();
   let startPosts = 0;
   let failedStatusRequests = 0;
@@ -130,7 +179,8 @@ test("real status observation failure retains the same run for Retry", async ({ 
   page.on("request", (request) => {
     const url = new URL(request.url());
     if (request.method() === "POST" && url.pathname === `/api/cases/${caseId}/run`) startPosts += 1;
-    if (url.pathname.includes("/assessment-runs/") && !url.pathname.endsWith("/audit-trace")) statusHandles.add(url.pathname.split("/").pop() ?? "");
+    if (url.pathname.includes("/assessment-runs/") && !url.pathname.endsWith("/audit-trace"))
+      statusHandles.add(url.pathname.split("/").pop() ?? "");
   });
   await page.route("**/api/cases/*/assessment-runs/*", async (route) => {
     if (failedStatusRequests === 0) {
@@ -141,18 +191,24 @@ test("real status observation failure retains the same run for Retry", async ({ 
     await route.continue();
   });
   await page.getByRole("button", { name: "Run assessment" }).click();
-  await expect(page.getByText("Could not refresh assessment status. Retry the status check.")).toBeVisible({ timeout: 30_000 });
+  await expect(
+    page.getByText("Could not refresh assessment status. Retry the status check."),
+  ).toBeVisible({ timeout: 30_000 });
   expect(startPosts).toBe(1);
   await expect(page.getByRole("button", { name: "Retry status check" })).toBeVisible();
   await page.unroute("**/api/cases/*/assessment-runs/*");
   await page.getByRole("button", { name: "Retry status check" }).click();
-  await expect(page.getByText("Assessment complete. The current report is up to date.")).toBeVisible({ timeout: 30_000 });
+  await expect(
+    page.getByText("Assessment complete. The current report is up to date."),
+  ).toBeVisible({ timeout: 30_000 });
   expect(startPosts).toBe(1);
   expect(statusHandles.size).toBe(1);
   await expect(page.getByRole("button", { name: "Retry status check" })).toHaveCount(0);
 });
 
-test("real Runtime settings uses the actual HTTP backend without changing case state or exposing secrets", async ({ page }, testInfo) => {
+test("real Runtime settings uses the actual HTTP backend without changing case state or exposing secrets", async ({
+  page,
+}, testInfo) => {
   const caseId = await createCase(page, "Runtime settings case");
   await page.request.delete(`${backendBase}/api/runtime-settings/aws-credentials`);
   await page.request.post(`${backendBase}/api/runtime-settings/models/reset`, { data: {} });
@@ -167,38 +223,43 @@ test("real Runtime settings uses the actual HTTP backend without changing case s
   await page.getByLabel("AWS Secret Access Key").fill("PRE5A_FAKE_SECRET");
   await page.getByLabel("AWS Session Token").fill("PRE5A_FAKE_SESSION");
   await page.getByRole("button", { name: "Apply temporary credentials" }).click();
-  await expect(page.getByText("Temporary AWS credentials loaded for this running session.")).toBeVisible();
+  await expect(
+    page.getByText("Temporary AWS credentials loaded for this running session."),
+  ).toBeVisible();
   await expect(page.getByLabel("AWS Access Key ID")).toHaveValue("");
   await expect(page.getByLabel("AWS Secret Access Key")).toHaveValue("");
   await expect(page.getByLabel("AWS Session Token")).toHaveValue("");
   await expect(page.locator("body")).not.toContainText("PRE5A_FAKE_");
-  await page.screenshot({ path: testInfo.outputPath("runtime-credentials-loaded-real-backend.png"), fullPage: true });
+  await page.screenshot({
+    path: testInfo.outputPath("runtime-credentials-loaded-real-backend.png"),
+    fullPage: true,
+  });
   await page.getByRole("button", { name: "Close Runtime settings" }).click();
   await page.getByRole("button", { name: "Runtime settings" }).click();
   await expect(page.getByLabel("AWS Access Key ID")).toHaveValue("");
   await page.getByRole("button", { name: "Clear temporary credentials" }).click();
-  await expect(page.getByText("Temporary credentials cleared. The default AWS credential chain will be used.")).toBeVisible();
+  await expect(
+    page.getByText("Temporary credentials cleared. The default AWS credential chain will be used."),
+  ).toBeVisible();
+  // The product approves a single model, so the only option is already the effective one: no change is pending.
   await page.getByLabel("Investigator model").selectOption("anthropic.claude-opus-4-5");
-  await expect(page.getByText("Pending change")).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath("runtime-model-pending-real-backend.png"), fullPage: true });
-  await page.getByRole("button", { name: "Apply model settings" }).click();
-  await expect(page.getByText("Model settings applied for subsequent calls.")).toBeVisible();
-  await page.getByLabel("Workspace Help model").selectOption("anthropic.claude-opus-4-5");
-  await page.getByRole("button", { name: "Apply model settings" }).click();
-  await expect(page.getByText("Model settings applied for subsequent calls.")).toBeVisible();
-  const applied = await page.request.get(`${backendBase}/api/runtime-settings`);
-  const appliedSettings = await applied.json();
-  expect(appliedSettings.models.investigator.effectiveModel).toBe("anthropic.claude-opus-4-5");
-  expect(appliedSettings.models.workspaceHelp.effectiveModel).toBe("anthropic.claude-opus-4-5");
-  await page.screenshot({ path: testInfo.outputPath("runtime-model-applied-real-backend.png"), fullPage: true });
+  await expect(page.getByText("Pending change")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Apply model settings" })).toBeDisabled();
   await page.getByRole("button", { name: "Reset defaults" }).click();
   await expect(page.getByText("Model defaults restored.")).toBeVisible();
   const reset = await page.request.get(`${backendBase}/api/runtime-settings`);
   const resetSettings = await reset.json();
   expect(resetSettings.models.investigator.effectiveModel).toBe("anthropic.claude-opus-4-5");
   expect(resetSettings.models.workspaceHelp.effectiveModel).toBe("anthropic.claude-opus-4-5");
-  await page.screenshot({ path: testInfo.outputPath("runtime-model-reset-real-backend.png"), fullPage: true });
-  const storage = await page.evaluate(() => ({ local: JSON.stringify(localStorage), session: JSON.stringify(sessionStorage), url: location.href }));
+  await page.screenshot({
+    path: testInfo.outputPath("runtime-model-reset-real-backend.png"),
+    fullPage: true,
+  });
+  const storage = await page.evaluate(() => ({
+    local: JSON.stringify(localStorage),
+    session: JSON.stringify(sessionStorage),
+    url: location.href,
+  }));
   expect(JSON.stringify(storage)).not.toContain("PRE5A_FAKE_");
   const after = await page.request.get(`${backendBase}/api/cases/${caseId}/workspace`);
   expect((await after.json()).caseRevision).toBe(beforeWorkspace.caseRevision);
@@ -209,8 +270,12 @@ test("real Runtime settings uses the actual HTTP backend without changing case s
 test("real sample boundaries and negative HTTP paths remain safe", async ({ page }, testInfo) => {
   await page.goto("/cases");
   await expect(page.getByRole("button", { name: "Law Exam Investigation" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Multi-Candidate Collaboration Review — 5 Candidates" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Multi-Candidate Collaboration Review — 10 Candidates" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Multi-Candidate Collaboration Review — 5 Candidates" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Multi-Candidate Collaboration Review — 10 Candidates" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Law Exam Investigation" }).click();
   await expect(page.getByText("Law Exam Investigation", { exact: true })).toBeVisible();
   await expect(page.getByText("Candidate A", { exact: true })).toBeVisible();
@@ -218,19 +283,35 @@ test("real sample boundaries and negative HTTP paths remain safe", async ({ page
   await page.screenshot({ path: testInfo.outputPath("real-law-sample.png"), fullPage: true });
   await page.setViewportSize({ width: 700, height: 900 });
   await expect(page.getByRole("heading", { name: "Law Exam Investigation" })).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath("real-law-sample-narrow.png"), fullPage: true });
+  await page.screenshot({
+    path: testInfo.outputPath("real-law-sample-narrow.png"),
+    fullPage: true,
+  });
   await page.goto("/cases");
-  await page.getByRole("button", { name: "Multi-Candidate Collaboration Review — 5 Candidates" }).click();
-  for (const letter of ["A", "B", "C", "D", "E"]) await expect(page.getByText(`Candidate ${letter}`, { exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Multi-Candidate Collaboration Review — 5 Candidates" })
+    .click();
+  for (const letter of ["A", "B", "C", "D", "E"])
+    await expect(page.getByText(`Candidate ${letter}`, { exact: true })).toBeVisible();
   await page.goto("/cases");
-  await page.getByRole("button", { name: "Multi-Candidate Collaboration Review — 10 Candidates" }).click();
-  for (const letter of ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]) await expect(page.getByText(`Candidate ${letter}`, { exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Multi-Candidate Collaboration Review — 10 Candidates" })
+    .click();
+  for (const letter of ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"])
+    await expect(page.getByText(`Candidate ${letter}`, { exact: true })).toBeVisible();
   const unknown = await page.request.get(`${backendBase}/api/cases/case-does-not-exist/workspace`);
   expect(unknown.status()).toBe(404);
-  const traversal = await page.request.get(`${backendBase}/api/cases/%2E%2E%2Fcase-000001/workspace`);
+  const traversal = await page.request.get(
+    `${backendBase}/api/cases/%2E%2E%2Fcase-000001/workspace`,
+  );
   expect(traversal.status()).toBe(404);
-  const disallowed = await page.request.get(`${backendBase}/api/cases`, { headers: { Origin: "https://not-allowed.example" } });
+  const disallowed = await page.request.get(`${backendBase}/api/cases`, {
+    headers: { Origin: "https://not-allowed.example" },
+  });
   expect(disallowed.status()).toBe(403);
-  const disallowedPreflight = await page.request.fetch(`${backendBase}/api/cases`, { method: "OPTIONS", headers: { Origin: "https://not-allowed.example", "Access-Control-Request-Method": "DELETE" } });
+  const disallowedPreflight = await page.request.fetch(`${backendBase}/api/cases`, {
+    method: "OPTIONS",
+    headers: { Origin: "https://not-allowed.example", "Access-Control-Request-Method": "DELETE" },
+  });
   expect(disallowedPreflight.status()).toBe(403);
 });

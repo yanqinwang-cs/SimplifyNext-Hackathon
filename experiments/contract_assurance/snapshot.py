@@ -6,7 +6,14 @@ from typing import Any
 
 from .registry import ContractSpec
 
-FORBIDDEN_PUBLIC_TERMS = ("validator", "adversarial fixture", "prior result", "hidden artifact", "expected answer", "failure taxonomy")
+FORBIDDEN_PUBLIC_TERMS = (
+    "validator",
+    "adversarial fixture",
+    "prior result",
+    "hidden artifact",
+    "expected answer",
+    "failure taxonomy",
+)
 
 
 def fingerprint(value: Any) -> str:
@@ -14,10 +21,33 @@ def fingerprint(value: Any) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
-def write_snapshot(spec: ContractSpec, destination: Path, *, prompt: str, case_input: Any, template: Any = None, commit: str = "unknown") -> Path:
+def write_snapshot(
+    spec: ContractSpec,
+    destination: Path,
+    *,
+    prompt: str,
+    case_input: Any,
+    template: Any = None,
+    commit: str = "unknown",
+) -> Path:
     destination.mkdir(parents=True, exist_ok=True)
     schema = spec.schema.model_json_schema()
-    package = {"manifest": {"contract": spec.name, "source": spec.source, "git_commit": commit, "created_at": datetime.now(UTC).isoformat(), "schema_hash": fingerprint(schema), "prompt_hash": fingerprint(prompt), "case_input_hash": fingerprint(case_input), "template_hash": fingerprint(template)}, "prompt": prompt, "case_input": case_input, "output_schema": schema, "template": template}
+    package = {
+        "manifest": {
+            "contract": spec.name,
+            "source": spec.source,
+            "git_commit": commit,
+            "created_at": datetime.now(UTC).isoformat(),
+            "schema_hash": fingerprint(schema),
+            "prompt_hash": fingerprint(prompt),
+            "case_input_hash": fingerprint(case_input),
+            "template_hash": fingerprint(template),
+        },
+        "prompt": prompt,
+        "case_input": case_input,
+        "output_schema": schema,
+        "template": template,
+    }
     path = destination / f"{spec.name}.json"
     path.write_text(json.dumps(package, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
     return path
@@ -38,11 +68,33 @@ def validate_public_package(package: dict[str, Any]) -> list[str]:
     return issues
 
 
-def write_public_snapshot(spec: ContractSpec, destination: Path, *, prompt: str, case_input: Any, template: Any = None, commit: str = "unknown") -> Path:
+def write_public_snapshot(
+    spec: ContractSpec,
+    destination: Path,
+    *,
+    prompt: str,
+    case_input: Any,
+    template: Any = None,
+    commit: str = "unknown",
+) -> Path:
     """Write only a package that passes the public-boundary audit."""
     path = destination / f"{spec.name}.json"
     schema = spec.schema.model_json_schema()
-    package = {"manifest": {"contract": spec.name, "source": spec.source, "git_commit": commit, "schema_hash": fingerprint(schema), "prompt_hash": fingerprint(prompt), "case_input_hash": fingerprint(case_input), "template_hash": fingerprint(template)}, "prompt": prompt, "case_input": case_input, "output_schema": schema, "template": template}
+    package = {
+        "manifest": {
+            "contract": spec.name,
+            "source": spec.source,
+            "git_commit": commit,
+            "schema_hash": fingerprint(schema),
+            "prompt_hash": fingerprint(prompt),
+            "case_input_hash": fingerprint(case_input),
+            "template_hash": fingerprint(template),
+        },
+        "prompt": prompt,
+        "case_input": case_input,
+        "output_schema": schema,
+        "template": template,
+    }
     issues = validate_public_package(package)
     if issues:
         raise ValueError("Public snapshot rejected: " + "; ".join(issues))
@@ -53,7 +105,12 @@ def write_public_snapshot(spec: ContractSpec, destination: Path, *, prompt: str,
 
 def verify_snapshot(package: dict[str, Any]) -> list[str]:
     manifest = package.get("manifest", {})
-    values = {"schema_hash": fingerprint(package.get("output_schema")), "prompt_hash": fingerprint(package.get("prompt")), "case_input_hash": fingerprint(package.get("case_input")), "template_hash": fingerprint(package.get("template"))}
+    values = {
+        "schema_hash": fingerprint(package.get("output_schema")),
+        "prompt_hash": fingerprint(package.get("prompt")),
+        "case_input_hash": fingerprint(package.get("case_input")),
+        "template_hash": fingerprint(package.get("template")),
+    }
     return [f"{key} drift" for key, value in values.items() if manifest.get(key) != value]
 
 

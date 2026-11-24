@@ -7,7 +7,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from .registry import ContractSpec, contract_registry
+from .registry import contract_registry
 
 
 DYNAMIC_STRUCTURED_BOUNDARIES = (
@@ -71,12 +71,18 @@ def assert_dynamic_structured_boundaries(root: Path) -> None:
         methods = [
             node
             for node in ast.walk(tree)
-            if isinstance(node, ast.FunctionDef) and node.name == method_name
-            and any(isinstance(parent, ast.ClassDef) and parent.name == class_name for parent in ast.walk(tree) if isinstance(parent, ast.ClassDef) and node in parent.body)
+            if isinstance(node, ast.FunctionDef)
+            and node.name == method_name
+            and any(
+                isinstance(parent, ast.ClassDef) and parent.name == class_name
+                for parent in ast.walk(tree)
+                if isinstance(parent, ast.ClassDef) and node in parent.body
+            )
         ]
         has_client_call = any(
             isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "call"
-            for method in methods for node in ast.walk(method)
+            for method in methods
+            for node in ast.walk(method)
         )
         if not methods or not has_client_call:
             missing.append(f"{boundary['symbol']}: expected structured model-client call not found")
@@ -90,17 +96,41 @@ def inventory(root: Path, commit: str = "unknown") -> dict[str, Any]:
     for spec in specs:
         source = root / spec.source
         source_hash = hashlib.sha256(source.read_bytes()).hexdigest() if source.exists() else None
-        prompt_hashes = {prompt: hashlib.sha256((root / prompt).read_bytes()).hexdigest() for prompt in spec.prompt_sources if (root / prompt).exists()}
+        prompt_hashes = {
+            prompt: hashlib.sha256((root / prompt).read_bytes()).hexdigest()
+            for prompt in spec.prompt_sources
+            if (root / prompt).exists()
+        }
         template_path = root / "experiments/contract_assurance/fixtures" / f"{spec.name}.json"
         template_hash = None
         if template_path.exists():
             try:
                 template_payload = json.loads(template_path.read_text(encoding="utf-8"))
-                template_hash = hashlib.sha256(json.dumps(template_payload.get("canonical"), sort_keys=True).encode()).hexdigest()
+                template_hash = hashlib.sha256(
+                    json.dumps(template_payload.get("canonical"), sort_keys=True).encode()
+                ).hexdigest()
             except (OSError, json.JSONDecodeError):
                 template_hash = None
-        entries.append({**asdict(spec), "schema": spec.schema.__name__, "schema_hash": hashlib.sha256(json.dumps(spec.schema.model_json_schema(), sort_keys=True).encode()).hexdigest(), "source_hash": source_hash, "prompt_hashes": prompt_hashes, "template_source": str(template_path.relative_to(root)), "template_hash": template_hash})
-    return {"git_commit": commit, "contracts": entries, "dynamic_structured_boundaries": list(DYNAMIC_STRUCTURED_BOUNDARIES), "discovered_response_classes": discover_response_classes(root), "unregistered_response_classes": unregistered_response_classes(root)}
+        entries.append(
+            {
+                **asdict(spec),
+                "schema": spec.schema.__name__,
+                "schema_hash": hashlib.sha256(
+                    json.dumps(spec.schema.model_json_schema(), sort_keys=True).encode()
+                ).hexdigest(),
+                "source_hash": source_hash,
+                "prompt_hashes": prompt_hashes,
+                "template_source": str(template_path.relative_to(root)),
+                "template_hash": template_hash,
+            }
+        )
+    return {
+        "git_commit": commit,
+        "contracts": entries,
+        "dynamic_structured_boundaries": list(DYNAMIC_STRUCTURED_BOUNDARIES),
+        "discovered_response_classes": discover_response_classes(root),
+        "unregistered_response_classes": unregistered_response_classes(root),
+    }
 
 
 def write_inventory(root: Path, destination: Path, commit: str = "unknown") -> Path:
@@ -111,9 +141,18 @@ def write_inventory(root: Path, destination: Path, commit: str = "unknown") -> P
 
 
 def render_inventory_markdown(data: dict[str, Any]) -> str:
-    lines = ["# LLM-facing contract inventory", "", f"- Git commit: `{data.get('git_commit', 'unknown')}`", "", "| Contract | Schema | Source | Production path | Schema hash |", "| --- | --- | --- | --- | --- |"]
+    lines = [
+        "# LLM-facing contract inventory",
+        "",
+        f"- Git commit: `{data.get('git_commit', 'unknown')}`",
+        "",
+        "| Contract | Schema | Source | Production path | Schema hash |",
+        "| --- | --- | --- | --- | --- |",
+    ]
     for item in data.get("contracts", []):
-        lines.append(f"| `{item['name']}` | `{item['schema']}` | `{item['source']}` | {item['production_path']} | `{item['schema_hash'][:12]}` |")
+        lines.append(
+            f"| `{item['name']}` | `{item['schema']}` | `{item['source']}` | {item['production_path']} | `{item['schema_hash'][:12]}` |"
+        )
     unregistered = data.get("unregistered_response_classes", [])
     lines += ["", f"Unregistered response classes: **{len(unregistered)}**"]
     for item in unregistered:

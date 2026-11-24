@@ -1,6 +1,7 @@
 import pytest
 
 from investigator.graph import CaseGraph, GraphNode, GraphNodeType
+from investigator.models.assessment import AssessmentSubject
 from investigator.models.source import Source, SourceType
 from investigator.state.case_state import CaseState
 from investigator.vnext import (
@@ -25,6 +26,11 @@ from investigator.vnext import (
 
 def source(source_id: str = "S1", content: str = "A record") -> Source:
     return Source(id=source_id, name=f"record-{source_id}", source_type=SourceType.DOCUMENT, content=content)
+
+
+def case_subject() -> dict[str, AssessmentSubject]:
+    """The implicit single subject, configured so case-shared sources have a permitted subject."""
+    return {"case_subject": AssessmentSubject(subject_id="case_subject", display_name="Case subject")}
 
 
 def preset(*violation_ids: str) -> AssessmentRulePreset:
@@ -105,6 +111,7 @@ def test_obvious_violation_can_stop_at_possession_without_downstream_fact() -> N
                     "local_ref": "possession",
                     "statement": "Student possessed prohibited smart eyewear.",
                     "source_ids": ["S1"],
+                    "scope": {"scope_type": "case"},
                     "reason": "Record the direct possession observation.",
                 }
             ]
@@ -118,18 +125,22 @@ def test_obvious_violation_can_stop_at_possession_without_downstream_fact() -> N
     )
     output = output.model_copy(
         update={
-            "subject_assessments": [SubjectAssessment(
-                subject_id="case_subject",
-                violation_assessments=output.subject_assessments[0].violation_assessments,
-                furthest_conclusion=FurthestJustifiedConclusion(
-                statement="Prohibited device possession is supported; actual information access remains unresolved.",
-                based_on_violation_ids=["unauthorized_device"],
-                confidence=Confidence.HIGH,
-                ),
-            )]
+            "subject_assessments": [
+                SubjectAssessment(
+                    subject_id="case_subject",
+                    violation_assessments=output.subject_assessments[0].violation_assessments,
+                    furthest_conclusion=FurthestJustifiedConclusion(
+                        statement="Prohibited device possession is supported; actual information access remains unresolved.",
+                        based_on_violation_ids=["unauthorized_device"],
+                        confidence=Confidence.HIGH,
+                    ),
+                )
+            ]
         }
     )
-    result = VNextInvestigationRunner(lambda _: output).run(VNextRunInput(case_id="case-01", sources={"S1": source()}, rule_preset=rule))
+    result = VNextInvestigationRunner(lambda _: output).run(
+        VNextRunInput(case_id="case-01", subjects=case_subject(), sources={"S1": source()}, rule_preset=rule)
+    )
 
     assert result.violation_assessments[0].status is AssessmentStatus.SUPPORTED
     assert result.violation_assessments[0].supporting_node_ids[0].startswith("node_")
@@ -141,22 +152,47 @@ def test_mitigating_evidence_is_preserved_separately() -> None:
     proposal = InvestigatorProposal.model_validate(
         {
             "graph_updates": [
-                {"operation": "add_evidence", "local_ref": "support", "statement": "Supporting record.", "source_ids": ["S1"], "reason": "Add support."},
-                {"operation": "add_evidence", "local_ref": "mitigation", "statement": "Mitigating record.", "source_ids": ["S2"], "reason": "Add mitigation."},
+                {
+                    "operation": "add_evidence",
+                    "local_ref": "support",
+                    "statement": "Supporting record.",
+                    "source_ids": ["S1"],
+                    "scope": {"scope_type": "case"},
+                    "reason": "Add support.",
+                },
+                {
+                    "operation": "add_evidence",
+                    "local_ref": "mitigation",
+                    "statement": "Mitigating record.",
+                    "source_ids": ["S2"],
+                    "scope": {"scope_type": "case"},
+                    "reason": "Add mitigation.",
+                },
             ]
         }
     )
     output = assessment(
-        ["V1"], proposal=proposal, statuses={"V1": AssessmentStatus.CONFLICTED},
-        supporting={"V1": ["support"]}, mitigating={"V1": ["mitigation"]},
+        ["V1"],
+        proposal=proposal,
+        statuses={"V1": AssessmentStatus.CONFLICTED},
+        supporting={"V1": ["support"]},
+        mitigating={"V1": ["mitigation"]},
     )
     result = VNextInvestigationRunner(lambda _: output).run(
-        run_input({"S1": source(), "S2": source("S2", "A mitigating record")}, "V1")
+        VNextRunInput(
+            case_id="case-01",
+            subjects=case_subject(),
+            sources={"S1": source(), "S2": source("S2", "A mitigating record")},
+            rule_preset=rule,
+        )
     )
     item = result.violation_assessments[0]
     assert item.status is AssessmentStatus.CONFLICTED
     assert item.supporting_node_ids != item.mitigating_node_ids
-    assert all(result.graph.nodes[node_id].node_type is GraphNodeType.EVIDENCE for node_id in item.supporting_node_ids + item.mitigating_node_ids)
+    assert all(
+        result.graph.nodes[node_id].node_type is GraphNodeType.EVIDENCE
+        for node_id in item.supporting_node_ids + item.mitigating_node_ids
+    )
 
 
 def test_assessment_order_is_normalized_to_preset_order() -> None:
@@ -184,11 +220,22 @@ def test_unknown_assessment_node_is_rejected_after_warden() -> None:
 
 def test_warden_rejection_fails_run_without_partial_result() -> None:
     proposal = InvestigatorProposal.model_validate(
-        {"graph_updates": [{"operation": "add_evidence", "statement": "Bad provenance.", "source_ids": ["S999"], "reason": "This should fail."}]}
+        {
+            "graph_updates": [
+                {
+                    "operation": "add_evidence",
+                    "statement": "Bad provenance.",
+                    "source_ids": ["S999"],
+                    "reason": "This should fail.",
+                }
+            ]
+        }
     )
     output = assessment(["V1"], proposal=proposal)
     with pytest.raises(WardenValidationError, match="unknown raw source ID"):
-        VNextInvestigationRunner(lambda _: output).run(VNextRunInput(case_id="case-01", sources={"S1": source()}, rule_preset=preset("V1")))
+        VNextInvestigationRunner(lambda _: output).run(
+            VNextRunInput(case_id="case-01", sources={"S1": source()}, rule_preset=preset("V1"))
+        )
 
 
 def test_clean_run_discards_old_reasoning_but_retains_sources() -> None:

@@ -8,4 +8,3 @@ class Conflict(BaseModel):
     evidence_ids: list[str] = Field(default_factory=list)
     resolved: bool = False
     resolution_note: str | None = None
-

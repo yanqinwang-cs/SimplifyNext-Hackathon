@@ -54,10 +54,7 @@ def render_xlsx(path: str | Path) -> str:
                 shared_strings.append("".join(node.text or "" for node in item.iter(MAIN_NS + "t")))
         workbook_root = ElementTree.fromstring(workbook.read("xl/workbook.xml"))
         relationships = ElementTree.fromstring(workbook.read("xl/_rels/workbook.xml.rels"))
-        targets = {
-            relationship.attrib["Id"]: relationship.attrib["Target"]
-            for relationship in relationships
-        }
+        targets = {relationship.attrib["Id"]: relationship.attrib["Target"] for relationship in relationships}
         sheets: list[str] = []
         for sheet in workbook_root.findall(f"{MAIN_NS}sheets/{MAIN_NS}sheet"):
             name = sheet.attrib["name"]

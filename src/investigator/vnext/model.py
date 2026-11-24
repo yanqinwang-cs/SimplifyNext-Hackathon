@@ -7,7 +7,6 @@ from typing import Any
 from investigator.llm import ModelCallResult, ModelClient
 from investigator.vnext.models import InvestigatorAssessment, InvestigatorProposal, VNextRunInput
 from investigator.vnext.semantic import InvestigatorSemanticAssessment
-from investigator.vnext.source_applicability import SourceApplicabilityClassification
 from investigator.vnext.relationships import relationship_scope_prompt_view
 from investigator.vnext.warden import ProposalValidationIssue
 
@@ -59,7 +58,9 @@ def build_prompt(run_input: VNextRunInput) -> str:
         if applicability.case_shared_allowed:
             sources["case_shared"].append(item)
         elif applicability.permitted_relationship_ids:
-            sources["multi_student_candidate"].append({**item, "matched_student_ids": applicability.permitted_subject_ids})
+            sources["multi_student_candidate"].append(
+                {**item, "matched_student_ids": applicability.permitted_subject_ids}
+            )
         else:
             for subject_id in applicability.permitted_subject_ids:
                 bucket = sources["student_specific"].setdefault(subject_id, [])
@@ -91,7 +92,7 @@ def build_prompt(run_input: VNextRunInput) -> str:
             "\nSTATUS CALIBRATION\nSUPPORTED: the violation is the substantially better explanation of the material evidence, with no major unresolved alternative or missing inferential link that materially undermines that assessment. PARTIALLY_SUPPORTED: the violation receives meaningful affirmative support and explains substantial parts of the record, but an important link, attribution, mechanism, component, or plausible competing explanation remains unresolved. CONFLICTED: material evidence genuinely points both toward and away from the violation hypothesis, and neither account clearly dominates. NOT_CURRENTLY_SUPPORTED: there is little meaningful affirmative evidence for the violation, or plausible non-violation explanations account for the observed evidence at least as well. Do not equate 'not conclusively proven' with NOT_CURRENTLY_SUPPORTED; uncertainty alone, absent direct evidence, or unconfirmed communication is not enough. Do not reserve supporting_item_refs only for direct or conclusive evidence.",
             "\nMATERIAL ROLES / CONFIDENCE\nsupporting_item_refs means evidence that increases the plausibility of the violation relative to its absence; it need not prove the violation by itself. conflicting_item_refs means material that affirmatively points away from the violation hypothesis. limiting_item_refs means material that reduces the strength or reach of an inference without affirmatively contradicting it. alternative_item_refs means a competing hypothesis. The same episode may contain supporting and limiting features; a limiting feature does not erase supporting value. Confidence is confidence that the selected assessment status accurately characterizes the current evidence. It is not a numerical probability of guilt, certainty that misconduct occurred, or a disciplinary standard of proof. PARTIALLY_SUPPORTED with HIGH confidence can be appropriate when that status is clearly the best characterization.",
             "\nSUGGESTED NEXT STEP\nFor each configured student, provide one short, practical suggested next step based on the current assessment. The recommendation may be targeted verification, review of an existing record, proceeding to human institutional review, preserving the current record, or stopping further enquiry. Prefer a proportionate action that could materially change or appropriately advance the assessment. If further enquiry is unlikely to materially change the assessment, say that no further enquiry is currently justified. Do not decide guilt, sanction, or disciplinary outcome. Do not recommend intrusive evidence collection merely because it could be informative; where possible, prefer existing records or ordinary institutional review. Final institutional judgment remains human.",
-            "\nSEMANTIC ITEM CONTRACT\nReturn meaning-level semantic items only. semantic_items is the only definition table. Define each local_ref once and reuse it in references. evidence_statement records what same-scope sources say; use basis_source_ids only; do not use semantic item refs; legal scope comes from cited sources. proposition is an inference from semantic items; use basis_item_refs only; never cite raw sources; case context may narrow to one compatible student or relationship, but never combine different private student scopes. hypothesis is a possible explanation, not an established fact; use about_subject_ids. A multi-student hypothesis may concern an existing exact relationship context without evidential support. Do not create an uncertainty semantic item; put remaining uncertainty in unresolved_points.\n\nALTERNATIVE REFERENCES\n- alternative_item_refs MUST reference semantic items whose kind is hypothesis.\n- Do not place proposition or evidence_statement refs in alternative_item_refs. If an alternative is currently expressed as a proposition, create a separate hypothesis item and reference that hypothesis.\nVALID: {\"alternative_item_refs\": [\"hyp-prior-study\"], \"semantic_items\": [{\"local_ref\": \"hyp-prior-study\", \"kind\": \"hypothesis\"}]}\nINVALID: {\"alternative_item_refs\": [\"prop-prior-study\"], \"semantic_items\": [{\"local_ref\": \"prop-prior-study\", \"kind\": \"proposition\"}]}",
+            '\nSEMANTIC ITEM CONTRACT\nReturn meaning-level semantic items only. semantic_items is the only definition table. Define each local_ref once and reuse it in references. evidence_statement records what same-scope sources say; use basis_source_ids only; do not use semantic item refs; legal scope comes from cited sources. proposition is an inference from semantic items; use basis_item_refs only; never cite raw sources; case context may narrow to one compatible student or relationship, but never combine different private student scopes. hypothesis is a possible explanation, not an established fact; use about_subject_ids. A multi-student hypothesis may concern an existing exact relationship context without evidential support. Do not create an uncertainty semantic item; put remaining uncertainty in unresolved_points.\n\nALTERNATIVE REFERENCES\n- alternative_item_refs MUST reference semantic items whose kind is hypothesis.\n- Do not place proposition or evidence_statement refs in alternative_item_refs. If an alternative is currently expressed as a proposition, create a separate hypothesis item and reference that hypothesis.\nVALID: {"alternative_item_refs": ["hyp-prior-study"], "semantic_items": [{"local_ref": "hyp-prior-study", "kind": "hypothesis"}]}\nINVALID: {"alternative_item_refs": ["prop-prior-study"], "semantic_items": [{"local_ref": "prop-prior-study", "kind": "proposition"}]}',
             "Every semantic item must explicitly list the fields required by its kind.",
             "\nSEMANTIC SCOPE INVARIANTS\n"
             "- One semantic item must use one compatible legal scope; never merge incompatible case, relationship, or subject-private source scopes.\n"
@@ -107,13 +108,15 @@ def build_prompt(run_input: VNextRunInput) -> str:
             "Missing evidence means NOT_CURRENTLY_SUPPORTED, not another enquiry.",
             "Return JSON only. Use exactly the current schema below. Do not add fields.",
             "\nCONFIGURED STUDENTS (REPORTING TARGETS ONLY)\n" + json.dumps(subjects, indent=2),
-            "\nAPPLICABLE POLICY / CONFIGURED VIOLATIONS (NORMATIVE CONTEXT, NOT FACTUAL EVIDENCE)\n" + json.dumps(run_input.rule_preset.model_dump(mode="json"), indent=2),
-            "\nADMITTED EVIDENCE SOURCES — CASE-WIDE / STUDENT-SPECIFIC / MULTI-STUDENT CANDIDATE (SOURCE STATEMENTS ARE NOT AUTOMATICALLY TRUE)\n" + json.dumps(sources, indent=2),
-            "\nEXISTING MULTI-STUDENT RELATIONSHIP CONTEXTS (STRUCTURAL CONTEXT ONLY; NOT FINDINGS)\n" + json.dumps(relationships, indent=2),
+            "\nAPPLICABLE POLICY / CONFIGURED VIOLATIONS (NORMATIVE CONTEXT, NOT FACTUAL EVIDENCE)\n"
+            + json.dumps(run_input.rule_preset.model_dump(mode="json"), indent=2),
+            "\nADMITTED EVIDENCE SOURCES — CASE-WIDE / STUDENT-SPECIFIC / MULTI-STUDENT CANDIDATE (SOURCE STATEMENTS ARE NOT AUTOMATICALLY TRUE)\n"
+            + json.dumps(sources, indent=2),
+            "\nEXISTING MULTI-STUDENT RELATIONSHIP CONTEXTS (STRUCTURAL CONTEXT ONLY; NOT FINDINGS)\n"
+            + json.dumps(relationships, indent=2),
             "\nEXPECTED CONFIGURED STUDENT IDS\n" + json.dumps(sorted(run_input.subjects) or ["case_subject"]),
             retry_section,
-            "\nEXACT INVESTIGATOR ASSESSMENT JSON SCHEMA\n"
-            + json.dumps(schema, indent=2, sort_keys=True),
+            "\nEXACT INVESTIGATOR ASSESSMENT JSON SCHEMA\n" + json.dumps(schema, indent=2, sort_keys=True),
         ]
     )
 
@@ -134,7 +137,7 @@ def build_corrective_prompt(
             "Do not add new factual predicates, conduct, intent, use, communication, assistance, or certainty to node statements during repair unless that meaning was already present in the frozen first assessment or proposal.",
             "When creating a missing node required only for graph representation, use the narrowest statement needed to represent the existing frozen semantic conclusion.",
             "Interpret issue fields precisely: allowed_types are for the failed field; construction_allowed_types are legal inputs for constructing a missing node; known_illegal_refs are refs illegal for this specific field only, not globally.",
-                "Return only a corrected InvestigatorProposal matching its required schema.",
+            "Return only a corrected InvestigatorProposal matching its required schema.",
             "\nPREVIOUS PROPOSAL\n" + json.dumps(assessment.proposal.model_dump(mode="json"), indent=2),
             "\nDETERMINISTIC VALIDATION ISSUES\n"
             "Each issue is authoritative. Read its operation_index, field, problem, and required_action.\n"

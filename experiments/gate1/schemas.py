@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from investigator.llm.base import ModelCallMetadata
 
@@ -21,4 +21,3 @@ class ExperimentResult(BaseModel):
     run: RunMetadata
     structured_result: Any
     call_metadata: ModelCallMetadata
-

@@ -25,10 +25,12 @@ class FakeClient:
 
 def model_result() -> ModelCallResult:
     return ModelCallResult(
-        parsed=HypothesisResponse(hypotheses=[
-            {"statement": "A", "justification": "E1", "uncertainty": "U1"},
-            {"statement": "B", "justification": "E2", "uncertainty": "U2"},
-        ]),
+        parsed=HypothesisResponse(
+            hypotheses=[
+                {"statement": "A", "justification": "E1", "uncertainty": "U1"},
+                {"statement": "B", "justification": "E2", "uncertainty": "U2"},
+            ]
+        ),
         metadata=ModelCallMetadata(provider="fake", model="model", latency_seconds=0.1, parse_success=True),
         raw_output='{"hypotheses": []}',
     )
@@ -73,9 +75,7 @@ def test_all_case_execution_creates_result_files_and_does_not_overwrite(tmp_path
     client = FakeClient([model_result() for _ in CASES])
     output_dir = run("test-model", None, tmp_path, client=client)
     assert len(client.calls) == 5
-    assert sorted(path.name for path in output_dir.glob("case_*.json")) == [
-        f"case_0{i}.json" for i in range(1, 6)
-    ]
+    assert sorted(path.name for path in output_dir.glob("case_*.json")) == [f"case_0{i}.json" for i in range(1, 6)]
     assert (output_dir / "run_summary.json").is_file()
     with pytest.raises(FileExistsError):
         run("test-model", None, tmp_path, client=FakeClient([model_result() for _ in CASES]))
@@ -96,14 +96,26 @@ def test_offline_reparse_repairs_failed_result_and_is_idempotent(tmp_path: Path)
     directory.mkdir()
     raw = '```json\n{"hypotheses": [{"statement": "A", "justification": "E1", "uncertainty": "U1"}, {"statement": "B", "justification": "E2", "uncertainty": "U2"}]}\n```'
     failed = CaseResult(
-        case_id="case_01", model_id="model", case_input="case", prompt="prompt",
-        raw_model_output=raw, parse_success=False, error_message="fenced output",
+        case_id="case_01",
+        model_id="model",
+        case_input="case",
+        prompt="prompt",
+        raw_model_output=raw,
+        parse_success=False,
+        error_message="fenced output",
     )
     (directory / "case_01.json").write_text(failed.model_dump_json(indent=2) + "\n", encoding="utf-8")
-    (directory / "run_summary.json").write_text(RunSummary(
-        model_id="model", result_directory=str(directory), case_ids=["case_01"],
-        successful_cases=0, failed_cases=1,
-    ).model_dump_json(indent=2) + "\n", encoding="utf-8")
+    (directory / "run_summary.json").write_text(
+        RunSummary(
+            model_id="model",
+            result_directory=str(directory),
+            case_ids=["case_01"],
+            successful_cases=0,
+            failed_cases=1,
+        ).model_dump_json(indent=2)
+        + "\n",
+        encoding="utf-8",
+    )
 
     summary = reparse_results(directory)
     repaired = json.loads((directory / "case_01.json").read_text(encoding="utf-8"))

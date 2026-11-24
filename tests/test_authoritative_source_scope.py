@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import json
 
 import pytest
 
-from investigator.graph import CaseGraph, GraphNode, GraphNodeType, GraphScope, GraphScopeType
+from investigator.graph import GraphScope, GraphScopeType
 from investigator.models import AssessmentContext, AssessmentSubject, Source, SourceType, SubjectRelationship
 from investigator.reporting import build_input_snapshot, build_report_record
 from investigator.state import CaseState
@@ -16,11 +15,8 @@ from investigator.vnext import (
     Confidence,
     FurthestJustifiedConclusion,
     GraphWarden,
-    InvestigatorAssessment,
     InvestigatorProposal,
-    SubjectAssessment,
     VNextInvestigationRunner,
-    ViolationAssessment,
     ViolationDefinition,
     build_source_applicability,
     clean_reasoning_graph,
@@ -43,13 +39,19 @@ SUBJECTS = {
 }
 PRESET = AssessmentRulePreset(
     preset_id="scope-consistency",
-    violations=[ViolationDefinition(violation_id="V1", label="Conduct", rule_text="A configured rule.", prohibited_conduct="Conduct")],
+    violations=[
+        ViolationDefinition(
+            violation_id="V1", label="Conduct", rule_text="A configured rule.", prohibited_conduct="Conduct"
+        )
+    ],
 )
 
 
 def _source(source_id: str, content: str, scope: GraphScope | None = None) -> Source:
     metadata = {"assessment_scope": scope.model_dump(mode="json")} if scope is not None else {}
-    return Source(id=source_id, name=f"{source_id}.md", source_type=SourceType.DOCUMENT, content=content, metadata=metadata)
+    return Source(
+        id=source_id, name=f"{source_id}.md", source_type=SourceType.DOCUMENT, content=content, metadata=metadata
+    )
 
 
 def _relationship() -> dict[str, SubjectRelationship]:
@@ -68,16 +70,20 @@ def _applicability(source: Source, relationships: dict[str, SubjectRelationship]
 
 
 def _proposal(source_id: str, scope: GraphScope):
-    return InvestigatorProposal.model_validate({
-        "graph_updates": [{
-            "operation": "add_evidence",
-            "local_ref": "case_evidence",
-            "statement": "The source records the relevant context.",
-            "source_ids": [source_id],
-            "scope": scope.model_dump(mode="json"),
-            "reason": "Record the authoritative source scope.",
-        }]
-    })
+    return InvestigatorProposal.model_validate(
+        {
+            "graph_updates": [
+                {
+                    "operation": "add_evidence",
+                    "local_ref": "case_evidence",
+                    "statement": "The source records the relevant context.",
+                    "source_ids": [source_id],
+                    "scope": scope.model_dump(mode="json"),
+                    "reason": "Record the authoritative source scope.",
+                }
+            ]
+        }
+    )
 
 
 def _warden(sources: dict[str, Source], relationships: dict[str, SubjectRelationship] | None = None) -> GraphWarden:
@@ -92,7 +98,11 @@ def _warden(sources: dict[str, Source], relationships: dict[str, SubjectRelation
 
 
 def test_trusted_case_scope_overrides_multi_student_textual_classification() -> None:
-    source = _source("S1", "Candidate A and Candidate B are named in this case-wide seating record.", GraphScope(scope_type=GraphScopeType.CASE))
+    source = _source(
+        "S1",
+        "Candidate A and Candidate B are named in this case-wide seating record.",
+        GraphScope(scope_type=GraphScopeType.CASE),
+    )
     applicability = _applicability(source, _relationship())
     assert applicability.trusted_scope.scope_type is GraphScopeType.CASE
     assert applicability.classification.value == "case_shared"
@@ -101,7 +111,11 @@ def test_trusted_case_scope_overrides_multi_student_textual_classification() -> 
 
 
 def test_prompt_places_trusted_case_source_in_case_wide_inventory() -> None:
-    source = _source("S1", "Candidate A and Candidate B are named in this case-wide seating record.", GraphScope(scope_type=GraphScopeType.CASE))
+    source = _source(
+        "S1",
+        "Candidate A and Candidate B are named in this case-wide seating record.",
+        GraphScope(scope_type=GraphScopeType.CASE),
+    )
     state = CaseState(
         case_id="scope-prompt",
         title="Scope prompt",
@@ -119,7 +133,11 @@ def test_prompt_places_trusted_case_source_in_case_wide_inventory() -> None:
 
 
 def test_trusted_case_scope_replays_live_failure_through_compiler_and_warden() -> None:
-    source = _source("S1", "Candidate A and Candidate B are named in this case-wide seating record.", GraphScope(scope_type=GraphScopeType.CASE))
+    source = _source(
+        "S1",
+        "Candidate A and Candidate B are named in this case-wide seating record.",
+        GraphScope(scope_type=GraphScopeType.CASE),
+    )
     relationships = _relationship()
     state = CaseState(
         case_id="scope-replay",
@@ -131,26 +149,37 @@ def test_trusted_case_scope_replays_live_failure_through_compiler_and_warden() -
     )
     run_input = run_input_from_case_state(state, PRESET)
     semantic = InvestigatorSemanticAssessment(
-        semantic_items=[EvidenceStatementItem(
-            local_ref="case_evidence",
-            kind="evidence_statement",
-            statement="The trusted case-wide record describes the configured seating context.",
-            basis_source_ids=["S1"],
-        )],
-        subject_assessments=[SemanticSubjectAssessment(
-            subject_id=subject_id,
-            violation_assessments=[SemanticViolationAssessment(
-                violation_id="V1",
-                status=AssessmentStatus.NOT_CURRENTLY_SUPPORTED,
-                limiting_item_refs=["case_evidence"],
-                reasoning_summary="The record provides context but does not establish prohibited conduct.",
-                confidence=Confidence.LOW,
-            )],
-            furthest_conclusion=FurthestJustifiedConclusion(statement="No supported finding is currently justified.", confidence=Confidence.LOW),
-        ) for subject_id in SUBJECTS],
+        semantic_items=[
+            EvidenceStatementItem(
+                local_ref="case_evidence",
+                kind="evidence_statement",
+                statement="The trusted case-wide record describes the configured seating context.",
+                basis_source_ids=["S1"],
+            )
+        ],
+        subject_assessments=[
+            SemanticSubjectAssessment(
+                subject_id=subject_id,
+                violation_assessments=[
+                    SemanticViolationAssessment(
+                        violation_id="V1",
+                        status=AssessmentStatus.NOT_CURRENTLY_SUPPORTED,
+                        limiting_item_refs=["case_evidence"],
+                        reasoning_summary="The record provides context but does not establish prohibited conduct.",
+                        confidence=Confidence.LOW,
+                    )
+                ],
+                furthest_conclusion=FurthestJustifiedConclusion(
+                    statement="No supported finding is currently justified.", confidence=Confidence.LOW
+                ),
+            )
+            for subject_id in SUBJECTS
+        ],
     )
     compiled = compile_semantic_assessment(semantic, run_input)
-    evidence = next(item for item in compiled.proposal.graph_updates if getattr(item, "local_ref", None) == "case_evidence")
+    evidence = next(
+        item for item in compiled.proposal.graph_updates if getattr(item, "local_ref", None) == "case_evidence"
+    )
     assert evidence.scope.scope_type is GraphScopeType.CASE
     result = VNextInvestigationRunner(lambda _: compiled).run(run_input)
     snapshot = build_input_snapshot(state, PRESET, "scope-replay-run")
@@ -169,19 +198,29 @@ def test_untrusted_multi_student_mentions_cannot_become_case_scope() -> None:
 
 
 def test_trusted_subject_scope_remains_private_and_cannot_widen() -> None:
-    source = _source("S1", "Candidate A and Candidate B are both mentioned in a private record.", GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id="subject_A"))
+    source = _source(
+        "S1",
+        "Candidate A and Candidate B are both mentioned in a private record.",
+        GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id="subject_A"),
+    )
     applicability = _applicability(source)
     assert applicability.classification.value == "student_specific"
     assert applicability.permitted_subject_ids == ["subject_A"]
     with pytest.raises(WardenValidationError, match="widened to CASE"):
         _warden({"S1": source}).apply(_proposal("S1", GraphScope(scope_type=GraphScopeType.CASE)))
     with pytest.raises(WardenValidationError, match="student 'subject_B'"):
-        _warden({"S1": source}).apply(_proposal("S1", GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id="subject_B")))
+        _warden({"S1": source}).apply(
+            _proposal("S1", GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id="subject_B"))
+        )
 
 
 def test_trusted_relationship_scope_is_accepted_only_as_relationship_scope() -> None:
     relationships = _relationship()
-    source = _source("S1", "Candidate A and Candidate B are named in a trusted relationship record.", GraphScope(scope_type=GraphScopeType.RELATIONSHIP, relationship_id="rel_A_B"))
+    source = _source(
+        "S1",
+        "Candidate A and Candidate B are named in a trusted relationship record.",
+        GraphScope(scope_type=GraphScopeType.RELATIONSHIP, relationship_id="rel_A_B"),
+    )
     applicability = _applicability(source, relationships)
     assert applicability.classification.value == "multi_student_candidate"
     relationship_scope = GraphScope(scope_type=GraphScopeType.RELATIONSHIP, relationship_id="rel_A_B")

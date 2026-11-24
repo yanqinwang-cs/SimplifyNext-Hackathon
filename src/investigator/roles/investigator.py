@@ -76,13 +76,19 @@ class AddUncertaintyCommand(_InvestigatorCommand):
     node_id: str | None = Field(default=None, pattern=r"^U\d+(?:\.\d+)*$")
     local_ref: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_-]{0,63}$")
     statement: str
-    target_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*|H\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$")
+    target_node_id: str = Field(
+        pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*|H\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$"
+    )
     scope: GraphScope | None = None
 
 
 class _RelationCommand(_InvestigatorCommand):
-    source_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$")
-    target_node_id: str = Field(pattern=r"^(?:P\d+(?:\.\d+)*|H\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$")
+    source_node_id: str = Field(
+        pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$"
+    )
+    target_node_id: str = Field(
+        pattern=r"^(?:P\d+(?:\.\d+)*|H\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$"
+    )
     strength: EdgeStrength | None = None
 
 
@@ -97,7 +103,9 @@ class AddConflictCommand(_RelationCommand):
 class AddDerivationCommand(_InvestigatorCommand):
     operation: Literal["add_derivation"] = "add_derivation"
     derived_proposition_id: str = Field(pattern=r"^(?:P\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$")
-    source_node_id: str = Field(pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$")
+    source_node_id: str = Field(
+        pattern=r"^(?:E\d+(?:\.\d+)*|A\d+_RELEASE|P\d+(?:\.\d+)*|node_[0-9a-f]{12,64}|[a-z][a-z0-9_-]{0,63})$"
+    )
 
 
 class AddSpecializationCommand(_InvestigatorCommand):
@@ -112,9 +120,15 @@ class MoveFocusCommand(_InvestigatorCommand):
 
 
 InvestigatorUpdate: TypeAlias = Annotated[
-    AddEvidenceCommand | AddPropositionCommand | AddHypothesisCommand | AddUncertaintyCommand |
-    AddSupportCommand | AddConflictCommand | AddDerivationCommand |
-    AddSpecializationCommand | MoveFocusCommand,
+    AddEvidenceCommand
+    | AddPropositionCommand
+    | AddHypothesisCommand
+    | AddUncertaintyCommand
+    | AddSupportCommand
+    | AddConflictCommand
+    | AddDerivationCommand
+    | AddSpecializationCommand
+    | MoveFocusCommand,
     Field(discriminator="operation"),
 ]
 

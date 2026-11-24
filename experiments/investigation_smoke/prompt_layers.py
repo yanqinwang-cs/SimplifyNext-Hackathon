@@ -12,12 +12,17 @@ Use the active fictional policy profile only after reasoning about the factual p
 </POLICY_DISCIPLINE>"""
 
 
-def render_current_case(case_input: str, prior_hypotheses: list[dict] | None = None, prior_uncertainties: list[dict] | None = None) -> str:
+def render_current_case(
+    case_input: str, prior_hypotheses: list[dict] | None = None, prior_uncertainties: list[dict] | None = None
+) -> str:
     parts = ["CURRENT CASE EVIDENCE / PRIOR STATE", case_input]
     if prior_hypotheses is not None:
         import json
+
         parts.append("Prior hypotheses/tree (NOT evidence):\n" + json.dumps(prior_hypotheses, indent=2))
-        parts.append("Prior unresolved uncertainties:\n" + json.dumps(prior_uncertainties or [], indent=2) + "\n(NOT evidence)")
+        parts.append(
+            "Prior unresolved uncertainties:\n" + json.dumps(prior_uncertainties or [], indent=2) + "\n(NOT evidence)"
+        )
     return "\n\n".join(parts)
 
 

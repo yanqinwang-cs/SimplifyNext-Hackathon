@@ -9,7 +9,7 @@ from investigator.http_api import SAMPLE_CASE_IDS, sample_cases, seed_sample_cas
 from investigator.reporting import build_input_snapshot, build_report_record
 from investigator.services.evidence_requests import HumanEvidenceWorkflow
 from investigator.state import CaseRepository
-from investigator.test_fixtures import load_scale_fixture_case_state
+from investigator.public_samples.scale import load_scale_fixture_case_state
 from investigator.vnext import run_input_from_case_state
 from investigator.vnext.model import build_prompt
 from investigator.vnext.presets import academic_integrity_core_preset
@@ -42,7 +42,8 @@ def test_importer_loads_ordinary_ten_candidate_case(tmp_path: Path) -> None:
     assert len(state.sources) == 24
     assert len(state.subject_relationships) == 2
     assert {tuple(item.subject_ids) for item in state.subject_relationships.values()} == {
-        ("subject_A", "subject_B"), ("subject_F", "subject_G")
+        ("subject_A", "subject_B"),
+        ("subject_F", "subject_G"),
     }
     assert "expected assessments: 40" in result.stdout
 
@@ -69,7 +70,9 @@ def test_imported_case_is_visible_through_normal_repository_and_samples_unchange
     workflow = HumanEvidenceWorkflow(repository)
     assert "scale-10-working" in repository.list_case_ids()
     assert [item["title"] for item in sample_cases()] == [
-        "Law Exam Investigation", "Multi-Candidate Collaboration Review — 5 Candidates", "Multi-Candidate Collaboration Review — 10 Candidates"
+        "Law Exam Investigation",
+        "Multi-Candidate Collaboration Review — 5 Candidates",
+        "Multi-Candidate Collaboration Review — 10 Candidates",
     ]
     seed_sample_case(workflow, "multi-candidate", SAMPLE_CASE_IDS["multi-candidate"])
     public_sample = repository.load(SAMPLE_CASE_IDS["multi-candidate"])
@@ -111,7 +114,9 @@ def test_imported_case_replays_existing_hand_authored_pipeline() -> None:
     run_input = run_input_from_case_state(state, academic_integrity_core_preset())
     compiled = module.compile_semantic_assessment(module._scale_assessment(state), run_input)
     result = module.VNextInvestigationRunner(lambda _: compiled).run(run_input)
-    report = build_report_record(build_input_snapshot(state, academic_integrity_core_preset(), "imported"), result, completed_at="offline")
+    report = build_report_record(
+        build_input_snapshot(state, academic_integrity_core_preset(), "imported"), result, completed_at="offline"
+    )
     assert len(result.subject_assessments) == 10
     assert sum(len(item.violation_assessments) for item in result.subject_assessments) == 40
     assert all(item.suggested_next_step for item in result.subject_assessments)

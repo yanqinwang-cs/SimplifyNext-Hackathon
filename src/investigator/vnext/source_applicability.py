@@ -34,7 +34,9 @@ class SourceApplicability(BaseModel):
     matched_student_ids: list[str] = Field(default_factory=list)
     identifier_mentions: list[str] = Field(default_factory=list)
     classification: SourceApplicabilityClassification
-    basis: str = Field(pattern=r"^(?:trusted_internal_scope|exact_identifier_match|single_student_default|no_identifier_match)$")
+    basis: str = Field(
+        pattern=r"^(?:trusted_internal_scope|exact_identifier_match|single_student_default|no_identifier_match)$"
+    )
     trusted_scope: GraphScope | None = None
     permitted_subject_ids: list[str] = Field(default_factory=list)
     permitted_relationship_ids: list[str] = Field(default_factory=list)
@@ -63,7 +65,7 @@ def _contains_identifier(haystack: str, identifier: str) -> bool:
     tokens = tuple(normalize_identifier(haystack).split())
     if len(needle) > len(tokens):
         return False
-    return any(tokens[index:index + len(needle)] == needle for index in range(len(tokens) - len(needle) + 1))
+    return any(tokens[index : index + len(needle)] == needle for index in range(len(tokens) - len(needle) + 1))
 
 
 def validate_configured_identifiers(subjects: Mapping[str, AssessmentSubject]) -> None:
@@ -101,7 +103,9 @@ def _trusted_scope(
     if scope.scope_type is GraphScopeType.RELATIONSHIP:
         relationship = relationships.get(scope.relationship_id or "")
         if relationship is None:
-            raise ValueError(f"Trusted source scope {source.id!r} references unknown relationship {scope.relationship_id!r}")
+            raise ValueError(
+                f"Trusted source scope {source.id!r} references unknown relationship {scope.relationship_id!r}"
+            )
     return scope
 
 
@@ -152,9 +156,7 @@ def build_source_applicability(
         permitted_relationship_ids: list[str] = []
         case_shared_allowed = False
         explicit_relationships = [
-            relationship
-            for relationship in relationships.values()
-            if source_id in relationship.source_ids
+            relationship for relationship in relationships.values() if source_id in relationship.source_ids
         ]
         if trusted is not None:
             if trusted.scope_type is GraphScopeType.CASE:
@@ -213,7 +215,10 @@ def source_jointly_identifies(
 
     if not participant_ids:
         return False
-    if applicability.trusted_scope is not None and applicability.trusted_scope.scope_type is GraphScopeType.RELATIONSHIP:
+    if (
+        applicability.trusted_scope is not None
+        and applicability.trusted_scope.scope_type is GraphScopeType.RELATIONSHIP
+    ):
         if relationships is not None and applicability.trusted_scope.relationship_id in relationships:
             return participant_ids.issubset(set(relationships[applicability.trusted_scope.relationship_id].subject_ids))
         return participant_ids.issubset(set(applicability.permitted_subject_ids))
@@ -223,7 +228,4 @@ def source_jointly_identifies(
 def source_applicability_snapshot(index: Mapping[str, SourceApplicability]) -> dict[str, dict[str, object]]:
     """Return an internal, deterministic artifact representation."""
 
-    return {
-        source_id: item.model_dump(mode="json")
-        for source_id, item in sorted(index.items())
-    }
+    return {source_id: item.model_dump(mode="json") for source_id, item in sorted(index.items())}

@@ -54,7 +54,10 @@ def test_fresh_product_catalog_has_only_samples_until_users_create_cases(tmp_pat
         for title in ("Business Law Tutorial 5", "Law Exam Investigation"):
             status, created = request(base, "POST", "/api/cases", {"title": title})
             assert status == 201
-            assert any(item["caseId"] == created["caseId"] and item["title"] == title for item in request(base, "GET", "/api/cases")[1]["cases"])
+            assert any(
+                item["caseId"] == created["caseId"] and item["title"] == title
+                for item in request(base, "GET", "/api/cases")[1]["cases"]
+            )
         assert not (Path(__file__).resolve().parents[1] / "data" / "cases" / "case-01.json").exists()
     finally:
         stop_server(server, thread)
@@ -162,7 +165,12 @@ def test_delete_student_maps_case_handle_and_mutation_errors_truthfully(tmp_path
         status, body = request(base, "DELETE", f"/api/cases/{first['caseId']}/students/{cross_case_handle}", {})
         assert status == 404 and body == {"error": "Student not found"}
         before = workflow.repository.load(first["caseId"])
-        status, body = request(base, "DELETE", f"/api/cases/{first['caseId']}/students/{public_student_handle(first['caseId'], 'subject_1')}", {})
+        status, body = request(
+            base,
+            "DELETE",
+            f"/api/cases/{first['caseId']}/students/{public_student_handle(first['caseId'], 'subject_1')}",
+            {},
+        )
         assert status == 422 and body["code"] == "FINAL_STUDENT_REQUIRED"
         assert workflow.repository.load(first["caseId"]).revision == before.revision
 
@@ -259,7 +267,9 @@ def test_snapshot_admission_failure_does_not_publish_running_state_or_partial_ru
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     create_case(workflow, {"title": "Admission"})
     before = workflow.repository.load("case-000001")
-    monkeypatch.setattr(evidence_requests, "build_input_snapshot", lambda *_args: (_ for _ in ()).throw(RuntimeError("snapshot failed")))
+    monkeypatch.setattr(
+        evidence_requests, "build_input_snapshot", lambda *_args: (_ for _ in ()).throw(RuntimeError("snapshot failed"))
+    )
     with pytest.raises(RuntimeError, match="snapshot failed"):
         workflow.start_run("case-000001")
     after = workflow.repository.load("case-000001")
@@ -382,7 +392,10 @@ def test_orphaned_running_state_is_reconciled_without_provider_call(tmp_path: Pa
     workflow.recover_interrupted_run("case-01")
     recovered = workflow.repository.load("case-01")
     assert recovered.runtime_status == "INTERRUPTED"
-    assert recovered.last_error == {"failure_category": "PROCESS_RESTART", "message": "The assessment was interrupted when the service restarted."}
+    assert recovered.last_error == {
+        "failure_category": "PROCESS_RESTART",
+        "message": "The assessment was interrupted when the service restarted.",
+    }
     assert workflow.current_run_id("case-01") is None
 
 
@@ -396,7 +409,10 @@ def test_fast_completion_returns_the_exact_admitted_run_identity(tmp_path: Path)
     workflow.run_callback = complete
     run_id, _workspace = workflow.start_run_with_id("case-000001")
     for _ in range(100):
-        if any(item.get("run_id") == run_id and item.get("outcome_type") == "COMPLETED" for item in workflow.get_runs("case-000001")):
+        if any(
+            item.get("run_id") == run_id and item.get("outcome_type") == "COMPLETED"
+            for item in workflow.get_runs("case-000001")
+        ):
             break
         time.sleep(0.01)
     runs = workflow.get_runs("case-000001")

@@ -72,11 +72,21 @@ def _raw_policy_context() -> str:
 
 def build_prompt(scenario: StewardScenario) -> str:
     graph = {
-        "nodes": [node.model_dump(mode="json") for node in sorted(scenario.graph.nodes.values(), key=lambda item: item.id)],
-        "edges": [edge.model_dump(mode="json") for edge in sorted(scenario.graph.edges.values(), key=lambda item: item.id)],
+        "nodes": [
+            node.model_dump(mode="json") for node in sorted(scenario.graph.nodes.values(), key=lambda item: item.id)
+        ],
+        "edges": [
+            edge.model_dump(mode="json") for edge in sorted(scenario.graph.edges.values(), key=lambda item: item.id)
+        ],
     }
-    features = {"region_health": region_health(scenario.graph, scenario.focus).model_dump(mode="json"), "tunnel_vision": tunnel_vision_indicators(scenario.graph, scenario.focus).model_dump(mode="json")}
-    participant_text = "\n".join(f"{item.id} roles={', '.join(item.contextual_roles)} label={item.display_label}" for item in scenario.participants)
+    features = {
+        "region_health": region_health(scenario.graph, scenario.focus).model_dump(mode="json"),
+        "tunnel_vision": tunnel_vision_indicators(scenario.graph, scenario.focus).model_dump(mode="json"),
+    }
+    participant_text = "\n".join(
+        f"{item.id} roles={', '.join(item.contextual_roles)} label={item.display_label}"
+        for item in scenario.participants
+    )
     focus_history = " -> ".join(scenario.focus.recent_node_ids) or "(none yet)"
     sections = [
         "<ROLE>\nYou are the Case Steward. Manage global graph focus and relevance. Do not investigate, choose an exact enquiry or tool, create nodes, or decide institutional guilt. Return exactly one legal StewardDecision JSON object.\n</ROLE>",
@@ -95,6 +105,15 @@ def build_prompt(scenario: StewardScenario) -> str:
         "<DETERMINISTIC_FEATURES>\n" + json.dumps(features, sort_keys=True) + "\n</DETERMINISTIC_FEATURES>",
     ]
     if scenario.review_context is not None:
-        sections.append("<TRUSTED_FRONTIER>\n" + json.dumps(scenario.review_context.model_dump(mode="json"), sort_keys=True) + "\nThis is trusted external structural input. Do not author or modify it.\n</TRUSTED_FRONTIER>")
-    sections.extend(["<DYNAMIC_SCENARIO>\n" + scenario.description + "\n</DYNAMIC_SCENARIO>", "<OUTPUT_CONTRACT>\n" + _OUTPUT_CONTRACT + "\n</OUTPUT_CONTRACT>"])
+        sections.append(
+            "<TRUSTED_FRONTIER>\n"
+            + json.dumps(scenario.review_context.model_dump(mode="json"), sort_keys=True)
+            + "\nThis is trusted external structural input. Do not author or modify it.\n</TRUSTED_FRONTIER>"
+        )
+    sections.extend(
+        [
+            "<DYNAMIC_SCENARIO>\n" + scenario.description + "\n</DYNAMIC_SCENARIO>",
+            "<OUTPUT_CONTRACT>\n" + _OUTPUT_CONTRACT + "\n</OUTPUT_CONTRACT>",
+        ]
+    )
     return "\n\n".join(sections)

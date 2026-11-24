@@ -10,7 +10,13 @@ from threading import RLock
 from typing import Any, Callable
 from datetime import datetime, timezone
 
-from investigator.cycle import EvidenceRequest, EvidenceRequestResponse, EvidenceRequestStatus, RequestEvidence, RequestInformation
+from investigator.cycle import (
+    EvidenceRequest,
+    EvidenceRequestResponse,
+    EvidenceRequestStatus,
+    RequestEvidence,
+    RequestInformation,
+)
 from investigator.models.evidence_request import allocate_evidence_request_id
 from investigator.cycle import TurnSnapshot
 from investigator.sources import SourceRegistry
@@ -33,6 +39,7 @@ class EvidenceRequestConflict(RuntimeError):
 
 class CaseSnapshotMismatch(EvidenceRequestConflict):
     """The canonical repository changed relative to a role-turn baseline."""
+
     pass
 
 
@@ -66,7 +73,14 @@ def _state_signature(state: CaseState) -> str:
         "graph": graph,
         "focus_node_id": state.focus_node_id,
         "revision": state.revision,
-        "pending_request": next((item.model_dump(mode="json") for item in reversed(state.evidence_request_history) if item.status is EvidenceRequestStatus.PENDING), None),
+        "pending_request": next(
+            (
+                item.model_dump(mode="json")
+                for item in reversed(state.evidence_request_history)
+                if item.status is EvidenceRequestStatus.PENDING
+            ),
+            None,
+        ),
         "sources": {
             source_id: hashlib.sha256(json.dumps(source.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
             for source_id, source in sorted(state.sources.items())
@@ -78,7 +92,12 @@ def _state_signature(state: CaseState) -> str:
 class HumanEvidenceWorkflow:
     """Single-pending-request application boundary backed by CaseRepository."""
 
-    def __init__(self, repository: CaseRepository, resume_callback: Callable[[str], None] | None = None, run_callback: Callable[[str, "HumanEvidenceWorkflow"], None] | None = None) -> None:
+    def __init__(
+        self,
+        repository: CaseRepository,
+        resume_callback: Callable[[str], None] | None = None,
+        run_callback: Callable[[str, "HumanEvidenceWorkflow"], None] | None = None,
+    ) -> None:
         self.repository = repository
         self.resume_callback = resume_callback
         self._lock = RLock()
@@ -95,7 +114,9 @@ class HumanEvidenceWorkflow:
     def _allocate_run_id(self, case_id: str) -> str:
         run_root = self.repository.runs_dir(case_id)
         run_root.mkdir(parents=True, exist_ok=True)
-        numbers = [int(match.group(1)) for path in run_root.iterdir() if (match := re.fullmatch(r"run_(\d{6})", path.name))]
+        numbers = [
+            int(match.group(1)) for path in run_root.iterdir() if (match := re.fullmatch(r"run_(\d{6})", path.name))
+        ]
         return f"run_{max(numbers, default=0) + 1:06d}"
 
     def _prepare_run_artifacts(
@@ -114,7 +135,31 @@ class HumanEvidenceWorkflow:
             snapshot = build_input_snapshot(state, preset, run_instance_id)
             self._write_run_result(directory / "assessment_input_snapshot.json", snapshot)
             started_at = datetime.now(timezone.utc).isoformat()
-            self._write_run_result(directory / "run_result.json", {"run_id": run_id, "run_instance_id": run_instance_id, "started_at": started_at, "ended_at": None, "termination_reason": None, "final_runtime_status": runtime_status, "outcome_type": "RUNNING", "trace_finalized": False, "originating_actor": "INVESTIGATOR", "start_revision": start_revision, "run_start_revision": start_revision, "latest_safe_revision": start_revision, "final_committed_revision": start_revision, "model_calls": 0, "proposal_correction_calls": 0, "clean_execution_retries": 0, "correction_retries": 0, "final_error": None, "pending_request_id": None, "trace_path": f"/api/cases/{state.case_id}/runs/{run_id}/raw-traces"})
+            self._write_run_result(
+                directory / "run_result.json",
+                {
+                    "run_id": run_id,
+                    "run_instance_id": run_instance_id,
+                    "started_at": started_at,
+                    "ended_at": None,
+                    "termination_reason": None,
+                    "final_runtime_status": runtime_status,
+                    "outcome_type": "RUNNING",
+                    "trace_finalized": False,
+                    "originating_actor": "INVESTIGATOR",
+                    "start_revision": start_revision,
+                    "run_start_revision": start_revision,
+                    "latest_safe_revision": start_revision,
+                    "final_committed_revision": start_revision,
+                    "model_calls": 0,
+                    "proposal_correction_calls": 0,
+                    "clean_execution_retries": 0,
+                    "correction_retries": 0,
+                    "final_error": None,
+                    "pending_request_id": None,
+                    "trace_path": f"/api/cases/{state.case_id}/runs/{run_id}/raw-traces",
+                },
+            )
         except Exception:
             shutil.rmtree(directory, ignore_errors=True)
             raise
@@ -164,18 +209,23 @@ class HumanEvidenceWorkflow:
                 return
             runs = self.get_runs(case_id)
             run = next((item for item in reversed(runs) if item.get("outcome_type") == "RUNNING"), None)
-            error = {"failure_category": "PROCESS_RESTART", "message": "The assessment was interrupted when the service restarted."}
+            error = {
+                "failure_category": "PROCESS_RESTART",
+                "message": "The assessment was interrupted when the service restarted.",
+            }
             if run is not None:
                 path = self._run_dir(case_id, str(run["run_id"])) / "run_result.json"
                 result = json.loads(path.read_text(encoding="utf-8"))
-                result.update({
-                    "ended_at": datetime.now(timezone.utc).isoformat(),
-                    "termination_reason": "process_restart",
-                    "final_runtime_status": "INTERRUPTED",
-                    "outcome_type": "INTERRUPTED",
-                    "trace_finalized": True,
-                    "final_error": error,
-                })
+                result.update(
+                    {
+                        "ended_at": datetime.now(timezone.utc).isoformat(),
+                        "termination_reason": "process_restart",
+                        "final_runtime_status": "INTERRUPTED",
+                        "outcome_type": "INTERRUPTED",
+                        "trace_finalized": True,
+                        "final_error": error,
+                    }
+                )
                 self._write_run_result(path, result)
             state.runtime_status = "INTERRUPTED"
             state.current_actor = "NONE"
@@ -183,7 +233,14 @@ class HumanEvidenceWorkflow:
             state.last_updated_at = datetime.now(timezone.utc)
             self.repository.save(state)
 
-    def finalize_run(self, case_id: str, *, expected_run_id: str | None = None, termination_reason: str | None = None, final_error: dict[str, Any] | None = None) -> None:
+    def finalize_run(
+        self,
+        case_id: str,
+        *,
+        expected_run_id: str | None = None,
+        termination_reason: str | None = None,
+        final_error: dict[str, Any] | None = None,
+    ) -> None:
         with self._lock:
             if expected_run_id is not None and self._active_runs.get(case_id) != expected_run_id:
                 return
@@ -193,9 +250,31 @@ class HumanEvidenceWorkflow:
             state = self.ensure_case(case_id)
             path = self._run_dir(case_id, run_id) / "run_result.json"
             result = json.loads(path.read_text(encoding="utf-8"))
-            pending = next((item for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None)
-            outcome = "WAITING_FOR_EVIDENCE" if pending else {"IDLE": "COMPLETED", "STOPPED": "STOPPED", "FAILED": "FAILED"}.get(state.runtime_status, state.runtime_status)
-            result.update({"ended_at": datetime.now(timezone.utc).isoformat(), "termination_reason": termination_reason or state.runtime_status.lower(), "final_runtime_status": state.runtime_status, "outcome_type": outcome, "trace_finalized": outcome in {"COMPLETED", "FAILED", "STOPPED", "INTERRUPTED"}, "final_case_revision": state.revision, "latest_safe_revision": state.revision, "final_committed_revision": state.revision, "final_error": final_error or state.last_error, "pending_request_id": pending.request_id if pending else None, "request_text": pending.information_sought if pending else None})
+            pending = next(
+                (item for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None
+            )
+            outcome = (
+                "WAITING_FOR_EVIDENCE"
+                if pending
+                else {"IDLE": "COMPLETED", "STOPPED": "STOPPED", "FAILED": "FAILED"}.get(
+                    state.runtime_status, state.runtime_status
+                )
+            )
+            result.update(
+                {
+                    "ended_at": datetime.now(timezone.utc).isoformat(),
+                    "termination_reason": termination_reason or state.runtime_status.lower(),
+                    "final_runtime_status": state.runtime_status,
+                    "outcome_type": outcome,
+                    "trace_finalized": outcome in {"COMPLETED", "FAILED", "STOPPED", "INTERRUPTED"},
+                    "final_case_revision": state.revision,
+                    "latest_safe_revision": state.revision,
+                    "final_committed_revision": state.revision,
+                    "final_error": final_error or state.last_error,
+                    "pending_request_id": pending.request_id if pending else None,
+                    "request_text": pending.information_sought if pending else None,
+                }
+            )
             self._write_run_result(path, result)
 
     def record_model_attempt(self, case_id: str, *, correction: bool = False, kind: str | None = None) -> None:
@@ -238,7 +317,11 @@ class HumanEvidenceWorkflow:
         """Start one backend-owned run through the configured production hook."""
         with self._lock:
             state = self.repository.require_case(case_id)
-            if state.runtime_status in {"RUNNING", "RUNNING_INVESTIGATOR", "RUNNING_STEWARD"} or case_id in self._in_flight_actor or case_id in self._active_runs:
+            if (
+                state.runtime_status in {"RUNNING", "RUNNING_INVESTIGATOR", "RUNNING_STEWARD"}
+                or case_id in self._in_flight_actor
+                or case_id in self._active_runs
+            ):
                 raise EvidenceRequestConflict("Investigation is already running")
             if state.case_status != "ACTIVE":
                 raise EvidenceRequestConflict("Stopped or inactive cases cannot be restarted")
@@ -268,14 +351,23 @@ class HumanEvidenceWorkflow:
                 thread = __import__("threading").Thread(target=self._execute_run, args=(case_id, run_id), daemon=True)
                 try:
                     thread.start()
-                except Exception:
+                except Exception as exc:
                     self._active_runs.pop(case_id, None)
                     self._in_flight_actor.pop(case_id, None)
                     self.repository.save(previous_state)
                     shutil.rmtree(self._run_dir(case_id, run_id), ignore_errors=True)
-                    raise RuntimeError("Assessment could not be started")
+                    raise RuntimeError("Assessment could not be started") from exc
                 summary = "Assessment started."
-                self.record_workspace_event(case_id, {"type": "run_started", "run_id": run_id, "runtime_status": runtime_status, "case_revision": state.revision, "human_summary": summary})
+                self.record_workspace_event(
+                    case_id,
+                    {
+                        "type": "run_started",
+                        "run_id": run_id,
+                        "runtime_status": runtime_status,
+                        "case_revision": state.revision,
+                        "human_summary": summary,
+                    },
+                )
             except Exception:
                 if self._active_runs.get(case_id) == run_id:
                     self._active_runs.pop(case_id, None)
@@ -296,30 +388,91 @@ class HumanEvidenceWorkflow:
             if state.runtime_status.startswith("RUNNING_"):
                 self.set_runtime(case_id, "IDLE", "NONE")
                 summary = "Assessment completed."
-                self.record_workspace_event(case_id, {"type": "run_completed", "run_id": run_id, "runtime_status": "IDLE", "case_revision": state.revision, "human_summary": summary})
+                self.record_workspace_event(
+                    case_id,
+                    {
+                        "type": "run_completed",
+                        "run_id": run_id,
+                        "runtime_status": "IDLE",
+                        "case_revision": state.revision,
+                        "human_summary": summary,
+                    },
+                )
             elif state.runtime_status == "STOPPED":
-                self.record_workspace_event(case_id, {"type": "run_stopped", "run_id": run_id, "runtime_status": "STOPPED", "case_revision": state.revision, "resumable": state.case_status == "ACTIVE", "human_summary": "Autonomous investigation paused for human review. The unresolved issues remain preserved, and the investigation can be resumed or new evidence can be added."})
+                self.record_workspace_event(
+                    case_id,
+                    {
+                        "type": "run_stopped",
+                        "run_id": run_id,
+                        "runtime_status": "STOPPED",
+                        "case_revision": state.revision,
+                        "resumable": state.case_status == "ACTIVE",
+                        "human_summary": "Autonomous investigation paused for human review. The unresolved issues remain preserved, and the investigation can be resumed or new evidence can be added.",
+                    },
+                )
         except Exception as exc:
             if self._active_runs.get(case_id) != run_id:
                 return
-            category = "ORCHESTRATION_CONFIGURATION_FAILURE" if type(exc).__name__ == "BedrockConfigurationError" else ("CASE_SNAPSHOT_MISMATCH" if isinstance(exc, CaseSnapshotMismatch) else failure_category(exc))
+            category = (
+                "ORCHESTRATION_CONFIGURATION_FAILURE"
+                if type(exc).__name__ == "BedrockConfigurationError"
+                else ("CASE_SNAPSHOT_MISMATCH" if isinstance(exc, CaseSnapshotMismatch) else failure_category(exc))
+            )
             state = self.ensure_case(case_id)
             safe_message = safe_failure_message(exc)
-            self.record_trace(case_id, {"event": "failed", "step": state.last_trace_step, "actor": "system", "runtime_status": "FAILED", "case_revision": state.revision, "current_actor": state.current_actor, "failure_category": category, "technical_error_type": type(exc).__name__, "error": safe_message})
-            self.set_runtime(case_id, "FAILED", "NONE", failure_category=category, message=safe_message, step=state.last_trace_step)
+            self.record_trace(
+                case_id,
+                {
+                    "event": "failed",
+                    "step": state.last_trace_step,
+                    "actor": "system",
+                    "runtime_status": "FAILED",
+                    "case_revision": state.revision,
+                    "current_actor": state.current_actor,
+                    "failure_category": category,
+                    "technical_error_type": type(exc).__name__,
+                    "error": safe_message,
+                },
+            )
+            self.set_runtime(
+                case_id, "FAILED", "NONE", failure_category=category, message=safe_message, step=state.last_trace_step
+            )
             summary = "Assessment could not be completed. Case evidence was unchanged."
-            self.record_workspace_event(case_id, {"type": "run_failed", "run_id": run_id, "runtime_status": "FAILED", "case_revision": state.revision, "final_case_revision": state.revision, "human_summary": summary})
+            self.record_workspace_event(
+                case_id,
+                {
+                    "type": "run_failed",
+                    "run_id": run_id,
+                    "runtime_status": "FAILED",
+                    "case_revision": state.revision,
+                    "final_case_revision": state.revision,
+                    "human_summary": summary,
+                },
+            )
         finally:
             self.finalize_run(case_id, expected_run_id=run_id)
 
-    def set_runtime(self, case_id: str, runtime_status: str, actor: str = "NONE", *, failure_category: str | None = None, message: str | None = None, step: int | None = None) -> None:
+    def set_runtime(
+        self,
+        case_id: str,
+        runtime_status: str,
+        actor: str = "NONE",
+        *,
+        failure_category: str | None = None,
+        message: str | None = None,
+        step: int | None = None,
+    ) -> None:
         """Persist truthful runtime state; RUNNING is also tracked in-process."""
         with self._lock:
             state = self.ensure_case(case_id)
             state.runtime_status = runtime_status
             state.current_actor = actor
             state.last_trace_step = step
-            state.last_error = ({"failure_category": failure_category, "message": message, "actor": actor, "step": step} if runtime_status == "FAILED" else None)
+            state.last_error = (
+                {"failure_category": failure_category, "message": message, "actor": actor, "step": step}
+                if runtime_status == "FAILED"
+                else None
+            )
             state.last_updated_at = datetime.now(timezone.utc)
             if runtime_status == "RUNNING" or runtime_status.startswith("RUNNING_"):
                 self._in_flight_actor[case_id] = actor
@@ -332,8 +485,22 @@ class HumanEvidenceWorkflow:
                     path = self._run_dir(case_id, run_id) / "run_result.json"
                     if path.is_file():
                         result = json.loads(path.read_text(encoding="utf-8"))
-                        pending = next((item for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None)
-                        result.update({"final_runtime_status": "WAITING_FOR_EVIDENCE", "outcome_type": "WAITING_FOR_EVIDENCE", "pending_request_id": pending.request_id if pending else None, "request_text": pending.information_sought if pending else None})
+                        pending = next(
+                            (
+                                item
+                                for item in reversed(state.evidence_request_history)
+                                if item.status.value == "pending"
+                            ),
+                            None,
+                        )
+                        result.update(
+                            {
+                                "final_runtime_status": "WAITING_FOR_EVIDENCE",
+                                "outcome_type": "WAITING_FOR_EVIDENCE",
+                                "pending_request_id": pending.request_id if pending else None,
+                                "request_text": pending.information_sought if pending else None,
+                            }
+                        )
                         self._write_run_result(path, result)
 
     def record_trace(self, case_id: str, trace: dict[str, Any]) -> None:
@@ -350,7 +517,9 @@ class HumanEvidenceWorkflow:
             state.last_updated_at = datetime.now(timezone.utc)
             self.repository.save(state)
 
-    def save_reasoning_state(self, case_id: str, graph: Any, focus_node_id: str, case_revision: int | None = None, focus: Any | None = None) -> None:
+    def save_reasoning_state(
+        self, case_id: str, graph: Any, focus_node_id: str, case_revision: int | None = None, focus: Any | None = None
+    ) -> None:
         with self._lock:
             state = self.ensure_case(case_id)
             state.reasoning_graph = graph.model_copy(deep=True)
@@ -366,10 +535,14 @@ class HumanEvidenceWorkflow:
     def assert_turn_snapshot_current(self, case_id: str, snapshot: TurnSnapshot) -> None:
         """Optimistic concurrency gate; never supplies a replacement apply baseline."""
         state = self.repository.require_case(case_id)
-        expected_revision = snapshot.repository_revision if snapshot.repository_revision is not None else snapshot.case_revision
+        expected_revision = (
+            snapshot.repository_revision if snapshot.repository_revision is not None else snapshot.case_revision
+        )
         if state.revision != expected_revision:
             raise CaseSnapshotMismatch("Turn snapshot is stale: canonical case revision changed")
-        if state.reasoning_graph is None or state.reasoning_graph.model_dump(mode="json") != snapshot.graph.model_dump(mode="json"):
+        if state.reasoning_graph is None or state.reasoning_graph.model_dump(mode="json") != snapshot.graph.model_dump(
+            mode="json"
+        ):
             raise CaseSnapshotMismatch("Turn snapshot is stale: canonical graph changed")
         if state.focus_node_id != snapshot.focus.node_id:
             raise CaseSnapshotMismatch("Turn snapshot is stale: canonical focus changed")
@@ -380,9 +553,14 @@ class HumanEvidenceWorkflow:
         }
         if current_signatures != snapshot.visible_source_signatures:
             raise CaseSnapshotMismatch("Turn snapshot is stale: readable source registry changed")
-        pending = next((item for item in reversed(state.evidence_request_history) if item.status is EvidenceRequestStatus.PENDING), None)
+        pending = next(
+            (item for item in reversed(state.evidence_request_history) if item.status is EvidenceRequestStatus.PENDING),
+            None,
+        )
         snapshot_pending = snapshot.cycle.evidence_request if snapshot.cycle is not None else None
-        if (pending.model_dump(mode="json") if pending else None) != (snapshot_pending.model_dump(mode="json") if snapshot_pending else None):
+        if (pending.model_dump(mode="json") if pending else None) != (
+            snapshot_pending.model_dump(mode="json") if snapshot_pending else None
+        ):
             raise CaseSnapshotMismatch("Turn snapshot is stale: pending request changed")
 
     def ensure_case(self, case_id: str, title: str = "Business Law Tutorial 5") -> CaseState:
@@ -429,14 +607,20 @@ class HumanEvidenceWorkflow:
             raise CaseSnapshotMismatch("Clean checkpoint identity does not match restored state")
         return restored
 
-    def request_evidence(self, case_id: str, step: RequestEvidence | RequestInformation | dict, expected_case_revision: int | None = None) -> EvidenceRequest:
+    def request_evidence(
+        self, case_id: str, step: RequestEvidence | RequestInformation | dict, expected_case_revision: int | None = None
+    ) -> EvidenceRequest:
         with self._lock:
             state = self.ensure_case(case_id)
             self._check_revision(state, expected_case_revision)
             if state.case_kind == "sample":
-                raise EvidenceRequestConflict("Sample cases are read-only; reset the sample to restore its original configuration")
+                raise EvidenceRequestConflict(
+                    "Sample cases are read-only; reset the sample to restore its original configuration"
+                )
             if case_id in self._model_revision_active:
-                raise EvidenceRequestConflict("A human request cannot be created while an Investigator revision is active")
+                raise EvidenceRequestConflict(
+                    "A human request cannot be created while an Investigator revision is active"
+                )
             if any(item.status.value == "pending" for item in state.evidence_request_history):
                 raise EvidenceRequestConflict("Only one pending human evidence request is allowed")
             if isinstance(step, (RequestEvidence, RequestInformation)):
@@ -465,7 +649,17 @@ class HumanEvidenceWorkflow:
             state.revision += 1
             self.repository.save(state)
             self._publish_waiting_run(case_id, state, request)
-            self.record_workspace_event(case_id, {"type": "request_created", "run_id": request.originating_run_id, "request_id": request.request_id, "runtime_status": "WAITING_FOR_EVIDENCE", "case_revision": state.revision, "human_summary": f"The Investigator requested: {request.information_sought}"})
+            self.record_workspace_event(
+                case_id,
+                {
+                    "type": "request_created",
+                    "run_id": request.originating_run_id,
+                    "request_id": request.request_id,
+                    "runtime_status": "WAITING_FOR_EVIDENCE",
+                    "case_revision": state.revision,
+                    "human_summary": f"The Investigator requested: {request.information_sought}",
+                },
+            )
             return request
 
     def persist_pending_request(self, case_id: str, request: EvidenceRequest) -> EvidenceRequest:
@@ -476,11 +670,15 @@ class HumanEvidenceWorkflow:
                 raise EvidenceRequestConflict("Only one pending human evidence request is allowed")
             if any(item.request_id == request.request_id for item in state.evidence_request_history):
                 raise EvidenceRequestConflict(f"Evidence request ID already exists: {request.request_id}")
-            request = request.model_copy(update={
-                "originating_run_id": request.originating_run_id or self.current_run_id(case_id),
-                "originating_actor": request.originating_actor or "investigator",
-                "created_case_revision": request.created_case_revision if request.created_case_revision is not None else state.revision,
-            })
+            request = request.model_copy(
+                update={
+                    "originating_run_id": request.originating_run_id or self.current_run_id(case_id),
+                    "originating_actor": request.originating_actor or "investigator",
+                    "created_case_revision": request.created_case_revision
+                    if request.created_case_revision is not None
+                    else state.revision,
+                }
+            )
             state.evidence_request_history.append(request)
             state.runtime_status = "WAITING_FOR_EVIDENCE"
             state.current_actor = "NONE"
@@ -489,7 +687,17 @@ class HumanEvidenceWorkflow:
             state.revision += 1
             self.repository.save(state)
             self._publish_waiting_run(case_id, state, request)
-            self.record_workspace_event(case_id, {"type": "request_created", "run_id": request.originating_run_id, "request_id": request.request_id, "runtime_status": "WAITING_FOR_EVIDENCE", "case_revision": state.revision, "human_summary": f"The Investigator requested: {request.information_sought}"})
+            self.record_workspace_event(
+                case_id,
+                {
+                    "type": "request_created",
+                    "run_id": request.originating_run_id,
+                    "request_id": request.request_id,
+                    "runtime_status": "WAITING_FOR_EVIDENCE",
+                    "case_revision": state.revision,
+                    "human_summary": f"The Investigator requested: {request.information_sought}",
+                },
+            )
             return request
 
     def current_pending_request(self, case_id: str) -> EvidenceRequest:
@@ -542,11 +750,23 @@ class HumanEvidenceWorkflow:
             state.runtime_status = "COMPLETED" if state.runtime_status == "COMPLETED" else state.runtime_status
             state.last_updated_at = datetime.now(timezone.utc)
             self.repository.save(state)
-        self.record_workspace_event(case_id, {"type": "source_added", "source_id": source.id, "runtime_status": state.runtime_status, "case_revision": state.revision, "human_summary": f"Source {source.name} was added to the case."})
+        self.record_workspace_event(
+            case_id,
+            {
+                "type": "source_added",
+                "source_id": source.id,
+                "runtime_status": state.runtime_status,
+                "case_revision": state.revision,
+                "human_summary": f"Source {source.name} was added to the case.",
+            },
+        )
         return source
 
-    def add_subject(self, case_id: str, subject: dict[str, Any], expected_case_revision: int | None = None) -> AssessmentSubject:
+    def add_subject(
+        self, case_id: str, subject: dict[str, Any], expected_case_revision: int | None = None
+    ) -> AssessmentSubject:
         from investigator.models.assessment import AssessmentSubject
+
         with self._lock:
             state = self.repository.require_case(case_id)
             self._assert_user_mutable(state)
@@ -570,10 +790,20 @@ class HumanEvidenceWorkflow:
             state.revision += 1
             state.last_updated_at = datetime.now(timezone.utc)
             self.repository.save(state)
-        self.record_workspace_event(case_id, {"type": "subject_added", "subject_id": item.subject_id, "case_revision": state.revision, "human_summary": f"Subject {item.display_name} was added."})
+        self.record_workspace_event(
+            case_id,
+            {
+                "type": "subject_added",
+                "subject_id": item.subject_id,
+                "case_revision": state.revision,
+                "human_summary": f"Subject {item.display_name} was added.",
+            },
+        )
         return item
 
-    def rename_subject(self, case_id: str, subject_id: str, display_name: str, expected_case_revision: int | None = None) -> AssessmentSubject:
+    def rename_subject(
+        self, case_id: str, subject_id: str, display_name: str, expected_case_revision: int | None = None
+    ) -> AssessmentSubject:
         with self._lock:
             state = self.repository.require_case(case_id)
             self._assert_user_mutable(state)
@@ -594,7 +824,15 @@ class HumanEvidenceWorkflow:
             state.revision += 1
             state.last_updated_at = datetime.now(timezone.utc)
             self.repository.save(state)
-        self.record_workspace_event(case_id, {"type": "subject_renamed", "subject_id": subject_id, "case_revision": state.revision, "human_summary": "A student was renamed."})
+        self.record_workspace_event(
+            case_id,
+            {
+                "type": "subject_renamed",
+                "subject_id": subject_id,
+                "case_revision": state.revision,
+                "human_summary": "A student was renamed.",
+            },
+        )
         return renamed
 
     def remove_subject(self, case_id: str, subject_id: str, expected_case_revision: int | None = None) -> None:
@@ -612,10 +850,21 @@ class HumanEvidenceWorkflow:
             state.revision += 1
             state.last_updated_at = datetime.now(timezone.utc)
             self.repository.save(state)
-        self.record_workspace_event(case_id, {"type": "subject_removed", "subject_id": subject_id, "case_revision": state.revision, "human_summary": "A student was removed from the case."})
+        self.record_workspace_event(
+            case_id,
+            {
+                "type": "subject_removed",
+                "subject_id": subject_id,
+                "case_revision": state.revision,
+                "human_summary": "A student was removed from the case.",
+            },
+        )
 
-    def add_relationship(self, case_id: str, relationship: dict[str, Any], expected_case_revision: int | None = None) -> SubjectRelationship:
+    def add_relationship(
+        self, case_id: str, relationship: dict[str, Any], expected_case_revision: int | None = None
+    ) -> SubjectRelationship:
         from investigator.models.assessment import SubjectRelationship
+
         with self._lock:
             state = self.ensure_case(case_id)
             self._check_revision(state, expected_case_revision)
@@ -630,11 +879,20 @@ class HumanEvidenceWorkflow:
             state.revision += 1
             state.last_updated_at = datetime.now(timezone.utc)
             self.repository.save(state)
-        self.record_workspace_event(case_id, {"type": "relationship_added", "relationship_id": item.relationship_id, "case_revision": state.revision, "human_summary": f"Relationship {item.relationship_id} was added."})
+        self.record_workspace_event(
+            case_id,
+            {
+                "type": "relationship_added",
+                "relationship_id": item.relationship_id,
+                "case_revision": state.revision,
+                "human_summary": f"Relationship {item.relationship_id} was added.",
+            },
+        )
         return item
 
     def update_context(self, case_id: str, context: dict[str, Any], expected_case_revision: int | None = None) -> Any:
         from investigator.models.assessment import AssessmentContext
+
         with self._lock:
             state = self.ensure_case(case_id)
             self._check_revision(state, expected_case_revision)
@@ -643,21 +901,50 @@ class HumanEvidenceWorkflow:
             state.revision += 1
             state.last_updated_at = datetime.now(timezone.utc)
             self.repository.save(state)
-        self.record_workspace_event(case_id, {"type": "context_updated", "case_revision": state.revision, "human_summary": "Assessment context was updated."})
+        self.record_workspace_event(
+            case_id,
+            {
+                "type": "context_updated",
+                "case_revision": state.revision,
+                "human_summary": "Assessment context was updated.",
+            },
+        )
         return item
 
-    def respond(self, case_id: str, request_id: str, response: EvidenceRequestResponse | dict, sources: list[dict[str, Any]] | None = None, expected_case_revision: int | None = None) -> EvidenceRequest:
+    def respond(
+        self,
+        case_id: str,
+        request_id: str,
+        response: EvidenceRequestResponse | dict,
+        sources: list[dict[str, Any]] | None = None,
+        expected_case_revision: int | None = None,
+    ) -> EvidenceRequest:
         with self._lock:
             state = self.ensure_case(case_id)
             self._check_revision(state, expected_case_revision)
             if state.case_kind == "sample":
-                raise EvidenceRequestConflict("Sample cases are read-only; reset the sample to restore its original configuration")
+                raise EvidenceRequestConflict(
+                    "Sample cases are read-only; reset the sample to restore its original configuration"
+                )
             if case_id in self._model_revision_active:
-                raise EvidenceRequestConflict("Human evidence responses are blocked while an Investigator revision is active")
-            pending = next((item for item in state.evidence_request_history if item.request_id == request_id and item.status.value == "pending"), None)
+                raise EvidenceRequestConflict(
+                    "Human evidence responses are blocked while an Investigator revision is active"
+                )
+            pending = next(
+                (
+                    item
+                    for item in state.evidence_request_history
+                    if item.request_id == request_id and item.status.value == "pending"
+                ),
+                None,
+            )
             if pending is None:
                 raise EvidenceRequestConflict("Request is not the current pending evidence request")
-            parsed = response if isinstance(response, EvidenceRequestResponse) else EvidenceRequestResponse.model_validate(response)
+            parsed = (
+                response
+                if isinstance(response, EvidenceRequestResponse)
+                else EvidenceRequestResponse.model_validate(response)
+            )
             if parsed.request_id != request_id:
                 raise EvidenceRequestConflict("Response request_id does not match the URL request ID")
             submitted = list(sources or [])
@@ -677,7 +964,14 @@ class HumanEvidenceWorkflow:
                         dict(source_data.get("metadata") or {}),
                     )
                     source_ids.append(source.id)
-            completed = pending.model_copy(update={"status": EvidenceRequestStatus(parsed.status), "released_source_ids": source_ids, "note": parsed.note, "fulfilled_case_revision": state.revision + 1})
+            completed = pending.model_copy(
+                update={
+                    "status": EvidenceRequestStatus(parsed.status),
+                    "released_source_ids": source_ids,
+                    "note": parsed.note,
+                    "fulfilled_case_revision": state.revision + 1,
+                }
+            )
             index = state.evidence_request_history.index(pending)
             state.evidence_request_history[index] = completed
             state.revision += 1
@@ -685,8 +979,28 @@ class HumanEvidenceWorkflow:
             state.current_actor = "NONE"
             state.last_updated_at = datetime.now(timezone.utc)
             self.repository.save(state)
-        self.record_trace(case_id, {"event": "evidence_request_resolved", "request_id": request_id, "status": completed.status.value, "released_source_ids": list(completed.released_source_ids), "fulfilled_case_revision": completed.fulfilled_case_revision, "actor": "human"})
-        self.record_workspace_event(case_id, {"type": "request_resolved", "request_id": request_id, "run_id": completed.originating_run_id, "runtime_status": "IDLE", "case_revision": completed.fulfilled_case_revision, "human_summary": f"Human evidence request {request_id} was marked {completed.status.value}."})
+        self.record_trace(
+            case_id,
+            {
+                "event": "evidence_request_resolved",
+                "request_id": request_id,
+                "status": completed.status.value,
+                "released_source_ids": list(completed.released_source_ids),
+                "fulfilled_case_revision": completed.fulfilled_case_revision,
+                "actor": "human",
+            },
+        )
+        self.record_workspace_event(
+            case_id,
+            {
+                "type": "request_resolved",
+                "request_id": request_id,
+                "run_id": completed.originating_run_id,
+                "runtime_status": "IDLE",
+                "case_revision": completed.fulfilled_case_revision,
+                "human_summary": f"Human evidence request {request_id} was marked {completed.status.value}.",
+            },
+        )
         if self.resume_callback:
             self.resume_callback(case_id)
             resumed_run_id = self.current_run_id(case_id)
@@ -709,7 +1023,9 @@ class HumanEvidenceWorkflow:
 
     def get_workspace(self, case_id: str) -> dict[str, Any]:
         state = self.ensure_case(case_id)
-        pending = next((item for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None)
+        pending = next(
+            (item for item in reversed(state.evidence_request_history) if item.status.value == "pending"), None
+        )
         runtime_status = state.runtime_status
         current_actor = state.current_actor
         if case_id in self._in_flight_actor:
@@ -718,12 +1034,60 @@ class HumanEvidenceWorkflow:
         messages: list[dict[str, Any]] = []
         if pending:
             request_payload = self._public_request(pending)
-            messages.append({"id": f"request-{pending.request_id}", "role": "simplifynext", "text": "The available material leaves one important question open.", "request": request_payload})
+            messages.append(
+                {
+                    "id": f"request-{pending.request_id}",
+                    "role": "simplifynext",
+                    "text": "The available material leaves one important question open.",
+                    "request": request_payload,
+                }
+            )
         pending_payload = self._public_request(pending) if pending else None
         runs = self.get_runs(case_id)
         latest = runs[-1] if runs else None
         display_title = "Law Exam Investigation" if state.title == "Business Law Tutorial 5" else state.title
-        return {"caseId": state.case_id, "caseRevision": state.revision, "title": display_title, "status": runtime_status.lower(), "caseStatus": state.case_status, "runtimeStatus": runtime_status, "currentActor": current_actor, "institutionalStatus": "Investigating" if state.case_status == "ACTIVE" else state.case_status.title(), "currentFocus": pending.information_sought if pending else "Review the current case state.", "messages": messages, "chatHistory": [], "workspaceTurns": [], "workspaceEvents": self.workspace_events(case_id), "visibleSources": [{"id": source.id, "name": source.name, "sourceType": source.source_type.value, "content": source.content or "", "contentPreview": (source.content or "")[:180], "metadata": source.metadata} for source in state.sources.values()], "assessmentContext": state.assessment_context.model_dump(mode="json") if state.assessment_context else None, "subjects": [item.model_dump(mode="json") for item in sorted(state.subjects.values(), key=lambda item: item.subject_id)], "relationships": [item.model_dump(mode="json") for item in sorted(state.subject_relationships.values(), key=lambda item: item.relationship_id)], "pendingEvidenceRequest": pending_payload, "requestHistory": [self._public_request(item) for item in state.evidence_request_history], "runs": runs, "lastError": state.last_error, "lastTraceStep": state.last_trace_step, "lastUpdatedAt": state.last_updated_at.isoformat(), "latestRun": latest}
+        return {
+            "caseId": state.case_id,
+            "caseRevision": state.revision,
+            "title": display_title,
+            "status": runtime_status.lower(),
+            "caseStatus": state.case_status,
+            "runtimeStatus": runtime_status,
+            "currentActor": current_actor,
+            "institutionalStatus": "Investigating" if state.case_status == "ACTIVE" else state.case_status.title(),
+            "currentFocus": pending.information_sought if pending else "Review the current case state.",
+            "messages": messages,
+            "chatHistory": [],
+            "workspaceTurns": [],
+            "workspaceEvents": self.workspace_events(case_id),
+            "visibleSources": [
+                {
+                    "id": source.id,
+                    "name": source.name,
+                    "sourceType": source.source_type.value,
+                    "content": source.content or "",
+                    "contentPreview": (source.content or "")[:180],
+                    "metadata": source.metadata,
+                }
+                for source in state.sources.values()
+            ],
+            "assessmentContext": state.assessment_context.model_dump(mode="json") if state.assessment_context else None,
+            "subjects": [
+                item.model_dump(mode="json")
+                for item in sorted(state.subjects.values(), key=lambda item: item.subject_id)
+            ],
+            "relationships": [
+                item.model_dump(mode="json")
+                for item in sorted(state.subject_relationships.values(), key=lambda item: item.relationship_id)
+            ],
+            "pendingEvidenceRequest": pending_payload,
+            "requestHistory": [self._public_request(item) for item in state.evidence_request_history],
+            "runs": runs,
+            "lastError": state.last_error,
+            "lastTraceStep": state.last_trace_step,
+            "lastUpdatedAt": state.last_updated_at.isoformat(),
+            "latestRun": latest,
+        }
 
     def _assessment_guidance(self, case_id: str) -> dict[str, Any]:
         """Build internal report material before projecting it for Help."""
@@ -740,28 +1104,64 @@ class HumanEvidenceWorkflow:
                 for student in record.get("students", []):
                     findings = []
                     for violation in student.get("violations", []):
-                        findings.append({
-                            "violation_id": violation.get("violation_id"),
-                            "status": violation.get("status"),
-                            "reasoning_summary": violation.get("reasoning_summary", ""),
-                            "unresolved_points": violation.get("unresolved_points", []),
-                            "supporting_material": [{"statement": item.get("statement", ""), "source_labels": [source.get("file_name", "") for source in item.get("sources", [])]} for item in violation.get("supporting_material", [])],
-                            "mitigating_material": [{"statement": item.get("statement", ""), "source_labels": [source.get("file_name", "") for source in item.get("sources", [])]} for item in violation.get("limiting_material", [])],
-                        })
-                    assessments.append({
-                        "subject_id": student.get("subject_id"),
-                        "subject_display_name": student.get("display_name", "Student"),
-                        "subject_candidate_number": student.get("candidate_number"),
-                        "violation_assessments": findings,
-                        "furthest_conclusion": {"statement": student.get("furthest_conclusion", "")},
-                    })
+                        findings.append(
+                            {
+                                "violation_id": violation.get("violation_id"),
+                                "status": violation.get("status"),
+                                "reasoning_summary": violation.get("reasoning_summary", ""),
+                                "unresolved_points": violation.get("unresolved_points", []),
+                                "supporting_material": [
+                                    {
+                                        "statement": item.get("statement", ""),
+                                        "source_labels": [
+                                            source.get("file_name", "") for source in item.get("sources", [])
+                                        ],
+                                    }
+                                    for item in violation.get("supporting_material", [])
+                                ],
+                                "mitigating_material": [
+                                    {
+                                        "statement": item.get("statement", ""),
+                                        "source_labels": [
+                                            source.get("file_name", "") for source in item.get("sources", [])
+                                        ],
+                                    }
+                                    for item in violation.get("limiting_material", [])
+                                ],
+                            }
+                        )
+                    assessments.append(
+                        {
+                            "subject_id": student.get("subject_id"),
+                            "subject_display_name": student.get("display_name", "Student"),
+                            "subject_candidate_number": student.get("candidate_number"),
+                            "violation_assessments": findings,
+                            "furthest_conclusion": {"statement": student.get("furthest_conclusion", "")},
+                        }
+                    )
                 return {
                     "case_id": case_id,
                     "title": record.get("case_name_at_assessment", state.title),
                     "assessment_context": None,
-                    "subjects": [{"subject_id": item.get("subject_id"), "display_name": item.get("display_name"), "candidate_number": item.get("candidate_number")} for item in record.get("students", [])],
+                    "subjects": [
+                        {
+                            "subject_id": item.get("subject_id"),
+                            "display_name": item.get("display_name"),
+                            "candidate_number": item.get("candidate_number"),
+                        }
+                        for item in record.get("students", [])
+                    ],
                     "relationships": [],
-                    "source_inventory": [{"id": item.get("source_id"), "name": item.get("filename"), "source_type": "document", "scope": None, "metadata": {}} for item in record.get("sources", [])],
+                    "source_inventory": [
+                        {
+                            "id": item.get("source_id"),
+                            "name": item.get("filename"),
+                            "source_type": "document",
+                            "scope": None,
+                            "metadata": {},
+                        }
+                        for item in record.get("sources", [])
+                    ],
                     "current_case_revision": state.revision,
                     "latest_successful_vnext_run": latest,
                     "latest_assessment_revision": record.get("assessment_input_revision"),
@@ -781,6 +1181,7 @@ class HumanEvidenceWorkflow:
                 result = payload.get("result")
         subject_lookup = state.subjects
         graph_nodes = ((result or {}).get("graph") or {}).get("nodes", {})
+
         def material(node_id: str) -> dict[str, Any]:
             node = graph_nodes.get(node_id)
             if not node:
@@ -789,7 +1190,14 @@ class HumanEvidenceWorkflow:
             source_ids = metadata.get("source_ids", [])
             if metadata.get("source_id"):
                 source_ids = [metadata["source_id"]]
-            return {"id": node_id, "statement": node.get("statement", "Referenced material is unavailable."), "source_labels": [state.sources[source_id].name for source_id in source_ids if source_id in state.sources]}
+            return {
+                "id": node_id,
+                "statement": node.get("statement", "Referenced material is unavailable."),
+                "source_labels": [
+                    state.sources[source_id].name for source_id in source_ids if source_id in state.sources
+                ],
+            }
+
         assessments = []
         for assessment in (result or {}).get("subject_assessments", []):
             subject = subject_lookup.get(assessment.get("subject_id"))
@@ -797,17 +1205,38 @@ class HumanEvidenceWorkflow:
             item["subject_display_name"] = subject.display_name if subject else assessment.get("subject_id")
             item["subject_candidate_number"] = subject.candidate_number if subject else None
             for violation in item.get("violation_assessments", []):
-                violation["supporting_material"] = [material(node_id) for node_id in violation.get("supporting_node_ids", [])]
-                violation["mitigating_material"] = [material(node_id) for node_id in violation.get("mitigating_node_ids", [])]
+                violation["supporting_material"] = [
+                    material(node_id) for node_id in violation.get("supporting_node_ids", [])
+                ]
+                violation["mitigating_material"] = [
+                    material(node_id) for node_id in violation.get("mitigating_node_ids", [])
+                ]
             assessments.append(item)
         assessment_revision = latest.get("start_revision") if latest else None
         return {
             "case_id": state.case_id,
             "title": state.title,
-            "assessment_context": state.assessment_context.model_dump(mode="json") if state.assessment_context else None,
-            "subjects": [item.model_dump(mode="json") for item in sorted(state.subjects.values(), key=lambda item: item.subject_id)],
-            "relationships": [item.model_dump(mode="json") for item in sorted(state.subject_relationships.values(), key=lambda item: item.relationship_id)],
-            "source_inventory": [{"id": item.id, "name": item.name, "source_type": item.source_type.value, "scope": item.metadata.get("assessment_scope"), "metadata": item.metadata} for item in sorted(state.sources.values(), key=lambda item: item.id)],
+            "assessment_context": state.assessment_context.model_dump(mode="json")
+            if state.assessment_context
+            else None,
+            "subjects": [
+                item.model_dump(mode="json")
+                for item in sorted(state.subjects.values(), key=lambda item: item.subject_id)
+            ],
+            "relationships": [
+                item.model_dump(mode="json")
+                for item in sorted(state.subject_relationships.values(), key=lambda item: item.relationship_id)
+            ],
+            "source_inventory": [
+                {
+                    "id": item.id,
+                    "name": item.name,
+                    "source_type": item.source_type.value,
+                    "scope": item.metadata.get("assessment_scope"),
+                    "metadata": item.metadata,
+                }
+                for item in sorted(state.sources.values(), key=lambda item: item.id)
+            ],
             "current_case_revision": state.revision,
             "latest_successful_vnext_run": latest,
             "latest_assessment_revision": assessment_revision,
@@ -819,43 +1248,96 @@ class HumanEvidenceWorkflow:
 
     def get_guidance_context(self, case_id: str) -> dict[str, Any]:
         """Return only human-facing, read-only context for the vNext Help Agent."""
-        from investigator.public_views import document_format
 
         state = self.repository.require_case(case_id)
         internal = self._assessment_guidance(case_id)
         preset_payload = internal.get("preset")
-        labels = {item["violation_id"]: item["label"] for item in preset_payload.get("violations", [])} if isinstance(preset_payload, dict) and preset_payload.get("violations") else {item.violation_id: item.label for item in preset_for_case(state).violations}
+        labels = (
+            {item["violation_id"]: item["label"] for item in preset_payload.get("violations", [])}
+            if isinstance(preset_payload, dict) and preset_payload.get("violations")
+            else {item.violation_id: item.label for item in preset_for_case(state).violations}
+        )
         assessments: list[dict[str, Any]] = []
         for assessment in internal["per_subject_assessments"]:
             safe_violations = []
             for violation in assessment.get("violation_assessments", []):
-                safe_violations.append({
-                    "label": labels.get(violation.get("violation_id"), "Configured violation"),
-                    "status": violation.get("status"),
-                    "reasoning_summary": _public_semantic_text(state, violation.get("reasoning_summary", "")),
-                    "unresolved_points": [_public_semantic_text(state, point) for point in violation.get("unresolved_points", [])],
-                    "supporting_material": [{"statement": _public_semantic_text(state, item.get("statement", "")), "source_labels": list(item.get("source_labels", []))} for item in violation.get("supporting_material", [])],
-                    "limiting_material": [{"statement": _public_semantic_text(state, item.get("statement", "")), "source_labels": list(item.get("source_labels", []))} for item in violation.get("mitigating_material", [])],
-                })
+                safe_violations.append(
+                    {
+                        "label": labels.get(violation.get("violation_id"), "Configured violation"),
+                        "status": violation.get("status"),
+                        "reasoning_summary": _public_semantic_text(state, violation.get("reasoning_summary", "")),
+                        "unresolved_points": [
+                            _public_semantic_text(state, point) for point in violation.get("unresolved_points", [])
+                        ],
+                        "supporting_material": [
+                            {
+                                "statement": _public_semantic_text(state, item.get("statement", "")),
+                                "source_labels": list(item.get("source_labels", [])),
+                            }
+                            for item in violation.get("supporting_material", [])
+                        ],
+                        "limiting_material": [
+                            {
+                                "statement": _public_semantic_text(state, item.get("statement", "")),
+                                "source_labels": list(item.get("source_labels", [])),
+                            }
+                            for item in violation.get("mitigating_material", [])
+                        ],
+                    }
+                )
             conclusion = assessment.get("furthest_conclusion") or {}
-            assessments.append({
-                "subject_display_name": assessment.get("subject_display_name", "Student"),
-                "subject_candidate_number": assessment.get("subject_candidate_number"),
-                "violation_assessments": safe_violations,
-                "furthest_conclusion": {**conclusion, "statement": _public_semantic_text(state, conclusion.get("statement", ""))},
-            })
+            assessments.append(
+                {
+                    "subject_display_name": assessment.get("subject_display_name", "Student"),
+                    "subject_candidate_number": assessment.get("subject_candidate_number"),
+                    "violation_assessments": safe_violations,
+                    "furthest_conclusion": {
+                        **conclusion,
+                        "statement": _public_semantic_text(state, conclusion.get("statement", "")),
+                    },
+                }
+            )
         return {
             "case_name": state.title,
             "assessment": {
-                "state": "stale" if internal["assessment_is_stale"] else ("complete" if internal["latest_successful_vnext_run"] else "not_started"),
+                "state": "stale"
+                if internal["assessment_is_stale"]
+                else ("complete" if internal["latest_successful_vnext_run"] else "not_started"),
                 "assessment_is_stale": internal["assessment_is_stale"],
                 "runtime_status": state.runtime_status,
             },
-            "students": [{"display_name": item.display_name, "candidate_number": item.candidate_number} for item in sorted(state.subjects.values(), key=lambda item: item.subject_id)],
-            "sources": [{"file_name": item.name, "document_format": document_format(item.name)} for item in sorted(state.sources.values(), key=lambda item: item.id)],
-            "policy_context": ([{"label": item["label"], "rule_text": item["rule_text"], "prohibited_conduct": item["prohibited_conduct"]} for item in preset_payload.get("violations", [])] if isinstance(preset_payload, dict) and preset_payload.get("violations") else [{"label": item.label, "rule_text": item.rule_text, "prohibited_conduct": item.prohibited_conduct} for item in preset_for_case(state).violations]),
+            "students": [
+                {"display_name": item.display_name, "candidate_number": item.candidate_number}
+                for item in sorted(state.subjects.values(), key=lambda item: item.subject_id)
+            ],
+            "sources": [
+                {"file_name": item.name, "document_format": document_format(item.name)}
+                for item in sorted(state.sources.values(), key=lambda item: item.id)
+            ],
+            "policy_context": (
+                [
+                    {
+                        "label": item["label"],
+                        "rule_text": item["rule_text"],
+                        "prohibited_conduct": item["prohibited_conduct"],
+                    }
+                    for item in preset_payload.get("violations", [])
+                ]
+                if isinstance(preset_payload, dict) and preset_payload.get("violations")
+                else [
+                    {"label": item.label, "rule_text": item.rule_text, "prohibited_conduct": item.prohibited_conduct}
+                    for item in preset_for_case(state).violations
+                ]
+            ),
             "per_subject_assessments": assessments,
-            "unresolved_points": sorted({point for assessment in assessments for violation in assessment["violation_assessments"] for point in violation["unresolved_points"]}),
+            "unresolved_points": sorted(
+                {
+                    point
+                    for assessment in assessments
+                    for violation in assessment["violation_assessments"]
+                    for point in violation["unresolved_points"]
+                }
+            ),
             "run_status": state.runtime_status,
         }
 
@@ -956,7 +1438,11 @@ class HumanEvidenceWorkflow:
 
     def record_workspace_event(self, case_id: str, event: dict[str, Any]) -> dict[str, Any]:
         self._event_sequence += 1
-        record = {"event_id": f"workspace_event_{self._event_sequence:06d}", "created_at": datetime.now(timezone.utc).isoformat(), **event}
+        record = {
+            "event_id": f"workspace_event_{self._event_sequence:06d}",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            **event,
+        }
         self._workspace_events.setdefault(case_id, []).append(record)
         return record
 
@@ -980,7 +1466,45 @@ class HumanEvidenceWorkflow:
                     # A run may be initializing on another thread; omit it until
                     # its first result snapshot is complete.
                     continue
-                runs.append({key: payload.get(key) for key in ("run_id", "run_instance_id", "started_at", "ended_at", "termination_reason", "final_runtime_status", "outcome_type", "trace_finalized", "originating_actor", "start_revision", "run_start_revision", "latest_safe_revision", "final_case_revision", "final_committed_revision", "final_error", "pending_request_id", "request_text", "trace_path", "vnext_status", "vnext_result_path", "report_record_path", "vnext_furthest_conclusion", "vnext_subject_conclusions", "model", "model_calls", "proposal_correction_calls", "clean_execution_retries", "correction_retries", "input_tokens", "output_tokens", "latency_seconds", "finish_reason")})
+                runs.append(
+                    {
+                        key: payload.get(key)
+                        for key in (
+                            "run_id",
+                            "run_instance_id",
+                            "started_at",
+                            "ended_at",
+                            "termination_reason",
+                            "final_runtime_status",
+                            "outcome_type",
+                            "trace_finalized",
+                            "originating_actor",
+                            "start_revision",
+                            "run_start_revision",
+                            "latest_safe_revision",
+                            "final_case_revision",
+                            "final_committed_revision",
+                            "final_error",
+                            "pending_request_id",
+                            "request_text",
+                            "trace_path",
+                            "vnext_status",
+                            "vnext_result_path",
+                            "report_record_path",
+                            "vnext_furthest_conclusion",
+                            "vnext_subject_conclusions",
+                            "model",
+                            "model_calls",
+                            "proposal_correction_calls",
+                            "clean_execution_retries",
+                            "correction_retries",
+                            "input_tokens",
+                            "output_tokens",
+                            "latency_seconds",
+                            "finish_reason",
+                        )
+                    }
+                )
         return runs
 
     def raw_trace_path(self, case_id: str, run_id: str) -> Path:
@@ -998,7 +1522,11 @@ class HumanEvidenceWorkflow:
         path = self._run_dir(case_id, run_id) / "raw_traces.jsonl"
         if not path.is_file():
             return b""
-        lines = [json.dumps(self._scrub_diagnostic(json.loads(line)), default=str) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        lines = [
+            json.dumps(self._scrub_diagnostic(json.loads(line)), default=str)
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
         return ("\n".join(lines) + ("\n" if lines else "")).encode("utf-8")
 
     @classmethod
@@ -1021,10 +1549,22 @@ class HumanEvidenceWorkflow:
             raise KeyError("Assessment run not found")
         path = self._run_dir(case_id, run_id) / "raw_traces.jsonl"
         allowed = {
-            "event", "actor", "runtime_status", "attempt_number", "retry_mode",
-            "failure_category", "technical_error_type", "error_type", "error",
-            "model", "input_tokens", "output_tokens", "latency_seconds",
-            "finish_reason", "step", "repairable",
+            "event",
+            "actor",
+            "runtime_status",
+            "attempt_number",
+            "retry_mode",
+            "failure_category",
+            "technical_error_type",
+            "error_type",
+            "error",
+            "model",
+            "input_tokens",
+            "output_tokens",
+            "latency_seconds",
+            "finish_reason",
+            "step",
+            "repairable",
         }
         trace: list[dict[str, Any]] = []
         lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
@@ -1036,7 +1576,9 @@ class HumanEvidenceWorkflow:
             if isinstance(record, dict):
                 trace.append({key: record[key] for key in allowed if key in record})
         final_error = run.get("final_error") if isinstance(run.get("final_error"), dict) else {}
-        failed_event = next((item for item in reversed(trace) if item.get("event") in {"vnext_attempt_failed", "failed"}), None)
+        failed_event = next(
+            (item for item in reversed(trace) if item.get("event") in {"vnext_attempt_failed", "failed"}), None
+        )
         category = final_error.get("failure_category") or (failed_event or {}).get("failure_category")
         technical_type = (failed_event or {}).get("technical_error_type") or (failed_event or {}).get("error_type")
         failure = None
@@ -1065,7 +1607,10 @@ class HumanEvidenceWorkflow:
         run = next((item for item in self.get_runs(case_id) if item.get("run_id") == run_id), None)
         if run is None:
             raise KeyError("Assessment run not found")
-        if run.get("outcome_type") not in {"COMPLETED", "FAILED", "STOPPED", "INTERRUPTED"} or run.get("trace_finalized") is not True:
+        if (
+            run.get("outcome_type") not in {"COMPLETED", "FAILED", "STOPPED", "INTERRUPTED"}
+            or run.get("trace_finalized") is not True
+        ):
             raise RuntimeError("Assessment trace is not finalized")
         return self.sanitized_raw_trace(case_id, run_id)
 
@@ -1081,7 +1626,9 @@ class HumanEvidenceWorkflow:
     def _assert_user_mutable(self, state: CaseState) -> None:
         self._assert_mutable(state)
         if state.case_kind == "sample":
-            raise EvidenceRequestConflict("Sample cases are read-only; reset the sample to restore its original configuration")
+            raise EvidenceRequestConflict(
+                "Sample cases are read-only; reset the sample to restore its original configuration"
+            )
 
     def _publish_waiting_run(self, case_id: str, state: CaseState, request: EvidenceRequest) -> None:
         run_id = self.current_run_id(case_id)
@@ -1091,5 +1638,12 @@ class HumanEvidenceWorkflow:
         if not path.is_file():
             return
         result = json.loads(path.read_text(encoding="utf-8"))
-        result.update({"final_runtime_status": "WAITING_FOR_EVIDENCE", "outcome_type": "WAITING_FOR_EVIDENCE", "pending_request_id": request.request_id, "request_text": request.information_sought})
+        result.update(
+            {
+                "final_runtime_status": "WAITING_FOR_EVIDENCE",
+                "outcome_type": "WAITING_FOR_EVIDENCE",
+                "pending_request_id": request.request_id,
+                "request_text": request.information_sought,
+            }
+        )
         self._write_run_result(path, result)

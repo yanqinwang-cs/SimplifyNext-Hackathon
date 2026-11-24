@@ -43,6 +43,4 @@ def preset_for_case(case_state: CaseState) -> AssessmentRulePreset:
     try:
         return PRESET_REGISTRY[case_state.assessment_rule_preset_id]()
     except KeyError as exc:
-        raise ValueError(
-            f"Unknown vNext assessment rule preset: {case_state.assessment_rule_preset_id!r}"
-        ) from exc
+        raise ValueError(f"Unknown vNext assessment rule preset: {case_state.assessment_rule_preset_id!r}") from exc

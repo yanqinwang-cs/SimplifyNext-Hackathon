@@ -16,4 +16,3 @@ class Uncertainty(BaseModel):
     description: str
     evidence_ids: list[str] = Field(default_factory=list)
     alternatives: list[str] = Field(default_factory=list)
-

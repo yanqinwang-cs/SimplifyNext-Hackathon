@@ -1,6 +1,23 @@
 import pytest
-from investigator.graph import CaseGraph, EdgeRelation, GraphEdge, GraphNode, GraphNodeType, GraphStatus, EpistemicStatus, propagate_epistemic_status
-from investigator.models import EvidenceItem, EvidenceKind, Hypothesis, HypothesisOrigin, Source, SourceType, Uncertainty, UncertaintyKind
+from investigator.graph import (
+    CaseGraph,
+    EdgeRelation,
+    GraphEdge,
+    GraphNode,
+    GraphNodeType,
+    EpistemicStatus,
+    propagate_epistemic_status,
+)
+from investigator.models import (
+    EvidenceItem,
+    EvidenceKind,
+    Hypothesis,
+    HypothesisOrigin,
+    Source,
+    SourceType,
+    Uncertainty,
+    UncertaintyKind,
+)
 from investigator.state import CaseState
 
 
@@ -9,22 +26,38 @@ def node(identifier: str, kind: GraphNodeType, statement: str = "x") -> GraphNod
 
 
 def graph() -> CaseGraph:
-    return CaseGraph(case_id="synthetic", nodes={
-        "E1": node("E1", GraphNodeType.EVIDENCE, "Recorded score displayed as 40/40."),
-        "P1": node("P1", GraphNodeType.PROPOSITION, "Recorded mark accurately reflects submitted answers."),
-        "P2": node("P2", GraphNodeType.PROPOSITION, "A scoring-system error affected the recorded result."),
-        "H1": node("H1", GraphNodeType.HYPOTHESIS, "Prohibited assistance contributed."),
-        "H2": node("H2", GraphNodeType.HYPOTHESIS, "Performance is explained without prohibited assistance."),
-        "H1.1": node("H1.1", GraphNodeType.HYPOTHESIS, "A narrower assistance explanation."),
-        "U1": node("U1", GraphNodeType.UNCERTAINTY, "Is the recorded score valid?"),
-    }, edges={
-        "E1_SUPPORTS_P1": GraphEdge(id="E1_SUPPORTS_P1", source_id="E1", target_id="P1", relation=EdgeRelation.SUPPORTS),
-        "P2_CONFLICTS_P1": GraphEdge(id="P2_CONFLICTS_P1", source_id="P2", target_id="P1", relation=EdgeRelation.CONFLICTS),
-        "H1_DEPENDS_ON_P1": GraphEdge(id="H1_DEPENDS_ON_P1", source_id="H1", target_id="P1", relation=EdgeRelation.DEPENDS_ON),
-        "H2_DEPENDS_ON_P1": GraphEdge(id="H2_DEPENDS_ON_P1", source_id="H2", target_id="P1", relation=EdgeRelation.DEPENDS_ON),
-        "U1_TARGETS_P1": GraphEdge(id="U1_TARGETS_P1", source_id="U1", target_id="P1", relation=EdgeRelation.TARGETS),
-        "H1.1_SPECIALIZES_H1": GraphEdge(id="H1.1_SPECIALIZES_H1", source_id="H1.1", target_id="H1", relation=EdgeRelation.SPECIALIZES),
-    })
+    return CaseGraph(
+        case_id="synthetic",
+        nodes={
+            "E1": node("E1", GraphNodeType.EVIDENCE, "Recorded score displayed as 40/40."),
+            "P1": node("P1", GraphNodeType.PROPOSITION, "Recorded mark accurately reflects submitted answers."),
+            "P2": node("P2", GraphNodeType.PROPOSITION, "A scoring-system error affected the recorded result."),
+            "H1": node("H1", GraphNodeType.HYPOTHESIS, "Prohibited assistance contributed."),
+            "H2": node("H2", GraphNodeType.HYPOTHESIS, "Performance is explained without prohibited assistance."),
+            "H1.1": node("H1.1", GraphNodeType.HYPOTHESIS, "A narrower assistance explanation."),
+            "U1": node("U1", GraphNodeType.UNCERTAINTY, "Is the recorded score valid?"),
+        },
+        edges={
+            "E1_SUPPORTS_P1": GraphEdge(
+                id="E1_SUPPORTS_P1", source_id="E1", target_id="P1", relation=EdgeRelation.SUPPORTS
+            ),
+            "P2_CONFLICTS_P1": GraphEdge(
+                id="P2_CONFLICTS_P1", source_id="P2", target_id="P1", relation=EdgeRelation.CONFLICTS
+            ),
+            "H1_DEPENDS_ON_P1": GraphEdge(
+                id="H1_DEPENDS_ON_P1", source_id="H1", target_id="P1", relation=EdgeRelation.DEPENDS_ON
+            ),
+            "H2_DEPENDS_ON_P1": GraphEdge(
+                id="H2_DEPENDS_ON_P1", source_id="H2", target_id="P1", relation=EdgeRelation.DEPENDS_ON
+            ),
+            "U1_TARGETS_P1": GraphEdge(
+                id="U1_TARGETS_P1", source_id="U1", target_id="P1", relation=EdgeRelation.TARGETS
+            ),
+            "H1.1_SPECIALIZES_H1": GraphEdge(
+                id="H1.1_SPECIALIZES_H1", source_id="H1.1", target_id="H1", relation=EdgeRelation.SPECIALIZES
+            ),
+        },
+    )
 
 
 def test_graph_validates_direction_and_traverses() -> None:
@@ -39,12 +72,22 @@ def test_graph_validates_direction_and_traverses() -> None:
 
 def test_invalid_edges_dangling_types_and_specialization_cycles_fail() -> None:
     with pytest.raises(ValueError):
-        CaseGraph(case_id="x", nodes={"H1": node("H1", GraphNodeType.HYPOTHESIS)}, edges={"bad": GraphEdge(id="bad", source_id="H1", target_id="H1", relation=EdgeRelation.SPECIALIZES)})
+        CaseGraph(
+            case_id="x",
+            nodes={"H1": node("H1", GraphNodeType.HYPOTHESIS)},
+            edges={"bad": GraphEdge(id="bad", source_id="H1", target_id="H1", relation=EdgeRelation.SPECIALIZES)},
+        )
     with pytest.raises(ValueError):
-        CaseGraph(case_id="x", nodes={"H1": node("H1", GraphNodeType.HYPOTHESIS), "E1": node("E1", GraphNodeType.EVIDENCE)}, edges={"bad": GraphEdge(id="bad", source_id="H1", target_id="E1", relation=EdgeRelation.SUPPORTS)})
+        CaseGraph(
+            case_id="x",
+            nodes={"H1": node("H1", GraphNodeType.HYPOTHESIS), "E1": node("E1", GraphNodeType.EVIDENCE)},
+            edges={"bad": GraphEdge(id="bad", source_id="H1", target_id="E1", relation=EdgeRelation.SUPPORTS)},
+        )
     case = graph()
     with pytest.raises(ValueError):
-        case.add_edge(GraphEdge(id="H1_SPECIALIZES_H1.1", source_id="H1", target_id="H1.1", relation=EdgeRelation.SPECIALIZES))
+        case.add_edge(
+            GraphEdge(id="H1_SPECIALIZES_H1.1", source_id="H1", target_id="H1.1", relation=EdgeRelation.SPECIALIZES)
+        )
 
 
 def test_archive_reactivate_active_subgraph_and_specialize() -> None:
@@ -74,7 +117,9 @@ def test_single_active_specialization_parent_allows_archived_history() -> None:
     case.specialize("H2", node("H1.1", GraphNodeType.HYPOTHESIS), [])
     assert [item.id for item in case.ancestors("H1.1")] == ["H2"]
     with pytest.raises(ValueError):
-        case.add_edge(GraphEdge(id="H1.1_SPECIALIZES_H1", source_id="H1.1", target_id="H1", relation=EdgeRelation.SPECIALIZES))
+        case.add_edge(
+            GraphEdge(id="H1.1_SPECIALIZES_H1", source_id="H1.1", target_id="H1", relation=EdgeRelation.SPECIALIZES)
+        )
 
 
 def test_canonical_graph_node_and_edge_ids() -> None:
@@ -83,7 +128,16 @@ def test_canonical_graph_node_and_edge_ids() -> None:
     assert node("H1.2", GraphNodeType.HYPOTHESIS)
     assert node("P3.1", GraphNodeType.PROPOSITION)
     assert node("U2", GraphNodeType.UNCERTAINTY)
-    for identifier, kind in [("E1", GraphNodeType.HYPOTHESIS), ("P1", GraphNodeType.EVIDENCE), ("hello world", GraphNodeType.HYPOTHESIS), ("H1..2", GraphNodeType.HYPOTHESIS), ("H1:U1", GraphNodeType.UNCERTAINTY), ("P1:U1", GraphNodeType.UNCERTAINTY), ("E1:U1", GraphNodeType.UNCERTAINTY), ("A_RELEASE", GraphNodeType.EVIDENCE)]:
+    for identifier, kind in [
+        ("E1", GraphNodeType.HYPOTHESIS),
+        ("P1", GraphNodeType.EVIDENCE),
+        ("hello world", GraphNodeType.HYPOTHESIS),
+        ("H1..2", GraphNodeType.HYPOTHESIS),
+        ("H1:U1", GraphNodeType.UNCERTAINTY),
+        ("P1:U1", GraphNodeType.UNCERTAINTY),
+        ("E1:U1", GraphNodeType.UNCERTAINTY),
+        ("A_RELEASE", GraphNodeType.EVIDENCE),
+    ]:
         with pytest.raises(ValueError):
             node(identifier, kind)
     with pytest.raises(ValueError):
@@ -93,6 +147,7 @@ def test_canonical_graph_node_and_edge_ids() -> None:
 
 def case_edge_id(source: str, relation: EdgeRelation, target: str) -> str:
     from investigator.graph import make_edge_id
+
     return make_edge_id(source, relation, target)
 
 
@@ -117,13 +172,35 @@ def test_graph_json_round_trip_and_case_state_bridge() -> None:
 def test_case_state_bridge_preserves_ids_text_and_creates_semantic_edges() -> None:
     source = Source(id="source", name="source", source_type=SourceType.OTHER)
     state = CaseState(
-        case_id="case", title="title", sources={"source": source},
-        evidence={"E1": EvidenceItem(id="E1", source_id="source", raw_content="Original evidence", kind=EvidenceKind.OTHER), "A1_RELEASE": EvidenceItem(id="A1_RELEASE", source_id="source", raw_content="Released evidence", kind=EvidenceKind.OTHER)},
-        hypotheses={"H1": Hypothesis(id="H1", statement="Parent", origin=HypothesisOrigin.HUMAN, supporting_evidence_ids=["E1"], unresolved_issue_ids=["U1"]), "H1.1": Hypothesis(id="H1.1", statement="Child", origin=HypothesisOrigin.AGENT_SUGGESTION, parent_hypothesis_id="H1")},
+        case_id="case",
+        title="title",
+        sources={"source": source},
+        evidence={
+            "E1": EvidenceItem(id="E1", source_id="source", raw_content="Original evidence", kind=EvidenceKind.OTHER),
+            "A1_RELEASE": EvidenceItem(
+                id="A1_RELEASE", source_id="source", raw_content="Released evidence", kind=EvidenceKind.OTHER
+            ),
+        },
+        hypotheses={
+            "H1": Hypothesis(
+                id="H1",
+                statement="Parent",
+                origin=HypothesisOrigin.HUMAN,
+                supporting_evidence_ids=["E1"],
+                unresolved_issue_ids=["U1"],
+            ),
+            "H1.1": Hypothesis(
+                id="H1.1", statement="Child", origin=HypothesisOrigin.AGENT_SUGGESTION, parent_hypothesis_id="H1"
+            ),
+        },
         uncertainties={"U1": Uncertainty(id="U1", kind=UncertaintyKind.UNKNOWN, description="Open question")},
     )
     bridged = CaseGraph.from_case_state(state)
-    assert {node.node_type for node in bridged.nodes.values()} == {GraphNodeType.EVIDENCE, GraphNodeType.HYPOTHESIS, GraphNodeType.UNCERTAINTY}
+    assert {node.node_type for node in bridged.nodes.values()} == {
+        GraphNodeType.EVIDENCE,
+        GraphNodeType.HYPOTHESIS,
+        GraphNodeType.UNCERTAINTY,
+    }
     assert bridged.nodes["E1"].statement == "Original evidence"
     assert bridged.nodes["A1_RELEASE"].node_type is GraphNodeType.EVIDENCE
     assert "E1_SUPPORTS_H1" in bridged.edges

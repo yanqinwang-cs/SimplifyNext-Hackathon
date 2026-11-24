@@ -6,7 +6,10 @@ requires-python = ">=3.12"
 dependencies = ["anthropic>=0.40,<1", "boto3>=1.35,<2", "pydantic>=2.7,<3", "python-dotenv>=1.0,<2", "streamlit>=1.40,<2"]
 
 [dependency-groups]
-dev = ["pytest>=8.0,<9"]
+dev = [
+    "pytest>=8.0,<9",
+    "ruff==0.14.0",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -18,3 +21,10 @@ packages = ["src/investigator"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E9", "F", "B"]

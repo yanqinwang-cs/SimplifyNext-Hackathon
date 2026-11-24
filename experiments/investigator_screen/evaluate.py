@@ -9,7 +9,13 @@ from experiments.investigator_screen.models import InvestigatorFixture, Investig
 
 def evaluate_payload(fixture: InvestigatorFixture, payload: dict) -> InvestigatorScreenResult:
     result = InvestigatorScreenResult(fixture.fixture_id, raw_output=payload)
-    coordinator = InvestigatorCycleCoordinator(deepcopy(fixture.observation.local_graph), fixture.observation.current_focus.model_copy(deep=True), available_enquiries=fixture.observation.available_enquiries, participants=fixture.observation.participants, max_turns_per_tenure=fixture.observation.max_turns_per_tenure)
+    coordinator = InvestigatorCycleCoordinator(
+        deepcopy(fixture.observation.local_graph),
+        fixture.observation.current_focus.model_copy(deep=True),
+        available_enquiries=fixture.observation.available_enquiries,
+        participants=fixture.observation.participants,
+        max_turns_per_tenure=fixture.observation.max_turns_per_tenure,
+    )
     try:
         response = InvestigatorTurnResponse.model_validate(payload)
         result.schema_valid = True
@@ -60,8 +66,10 @@ def _next_step_acceptable(next_step: str, fixture: InvestigatorFixture, response
         return True
     # A one-turn screen cannot declare a real tenure exhausted, but it can
     # accept the handoff when the public observation exposes no local action.
-    return next_step == "local_exhausted" and not fixture.observation.available_enquiries and not any(
-        not _satisfies(requirement, response, coordinator, fixture) for requirement in fixture.required
+    return (
+        next_step == "local_exhausted"
+        and not fixture.observation.available_enquiries
+        and not any(not _satisfies(requirement, response, coordinator, fixture) for requirement in fixture.required)
     )
 
 
@@ -72,15 +80,23 @@ def _relation_path_exists(coordinator, relation: EdgeRelation, source: str, targ
     for bridge in coordinator.graph.nodes.values():
         if bridge.node_type is not GraphNodeType.PROPOSITION or bridge.id == target:
             continue
-        derived = any(edge.source_id == bridge.id and edge.target_id == source and edge.relation is EdgeRelation.DERIVED_FROM for edge in coordinator.graph.edges.values())
-        related = any(edge.source_id == bridge.id and edge.target_id == target and edge.relation is relation for edge in coordinator.graph.edges.values())
+        derived = any(
+            edge.source_id == bridge.id and edge.target_id == source and edge.relation is EdgeRelation.DERIVED_FROM
+            for edge in coordinator.graph.edges.values()
+        )
+        related = any(
+            edge.source_id == bridge.id and edge.target_id == target and edge.relation is relation
+            for edge in coordinator.graph.edges.values()
+        )
         if derived and related:
             return True
     return False
 
 
 def _text_of_updates(response) -> str:
-    return " ".join(str(value) for update in response.graph_updates for value in update.model_dump(mode="json").values()).lower()
+    return " ".join(
+        str(value) for update in response.graph_updates for value in update.model_dump(mode="json").values()
+    ).lower()
 
 
 def _manual_review_flags(fixture: InvestigatorFixture, response) -> list[str]:
@@ -90,7 +106,10 @@ def _manual_review_flags(fixture: InvestigatorFixture, response) -> list[str]:
     new_uncertainties = sum(item.operation == "add_uncertainty" for item in updates)
     if len(updates) >= 4 and new_hypotheses + new_uncertainties >= 2:
         flags.append("POSSIBLE_OVER_EXPANSION")
-    if fixture.fixture_id == "INV3" and any(term in _text_of_updates(response) for term in ("timestamp manipulation", "system-clock tampering", "copied metadata")):
+    if fixture.fixture_id == "INV3" and any(
+        term in _text_of_updates(response)
+        for term in ("timestamp manipulation", "system-clock tampering", "copied metadata")
+    ):
         flags.append("POSSIBLE_UNSUPPORTED_ABDUCTION")
     return flags
 
@@ -99,31 +118,59 @@ def _satisfies(requirement, response, coordinator, fixture) -> bool:
     kind, values = requirement.kind, requirement.values
     if kind == "node_created":
         expected = GraphNodeType(values[0])
-        return any(node.id not in fixture.observation.local_graph.nodes and node.node_type is expected for node in coordinator.graph.nodes.values())
+        return any(
+            node.id not in fixture.observation.local_graph.nodes and node.node_type is expected
+            for node in coordinator.graph.nodes.values()
+        )
     if kind == "uncertainty":
-        return any(item.operation == "add_uncertainty" and item.target_node_id == values[0] for item in response.graph_updates)
+        return any(
+            item.operation == "add_uncertainty" and item.target_node_id == values[0] for item in response.graph_updates
+        )
     if kind == "edge_created":
         relation, source, target = values
         return _relation_path_exists(coordinator, EdgeRelation(relation), source, target)
     if kind == "derived_from":
         proposition_ids = {item.node_id for item in response.graph_updates if item.operation == "add_proposition"}
-        return any(item.operation == "add_proposition" and item.node_id in proposition_ids and set(values) <= set(item.derived_from_node_ids) for item in response.graph_updates)
+        return any(
+            item.operation == "add_proposition"
+            and item.node_id in proposition_ids
+            and set(values) <= set(item.derived_from_node_ids)
+            for item in response.graph_updates
+        )
     if kind == "enquiry":
         step = response.next_step
-        return isinstance(step, RequestEnquiry) and step.action_id == values[0] and step.target_uncertainty_id == values[1]
+        return (
+            isinstance(step, RequestEnquiry) and step.action_id == values[0] and step.target_uncertainty_id == values[1]
+        )
     if kind == "has_update":
         return bool(response.graph_updates)
     if kind == "next_step":
         return response.next_step.type == values[0]
     if kind == "no_unsupported_specificity":
         text = _text_of_updates(response)
-        unsupported = ("direct help", "unauthorized website", "unauthorized book", "ai tool", "chatgpt", "named actor", "tutor")
-        return not any(item.operation == "add_specialization" for item in response.graph_updates) and not any(term in text for term in unsupported)
+        unsupported = (
+            "direct help",
+            "unauthorized website",
+            "unauthorized book",
+            "ai tool",
+            "chatgpt",
+            "named actor",
+            "tutor",
+        )
+        return not any(item.operation == "add_specialization" for item in response.graph_updates) and not any(
+            term in text for term in unsupported
+        )
     if kind == "grounded_update":
-        if not any(item.operation in {"add_proposition", "add_uncertainty", "add_hypothesis"} for item in response.graph_updates):
+        if not any(
+            item.operation in {"add_proposition", "add_uncertainty", "add_hypothesis"}
+            for item in response.graph_updates
+        ):
             return False
         if len(values) > 1 and values[1] == "add_uncertainty":
-            return any(item.operation == "add_uncertainty" and item.target_node_id in {"H1", "H2", "P1"} for item in response.graph_updates)
+            return any(
+                item.operation == "add_uncertainty" and item.target_node_id in {"H1", "H2", "P1"}
+                for item in response.graph_updates
+            )
         return any("E1" in getattr(item, "derived_from_node_ids", []) for item in response.graph_updates) or any(
             edge.source_id == "E1" or edge.target_id == "E1" for edge in coordinator.graph.edges.values()
         )
@@ -132,9 +179,16 @@ def _satisfies(requirement, response, coordinator, fixture) -> bool:
 
 def _hard_failure_terms(fixture: InvestigatorFixture) -> list[tuple[str, tuple[str, ...]]]:
     if fixture.fixture_id == "INV4":
-        return [("CONTRADICTION_TO_DECEPTION", ("deception", "deceptive", "intentional lie", "deliberately lied", "dishonest"))]
+        return [
+            (
+                "CONTRADICTION_TO_DECEPTION",
+                ("deception", "deceptive", "intentional lie", "deliberately lied", "dishonest"),
+            )
+        ]
     if fixture.fixture_id == "INV9":
-        return [("CREDENTIAL_TO_PERSON", ("person1 performed", "person1 was the actor", "person1 used", "person1 accessed"))]
+        return [
+            ("CREDENTIAL_TO_PERSON", ("person1 performed", "person1 was the actor", "person1 used", "person1 accessed"))
+        ]
     return []
 
 

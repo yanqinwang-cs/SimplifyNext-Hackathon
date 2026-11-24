@@ -29,9 +29,7 @@ def _reject_placeholder(value: str | None) -> str | None:
 
 def _reject_empty_items(values: list[str]) -> list[str]:
     if any(
-        not value.strip()
-        or value.strip().startswith("REPLACE_WITH_")
-        or value.strip() in _CANONICAL_PLACEHOLDERS
+        not value.strip() or value.strip().startswith("REPLACE_WITH_") or value.strip() in _CANONICAL_PLACEHOLDERS
         for value in values
     ):
         raise ValueError("Substantive text cannot be empty or a template placeholder")
@@ -67,7 +65,9 @@ class InitialResponse(BaseModel):
     expected_information_value: str
     why_this_action_now: str
 
-    _valid_text = field_validator("target_uncertainty", "expected_information_value", "why_this_action_now")(_reject_placeholder)
+    _valid_text = field_validator("target_uncertainty", "expected_information_value", "why_this_action_now")(
+        _reject_placeholder
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -135,7 +135,9 @@ class InitialExpansionResponse(BaseModel):
     expected_information_value: str
     why_this_action_now: str
 
-    _valid_target = field_validator("target_uncertainty", "expected_information_value", "why_this_action_now")(_reject_placeholder)
+    _valid_target = field_validator("target_uncertainty", "expected_information_value", "why_this_action_now")(
+        _reject_placeholder
+    )
 
 
 class NextStepResponse(BaseModel):
@@ -152,18 +154,40 @@ class NextStepResponse(BaseModel):
     @model_validator(mode="after")
     def validate_step(self) -> "NextStepResponse":
         if self.step_type == "action":
-            if self.selected_action_id is None or any(value is None for value in (self.target_uncertainty, self.expected_information_value, self.why_this_action_now)) or self.conclusion_hypothesis_id is not None or self.conclusion_reason is not None or self.remaining_uncertainty_ids:
+            if (
+                self.selected_action_id is None
+                or any(
+                    value is None
+                    for value in (self.target_uncertainty, self.expected_information_value, self.why_this_action_now)
+                )
+                or self.conclusion_hypothesis_id is not None
+                or self.conclusion_reason is not None
+                or self.remaining_uncertainty_ids
+            ):
                 raise ValueError("action step requires action fields and no conclusion fields")
         elif self.step_type == "conclusion":
-            if self.conclusion_hypothesis_id is None or not self.conclusion_reason or self.selected_action_id is not None or self.remaining_uncertainty_ids:
+            if (
+                self.conclusion_hypothesis_id is None
+                or not self.conclusion_reason
+                or self.selected_action_id is not None
+                or self.remaining_uncertainty_ids
+            ):
                 raise ValueError("conclusion step requires hypothesis and reason and no action")
-        elif self.selected_action_id is not None or self.target_uncertainty is not None or self.expected_information_value is not None or self.why_this_action_now is not None or self.conclusion_hypothesis_id is not None:
+        elif (
+            self.selected_action_id is not None
+            or self.target_uncertainty is not None
+            or self.expected_information_value is not None
+            or self.why_this_action_now is not None
+            or self.conclusion_hypothesis_id is not None
+        ):
             raise ValueError("stop_unresolved cannot contain action or conclusion-target fields")
         elif not self.conclusion_reason and not self.remaining_uncertainty_ids:
             raise ValueError("stop_unresolved requires a reason or unresolved IDs")
         return self
 
-    _valid_text = field_validator("target_uncertainty", "expected_information_value", "why_this_action_now", "conclusion_reason")(_reject_placeholder)
+    _valid_text = field_validator(
+        "target_uncertainty", "expected_information_value", "why_this_action_now", "conclusion_reason"
+    )(_reject_placeholder)
 
 
 class NextActionResponse(BaseModel):
@@ -173,7 +197,9 @@ class NextActionResponse(BaseModel):
     expected_information_value: str
     why_this_action_now: str
 
-    _valid_text = field_validator("target_uncertainty", "expected_information_value", "why_this_action_now")(_reject_placeholder)
+    _valid_text = field_validator("target_uncertainty", "expected_information_value", "why_this_action_now")(
+        _reject_placeholder
+    )
 
 
 class NewUncertainty(BaseModel):
@@ -184,6 +210,7 @@ class NewUncertainty(BaseModel):
     basis_evidence_ids: list[EvidenceId] = Field(default_factory=list)
 
     _valid_description = field_validator("description")(_reject_placeholder)
+
 
 class RevisionResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")

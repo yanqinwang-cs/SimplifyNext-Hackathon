@@ -24,11 +24,19 @@ class GraphScope(BaseModel):
 
     @model_validator(mode="after")
     def validate_scope_fields(self) -> "GraphScope":
-        if self.scope_type is GraphScopeType.CASE and (self.subject_id is not None or self.relationship_id is not None or self.relationship_ref is not None):
+        if self.scope_type is GraphScopeType.CASE and (
+            self.subject_id is not None or self.relationship_id is not None or self.relationship_ref is not None
+        ):
             raise ValueError("CASE graph scope cannot contain subject_id or relationship_id")
-        if self.scope_type is GraphScopeType.SUBJECT and (self.subject_id is None or self.relationship_id is not None or self.relationship_ref is not None):
+        if self.scope_type is GraphScopeType.SUBJECT and (
+            self.subject_id is None or self.relationship_id is not None or self.relationship_ref is not None
+        ):
             raise ValueError("SUBJECT graph scope requires subject_id and no relationship_id")
-        if self.scope_type is GraphScopeType.RELATIONSHIP and (self.subject_id is not None or (self.relationship_id is None and self.relationship_ref is None) or (self.relationship_id is not None and self.relationship_ref is not None)):
+        if self.scope_type is GraphScopeType.RELATIONSHIP and (
+            self.subject_id is not None
+            or (self.relationship_id is None and self.relationship_ref is None)
+            or (self.relationship_id is not None and self.relationship_ref is not None)
+        ):
             raise ValueError("RELATIONSHIP graph scope requires exactly one relationship_id or relationship_ref")
         return self
 
@@ -47,7 +55,9 @@ def scopes_compatible(left: GraphScope, right: GraphScope, relationships: dict[s
     # narrower node, but private material may not be widened back to CASE.
     # ``case_subject`` is the legacy single-subject compatibility marker used
     # only when no configured student registry is present.
-    if (left.scope_type is GraphScopeType.SUBJECT and left.subject_id == "case_subject") or (right.scope_type is GraphScopeType.SUBJECT and right.subject_id == "case_subject"):
+    if (left.scope_type is GraphScopeType.SUBJECT and left.subject_id == "case_subject") or (
+        right.scope_type is GraphScopeType.SUBJECT and right.subject_id == "case_subject"
+    ):
         return True
     if left.scope_type is GraphScopeType.CASE:
         return True

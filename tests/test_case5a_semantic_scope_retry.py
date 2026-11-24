@@ -11,7 +11,14 @@ from investigator.public_views import public_run_handle_for_instance
 from investigator.services.evidence_requests import HumanEvidenceWorkflow
 from investigator.services.vnext_runner import VNextProductionRunner
 from investigator.state import CaseRepository
-from investigator.vnext import AssessmentRulePreset, AssessmentStatus, Confidence, FurthestJustifiedConclusion, VNextRunInput, ViolationDefinition
+from investigator.vnext import (
+    AssessmentRulePreset,
+    AssessmentStatus,
+    Confidence,
+    FurthestJustifiedConclusion,
+    VNextRunInput,
+    ViolationDefinition,
+)
 from investigator.vnext.semantic import (
     InvestigatorSemanticAssessment,
     SemanticItem,
@@ -58,7 +65,9 @@ def _sources() -> dict[str, Source]:
 def _preset() -> AssessmentRulePreset:
     return AssessmentRulePreset(
         preset_id="case5a-scope-test",
-        violations=[ViolationDefinition(violation_id="V1", label="Conduct", rule_text="rule", prohibited_conduct="conduct")],
+        violations=[
+            ViolationDefinition(violation_id="V1", label="Conduct", rule_text="rule", prohibited_conduct="conduct")
+        ],
     )
 
 
@@ -129,7 +138,9 @@ def _invalid_semantic_assessment() -> InvestigatorSemanticAssessment:
 
 
 class _SequenceClient:
-    def __init__(self, responses: list[InvestigatorSemanticAssessment], raw_outputs: list[object] | None = None) -> None:
+    def __init__(
+        self, responses: list[InvestigatorSemanticAssessment], raw_outputs: list[object] | None = None
+    ) -> None:
         self.responses = list(responses)
         self.raw_outputs = list(raw_outputs or [])
         self.calls: list[str] = []
@@ -223,11 +234,21 @@ def test_semantic_scope_failure_uses_one_fresh_full_retry_and_discards_first_gra
     assert traces.index(completed[0]) < traces.index(completed[1])
     run = workflow.get_runs("case-01")[0]
     handle = public_run_handle_for_instance("case-01", run["run_id"], run["run_instance_id"])
-    internal = [json.loads(line) for line in (tmp_path / "cases" / "case-01" / "runs" / run["run_id"] / "raw_traces.jsonl").read_text().splitlines()]
-    exported = [json.loads(line) for line in workflow.audit_trace_file("case-01", run["run_id"], handle).decode().splitlines()]
+    internal = [
+        json.loads(line)
+        for line in (tmp_path / "cases" / "case-01" / "runs" / run["run_id"] / "raw_traces.jsonl")
+        .read_text()
+        .splitlines()
+    ]
+    exported = [
+        json.loads(line) for line in workflow.audit_trace_file("case-01", run["run_id"], handle).decode().splitlines()
+    ]
     assert len(exported) == len(internal)
     assert [item["event"] for item in exported] == [item["event"] for item in internal]
-    assert [item["raw_output"] for item in exported if item["event"] == "vnext_model_call_completed"] == ["RAW_INITIAL_A", "RAW_SECOND_B"]
+    assert [item["raw_output"] for item in exported if item["event"] == "vnext_model_call_completed"] == [
+        "RAW_INITIAL_A",
+        "RAW_SECOND_B",
+    ]
 
 
 def test_second_semantic_scope_failure_is_terminal_without_third_call_or_partial_graph(tmp_path: Path) -> None:

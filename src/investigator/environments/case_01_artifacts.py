@@ -18,7 +18,9 @@ def render_xlsx(path: str | Path) -> str:
         shared: list[str] = []
         if "xl/sharedStrings.xml" in workbook.namelist():
             root = ElementTree.fromstring(workbook.read("xl/sharedStrings.xml"))
-            shared = ["".join(node.text or "" for node in item.iter(MAIN_NS + "t")) for item in root.findall(MAIN_NS + "si")]
+            shared = [
+                "".join(node.text or "" for node in item.iter(MAIN_NS + "t")) for item in root.findall(MAIN_NS + "si")
+            ]
         workbook_root = ElementTree.fromstring(workbook.read("xl/workbook.xml"))
         rels = ElementTree.fromstring(workbook.read("xl/_rels/workbook.xml.rels"))
         targets = {r.attrib["Id"]: r.attrib["Target"] for r in rels}

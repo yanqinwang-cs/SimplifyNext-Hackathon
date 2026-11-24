@@ -3,19 +3,112 @@ import { test, expect } from "@playwright/test";
 const opus = "anthropic.claude-opus-4-5";
 
 function settings(model = opus, help = opus, temporary = false) {
-  return { provider: "anthropic", debugCredentialsEnabled: true, aws: { mode: temporary ? "temporary_credentials" : "default_chain", statusLabel: temporary ? "Temporary AWS credentials loaded" : "Default AWS credential chain", lastUpdatedAt: null, region: "us-east-1" }, models: { investigator: { effectiveModel: model, effectiveLabel: "Claude Opus 4.5", source: model === opus ? "default" : "runtime_selection", lastUsed: null, noModelCallRequired: false }, workspaceHelp: { effectiveModel: help, effectiveLabel: "Claude Opus 4.5", source: help === opus ? "default" : "runtime_selection", lastUsed: null } }, availableModels: [{ model: opus, label: "Claude Opus 4.5" }] };
+  return {
+    provider: "anthropic",
+    debugCredentialsEnabled: true,
+    aws: {
+      mode: temporary ? "temporary_credentials" : "default_chain",
+      statusLabel: temporary ? "Temporary AWS credentials loaded" : "Default AWS credential chain",
+      lastUpdatedAt: null,
+      region: "us-east-1",
+    },
+    models: {
+      investigator: {
+        effectiveModel: model,
+        effectiveLabel: "Claude Opus 4.5",
+        source: model === opus ? "default" : "runtime_selection",
+        lastUsed: null,
+        noModelCallRequired: false,
+      },
+      workspaceHelp: {
+        effectiveModel: help,
+        effectiveLabel: "Claude Opus 4.5",
+        source: help === opus ? "default" : "runtime_selection",
+        lastUsed: null,
+      },
+    },
+    availableModels: [{ model: opus, label: "Claude Opus 4.5" }],
+  };
 }
 
-test("Runtime settings supports safe credentials, draft/apply/reset, and storage redaction", async ({ page }, testInfo) => {
+test("Runtime settings supports safe credentials, draft/apply/reset, and storage redaction", async ({
+  page,
+}, testInfo) => {
   let current = settings();
-  await page.route("**/api/cases/case-01/workspace", (route) => route.fulfill({ json: { caseId: "case-01", caseRevision: 0, title: "Offline case", status: "ready", institutionalStatus: "Investigating", currentFocus: "", messages: [], caseStatus: "ACTIVE", caseKind: "user", sample: null, capabilities: { editStudents: true, addEvidence: true, resetSample: false, runAssessment: true, useHelp: true, viewSources: true }, preloadedSourceCount: 0, runtimeStatus: "IDLE", currentActor: "NONE", sources: [], students: [{ studentHandle: "s1", displayName: "Student 1" }], report: { state: "unavailable", assessmentIsStale: false }, assessment: { state: "not_started", activeRun: null, latestAttempt: null, reportAvailable: false, reportStale: false }, chatHistory: [], activity: [] } }));
-  await page.route("**/api/cases/case-01/report", (route) => route.fulfill({ json: { caseId: "case-01", title: "Offline case", reportState: "unavailable", assessmentIsStale: false, latestSuccessfulRun: null, students: [] } }));
+  await page.route("**/api/cases/case-01/workspace", (route) =>
+    route.fulfill({
+      json: {
+        caseId: "case-01",
+        caseRevision: 0,
+        title: "Offline case",
+        status: "ready",
+        institutionalStatus: "Investigating",
+        currentFocus: "",
+        messages: [],
+        caseStatus: "ACTIVE",
+        caseKind: "user",
+        sample: null,
+        capabilities: {
+          editStudents: true,
+          addEvidence: true,
+          resetSample: false,
+          runAssessment: true,
+          useHelp: true,
+          viewSources: true,
+        },
+        preloadedSourceCount: 0,
+        runtimeStatus: "IDLE",
+        currentActor: "NONE",
+        sources: [],
+        students: [{ studentHandle: "s1", displayName: "Student 1" }],
+        report: { state: "unavailable", assessmentIsStale: false },
+        assessment: {
+          state: "not_started",
+          activeRun: null,
+          latestAttempt: null,
+          reportAvailable: false,
+          reportStale: false,
+        },
+        chatHistory: [],
+        activity: [],
+      },
+    }),
+  );
+  await page.route("**/api/cases/case-01/report", (route) =>
+    route.fulfill({
+      json: {
+        caseId: "case-01",
+        title: "Offline case",
+        reportState: "unavailable",
+        assessmentIsStale: false,
+        latestSuccessfulRun: null,
+        students: [],
+      },
+    }),
+  );
   await page.route("**/api/runtime-settings**", async (route) => {
-    const request = route.request(); const url = new URL(request.url());
+    const request = route.request();
+    const url = new URL(request.url());
     if (request.method() === "GET") return route.fulfill({ json: current });
-    if (url.pathname.endsWith("/aws-credentials")) { current = settings(current.models.investigator.effectiveModel, current.models.workspaceHelp.effectiveModel, request.method() === "POST"); return route.fulfill({ json: current }); }
-    if (url.pathname.endsWith("/models/reset")) { const aws = current.aws; current = { ...settings(), aws }; return route.fulfill({ json: current }); }
-    if (url.pathname.endsWith("/models")) { const body = request.postDataJSON(); const aws = current.aws; current = { ...settings(body.investigator, body.workspaceHelp), aws }; return route.fulfill({ json: current }); }
+    if (url.pathname.endsWith("/aws-credentials")) {
+      current = settings(
+        current.models.investigator.effectiveModel,
+        current.models.workspaceHelp.effectiveModel,
+        request.method() === "POST",
+      );
+      return route.fulfill({ json: current });
+    }
+    if (url.pathname.endsWith("/models/reset")) {
+      const aws = current.aws;
+      current = { ...settings(), aws };
+      return route.fulfill({ json: current });
+    }
+    if (url.pathname.endsWith("/models")) {
+      const body = request.postDataJSON();
+      const aws = current.aws;
+      current = { ...settings(body.investigator, body.workspaceHelp), aws };
+      return route.fulfill({ json: current });
+    }
     return route.fulfill({ status: 404, json: { error: "not found" } });
   });
 
@@ -28,16 +121,31 @@ test("Runtime settings supports safe credentials, draft/apply/reset, and storage
   await page.getByLabel("AWS Secret Access Key").fill("FAKE_SECRET_VALUE");
   await page.getByLabel("AWS Session Token").fill("FAKE_TOKEN_VALUE");
   await page.getByRole("button", { name: "Apply temporary credentials" }).click();
-  await expect(page.getByText("Temporary AWS credentials loaded for this running session.")).toBeVisible();
+  await expect(
+    page.getByText("Temporary AWS credentials loaded for this running session."),
+  ).toBeVisible();
   await expect(page.getByLabel("AWS Access Key ID")).toHaveValue("");
   await expect(page.locator("body")).not.toContainText("FAKE_ACCESS_SECRET");
-  await page.screenshot({ path: testInfo.outputPath("runtime-credentials-loaded.png"), fullPage: true });
-  const storage = await page.evaluate(() => ({ local: JSON.stringify(localStorage), session: JSON.stringify(sessionStorage), url: location.href, cookies: document.cookie }));
+  await page.screenshot({
+    path: testInfo.outputPath("runtime-credentials-loaded.png"),
+    fullPage: true,
+  });
+  const storage = await page.evaluate(() => ({
+    local: JSON.stringify(localStorage),
+    session: JSON.stringify(sessionStorage),
+    url: location.href,
+    cookies: document.cookie,
+  }));
   expect(JSON.stringify(storage)).not.toContain("FAKE_");
   await expect(page.getByText("Effective: Claude Opus 4.5").first()).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath("runtime-effective-opus.png"), fullPage: true });
+  await page.screenshot({
+    path: testInfo.outputPath("runtime-effective-opus.png"),
+    fullPage: true,
+  });
   await page.getByRole("button", { name: "Clear temporary credentials" }).click();
-  await expect(page.getByText("Temporary credentials cleared. The default AWS credential chain will be used.")).toBeVisible();
+  await expect(
+    page.getByText("Temporary credentials cleared. The default AWS credential chain will be used."),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Close Runtime settings" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
 });

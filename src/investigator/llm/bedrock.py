@@ -47,7 +47,10 @@ def bedrock_transport_config() -> Config:
 
 
 def is_provider_timeout(exc: BaseException) -> bool:
-    return isinstance(exc, (ReadTimeoutError, TimeoutError)) or type(exc).__name__ in {"APITimeoutError", "TimeoutException"}
+    return isinstance(exc, (ReadTimeoutError, TimeoutError)) or type(exc).__name__ in {
+        "APITimeoutError",
+        "TimeoutException",
+    }
 
 
 def failure_category(exc: BaseException) -> str:
@@ -100,7 +103,9 @@ def credential_status() -> dict[str, object]:
             "override_active": _credential_override is not None,
             "credential_source": "ui_override" if _credential_override is not None else "default_aws_credential_chain",
             "last_updated_at": _credential_updated_at.isoformat() if _credential_updated_at else None,
-            "region": (_credential_override.region_name if _credential_override else os.getenv("AWS_REGION", "us-east-1")),
+            "region": (
+                _credential_override.region_name if _credential_override else os.getenv("AWS_REGION", "us-east-1")
+            ),
         }
 
 
@@ -125,7 +130,11 @@ def redact_sensitive_text(value: str) -> str:
         if secret:
             result = result.replace(secret, "[REDACTED]")
     result = re.sub(r"sk-ant-[A-Za-z0-9_-]+", "[REDACTED]", result)
-    return re.sub(r"(?i)(access[_ -]?key|secret|session[_ -]?token|security[_ -]?token|authorization|credential)(?:\s*[:=]\s*)[^\s,;]+", r"\1=[REDACTED]", result)
+    return re.sub(
+        r"(?i)(access[_ -]?key|secret|session[_ -]?token|security[_ -]?token|authorization|credential)(?:\s*[:=]\s*)[^\s,;]+",
+        r"\1=[REDACTED]",
+        result,
+    )
 
 
 class BedrockModelClient:
@@ -135,9 +144,7 @@ class BedrockModelClient:
         self.model_id = model_id or os.getenv("BEDROCK_MODEL_ID")
         self.region = region or os.getenv("AWS_REGION", "us-east-1")
         if not self.model_id:
-            raise BedrockConfigurationError(
-                "Bedrock model configuration is missing; set BEDROCK_MODEL_ID"
-            )
+            raise BedrockConfigurationError("Bedrock model configuration is missing; set BEDROCK_MODEL_ID")
         self.client = client
         self._injected_client = client is not None
         self._client_generation: int | None = None
@@ -174,7 +181,11 @@ class BedrockModelClient:
     def call_native(self, input_data: MessageInput, tools: list[dict[str, Any]]) -> ModelNativeCall:
         """Use Bedrock Converse native text/toolUse blocks; no custom response schema."""
         started = perf_counter()
-        request: dict[str, Any] = {"modelId": self.model_id, "messages": self._native_messages(input_data), "inferenceConfig": {"temperature": 0}}
+        request: dict[str, Any] = {
+            "modelId": self.model_id,
+            "messages": self._native_messages(input_data),
+            "inferenceConfig": {"temperature": 0},
+        }
         if tools:
             request["toolConfig"] = {"tools": [{"toolSpec": self._tool_spec(tool)} for tool in tools]}
         response = self._client_for_call().converse(**request)
@@ -186,9 +197,23 @@ class BedrockModelClient:
                 text_blocks.append(ModelTextBlock(text=block["text"]))
             if isinstance(block.get("toolUse"), dict):
                 use = block["toolUse"]
-                tool_uses.append(ModelToolUse(call_id=str(use.get("toolUseId", "")), name=str(use.get("name", "")), arguments=use.get("input", {})))
+                tool_uses.append(
+                    ModelToolUse(
+                        call_id=str(use.get("toolUseId", "")),
+                        name=str(use.get("name", "")),
+                        arguments=use.get("input", {}),
+                    )
+                )
         usage = response.get("usage", {})
-        metadata = ModelCallMetadata(provider="bedrock", model=self.model_id, input_tokens=usage.get("inputTokens"), output_tokens=usage.get("outputTokens"), latency_seconds=perf_counter() - started, parse_success=True, finish_reason=response.get("stopReason"))
+        metadata = ModelCallMetadata(
+            provider="bedrock",
+            model=self.model_id,
+            input_tokens=usage.get("inputTokens"),
+            output_tokens=usage.get("outputTokens"),
+            latency_seconds=perf_counter() - started,
+            parse_success=True,
+            finish_reason=response.get("stopReason"),
+        )
         return ModelNativeCall(text_blocks=text_blocks, tool_uses=tool_uses, metadata=metadata, raw_output=response)
 
     def _client_for_call(self) -> Any:
@@ -201,7 +226,9 @@ class BedrockModelClient:
             except ImportError as exc:
                 raise BedrockConfigurationError("boto3 is required for BedrockModelClient") from exc
             if override is None:
-                self.client = boto3.client("bedrock-runtime", region_name=self.region, config=bedrock_transport_config())
+                self.client = boto3.client(
+                    "bedrock-runtime", region_name=self.region, config=bedrock_transport_config()
+                )
             else:
                 session = boto3.Session(
                     aws_access_key_id=override.aws_access_key_id,
@@ -237,10 +264,21 @@ class BedrockModelClient:
                 content.append({"text": str(message["text"])})
             if role == "assistant":
                 for use in message.get("tool_uses", []):
-                    content.append({"toolUse": {"toolUseId": use["call_id"], "name": use["name"], "input": use["arguments"]}})
+                    content.append(
+                        {"toolUse": {"toolUseId": use["call_id"], "name": use["name"], "input": use["arguments"]}}
+                    )
             if role == "tool":
-                content.append({"toolResult": {"toolUseId": message.get("call_id", ""), "content": [{"text": json.dumps(message.get("result", {}), default=str)}]}})
-            result.append({"role": "assistant" if role == "assistant" else "user", "content": content or [{"text": ""}]})
+                content.append(
+                    {
+                        "toolResult": {
+                            "toolUseId": message.get("call_id", ""),
+                            "content": [{"text": json.dumps(message.get("result", {}), default=str)}],
+                        }
+                    }
+                )
+            result.append(
+                {"role": "assistant" if role == "assistant" else "user", "content": content or [{"text": ""}]}
+            )
         return result
 
     @staticmethod

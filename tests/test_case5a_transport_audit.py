@@ -5,7 +5,7 @@ import time
 import types
 from pathlib import Path
 from urllib.error import HTTPError
-from urllib.request import Request, urlopen
+from urllib.request import urlopen
 
 from botocore.exceptions import ReadTimeoutError
 
@@ -39,7 +39,9 @@ class TimeoutClient:
         )
 
 
-def add_source(workflow: HumanEvidenceWorkflow, case_id: str = "case-01", content: str = "A controlled record.") -> None:
+def add_source(
+    workflow: HumanEvidenceWorkflow, case_id: str = "case-01", content: str = "A controlled record."
+) -> None:
     state = workflow.ensure_case(case_id)
     state.sources["S1"] = Source(id="S1", name="record.txt", source_type=SourceType.DOCUMENT, content=content)
     workflow.repository.save(state)
@@ -121,7 +123,9 @@ def test_default_and_temporary_credential_paths_use_the_same_config(monkeypatch)
     assert calls[2][1]["service"] == "bedrock-runtime"
     assert calls[0][1]["config"].connect_timeout == calls[2][1]["config"].connect_timeout == 10
     assert calls[0][1]["config"].read_timeout == calls[2][1]["config"].read_timeout == 300
-    assert calls[0][1]["config"].retries == calls[2][1]["config"].retries == {"mode": "standard", "total_max_attempts": 1}
+    assert (
+        calls[0][1]["config"].retries == calls[2][1]["config"].retries == {"mode": "standard", "total_max_attempts": 1}
+    )
 
 
 def test_injected_client_does_not_construct_boto3(monkeypatch) -> None:
@@ -193,20 +197,40 @@ def test_trace_is_handle_bound_sanitized_and_available_without_diagnostic_flag(t
         encoded = json.dumps(payload)
         assert "PRE5A_AUDIT_" not in encoded
         assert run["run_id"] not in encoded
-        download_status, headers, body = get_bytes(f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-01/assessment-runs/{handle}/audit-trace/download")
+        download_status, headers, body = get_bytes(
+            f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-01/assessment-runs/{handle}/audit-trace/download"
+        )
         assert download_status == 200
         assert headers["Content-Type"] == "application/x-ndjson; charset=utf-8"
-        assert headers["Content-Disposition"].startswith("attachment; filename=\"caselens-case-01-assessment-")
-        assert headers["Content-Disposition"].endswith("-trace.jsonl\"")
+        assert headers["Content-Disposition"].startswith('attachment; filename="caselens-case-01-assessment-')
+        assert headers["Content-Disposition"].endswith('-trace.jsonl"')
         downloaded = [json.loads(line) for line in body.decode().splitlines()]
         assert any(item["event"] == "vnext_attempt_failed" for item in downloaded)
         assert any("raw_output" in item for item in downloaded)
         assert any("prompt" in item for item in downloaded)
         assert "PRE5A_AUDIT_" not in body.decode()
-        assert get(f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-01/runs/{run['run_id']}/raw-traces")[0] == 404
-        assert get(f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-02/assessment-runs/{handle}/audit-trace")[0] == 404
-        assert get(f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-01/assessment-runs/not-a-real-handle/audit-trace")[0] == 404
-        assert get(f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-01/assessment-runs/not-a-real-handle/audit-trace/download")[0] == 404
+        assert (
+            get(f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-01/runs/{run['run_id']}/raw-traces")[0]
+            == 404
+        )
+        assert (
+            get(f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-02/assessment-runs/{handle}/audit-trace")[
+                0
+            ]
+            == 404
+        )
+        assert (
+            get(
+                f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-01/assessment-runs/not-a-real-handle/audit-trace"
+            )[0]
+            == 404
+        )
+        assert (
+            get(
+                f"http://127.0.0.1:{server.server_address[1]}/api/cases/case-01/assessment-runs/not-a-real-handle/audit-trace/download"
+            )[0]
+            == 404
+        )
     finally:
         server.shutdown()
         server.server_close()

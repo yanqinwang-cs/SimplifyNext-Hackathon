@@ -14,7 +14,9 @@ def main() -> int:
     args = parser.parse_args()
     report = run_deterministic(args.root, args.output, args.commit)
     summary = report["deterministic"]
-    print(f"contracts={sum(item['public'] for item in report['inventory']['contracts'])} total={summary['total']} accepted={summary['accepted']} rejected={summary['rejected']} unexpected_accepts={summary['unexpected_accepts']} unexpected_rejects={summary['unexpected_rejects']}")
+    print(
+        f"contracts={sum(item['public'] for item in report['inventory']['contracts'])} total={summary['total']} accepted={summary['accepted']} rejected={summary['rejected']} unexpected_accepts={summary['unexpected_accepts']} unexpected_rejects={summary['unexpected_rejects']}"
+    )
     return 0
 
 

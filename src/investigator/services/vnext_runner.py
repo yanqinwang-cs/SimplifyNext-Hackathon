@@ -7,12 +7,18 @@ clean input; it never resumes an unfinished reasoning graph.
 from collections.abc import Callable
 from datetime import datetime, timezone
 import json
-import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
 
-from investigator.llm import ModelClient, ModelParseError, create_model_client, failure_category, is_provider_timeout, redact_sensitive_text
+from investigator.llm import (
+    ModelClient,
+    ModelParseError,
+    create_model_client,
+    failure_category,
+    is_provider_timeout,
+    redact_sensitive_text,
+)
 from investigator.services.evidence_requests import HumanEvidenceWorkflow
 from investigator.vnext import (
     VNextInvestigationRunner,
@@ -25,8 +31,21 @@ from investigator.vnext import (
     run_input_from_case_state,
 )
 from investigator.vnext.model import VNextInvestigatorModel, build_corrective_prompt, build_prompt
-from investigator.vnext.models import AssessmentRulePreset, AssessmentStatus, Confidence, FurthestJustifiedConclusion, InvestigatorAssessment, InvestigatorProposal, SubjectAssessment, ViolationAssessment
-from investigator.vnext.semantic import InvestigatorSemanticAssessment, SemanticValidationError, compile_semantic_assessment
+from investigator.vnext.models import (
+    AssessmentRulePreset,
+    AssessmentStatus,
+    Confidence,
+    FurthestJustifiedConclusion,
+    InvestigatorAssessment,
+    InvestigatorProposal,
+    SubjectAssessment,
+    ViolationAssessment,
+)
+from investigator.vnext.semantic import (
+    InvestigatorSemanticAssessment,
+    SemanticValidationError,
+    compile_semantic_assessment,
+)
 from investigator.vnext.source_applicability import source_applicability_snapshot
 from investigator.vnext.presets import preset_for_case
 from investigator.runtime_settings import effective_model
@@ -76,64 +95,75 @@ class VNextProductionRunner:
             run_id = workflow.current_run_id(case_id)
 
             def record_started(exact_prompt: str) -> None:
-                workflow.record_trace(case_id, {
-                    "event": "vnext_model_call_started",
-                    "actor": "investigator",
-                    "runtime_status": "RUNNING",
-                    "model_call_number": call_number,
-                    "attempt_number": attempt_number,
-                    "call_kind": call_kind,
-                    "model": logical_model,
-                    "run_id": run_id,
-                    "case_id": case_id,
-                    "prompt": exact_prompt,
-                })
+                workflow.record_trace(
+                    case_id,
+                    {
+                        "event": "vnext_model_call_started",
+                        "actor": "investigator",
+                        "runtime_status": "RUNNING",
+                        "model_call_number": call_number,
+                        "attempt_number": attempt_number,
+                        "call_kind": call_kind,
+                        "model": logical_model,
+                        "run_id": run_id,
+                        "case_id": case_id,
+                        "prompt": exact_prompt,
+                    },
+                )
 
             def record_completed(call: Any) -> None:
                 metadata = call.metadata
-                workflow.record_trace(case_id, {
-                    "event": "vnext_model_call_completed",
-                    "actor": "investigator",
-                    "runtime_status": "RUNNING",
-                    "model_call_number": call_number,
-                    "attempt_number": attempt_number,
-                    "call_kind": call_kind,
-                    "model": logical_model,
-                    "run_id": run_id,
-                    "case_id": case_id,
-                    "raw_output": call.raw_output,
-                    "parsed_output": call.parsed.model_dump(mode="json"),
-                    "provider": metadata.provider,
-                    "input_tokens": metadata.input_tokens,
-                    "output_tokens": metadata.output_tokens,
-                    "latency_seconds": metadata.latency_seconds,
-                    "finish_reason": metadata.finish_reason,
-                    "parse_success": metadata.parse_success,
-                })
+                workflow.record_trace(
+                    case_id,
+                    {
+                        "event": "vnext_model_call_completed",
+                        "actor": "investigator",
+                        "runtime_status": "RUNNING",
+                        "model_call_number": call_number,
+                        "attempt_number": attempt_number,
+                        "call_kind": call_kind,
+                        "model": logical_model,
+                        "run_id": run_id,
+                        "case_id": case_id,
+                        "raw_output": call.raw_output,
+                        "parsed_output": call.parsed.model_dump(mode="json"),
+                        "provider": metadata.provider,
+                        "input_tokens": metadata.input_tokens,
+                        "output_tokens": metadata.output_tokens,
+                        "latency_seconds": metadata.latency_seconds,
+                        "finish_reason": metadata.finish_reason,
+                        "parse_success": metadata.parse_success,
+                    },
+                )
 
             def record_failed(exc: Exception) -> None:
                 metadata = getattr(exc, "metadata", None)
-                workflow.record_trace(case_id, {
-                    "event": "vnext_model_call_failed",
-                    "actor": "investigator",
-                    "runtime_status": "RUNNING" if self._retryable(exc) and attempt_number < self.max_attempts else "FAILED",
-                    "model_call_number": call_number,
-                    "attempt_number": attempt_number,
-                    "call_kind": call_kind,
-                    "model": logical_model,
-                    "run_id": run_id,
-                    "case_id": case_id,
-                    "technical_error_type": type(exc).__name__,
-                    "failure_category": failure_category(exc),
-                    "error": redact_sensitive_text(str(exc)),
-                    "raw_output": getattr(exc, "raw_output", None),
-                    "provider": metadata.provider if metadata else None,
-                    "input_tokens": metadata.input_tokens if metadata else None,
-                    "output_tokens": metadata.output_tokens if metadata else None,
-                    "latency_seconds": metadata.latency_seconds if metadata else None,
-                    "finish_reason": metadata.finish_reason if metadata else None,
-                    "parse_success": False,
-                })
+                workflow.record_trace(
+                    case_id,
+                    {
+                        "event": "vnext_model_call_failed",
+                        "actor": "investigator",
+                        "runtime_status": "RUNNING"
+                        if self._retryable(exc) and attempt_number < self.max_attempts
+                        else "FAILED",
+                        "model_call_number": call_number,
+                        "attempt_number": attempt_number,
+                        "call_kind": call_kind,
+                        "model": logical_model,
+                        "run_id": run_id,
+                        "case_id": case_id,
+                        "technical_error_type": type(exc).__name__,
+                        "failure_category": failure_category(exc),
+                        "error": redact_sensitive_text(str(exc)),
+                        "raw_output": getattr(exc, "raw_output", None),
+                        "provider": metadata.provider if metadata else None,
+                        "input_tokens": metadata.input_tokens if metadata else None,
+                        "output_tokens": metadata.output_tokens if metadata else None,
+                        "latency_seconds": metadata.latency_seconds if metadata else None,
+                        "finish_reason": metadata.finish_reason if metadata else None,
+                        "parse_success": False,
+                    },
+                )
 
             return investigator.call_prompt(
                 prompt,
@@ -144,19 +174,22 @@ class VNextProductionRunner:
             )
 
         def record_result_validation_failure(exc: VNextRunValidationError, attempt_number: int) -> None:
-            workflow.record_trace(case_id, {
-                "event": "vnext_result_validation_failed",
-                "actor": "investigator",
-                "runtime_status": "FAILED",
-                "attempt_number": attempt_number,
-                "model_call_number": model_call_number or None,
-                "run_id": workflow.current_run_id(case_id),
-                "case_id": case_id,
-                "validation_stage": "post_apply",
-                "technical_error_type": type(exc).__name__,
-                "failure_category": failure_category(exc),
-                "error": redact_sensitive_text(str(exc)),
-            })
+            workflow.record_trace(
+                case_id,
+                {
+                    "event": "vnext_result_validation_failed",
+                    "actor": "investigator",
+                    "runtime_status": "FAILED",
+                    "attempt_number": attempt_number,
+                    "model_call_number": model_call_number or None,
+                    "run_id": workflow.current_run_id(case_id),
+                    "case_id": case_id,
+                    "validation_stage": "post_apply",
+                    "technical_error_type": type(exc).__name__,
+                    "failure_category": failure_category(exc),
+                    "error": redact_sensitive_text(str(exc)),
+                },
+            )
 
         for attempt_number in range(1, self.max_attempts + 1):
             run_input = run_input_from_case_state(
@@ -200,56 +233,70 @@ class VNextProductionRunner:
                         attempt_number=attempt_number,
                         call_kind="semantic_initial" if attempt_number == 1 else "semantic_clean_execution_retry",
                     )
-                    workflow.record_trace(case_id, {
-                        "event": "vnext_semantic_compilation_started",
-                        "actor": "investigator",
-                        "runtime_status": "RUNNING",
-                        "attempt_number": attempt_number,
-                        "run_id": workflow.current_run_id(case_id),
-                        "case_id": case_id,
-                        "evidence_use_map": source_applicability_snapshot(run_input.source_applicability),
-                    })
+                    workflow.record_trace(
+                        case_id,
+                        {
+                            "event": "vnext_semantic_compilation_started",
+                            "actor": "investigator",
+                            "runtime_status": "RUNNING",
+                            "attempt_number": attempt_number,
+                            "run_id": workflow.current_run_id(case_id),
+                            "case_id": case_id,
+                            "evidence_use_map": source_applicability_snapshot(run_input.source_applicability),
+                        },
+                    )
                     try:
                         first_assessment = compile_semantic_assessment(semantic_assessment, run_input, preset=preset)
                     except SemanticValidationError as semantic_error:
                         if attempt_number < self.max_attempts:
                             retry_constraints = self._semantic_validation_retry_constraints(semantic_error)
-                        workflow.record_trace(case_id, {
-                            "event": "vnext_semantic_validation_failed",
+                        workflow.record_trace(
+                            case_id,
+                            {
+                                "event": "vnext_semantic_validation_failed",
+                                "actor": "investigator",
+                                "runtime_status": "RUNNING" if attempt_number < self.max_attempts else "FAILED",
+                                "attempt_number": attempt_number,
+                                "run_id": workflow.current_run_id(case_id),
+                                "case_id": case_id,
+                                "failure_category": "SEMANTIC_VALIDATION",
+                                "error": redact_sensitive_text(str(semantic_error)),
+                                "evidence_use_map": source_applicability_snapshot(run_input.source_applicability),
+                                "retry_constraints": list(retry_constraints),
+                            },
+                        )
+                        raise
+                    workflow.record_trace(
+                        case_id,
+                        {
+                            "event": "vnext_semantic_compilation_completed",
                             "actor": "investigator",
-                            "runtime_status": "RUNNING" if attempt_number < self.max_attempts else "FAILED",
+                            "runtime_status": "RUNNING",
                             "attempt_number": attempt_number,
                             "run_id": workflow.current_run_id(case_id),
                             "case_id": case_id,
-                            "failure_category": "SEMANTIC_VALIDATION",
-                            "error": redact_sensitive_text(str(semantic_error)),
-                            "evidence_use_map": source_applicability_snapshot(run_input.source_applicability),
-                            "retry_constraints": list(retry_constraints),
-                        })
-                        raise
-                    workflow.record_trace(case_id, {
-                        "event": "vnext_semantic_compilation_completed",
-                        "actor": "investigator",
-                        "runtime_status": "RUNNING",
-                        "attempt_number": attempt_number,
-                        "run_id": workflow.current_run_id(case_id),
-                        "case_id": case_id,
-                        "compiled_proposal": first_assessment.proposal.model_dump(mode="json"),
-                    })
+                            "compiled_proposal": first_assessment.proposal.model_dump(mode="json"),
+                        },
+                    )
                 try:
-                    result = VNextInvestigationRunner(lambda _: first_assessment).run(run_input)
+                    result = VNextInvestigationRunner(lambda _, assessment=first_assessment: assessment).run(run_input)
                 except WardenValidationError as validation_error:
                     if semantic_path:
-                        workflow.record_trace(case_id, {
-                            "event": "vnext_warden_validation_failed",
-                            "actor": "investigator",
-                            "runtime_status": "FAILED",
-                            "attempt_number": attempt_number,
-                            "run_id": workflow.current_run_id(case_id),
-                            "case_id": case_id,
-                            "validation_issues": [issue.model_dump(mode="json") for issue in validation_error.issues],
-                            "implementation_defect": True,
-                        })
+                        workflow.record_trace(
+                            case_id,
+                            {
+                                "event": "vnext_warden_validation_failed",
+                                "actor": "investigator",
+                                "runtime_status": "FAILED",
+                                "attempt_number": attempt_number,
+                                "run_id": workflow.current_run_id(case_id),
+                                "case_id": case_id,
+                                "validation_issues": [
+                                    issue.model_dump(mode="json") for issue in validation_error.issues
+                                ],
+                                "implementation_defect": True,
+                            },
+                        )
                         raise
                     failure_class = classify_warden_failure(validation_error)
                     if failure_class is WardenFailureClass.SEMANTIC_AFFECTING:
@@ -288,18 +335,21 @@ class VNextProductionRunner:
                         )
                         if attempt_number < self.max_attempts:
                             retry_constraints = self._semantic_retry_constraints(validation_error)
-                            workflow.record_trace(case_id, {
-                                "event": "vnext_retry_decision",
-                                "actor": "investigator",
-                                "runtime_status": "RUNNING",
-                                "attempt_number": attempt_number,
-                                "model_call_number": model_call_number,
-                                "run_id": workflow.current_run_id(case_id),
-                                "case_id": case_id,
-                                "retry_mode": "clean_execution",
-                                "reason_class": "semantic_affecting",
-                                "next_attempt_number": attempt_number + 1,
-                            })
+                            workflow.record_trace(
+                                case_id,
+                                {
+                                    "event": "vnext_retry_decision",
+                                    "actor": "investigator",
+                                    "runtime_status": "RUNNING",
+                                    "attempt_number": attempt_number,
+                                    "model_call_number": model_call_number,
+                                    "run_id": workflow.current_run_id(case_id),
+                                    "case_id": case_id,
+                                    "retry_mode": "clean_execution",
+                                    "reason_class": "semantic_affecting",
+                                    "next_attempt_number": attempt_number + 1,
+                                },
+                            )
                             workflow.record_trace(
                                 case_id,
                                 {
@@ -315,18 +365,21 @@ class VNextProductionRunner:
                                 },
                             )
                             continue
-                        workflow.record_trace(case_id, {
-                            "event": "vnext_retry_decision",
-                            "actor": "investigator",
-                            "runtime_status": "FAILED",
-                            "attempt_number": attempt_number,
-                            "model_call_number": model_call_number,
-                            "run_id": workflow.current_run_id(case_id),
-                            "case_id": case_id,
-                            "retry_mode": "none",
-                            "reason_class": "semantic_affecting",
-                            "terminal": True,
-                        })
+                        workflow.record_trace(
+                            case_id,
+                            {
+                                "event": "vnext_retry_decision",
+                                "actor": "investigator",
+                                "runtime_status": "FAILED",
+                                "attempt_number": attempt_number,
+                                "model_call_number": model_call_number,
+                                "run_id": workflow.current_run_id(case_id),
+                                "case_id": case_id,
+                                "retry_mode": "none",
+                                "reason_class": "semantic_affecting",
+                                "terminal": True,
+                            },
+                        )
                         raise
                     if attempt_number != 1 or not validation_error.issues:
                         raise
@@ -348,18 +401,21 @@ class VNextProductionRunner:
                             "validation_stage": "warden",
                         },
                     )
-                    workflow.record_trace(case_id, {
-                        "event": "vnext_retry_decision",
-                        "actor": "investigator",
-                        "runtime_status": "RUNNING",
-                        "attempt_number": 1,
-                        "model_call_number": model_call_number,
-                        "run_id": workflow.current_run_id(case_id),
-                        "case_id": case_id,
-                        "retry_mode": "proposal_correction",
-                        "reason_class": "structural_repairable",
-                        "next_attempt_number": 2,
-                    })
+                    workflow.record_trace(
+                        case_id,
+                        {
+                            "event": "vnext_retry_decision",
+                            "actor": "investigator",
+                            "runtime_status": "RUNNING",
+                            "attempt_number": 1,
+                            "model_call_number": model_call_number,
+                            "run_id": workflow.current_run_id(case_id),
+                            "case_id": case_id,
+                            "retry_mode": "proposal_correction",
+                            "reason_class": "structural_repairable",
+                            "next_attempt_number": 2,
+                        },
+                    )
                     workflow.record_trace(
                         case_id,
                         {
@@ -385,7 +441,9 @@ class VNextProductionRunner:
                         repaired_proposal = InvestigatorProposal.model_validate(repaired_proposal)
                     repaired_assessment = first_assessment.model_copy(update={"proposal": repaired_proposal})
                     try:
-                        result = VNextInvestigationRunner(lambda _: repaired_assessment).run(run_input)
+                        result = VNextInvestigationRunner(lambda _, assessment=repaired_assessment: assessment).run(
+                            run_input
+                        )
                     except WardenValidationError as second_validation_error:
                         workflow.record_trace(
                             case_id,
@@ -405,18 +463,21 @@ class VNextProductionRunner:
                                 "validation_stage": "warden",
                             },
                         )
-                        workflow.record_trace(case_id, {
-                            "event": "vnext_retry_decision",
-                            "actor": "investigator",
-                            "runtime_status": "FAILED",
-                            "attempt_number": 2,
-                            "model_call_number": model_call_number,
-                            "run_id": workflow.current_run_id(case_id),
-                            "case_id": case_id,
-                            "retry_mode": "none",
-                            "reason_class": "structural_repairable",
-                            "terminal": True,
-                        })
+                        workflow.record_trace(
+                            case_id,
+                            {
+                                "event": "vnext_retry_decision",
+                                "actor": "investigator",
+                                "runtime_status": "FAILED",
+                                "attempt_number": 2,
+                                "model_call_number": model_call_number,
+                                "run_id": workflow.current_run_id(case_id),
+                                "case_id": case_id,
+                                "retry_mode": "none",
+                                "reason_class": "structural_repairable",
+                                "terminal": True,
+                            },
+                        )
                         raise
                     workflow.record_trace(
                         case_id,
@@ -494,7 +555,12 @@ class VNextProductionRunner:
                         "finish_reason": metadata.finish_reason if metadata else None,
                     },
                 )
-                if corrective_attempted or (semantic_path and isinstance(exc, WardenValidationError)) or not self._retryable(exc) or attempt_number == self.max_attempts:
+                if (
+                    corrective_attempted
+                    or (semantic_path and isinstance(exc, WardenValidationError))
+                    or not self._retryable(exc)
+                    or attempt_number == self.max_attempts
+                ):
                     raise
         raise AssertionError(f"vNext run ended without a result: {last_error}")
 
@@ -507,7 +573,8 @@ class VNextProductionRunner:
             "Do not preserve conclusions from the prior failed execution.",
         }
         incompatible_scope_issues = [
-            issue for issue in error.issues
+            issue
+            for issue in error.issues
             if issue.error_code == "INCOMPATIBLE_SCOPE" and issue.source_scope and issue.target_scope
         ]
         if incompatible_scope_issues:
@@ -537,7 +604,24 @@ class VNextProductionRunner:
     def _zero_evidence_assessment(run_input: VNextRunInput) -> InvestigatorAssessment:
         assessments = []
         for subject_id in run_input.subjects:
-            assessments.append(SubjectAssessment(subject_id=subject_id, violation_assessments=[ViolationAssessment(violation_id=item.violation_id, status=AssessmentStatus.NOT_CURRENTLY_SUPPORTED, reasoning_summary="The current record contains no substantive evidence for this assessment.", confidence=Confidence.LOW) for item in run_input.rule_preset.violations], furthest_conclusion=FurthestJustifiedConclusion(statement="The current record does not support a finding on the configured violations.", confidence=Confidence.LOW)))
+            assessments.append(
+                SubjectAssessment(
+                    subject_id=subject_id,
+                    violation_assessments=[
+                        ViolationAssessment(
+                            violation_id=item.violation_id,
+                            status=AssessmentStatus.NOT_CURRENTLY_SUPPORTED,
+                            reasoning_summary="The current record contains no substantive evidence for this assessment.",
+                            confidence=Confidence.LOW,
+                        )
+                        for item in run_input.rule_preset.violations
+                    ],
+                    furthest_conclusion=FurthestJustifiedConclusion(
+                        statement="The current record does not support a finding on the configured violations.",
+                        confidence=Confidence.LOW,
+                    ),
+                )
+            )
         return InvestigatorAssessment(proposal=InvestigatorProposal(graph_updates=[]), subject_assessments=assessments)
 
     @staticmethod
@@ -546,7 +630,10 @@ class VNextProductionRunner:
         # issue a fresh paid request for this ambiguous transport failure.
         if is_provider_timeout(exc):
             return False
-        return isinstance(exc, (ModelParseError, VNextRunValidationError, SemanticValidationError, WardenValidationError, RuntimeError))
+        return isinstance(
+            exc,
+            (ModelParseError, VNextRunValidationError, SemanticValidationError, WardenValidationError, RuntimeError),
+        )
 
     @staticmethod
     def _persist_success(
@@ -592,13 +679,9 @@ class VNextProductionRunner:
         run_result_path = directory / "run_result.json"
         run_summary = json.loads(run_result_path.read_text(encoding="utf-8"))
         subject_conclusions = {
-            item.subject_id: item.furthest_conclusion.statement
-            for item in result.subject_assessments
+            item.subject_id: item.furthest_conclusion.statement for item in result.subject_assessments
         }
-        conclusion = "; ".join(
-            f"{subject_id}: {statement}"
-            for subject_id, statement in subject_conclusions.items()
-        )
+        conclusion = "; ".join(f"{subject_id}: {statement}" for subject_id, statement in subject_conclusions.items())
         run_summary.update(
             {
                 "final_runtime_status": "COMPLETED",

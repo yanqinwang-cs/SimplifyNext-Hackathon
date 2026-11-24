@@ -30,7 +30,9 @@ def source_snapshot(source: Source) -> dict[str, Any]:
     }
 
 
-def build_input_snapshot(state: Any, preset: AssessmentRulePreset | Mapping[str, Any], run_instance_id: str) -> dict[str, Any]:
+def build_input_snapshot(
+    state: Any, preset: AssessmentRulePreset | Mapping[str, Any], run_instance_id: str
+) -> dict[str, Any]:
     """Copy the exact admitted semantic inputs into a private run artifact."""
 
     students = list(state.subjects.values())
@@ -53,7 +55,9 @@ def build_input_snapshot(state: Any, preset: AssessmentRulePreset | Mapping[str,
             for student in admitted_students
         ],
         "sources": [source_snapshot(source) for source in admitted_sources.values()],
-        "relationships": [relationship.model_dump(mode="json") for relationship in state.subject_relationships.values()],
+        "relationships": [
+            relationship.model_dump(mode="json") for relationship in state.subject_relationships.values()
+        ],
         "source_applicability": source_applicability_snapshot(applicability),
     }
 
@@ -124,36 +128,53 @@ def build_report_record(
         actual_violations = [item.violation_id for item in findings]
         if actual_violations != expected_violations or len(actual_violations) != len(set(actual_violations)):
             raise ValueError(f"Report integrity failure: violation coverage for {assessment.subject_id!r} is invalid")
-        student_sections.append({
-            "subject_id": assessment.subject_id,
-            "display_name": next(item["display_name"] for item in students if item["subject_id"] == assessment.subject_id),
-            "candidate_number": next(item.get("candidate_number") for item in students if item["subject_id"] == assessment.subject_id),
-            "violations": [
-                {
-                    "violation_id": item.violation_id,
-                    "label": label_by_violation[item.violation_id],
-                    "status": AssessmentStatus(item.status).value,
-                    "reasoning_summary": _humanize(item.reasoning_summary, snapshot),
-                    "supporting_material": [_material(graph, node_id, snapshot, snapshot["run_instance_id"]) for node_id in item.supporting_node_ids],
-                    "conflicting_material": [_material(graph, node_id, snapshot, snapshot["run_instance_id"]) for node_id in item.conflicting_node_ids],
-                    "limiting_material": [_material(graph, node_id, snapshot, snapshot["run_instance_id"]) for node_id in item.mitigating_node_ids],
-                    "unresolved_points": [_humanize(point, snapshot) for point in item.unresolved_points],
-                }
-                for item in findings
-            ],
-            "alternative_explanations": [
-                {
-                    "statement": _humanize(item.statement, snapshot),
-                    "supporting_material": [
-                        _material(graph, node_id, snapshot, snapshot["run_instance_id"])
-                        for node_id in item.source_node_ids
-                    ],
-                }
-                for item in getattr(assessment, "alternative_explanations", [])
-            ],
-            "furthest_conclusion": _humanize(assessment.furthest_conclusion.statement, snapshot),
-            "suggested_next_step": _humanize(assessment.suggested_next_step, snapshot) if assessment.suggested_next_step else None,
-        })
+        student_sections.append(
+            {
+                "subject_id": assessment.subject_id,
+                "display_name": next(
+                    item["display_name"] for item in students if item["subject_id"] == assessment.subject_id
+                ),
+                "candidate_number": next(
+                    item.get("candidate_number") for item in students if item["subject_id"] == assessment.subject_id
+                ),
+                "violations": [
+                    {
+                        "violation_id": item.violation_id,
+                        "label": label_by_violation[item.violation_id],
+                        "status": AssessmentStatus(item.status).value,
+                        "reasoning_summary": _humanize(item.reasoning_summary, snapshot),
+                        "supporting_material": [
+                            _material(graph, node_id, snapshot, snapshot["run_instance_id"])
+                            for node_id in item.supporting_node_ids
+                        ],
+                        "conflicting_material": [
+                            _material(graph, node_id, snapshot, snapshot["run_instance_id"])
+                            for node_id in item.conflicting_node_ids
+                        ],
+                        "limiting_material": [
+                            _material(graph, node_id, snapshot, snapshot["run_instance_id"])
+                            for node_id in item.mitigating_node_ids
+                        ],
+                        "unresolved_points": [_humanize(point, snapshot) for point in item.unresolved_points],
+                    }
+                    for item in findings
+                ],
+                "alternative_explanations": [
+                    {
+                        "statement": _humanize(item.statement, snapshot),
+                        "supporting_material": [
+                            _material(graph, node_id, snapshot, snapshot["run_instance_id"])
+                            for node_id in item.source_node_ids
+                        ],
+                    }
+                    for item in getattr(assessment, "alternative_explanations", [])
+                ],
+                "furthest_conclusion": _humanize(assessment.furthest_conclusion.statement, snapshot),
+                "suggested_next_step": _humanize(assessment.suggested_next_step, snapshot)
+                if assessment.suggested_next_step
+                else None,
+            }
+        )
     return {
         "schema_version": REPORT_SCHEMA_VERSION,
         "run_instance_id": snapshot["run_instance_id"],
@@ -193,7 +214,9 @@ def public_report_from_record(
             "completedAt": record["completed_at"],
             "students": [
                 {
-                    "sectionHandle": public_assessment_source_handle(case_id, run_instance_id, f"student:{student['subject_id']}"),
+                    "sectionHandle": public_assessment_source_handle(
+                        case_id, run_instance_id, f"student:{student['subject_id']}"
+                    ),
                     "displayName": student["display_name"],
                     "violations": [
                         {

@@ -63,9 +63,7 @@ def run(
 
     results = [run_case(active_client, resolved_model_id, case["case_id"]) for case in selected_cases]
     for result in results:
-        (output_dir / f"{result.case_id}.json").write_text(
-            result.model_dump_json(indent=2) + "\n", encoding="utf-8"
-        )
+        (output_dir / f"{result.case_id}.json").write_text(result.model_dump_json(indent=2) + "\n", encoding="utf-8")
     summary = RunSummary(
         model_id=resolved_model_id,
         result_directory=str(output_dir),

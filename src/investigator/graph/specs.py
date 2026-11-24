@@ -60,8 +60,16 @@ class OperationSpecRegistry:
 
     @classmethod
     def matrix(cls, relation: EdgeRelation) -> dict[tuple[GraphNodeType, GraphNodeType], bool]:
-        semantic_types = (GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION, GraphNodeType.HYPOTHESIS, GraphNodeType.UNCERTAINTY)
-        return {(source, target): cls.allows(relation, source, target) for source, target in product(semantic_types, repeat=2)}
+        semantic_types = (
+            GraphNodeType.EVIDENCE,
+            GraphNodeType.PROPOSITION,
+            GraphNodeType.HYPOTHESIS,
+            GraphNodeType.UNCERTAINTY,
+        )
+        return {
+            (source, target): cls.allows(relation, source, target)
+            for source, target in product(semantic_types, repeat=2)
+        }
 
     @classmethod
     def contract(cls, operation: str) -> OperationContract:
@@ -83,32 +91,63 @@ _OPERATION_TYPES = {
 OPERATION_CONTRACTS = {
     "add_evidence": OperationContract("add_evidence", _OPERATION_TYPES["evidence"]),
     "add_proposition": OperationContract(
-        "add_proposition", _OPERATION_TYPES["proposition"],
-        (ReferenceSpec("derived_from_node_ids", frozenset({_OPERATION_TYPES["evidence"], _OPERATION_TYPES["proposition"]}), True),),
+        "add_proposition",
+        _OPERATION_TYPES["proposition"],
+        (
+            ReferenceSpec(
+                "derived_from_node_ids",
+                frozenset({_OPERATION_TYPES["evidence"], _OPERATION_TYPES["proposition"]}),
+                True,
+            ),
+        ),
     ),
     "add_hypothesis": OperationContract("add_hypothesis", _OPERATION_TYPES["hypothesis"]),
     "add_uncertainty": OperationContract(
-        "add_uncertainty", _OPERATION_TYPES["uncertainty"],
-        (ReferenceSpec("target_node_id", frozenset({_OPERATION_TYPES["evidence"], _OPERATION_TYPES["proposition"], _OPERATION_TYPES["hypothesis"]})),),
+        "add_uncertainty",
+        _OPERATION_TYPES["uncertainty"],
+        (
+            ReferenceSpec(
+                "target_node_id",
+                frozenset(
+                    {_OPERATION_TYPES["evidence"], _OPERATION_TYPES["proposition"], _OPERATION_TYPES["hypothesis"]}
+                ),
+            ),
+        ),
     ),
     "add_support": OperationContract(
-        "add_support", None,
-        (ReferenceSpec("source_node_id", frozenset({_OPERATION_TYPES["evidence"], _OPERATION_TYPES["proposition"]})),
-         ReferenceSpec("target_node_id", frozenset({_OPERATION_TYPES["proposition"], _OPERATION_TYPES["hypothesis"]}))),
+        "add_support",
+        None,
+        (
+            ReferenceSpec("source_node_id", frozenset({_OPERATION_TYPES["evidence"], _OPERATION_TYPES["proposition"]})),
+            ReferenceSpec(
+                "target_node_id", frozenset({_OPERATION_TYPES["proposition"], _OPERATION_TYPES["hypothesis"]})
+            ),
+        ),
     ),
     "add_conflict": OperationContract(
-        "add_conflict", None,
-        (ReferenceSpec("source_node_id", frozenset({_OPERATION_TYPES["evidence"], _OPERATION_TYPES["proposition"]})),
-         ReferenceSpec("target_node_id", frozenset({_OPERATION_TYPES["proposition"], _OPERATION_TYPES["hypothesis"]}))),
+        "add_conflict",
+        None,
+        (
+            ReferenceSpec("source_node_id", frozenset({_OPERATION_TYPES["evidence"], _OPERATION_TYPES["proposition"]})),
+            ReferenceSpec(
+                "target_node_id", frozenset({_OPERATION_TYPES["proposition"], _OPERATION_TYPES["hypothesis"]})
+            ),
+        ),
     ),
     "add_derivation": OperationContract(
-        "add_derivation", None,
-        (ReferenceSpec("derived_proposition_id", frozenset({_OPERATION_TYPES["proposition"]})),
-         ReferenceSpec("source_node_id", frozenset({_OPERATION_TYPES["evidence"], _OPERATION_TYPES["proposition"]}))),
+        "add_derivation",
+        None,
+        (
+            ReferenceSpec("derived_proposition_id", frozenset({_OPERATION_TYPES["proposition"]})),
+            ReferenceSpec("source_node_id", frozenset({_OPERATION_TYPES["evidence"], _OPERATION_TYPES["proposition"]})),
+        ),
     ),
     "add_specialization": OperationContract(
-        "add_specialization", None,
-        (ReferenceSpec("child_hypothesis_id", frozenset({_OPERATION_TYPES["hypothesis"]})),
-         ReferenceSpec("parent_hypothesis_id", frozenset({_OPERATION_TYPES["hypothesis"]}))),
+        "add_specialization",
+        None,
+        (
+            ReferenceSpec("child_hypothesis_id", frozenset({_OPERATION_TYPES["hypothesis"]})),
+            ReferenceSpec("parent_hypothesis_id", frozenset({_OPERATION_TYPES["hypothesis"]})),
+        ),
     ),
 }

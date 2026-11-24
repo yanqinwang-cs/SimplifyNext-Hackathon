@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 import pytest
@@ -12,14 +11,17 @@ from experiments.investigation_smoke.case_01.runner import (
     release_selected_artifact,
     run,
 )
-from experiments.investigation_smoke.case_01.prompts import initial_output_template, revision_output_template, revision_prompt
+from experiments.investigation_smoke.case_01.prompts import (
+    initial_output_template,
+    revision_output_template,
+    revision_prompt,
+)
 from experiments.investigation_smoke.case_01.schemas import (
     ControlledRunTrace,
     HypothesisProposal,
     InitialResponse,
     RevisionResponse,
 )
-from experiments.model_screen.cases import get_case
 from investigator.llm.base import ModelCallMetadata, ModelCallResult, ModelParseError
 from investigator.models import HypothesisStatus, HypothesisTransition, HypothesisTransitionType
 
@@ -46,12 +48,21 @@ def initial_response(selected_action_id="A3"):
     return InitialResponse(
         hypotheses=[
             HypothesisProposal(
-                id="H1", statement="Some explanation may account for the observed result.",
-                supported_by=["E1"], conflicted_by=[], unresolved=["The explanation remains uncertain."], specificity_basis_evidence_ids=[],
+                id="H1",
+                statement="Some explanation may account for the observed result.",
+                supported_by=["E1"],
+                conflicted_by=[],
+                unresolved=["The explanation remains uncertain."],
+                specificity_basis_evidence_ids=[],
             ),
             HypothesisProposal(
-                id="H1.1", parent_id="H1", statement="A narrower explanation may account for the result.",
-                supported_by=["E3"], conflicted_by=[], unresolved=["The narrower explanation remains uncertain."], specificity_basis_evidence_ids=["E3"],
+                id="H1.1",
+                parent_id="H1",
+                statement="A narrower explanation may account for the result.",
+                supported_by=["E3"],
+                conflicted_by=[],
+                unresolved=["The narrower explanation remains uncertain."],
+                specificity_basis_evidence_ids=["E3"],
             ),
         ],
         selected_action_id=selected_action_id,
@@ -64,8 +75,18 @@ def initial_response(selected_action_id="A3"):
 def revision_response():
     return RevisionResponse(
         hypothesis_updates=[
-            HypothesisTransition(hypothesis_id="H1.1", transition=HypothesisTransitionType.REMOVE, reason="The artefact does not support this narrow child.", add_conflicting_evidence_ids=["A3_RELEASE"]),
-            HypothesisTransition(hypothesis_id="H1", transition=HypothesisTransitionType.ACTIVATE, reason="The broad explanation remains viable.", add_supporting_evidence_ids=["A3_RELEASE"]),
+            HypothesisTransition(
+                hypothesis_id="H1.1",
+                transition=HypothesisTransitionType.REMOVE,
+                reason="The artefact does not support this narrow child.",
+                add_conflicting_evidence_ids=["A3_RELEASE"],
+            ),
+            HypothesisTransition(
+                hypothesis_id="H1",
+                transition=HypothesisTransitionType.ACTIVATE,
+                reason="The broad explanation remains viable.",
+                add_supporting_evidence_ids=["A3_RELEASE"],
+            ),
         ],
         uncertainty_updates=[],
         new_uncertainties=[],
@@ -109,7 +130,12 @@ def test_initial_state_rejects_invalid_evidence_and_hypothesis_references() -> N
 def test_experiment_schema_rejects_wrong_or_missing_fields() -> None:
     with pytest.raises(ValidationError):
         HypothesisProposal(
-            id="H1", statement="x", supported_by=[], conflicted_by=[], unresolved=[], specificity_basis_evidence_ids=[],
+            id="H1",
+            statement="x",
+            supported_by=[],
+            conflicted_by=[],
+            unresolved=[],
+            specificity_basis_evidence_ids=[],
             unresolved_uncertainty="wrong field",
         )
     with pytest.raises(ValidationError):
@@ -137,13 +163,25 @@ def test_canonical_prompt_templates_validate_against_response_models() -> None:
 
 def test_revision_schema_requires_reason_and_accepts_valid_response() -> None:
     with pytest.raises(ValidationError):
-        RevisionResponse.model_validate({
-            "hypothesis_updates": [{
-                "hypothesis_id": "H1", "transition": "keep",
-                "add_supporting_evidence_ids": [], "add_conflicting_evidence_ids": [], "add_specificity_basis_evidence_ids": [],
-            }], "new_hypotheses": [], "remaining_uncertainties": [], "revision_rationale": "x",
-        })
+        RevisionResponse.model_validate(
+            {
+                "hypothesis_updates": [
+                    {
+                        "hypothesis_id": "H1",
+                        "transition": "keep",
+                        "add_supporting_evidence_ids": [],
+                        "add_conflicting_evidence_ids": [],
+                        "add_specificity_basis_evidence_ids": [],
+                    }
+                ],
+                "new_hypotheses": [],
+                "remaining_uncertainties": [],
+                "revision_rationale": "x",
+            }
+        )
     assert revision_response().hypothesis_updates[0].reason
+
+
 def test_specificity_basis_and_prior_hypotheses_remain_separate_from_released_evidence() -> None:
     state = initial_state(initial_response())
     release_selected_artifact(state, "A3")
@@ -196,9 +234,12 @@ def test_revision_is_deterministic_and_preserves_parent() -> None:
 def test_revision_prompt_separates_hypotheses_from_evidence() -> None:
     state = initial_state(initial_response())
     prompt = revision_prompt(
-        "original evidence", [h.model_dump(mode="json") for h in state.hypotheses.values()],
+        "original evidence",
+        [h.model_dump(mode="json") for h in state.hypotheses.values()],
         [u.model_dump(mode="json") for u in state.uncertainties.values()],
-        {"action_id": "A3"}, "A3_RELEASE", "A3_RELEASE content",
+        {"action_id": "A3"},
+        "A3_RELEASE",
+        "A3_RELEASE content",
     )
     assert "Prior hypotheses/tree (NOT evidence):" in prompt
     assert "Prior unresolved uncertainties:" in prompt
@@ -223,11 +264,14 @@ def test_failed_call_raw_output_is_preserved_in_trace(tmp_path: Path) -> None:
         def call(self, prompt, schema):
             raise ModelParseError("initial schema failure", raw_output=raw_initial)
 
-    first_trace = ControlledRunTrace.model_validate_json(run("model", tmp_path / "first", client=InitialFailure()).read_text())
+    first_trace = ControlledRunTrace.model_validate_json(
+        run("model", tmp_path / "first", client=InitialFailure()).read_text()
+    )
     assert first_trace.failure_stage == "initial_parse"
     assert first_trace.initial_raw_model_output == raw_initial
 
     raw_revision = "{malformed revision}"
+
     class RevisionFailure:
         def __init__(self):
             self.calls = 0
@@ -238,7 +282,9 @@ def test_failed_call_raw_output_is_preserved_in_trace(tmp_path: Path) -> None:
                 return call_result(initial_response("A1"))
             raise ModelParseError("revision schema failure", raw_output=raw_revision)
 
-    second_trace = ControlledRunTrace.model_validate_json(run("model", tmp_path / "second", client=RevisionFailure()).read_text())
+    second_trace = ControlledRunTrace.model_validate_json(
+        run("model", tmp_path / "second", client=RevisionFailure()).read_text()
+    )
     assert second_trace.failure_stage == "revision_parse"
     assert second_trace.revision_raw_model_output == raw_revision
     assert second_trace.initial_hypothesis_state is not None

@@ -20,8 +20,10 @@ export const initialWorkspace: CaseWorkspaceState = {
       text: "The available material leaves one important question open.",
       request: {
         request_id: "request-01",
-        informationSought: "Obtain available evidence of Candidate A's device or communication activity during the assessment period.",
-        reason: "This could help determine whether the observed behaviour was associated with external information access.",
+        informationSought:
+          "Obtain available evidence of Candidate A's device or communication activity during the assessment period.",
+        reason:
+          "This could help determine whether the observed behaviour was associated with external information access.",
         status: "pending",
       },
     },
@@ -36,7 +38,13 @@ export const initialWorkspace: CaseWorkspaceState = {
   ],
   students: [{ studentHandle: "demo-student-1", displayName: "Student 1", candidateNumber: null }],
   report: { state: "unavailable", assessmentIsStale: true },
-  assessment: { state: "not_started", activeRun: null, latestAttempt: null, reportAvailable: false, reportStale: false },
+  assessment: {
+    state: "not_started",
+    activeRun: null,
+    latestAttempt: null,
+    reportAvailable: false,
+    reportStale: false,
+  },
   chatHistory: [],
   activity: [],
   caseStatus: "ACTIVE",
@@ -44,6 +52,13 @@ export const initialWorkspace: CaseWorkspaceState = {
   currentActor: "NONE",
   caseKind: "user",
   sample: null,
-  capabilities: { editStudents: true, addEvidence: true, resetSample: false, runAssessment: true, useHelp: true, viewSources: true },
+  capabilities: {
+    editStudents: true,
+    addEvidence: true,
+    resetSample: false,
+    runAssessment: true,
+    useHelp: true,
+    viewSources: true,
+  },
   preloadedSourceCount: 0,
 };

@@ -6,9 +6,36 @@ from investigator.state import CaseState
 
 
 ROOT = Path(__file__).parent
-VISIBLE_KEYS = ("blank_tutorial", "student_script", "marker_report", "invigilator_report", "assessment_rules", "assessment_logistics")
-VISIBLE_FILENAMES = ("blank_tutorial.md", "student_script.md", "marker_report.md", "invigilator_report.md", "assessment_rules.md", "assessment_logistics.md")
-HIDDEN_KEYS = ("entry_items", "prior_work", "student_support", "course_materials", "module_scope", "student_clarification", "device_examination", "smart_glasses_activity", "network_connectivity", "device_account_linkage", "external_ai_service", "outside_assistant")
+VISIBLE_KEYS = (
+    "blank_tutorial",
+    "student_script",
+    "marker_report",
+    "invigilator_report",
+    "assessment_rules",
+    "assessment_logistics",
+)
+VISIBLE_FILENAMES = (
+    "blank_tutorial.md",
+    "student_script.md",
+    "marker_report.md",
+    "invigilator_report.md",
+    "assessment_rules.md",
+    "assessment_logistics.md",
+)
+HIDDEN_KEYS = (
+    "entry_items",
+    "prior_work",
+    "student_support",
+    "course_materials",
+    "module_scope",
+    "student_clarification",
+    "device_examination",
+    "smart_glasses_activity",
+    "network_connectivity",
+    "device_account_linkage",
+    "external_ai_service",
+    "outside_assistant",
+)
 
 
 @dataclass(frozen=True)
@@ -45,7 +72,16 @@ def hidden_fixtures() -> tuple[Fixture, ...]:
         "course_materials": ("course", "materials", "authority", "assigned"),
         "module_scope": ("scope", "syllabus", "covered", "teaching"),
         "student_clarification": ("student", "explanation", "account", "worn", "which glasses"),
-        "device_examination": ("eyewear", "glasses", "capabilities", "record", "transmit", "receive", "electronic", "functionality"),
+        "device_examination": (
+            "eyewear",
+            "glasses",
+            "capabilities",
+            "record",
+            "transmit",
+            "receive",
+            "electronic",
+            "functionality",
+        ),
         "smart_glasses_activity": ("activity", "usage", "logs", "session", "device", "eyewear"),
         "network_connectivity": ("network", "wifi", "wi-fi", "internet", "connectivity"),
         "device_account_linkage": ("link", "linked", "pairing", "phone", "account", "associated"),
@@ -53,7 +89,18 @@ def hidden_fixtures() -> tuple[Fixture, ...]:
         "outside_assistant": ("outside", "communications", "communication", "classmate", "person"),
     }
     filenames = {
-        "entry_items": "entry_permitted_items_record.md", "prior_work": "prior_assessed_work.md", "student_support": "student_support_session.md", "course_materials": "course_materials.md", "module_scope": "module_scope_syllabus.md", "student_clarification": "student_clarification_record.md", "device_examination": "device_examination_report.md", "smart_glasses_activity": "smart_glasses_activity_record.md", "network_connectivity": "network_connectivity_record.md", "device_account_linkage": "device_account_linkage_record.md", "external_ai_service": "external_ai_service_record.md", "outside_assistant": "potential_outside_assistant_record.md",
+        "entry_items": "entry_permitted_items_record.md",
+        "prior_work": "prior_assessed_work.md",
+        "student_support": "student_support_session.md",
+        "course_materials": "course_materials.md",
+        "module_scope": "module_scope_syllabus.md",
+        "student_clarification": "student_clarification_record.md",
+        "device_examination": "device_examination_report.md",
+        "smart_glasses_activity": "smart_glasses_activity_record.md",
+        "network_connectivity": "network_connectivity_record.md",
+        "device_account_linkage": "device_account_linkage_record.md",
+        "external_ai_service": "external_ai_service_record.md",
+        "outside_assistant": "potential_outside_assistant_record.md",
     }
     return tuple(_fixture(key, filenames[key], concepts[key], contents[key]) for key in HIDDEN_KEYS)
 
@@ -69,7 +116,9 @@ def initial_case() -> CaseState:
         "assessment_logistics": "The assessment logistics describe the assessment period and location.",
     }
     for index, key in enumerate(VISIBLE_KEYS, start=1):
-        state.sources[f"S{index}"] = Source(id=f"S{index}", name=VISIBLE_FILENAMES[index - 1], source_type=SourceType.DOCUMENT, content=contents[key])
+        state.sources[f"S{index}"] = Source(
+            id=f"S{index}", name=VISIBLE_FILENAMES[index - 1], source_type=SourceType.DOCUMENT, content=contents[key]
+        )
     return state
 
 

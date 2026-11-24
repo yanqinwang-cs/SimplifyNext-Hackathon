@@ -1,4 +1,5 @@
 """Deterministic, non-model matcher for the controlled Stage 2B environment."""
+
 from dataclasses import dataclass
 import re
 
@@ -26,7 +27,17 @@ class ControlledEvidenceMatcher:
     def visible_match(request_text: str, visible_sources: list[tuple[str, str | None]]) -> VisibleMatch:
         """Check only admitted source names/content; never consult hidden fixtures."""
         text = request_text.lower()
-        terms = ("concern", "anomal", "allegation", "assessment record", "conduct", "observation", "submitted", "rules", "logistics")
+        terms = (
+            "concern",
+            "anomal",
+            "allegation",
+            "assessment record",
+            "conduct",
+            "observation",
+            "submitted",
+            "rules",
+            "logistics",
+        )
         source_text = " ".join(f"{name} {content or ''}".lower() for name, content in visible_sources)
         source_hits = sum(1 for term in terms if term in source_text and term in text)
         if source_hits >= 1:

@@ -8,7 +8,10 @@ from experiments.investigator_screen import live
 from investigator.llm import ModelCallMetadata, ModelCallResult
 
 
-VALID_PAYLOAD = {"graph_updates": [], "next_step": {"type": "local_exhausted", "reason": "No useful local work remains."}}
+VALID_PAYLOAD = {
+    "graph_updates": [],
+    "next_step": {"type": "local_exhausted", "reason": "No useful local work remains."},
+}
 
 
 def test_dry_run_makes_zero_model_calls(monkeypatch, capsys):
@@ -48,11 +51,21 @@ def test_mocked_valid_call_evaluates_and_writes_artifacts(tmp_path, monkeypatch,
             return ModelCallResult(
                 parsed=output_schema.model_validate(VALID_PAYLOAD),
                 raw_output=json.dumps(VALID_PAYLOAD),
-                metadata=ModelCallMetadata(provider="fake", model="fake", latency_seconds=0.2, input_tokens=10, output_tokens=8, parse_success=True, finish_reason="end_turn"),
+                metadata=ModelCallMetadata(
+                    provider="fake",
+                    model="fake",
+                    latency_seconds=0.2,
+                    input_tokens=10,
+                    output_tokens=8,
+                    parse_success=True,
+                    finish_reason="end_turn",
+                ),
             )
 
     monkeypatch.setattr(live, "BedrockModelClient", FakeClient)
-    monkeypatch.setattr(sys, "argv", ["live", "--models", "zai.glm-5", "--fixtures", "INV12", "--output-dir", str(tmp_path)])
+    monkeypatch.setattr(
+        sys, "argv", ["live", "--models", "zai.glm-5", "--fixtures", "INV12", "--output-dir", str(tmp_path)]
+    )
     live.main()
     stdout = capsys.readouterr().out
     assert "INV12: PASS" in stdout

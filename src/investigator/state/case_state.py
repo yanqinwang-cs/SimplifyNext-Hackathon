@@ -10,7 +10,12 @@ from investigator.models.source import Source
 from investigator.models.uncertainty import Uncertainty
 from investigator.models.evidence_request import EvidenceRequest
 from investigator.graph import CaseGraph
-from investigator.models.assessment import AssessmentContext, AssessmentSubject, SubjectRelationship, validate_identity_references
+from investigator.models.assessment import (
+    AssessmentContext,
+    AssessmentSubject,
+    SubjectRelationship,
+    validate_identity_references,
+)
 
 
 class CaseState(BaseModel):

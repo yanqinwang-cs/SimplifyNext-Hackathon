@@ -3,7 +3,9 @@ from collections.abc import Mapping
 from investigator.graph.models import EpistemicStatus
 
 
-def propagate_epistemic_status(statuses: Mapping[str, EpistemicStatus], parent_by_child: Mapping[str, str], node_id: str, status: EpistemicStatus) -> dict[str, EpistemicStatus]:
+def propagate_epistemic_status(
+    statuses: Mapping[str, EpistemicStatus], parent_by_child: Mapping[str, str], node_id: str, status: EpistemicStatus
+) -> dict[str, EpistemicStatus]:
     """Apply only explicit asymmetric specialization propagation rules."""
     updated = dict(statuses)
     updated[node_id] = status

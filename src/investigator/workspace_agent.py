@@ -6,14 +6,12 @@ from dataclasses import dataclass, field
 from copy import deepcopy
 from copy import copy
 from datetime import datetime, timezone
-import re
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from investigator.llm import AnthropicModelClient, ModelClient, ModelToolUse, create_model_client, configured_provider
 from investigator.services.evidence_requests import HumanEvidenceWorkflow
-from investigator.state.case_state import CaseState
 from investigator.help import product_guide
 from investigator.runtime_settings import effective_model, record_help_model_use
 from investigator.llm.bedrock import BedrockModelClient, redact_sensitive_text
@@ -82,12 +80,29 @@ class WorkspaceAgent:
     """Small operational assistant; it never exposes semantic graph mutation tools."""
 
     VNEXT_READ_TOOLS = frozenset({"GET_CASE_GUIDANCE_CONTEXT", "GET_PRODUCT_GUIDE", "READ_SOURCE", "LIST_SOURCES"})
-    FORBIDDEN_TOOLS = frozenset({
-        "add_evidence", "add_proposition", "add_hypothesis", "add_uncertainty", "supports",
-        "conflicts", "derived_from", "specializes", "depends_on", "targets", "archive", "reactivate",
-    })
+    FORBIDDEN_TOOLS = frozenset(
+        {
+            "add_evidence",
+            "add_proposition",
+            "add_hypothesis",
+            "add_uncertainty",
+            "supports",
+            "conflicts",
+            "derived_from",
+            "specializes",
+            "depends_on",
+            "targets",
+            "archive",
+            "reactivate",
+        }
+    )
 
-    def __init__(self, workflow: HumanEvidenceWorkflow, client: ModelClient | None = None, session_store: WorkspaceSessionStore | None = None) -> None:
+    def __init__(
+        self,
+        workflow: HumanEvidenceWorkflow,
+        client: ModelClient | None = None,
+        session_store: WorkspaceSessionStore | None = None,
+    ) -> None:
         self.workflow = workflow
         self.client = client
         self.session_store = session_store or WorkspaceSessionStore()
@@ -154,7 +169,11 @@ class WorkspaceAgent:
                     record_help_model_use(case_id, turn_model.name, "completed")
                     self._append_chat(case_id, "workspace", response)
                     return WorkspaceChatResponse(response=response, recovery=self._has_recovery(case_id))
-                assistant_message = {"role": "assistant", "text": " ".join(block.text for block in call.text_blocks), "tool_uses": [use.model_dump(mode="json") for use in call.tool_uses]}
+                assistant_message = {
+                    "role": "assistant",
+                    "text": " ".join(block.text for block in call.text_blocks),
+                    "tool_uses": [use.model_dump(mode="json") for use in call.tool_uses],
+                }
                 session["conversation"].append(assistant_message)
                 messages.append(assistant_message)
                 for tool_call in call.tool_uses:
@@ -167,11 +186,15 @@ class WorkspaceAgent:
                     messages.append(tool_message)
             raise RuntimeError("Workspace tool loop exceeded the configured safety bound")
         except WorkspaceToolAuthorizationError as exc:
-            self._finish_workspace_turn(case_id, turn_id, "failed", "The requested Workspace operation is not authorized.", type(exc).__name__)
+            self._finish_workspace_turn(
+                case_id, turn_id, "failed", "The requested Workspace operation is not authorized.", type(exc).__name__
+            )
             record_help_model_use(case_id, turn_model.name, "failed")
             raise
         except Exception as exc:
-            self._finish_workspace_turn(case_id, turn_id, "failed", "The Workspace assistant could not respond.", type(exc).__name__)
+            self._finish_workspace_turn(
+                case_id, turn_id, "failed", "The Workspace assistant could not respond.", type(exc).__name__
+            )
             record_help_model_use(case_id, turn_model.name, "failed")
             raise
 
@@ -189,22 +212,32 @@ class WorkspaceAgent:
 
     def system_prompt(self) -> str:
         tools = sorted(self.VNEXT_READ_TOOLS)
-        return "\n".join((
-            "You are the SimplifyNext Help Assistant, a read-only human-facing guide.",
-            "WORKSPACE HELP RESPONSE POLICY: Workspace Help exists to simplify the case, not reproduce the report. Give the simplest accurate answer to the user's actual question.",
-            "Use plain language and be concise by default. There is no minimum response length; if one sentence answers the question accurately, one sentence is enough.",
-            "If the user explicitly asks for the shortest summary or shortest possible summary, answer in exactly one sentence containing only the current result or conclusion and the single most important remaining uncertainty; omit evidence recap, background, headings, bullets, next steps, and generic caveats. Apply this special rule only to explicit shortest-summary requests, while preserving material qualifications needed for accuracy.",
-            "Answer with relevant case context only. Do not mention every candidate unless needed, turn a simple question into a candidate-by-candidate report summary, or mirror/reproduce the report structure by default. Prefer synthesis over enumeration. Do not add headings, numbered lists, background, or generic caveats unless they materially help.",
-            "Provide substantially more detail only when the user explicitly asks for more detail, a breakdown, supporting evidence, all relevant information, or a comprehensive explanation. Follow-up questions may rely on the existing conversation instead of restating prior information.",
-            "You may read bounded case guidance context, the authoritative product guide, and source documents, but must never mutate the case, add or remove evidence or students, rename students, run or recover an assessment, change a report, call Steward or Graph Warden, or make a disciplinary judgment.",
-            "Never require a number of sources. Preserve accuracy and evidence discipline: distinguish source statements from truth, claims from propositions, similarity from collaboration, opportunity from use, association from misconduct, device or credential linkage from proof of the human actor, and absence of support from innocence. Brevity must not hide material qualifications or overstate a finding.",
-            "When discussing whether to stop, consider whether unresolved uncertainty could materially change the assessment, whether feasible verification would distinguish explanations, whether more material would merely repeat existing evidence, and whether collection would be disproportionate or intrusive. Do not order the case closed; final procedural judgment remains human.",
-            "For product-use questions, use GET_PRODUCT_GUIDE as the authoritative guide. Briefly redirect unrelated questions to the investigation, current evidence, or product guide.",
-            f"Available read-only tools: {', '.join(tools)}. Return ordinary natural-language text only; never expose tool names, handles, internal IDs, graph terminology, paths, provider errors, or model configuration details.",
-        ))
+        return "\n".join(
+            (
+                "You are the SimplifyNext Help Assistant, a read-only human-facing guide.",
+                "WORKSPACE HELP RESPONSE POLICY: Workspace Help exists to simplify the case, not reproduce the report. Give the simplest accurate answer to the user's actual question.",
+                "Use plain language and be concise by default. There is no minimum response length; if one sentence answers the question accurately, one sentence is enough.",
+                "If the user explicitly asks for the shortest summary or shortest possible summary, answer in exactly one sentence containing only the current result or conclusion and the single most important remaining uncertainty; omit evidence recap, background, headings, bullets, next steps, and generic caveats. Apply this special rule only to explicit shortest-summary requests, while preserving material qualifications needed for accuracy.",
+                "Answer with relevant case context only. Do not mention every candidate unless needed, turn a simple question into a candidate-by-candidate report summary, or mirror/reproduce the report structure by default. Prefer synthesis over enumeration. Do not add headings, numbered lists, background, or generic caveats unless they materially help.",
+                "Provide substantially more detail only when the user explicitly asks for more detail, a breakdown, supporting evidence, all relevant information, or a comprehensive explanation. Follow-up questions may rely on the existing conversation instead of restating prior information.",
+                "You may read bounded case guidance context, the authoritative product guide, and source documents, but must never mutate the case, add or remove evidence or students, rename students, run or recover an assessment, change a report, call Steward or Graph Warden, or make a disciplinary judgment.",
+                "Never require a number of sources. Preserve accuracy and evidence discipline: distinguish source statements from truth, claims from propositions, similarity from collaboration, opportunity from use, association from misconduct, device or credential linkage from proof of the human actor, and absence of support from innocence. Brevity must not hide material qualifications or overstate a finding.",
+                "When discussing whether to stop, consider whether unresolved uncertainty could materially change the assessment, whether feasible verification would distinguish explanations, whether more material would merely repeat existing evidence, and whether collection would be disproportionate or intrusive. Do not order the case closed; final procedural judgment remains human.",
+                "For product-use questions, use GET_PRODUCT_GUIDE as the authoritative guide. Briefly redirect unrelated questions to the investigation, current evidence, or product guide.",
+                f"Available read-only tools: {', '.join(tools)}. Return ordinary natural-language text only; never expose tool names, handles, internal IDs, graph terminology, paths, provider errors, or model configuration details.",
+            )
+        )
 
     def tool_specs(self) -> list[dict[str, Any]]:
-        return [{"name": name, "description": f"Deterministic Workspace operation {name}.", "inputSchema": schema.model_json_schema()} for name, schema in sorted(_TOOL_ARGUMENTS.items()) if name in self.VNEXT_READ_TOOLS]
+        return [
+            {
+                "name": name,
+                "description": f"Deterministic Workspace operation {name}.",
+                "inputSchema": schema.model_json_schema(),
+            }
+            for name, schema in sorted(_TOOL_ARGUMENTS.items())
+            if name in self.VNEXT_READ_TOOLS
+        ]
 
     @staticmethod
     def _safe_tool_error(exc: Exception) -> str:
@@ -223,38 +256,87 @@ class WorkspaceAgent:
     def _begin_workspace_turn(self, case_id: str, message: str, model: str) -> str:
         session = self.session_store.session(case_id)
         turn_id = f"workspace_{len(session['turns']) + 1:06d}"
-        session["turns"].append({"workspace_turn_id": turn_id, "user_message": message, "model_status": "running", "model": model, "started_at": datetime.now(timezone.utc).isoformat(), "requested_tool_names": [], "tool_execution_status": "pending"})
+        session["turns"].append(
+            {
+                "workspace_turn_id": turn_id,
+                "user_message": message,
+                "model_status": "running",
+                "model": model,
+                "started_at": datetime.now(timezone.utc).isoformat(),
+                "requested_tool_names": [],
+                "tool_execution_status": "pending",
+            }
+        )
         return turn_id
 
     def _record_requested_tools(self, case_id: str, turn_id: str, uses: list[ModelToolUse]) -> None:
-        record = next(item for item in reversed(self.session_store.session(case_id)["turns"]) if item["workspace_turn_id"] == turn_id)
+        record = next(
+            item
+            for item in reversed(self.session_store.session(case_id)["turns"])
+            if item["workspace_turn_id"] == turn_id
+        )
         record["requested_tool_names"] = [use.name for use in uses]
 
-    def _finish_workspace_turn(self, case_id: str, turn_id: str, status: str, summary: str, failure_category: str | None = None) -> None:
-        record = next(item for item in reversed(self.session_store.session(case_id)["turns"]) if item["workspace_turn_id"] == turn_id)
-        record.update({"model_status": status, "tool_execution_status": "completed" if status == "completed" else "failed", "failure_category": failure_category, "failure_summary": summary, "ended_at": datetime.now(timezone.utc).isoformat()})
+    def _finish_workspace_turn(
+        self, case_id: str, turn_id: str, status: str, summary: str, failure_category: str | None = None
+    ) -> None:
+        record = next(
+            item
+            for item in reversed(self.session_store.session(case_id)["turns"])
+            if item["workspace_turn_id"] == turn_id
+        )
+        record.update(
+            {
+                "model_status": status,
+                "tool_execution_status": "completed" if status == "completed" else "failed",
+                "failure_category": failure_category,
+                "failure_summary": summary,
+                "ended_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
 
     def _read_tool(self, case_id: str, request: WorkspaceToolRequest) -> dict[str, Any]:
         state = self.workflow.repository.require_case(case_id)
         if request.tool == "GET_CASE_GUIDANCE_CONTEXT":
             from investigator.public_views import safe_help_context
+
             return safe_help_context(self.workflow, case_id)
         if request.tool == "GET_PRODUCT_GUIDE":
             return {"guide": product_guide()}
         if request.tool == "LIST_SOURCES":
             from investigator.public_views import public_source_handle, document_format
-            return {"sources": [{"sourceHandle": public_source_handle(case_id, source.id), "fileName": source.name, "documentFormat": document_format(source.name)} for source in state.sources.values()]}
+
+            return {
+                "sources": [
+                    {
+                        "sourceHandle": public_source_handle(case_id, source.id),
+                        "fileName": source.name,
+                        "documentFormat": document_format(source.name),
+                    }
+                    for source in state.sources.values()
+                ]
+            }
         if request.tool == "READ_SOURCE":
             from investigator.public_views import resolve_source_handle, document_format
+
             source = state.sources[resolve_source_handle(state, str(request.payload.get("sourceHandle")))]
-            return {"source": {"sourceHandle": request.payload["sourceHandle"], "fileName": source.name, "documentFormat": document_format(source.name), "content": source.content or ""}}
+            return {
+                "source": {
+                    "sourceHandle": request.payload["sourceHandle"],
+                    "fileName": source.name,
+                    "documentFormat": document_format(source.name),
+                    "content": source.content or "",
+                }
+            }
         raise WorkspaceToolAuthorizationError(request.tool)
 
     def _append_chat(self, case_id: str, role: str, text: str) -> None:
         self.session_store.session(case_id)["chat_history"].append({"role": role, "text": text})
 
     def _has_recovery(self, case_id: str) -> bool:
-        return any(item.get("event") == "workspace_recovery" for item in self.workflow.ensure_case(case_id).trace_history)
+        return any(
+            item.get("event") == "workspace_recovery" for item in self.workflow.ensure_case(case_id).trace_history
+        )
 
     def chat_history(self, case_id: str) -> list[dict[str, str]]:
         return [dict(item) for item in self.session_store.session(case_id)["chat_history"]]
