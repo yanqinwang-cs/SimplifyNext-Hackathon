@@ -122,7 +122,7 @@ def test_source_registry_assigns_application_owned_ids_without_graph_mutation(tm
     assert state.evidence == {}
 
 
-def test_http_endpoints_return_workspace_and_accept_responses(tmp_path: Path) -> None:
+def test_http_surface_blocks_legacy_evidence_request_fulfilment(tmp_path: Path) -> None:
     from investigator.http_api import create_server
 
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
@@ -134,12 +134,13 @@ def test_http_endpoints_return_workspace_and_accept_responses(tmp_path: Path) ->
     base = f"http://127.0.0.1:{server.server_address[1]}"
     try:
         workspace = json.loads(urllib.request.urlopen(f"{base}/api/cases/case-01/workspace").read())
-        assert workspace["status"] == "waiting_for_evidence"
+        assert workspace["caseId"] == "case-01"
         payload = json.dumps({"case_revision": 1, "sources": [{"display_name": "notes.txt", "content": "raw"}], "note": "Supplied by investigator."}).encode()
         request = urllib.request.Request(f"{base}/api/cases/case-01/evidence-requests/R1/fulfil", data=payload, headers={"Content-Type": "application/json"}, method="POST")
-        response = json.loads(urllib.request.urlopen(request).read())
-        assert response["completedRequest"]["status"] == "fulfilled"
-        assert response["completedRequest"]["released_source_ids"] == ["S20"]
+        with pytest.raises(urllib.error.HTTPError) as blocked:
+            urllib.request.urlopen(request)
+        assert blocked.value.code == 404
+        assert workflow.repository.load("case-01").evidence_request_history[-1].status.value == "pending"
     finally:
         server.shutdown()
         server.server_close()
@@ -179,7 +180,7 @@ def test_production_fulfilment_accepts_exactly_one_source(tmp_path: Path) -> Non
 def test_workspace_exposes_case_and_truthful_runtime_states(tmp_path: Path) -> None:
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     workflow.ensure_case("case-01")
-    for runtime, actor in (("IDLE", "NONE"), ("RUNNING_INVESTIGATOR", "INVESTIGATOR"), ("RUNNING_STEWARD", "STEWARD"), ("FAILED", "NONE"), ("STOPPED", "NONE")):
+    for runtime, actor in (("IDLE", "NONE"), ("RUNNING", "INVESTIGATOR"), ("FAILED", "NONE"), ("STOPPED", "NONE")):
         workflow.set_runtime("case-01", runtime, actor, failure_category="TEST_FAILURE" if runtime == "FAILED" else None, message="Failure detail" if runtime == "FAILED" else None, step=5 if runtime == "FAILED" else None)
         workspace = workflow.get_workspace("case-01")
         assert workspace["caseStatus"] == "ACTIVE"
@@ -194,14 +195,8 @@ def test_workspace_exposes_case_and_truthful_runtime_states(tmp_path: Path) -> N
 def test_run_rejects_waiting_running_but_allows_stopped_cases(tmp_path: Path) -> None:
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     workflow.ensure_case("case-01")
-    workflow.set_runtime("case-01", "RUNNING_INVESTIGATOR", "INVESTIGATOR")
+    workflow.set_runtime("case-01", "RUNNING", "INVESTIGATOR")
     with pytest.raises(EvidenceRequestConflict, match="already running"):
-        workflow.start_run("case-01")
-    workflow.set_runtime("case-01", "RUNNING_STEWARD", "STEWARD")
-    with pytest.raises(EvidenceRequestConflict, match="already running"):
-        workflow.start_run("case-01")
-    workflow.set_runtime("case-01", "WAITING_FOR_EVIDENCE", "NONE")
-    with pytest.raises(EvidenceRequestConflict, match="pending"):
         workflow.start_run("case-01")
     workflow.set_runtime("case-01", "STOPPED", "NONE")
     workflow.run_callback = lambda _case_id, active: active.set_runtime("case-01", "IDLE", "NONE")
@@ -223,8 +218,9 @@ def test_run_stub_owns_runtime_and_persists_failure_or_waiting(tmp_path: Path) -
         raise RuntimeError("deterministic run failure")
 
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "fail-cases"), run_callback=fail)
+    workflow.ensure_case("case-01")
     workspace = workflow.start_run("case-01")
-    assert workspace["runtimeStatus"] in {"RUNNING_INVESTIGATOR", "FAILED"}
+    assert workspace["runtimeStatus"] in {"RUNNING", "FAILED"}
     import time
     for _ in range(20):
         if workflow.get_workspace("case-01")["runtimeStatus"] == "FAILED":
@@ -233,14 +229,3 @@ def test_run_stub_owns_runtime_and_persists_failure_or_waiting(tmp_path: Path) -
     failed = workflow.get_workspace("case-01")
     assert failed["runtimeStatus"] == "FAILED" and failed["currentActor"] == "NONE"
     assert failed["lastError"]["message"] == "deterministic run failure"
-
-    def wait(_case_id: str, active: HumanEvidenceWorkflow) -> None:
-        active.request_evidence("case-02", request_payload())
-
-    waiting_workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "wait-cases"), run_callback=wait)
-    waiting_workflow.start_run("case-02")
-    for _ in range(20):
-        if waiting_workflow.get_workspace("case-02")["runtimeStatus"] == "WAITING_FOR_EVIDENCE":
-            break
-        time.sleep(0.01)
-    assert waiting_workflow.get_workspace("case-02")["runtimeStatus"] == "WAITING_FOR_EVIDENCE"

@@ -23,7 +23,7 @@ from investigator.vnext.semantic import EvidenceStatementItem, InvestigatorSeman
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCALE_ROOT = ROOT / "tests" / "fixtures" / "vnext_scale" / "case_10_5a_plus_5b"
+SCALE_ROOT = ROOT / "src" / "investigator" / "public_samples" / "multi_candidate_10"
 
 
 def _scale_state() -> CaseState:
@@ -177,9 +177,9 @@ def test_private_cross_cohort_evidence_is_rejected(target: str, source_letter: s
 def test_relationships_do_not_cross_cohorts_and_public_sample_stays_five_candidates() -> None:
     state = _scale_state()
     assert {tuple(item.subject_ids) for item in state.subject_relationships.values()} == {("subject_A", "subject_B"), ("subject_F", "subject_G")}
-    public_sources = list((ROOT / "tests" / "fixtures" / "public_samples" / "multi_candidate" / "sources").glob("*"))
+    public_sources = list((ROOT / "src" / "investigator" / "public_samples" / "multi_candidate" / "sources").glob("*"))
     assert len(public_sources) == 14
     assert not any(path.name.startswith("candidate_F") for path in public_sources)
-    public_state = json.loads((ROOT / "tests" / "fixtures" / "public_samples" / "multi_candidate" / "manifest.json").read_text(encoding="utf-8"))
+    public_state = json.loads((ROOT / "src" / "investigator" / "public_samples" / "multi_candidate" / "manifest.json").read_text(encoding="utf-8"))
     assert len(public_state["visible_source_files"]) == 14
     assert public_state["subject_ids"] == ["subject_A", "subject_B", "subject_C", "subject_D", "subject_E"]

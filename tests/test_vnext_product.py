@@ -79,7 +79,7 @@ def assessment(*, supported: bool = False, proposal: InvestigatorProposal | None
 
 
 def start_vnext(tmp_path: Path, client: SequenceClient) -> HumanEvidenceWorkflow:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     state = workflow.ensure_case("case-01")
     state.sources["S1"] = source()
     workflow.repository.save(state)
@@ -173,7 +173,7 @@ def test_product_retry_failure_is_failed_without_successful_result(tmp_path: Pat
 
 def test_missing_preset_fails_without_model_retry(tmp_path: Path) -> None:
     client = SequenceClient([assessment(), assessment()])
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     state = workflow.ensure_case("case-01")
     state.assessment_rule_preset_id = "missing-preset"
     workflow.repository.save(state)
@@ -205,8 +205,3 @@ def test_clean_rerun_has_distinct_history_and_does_not_use_prior_reasoning_graph
     assert all(node["node_type"] == "source" for node in second_result["result"]["graph"]["nodes"].values())
 
 
-def test_legacy_workflow_mode_remains_available(tmp_path: Path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="legacy")
-    assert workflow.run_mode == "legacy"
-    with pytest.raises(ValueError, match="vnext.*legacy"):
-        HumanEvidenceWorkflow(CaseRepository(tmp_path / "other"), run_mode="unsupported")

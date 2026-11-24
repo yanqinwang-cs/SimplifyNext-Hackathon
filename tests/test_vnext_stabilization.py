@@ -9,7 +9,7 @@ from investigator.http_api import create_case, product_guide, reset_sample_case,
 from investigator.graph import GraphNode, GraphNodeType
 from investigator.llm import ModelCallMetadata, ModelNativeCall, ModelTextBlock
 from investigator.models.evidence_request import EvidenceRequestStatus
-from investigator.services.evidence_requests import EvidenceRequestConflict, HumanEvidenceWorkflow
+from investigator.services.evidence_requests import HumanEvidenceWorkflow
 from investigator.state import CaseRepository, CaseState
 from investigator.workspace_agent import WorkspaceAgent
 from investigator.vnext import run_input_from_case_state
@@ -26,7 +26,7 @@ class FailingWorkspaceClient:
 
 
 def test_report_projection_is_safe_and_unavailable_before_success(tmp_path: Path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     state = CaseState(case_id="case-01", title="Report case")
     workflow.repository.save(state)
     report = workflow.get_report("case-01")
@@ -36,7 +36,7 @@ def test_report_projection_is_safe_and_unavailable_before_success(tmp_path: Path
 
 
 def make_case(tmp_path: Path, mode: str) -> HumanEvidenceWorkflow:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / mode), run_mode=mode)
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / mode))
     state = CaseState(case_id="case-01", title="Test", reasoning_graph=None)
     state.reasoning_graph = __import__("investigator.graph", fromlist=["CaseGraph"]).CaseGraph(
         case_id="case-01", nodes={"U1": GraphNode(id="U1", node_type=GraphNodeType.UNCERTAINTY, statement="Open")}, edges={}
@@ -61,13 +61,6 @@ def wait_for(workflow: HumanEvidenceWorkflow, status: str) -> None:
             return
         time.sleep(0.01)
     pytest.fail(f"workflow did not reach {status}")
-
-
-def test_legacy_pending_request_still_blocks(tmp_path: Path) -> None:
-    workflow = make_case(tmp_path, "legacy")
-    add_pending(workflow)
-    with pytest.raises(EvidenceRequestConflict):
-        workflow.start_run("case-01")
 
 
 def test_vnext_pending_request_is_ignored_and_history_remains(tmp_path: Path) -> None:
@@ -166,7 +159,7 @@ def test_guidance_resolves_subject_and_material_names(tmp_path: Path) -> None:
 
 
 def test_case_creation_and_public_sample_catalog_are_minimal(tmp_path: Path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     workspace = create_case(workflow, {"title": "New review", "description": "Context", "assessment": {"title": "Assessment", "assessment_type": "closed notes"}})
     assert workspace["caseId"] == "case-000001"
     assert workspace["assessmentContext"]["title"] == "Assessment"
@@ -175,7 +168,7 @@ def test_case_creation_and_public_sample_catalog_are_minimal(tmp_path: Path) -> 
 
 
 def test_public_samples_seed_real_visible_sources_without_hidden_material(tmp_path: Path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     law = seed_sample_case(workflow, "law-exam", "law-exam-working")
     multi = seed_sample_case(workflow, "multi-candidate", "multi-candidate-working")
     assert len(law["visibleSources"]) == 17
@@ -189,7 +182,7 @@ def test_public_samples_seed_real_visible_sources_without_hidden_material(tmp_pa
 
 
 def test_ten_candidate_sample_opens_and_resets_as_a_clean_public_sample(tmp_path: Path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     opened = seed_sample_case(workflow, "multi-candidate-10", "multi-candidate-10-working")
     state = workflow.repository.load("multi-candidate-10-working")
     assert state.case_kind == "sample"
@@ -211,11 +204,11 @@ def test_public_sample_fixture_integrity() -> None:
         "smart_glasses_activity_record.md", "external_ai_service_record.md", "device_account_linkage_record.md",
         "network_connectivity_record.md", "deterministic_timeline.md", "student_clarification_record.md",
     }
-    law_root = Path("tests/fixtures/public_samples/law_exam/sources")
+    law_root = Path("src/investigator/public_samples/law_exam/sources")
     assert {path.name for path in law_root.glob("*.md")} == law_expected
     assert not any((law_root / name).exists() for name in ("case_context_note.txt", "assessment_rule_clarification.txt", "student_b_witness_statement.md", "observation_timing_record.md"))
 
-    multi_root = Path("tests/fixtures/public_samples/multi_candidate/sources")
+    multi_root = Path("src/investigator/public_samples/multi_candidate/sources")
     multi_files = {path.name for path in multi_root.glob("*.md")}
     assert len(multi_files) == 14
     assert all("source 1" not in path.lower() and "source 2" not in path.lower() for path in multi_files)
@@ -233,7 +226,7 @@ def test_workspace_home_is_onboarding_and_new_case_minimal() -> None:
 
 def test_new_cases_start_with_one_persistent_student_and_can_add_remove(tmp_path: Path) -> None:
     repository = CaseRepository(tmp_path / "cases")
-    workflow = HumanEvidenceWorkflow(repository, run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(repository)
     first = create_case(workflow, {"title": "First case"})
     second = create_case(workflow, {"title": "Second case"})
     first_state = repository.load(first["caseId"])
@@ -250,7 +243,7 @@ def test_new_cases_start_with_one_persistent_student_and_can_add_remove(tmp_path
 
 
 def test_student_identity_is_explicit_and_samples_keep_their_configuration(tmp_path: Path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     user = create_case(workflow, {"title": "Explicit students"})
     before = workflow.ensure_case(user["caseId"])
     workflow.add_direct_source(user["caseId"], display_name="Evidence", content="Candidate A appears in prose", source_type="document", expected_case_revision=before.revision)

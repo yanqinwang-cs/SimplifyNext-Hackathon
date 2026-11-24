@@ -272,7 +272,7 @@ def test_semantic_schema_has_only_one_definition_table() -> None:
 
 
 def test_unscoped_upload_uses_identifier_permissions_not_case_trust(tmp_path) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     state = CaseState(case_id="case-01", title="Upload boundary")
     state.subjects = {
         "subject_A": AssessmentSubject(subject_id="subject_A", display_name="Candidate A"),
@@ -416,7 +416,7 @@ def test_semantic_scope_failure_gets_one_clean_retry_with_concrete_constraint(tm
                 raw_output=response.model_dump(mode="json"),
             )
 
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     state = CaseState(case_id="case-01", title="Semantic scope retry")
     state.subjects = run_input.subjects
     state.subject_relationships = run_input.subject_relationships
@@ -441,7 +441,7 @@ def test_semantic_scope_failure_gets_one_clean_retry_with_concrete_constraint(tm
 
 
 def test_normal_semantic_warden_failure_is_terminal_without_model_retry(tmp_path, monkeypatch) -> None:
-    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     state = CaseState(case_id="case-01", title="Warden boundary")
     state.subjects = {"subject_A": AssessmentSubject(subject_id="subject_A", display_name="Candidate A")}
     state.sources = {"S1": Source(id="S1", name="record.md", source_type=SourceType.DOCUMENT, content="Candidate A record")}

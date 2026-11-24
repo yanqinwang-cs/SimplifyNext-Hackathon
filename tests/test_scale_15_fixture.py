@@ -80,7 +80,7 @@ def test_importer_rewrites_case_id_and_replace_is_scoped(tmp_path: Path) -> None
     assert rejected.returncode != 0
     replaced = subprocess.run([*command, "--replace"], cwd=ROOT, env=env, text=True, capture_output=True)
     assert replaced.returncode == 0, replaced.stderr
-    workflow = HumanEvidenceWorkflow(CaseRepository(repository), run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(CaseRepository(repository))
     run_id = workflow.begin_run("scale-15-working", start_revision=0)
     assert workflow.current_run_id("scale-15-working") == run_id
     assert (repository / "scale-15-working" / "runs" / run_id / "run_result.json").is_file()

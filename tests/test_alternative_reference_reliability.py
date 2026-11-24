@@ -22,7 +22,7 @@ from investigator.vnext.semantic import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCALE_ROOT = ROOT / "tests/fixtures/vnext_scale/case_10_5a_plus_5b"
+SCALE_ROOT = ROOT / "src/investigator/public_samples/multi_candidate_10"
 
 
 def _scale_assessment(state):

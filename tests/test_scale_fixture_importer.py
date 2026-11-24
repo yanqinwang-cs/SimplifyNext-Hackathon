@@ -16,7 +16,8 @@ from investigator.vnext.presets import academic_integrity_core_preset
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FIXTURE = ROOT / "tests/fixtures/vnext_scale/case_10_5a_plus_5b"
+FIXTURE = ROOT / "src/investigator/public_samples/multi_candidate_10"
+EVALUATOR_ONLY = ROOT / "tests/fixtures/multi_candidate_10_evaluator/evaluator_only"
 SCRIPT = ROOT / "scripts/load_scale_fixture.py"
 
 
@@ -95,7 +96,7 @@ def test_imported_run_input_matches_canonical_fixture_semantics_and_prompt_is_bl
     assert all(f"Candidate {letter}" in prompt for letter in "ABCDEFGHIJ")
     assert '"participants": [\n      "subject_A",\n      "subject_B"' in prompt
     assert '"participants": [\n      "subject_F",\n      "subject_G"' in prompt
-    hidden = [path.read_text(encoding="utf-8") for path in (FIXTURE / "evaluator_only").glob("*")]
+    hidden = [path.read_text(encoding="utf-8") for path in EVALUATOR_ONLY.glob("*")]
     assert not any(text in prompt for text in hidden)
     assert not any("evaluator_only" in source.name for source in actual.sources.values())
 

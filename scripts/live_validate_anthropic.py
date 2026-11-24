@@ -89,7 +89,7 @@ def main() -> int:
     repository.require_case(args.case_id)
     model_spec = effective_model("investigator")
     client = BudgetedModelClient(create_model_client(model_spec, provider="anthropic"), args.max_provider_calls)
-    workflow = HumanEvidenceWorkflow(repository, run_mode="vnext")
+    workflow = HumanEvidenceWorkflow(repository)
     result = None
     directory = None
     error = None
