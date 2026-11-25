@@ -1,5 +1,5 @@
 {
-  "name": "simplifynext-investigator-frontend",
+  "name": "caselens-investigator-frontend",
   "private": true,
   "scripts": {
     "dev": "next dev",

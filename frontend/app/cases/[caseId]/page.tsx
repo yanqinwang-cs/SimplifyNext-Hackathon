@@ -328,7 +328,7 @@ export default function CasePage() {
           <img src="/caselens-logo.png" alt="CaseLens" className="h-10 w-auto object-contain" />
           <div>
             <Link href="/cases" className="font-black uppercase tracking-widest text-blue-700">
-              SimplifyNext
+              CaseLens
             </Link>
             {editingTitle && !sample ? (
               <div className="mt-2 flex gap-2">

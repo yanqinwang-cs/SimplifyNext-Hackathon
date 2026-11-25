@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SimplifyNext | Investigator workspace",
+  title: "CaseLens | Investigator workspace",
   description: "A focused investigator workspace for academic-integrity review.",
 };
 
