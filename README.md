@@ -1,89 +1,95 @@
-# SimplifyNext Investigator
+# CaseLens
 
-This repository is a deterministic investigation-state kernel and a bounded vNext prototype. It preserves evidence, provenance, claims, hypotheses, conflicts, and uncertainty as distinct concepts. The normal product path is a finite Investigator assessment with deterministic validation and human-facing read-only Help; it is not an autonomous multi-agent system.
+CaseLens is an investigation assistant for academic-integrity reviews. A reviewer admits textual evidence into a case, runs a bounded assessment of each configured student against the configured policy, and reads a report that keeps evidence, claims, conflicts and uncertainty apart. A read-only Help assistant answers questions about the case.
 
-The prototype uses typed Pydantic models and local JSON files under `data/cases/`. A minimal model-call abstraction and deterministic mock support controlled structured experiments; the product workflow uses a bounded Investigator path rather than an open-ended agent loop.
+CaseLens does not decide guilt. It shows what the admitted record does and does not support, and every conclusion stays with the human reviewer.
 
-Structured model outputs must keep identifiers separate from explanatory text: IDs identify existing records, while prose fields explain them. Future experiment schemas should use explicit identifier types or enums, and deterministic code should validate existence and namespace boundaries.
+![Case workspace with configured students and evidence](docs/images/workspace.png)
 
-In model-generated schemas, fields such as `id`, `parent_id`, `hypothesis_id`, `uncertainty_id`, `selected_action_id`, and fields ending in `_ids` or `_evidence_ids` contain bare machine IDs only. Fields such as `statement`, `reason`, `description`, and `rationale` contain explanatory text only.
+| Cases | Assessment report |
+| --- | --- |
+| ![Case list with sample cases](docs/images/cases.png) | ![Report showing each student's findings](docs/images/report.png) |
 
-For every future structured LLM interface, validate raw output, JSON, schema, fields, cross-field relationships, and references before applying state changes. Undefined operations do not execute; a last-resort `other` operation may report a missing operation for later design work, but it cannot mutate state.
+## Try it without an API key
+
+The offline demo runs the real HTTP API and the real assessment path. An in-process fake stands in for the model provider, so no credential is read and no paid call is made. The fake returns fixed, schema-valid placeholder judgements. Use it to see the workflow, not to judge model reasoning.
+
+Requirements: [uv](https://docs.astral.sh/uv/), Python 3.12 or later, Node.js 22 or later.
 
 ```bash
+# Terminal 1: backend, from the repository root
 uv sync
-uv run pytest
+uv run python scripts/offline_demo_server.py --repository data/cases --port 8000
+
+# Terminal 2: frontend
+cd frontend
+npm ci
+npm run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
-With AWS environment variables and `BEDROCK_MODEL_ID` configured, run one live smoke call with:
+Open `http://127.0.0.1:3000`. Under **Cases**, open a sample, run an assessment, and read the report. Samples are read-only; add your own case with **Create case**.
 
-```bash
-uv run python scripts/smoke_bedrock.py
-```
+## Run with a real model provider
 
-The reusable `InvestigationSession` / `InvestigationService` cycle remains available for the earlier deterministic kernel. The vNext product path is finite and report-oriented; LangGraph and autonomous tool loops are not required for local operation.
-
-The state kernel also contains a provisional hypothesis tree. Broad parent hypotheses and narrower evidence-based children are represented structurally; removing or weakening a child leaves its parent unchanged. Hypotheses are never evidence, and `specificity_basis` records evidence IDs that supposedly justify narrowing. This is deterministic state representation, not a graph or search algorithm; semantic adequacy of the basis is deferred to later experiments.
-
-Interactive runs are written incrementally to `runs/<session_id>/trace.json`, preserving raw model output, human decisions, and a current `CaseState` snapshot. These local runtime traces are gitignored; resume/recovery is not implemented yet.
-
-`CaseGraph` in `src/investigator/graph/` is a parallel semantic representation of evidence, propositions, hypotheses, and uncertainties. It is not workflow chronology: the trace remains the audit/event record, and `CaseState` remains authoritative for runtime behavior. Graph edges use explicit directions for supports, conflicts, specializes (child to parent), depends-on, targets, and derived-from; qualitative strength is descriptive only, not probability.
-
-Graph IDs use typed namespaces (`E...` or `A..._RELEASE` for evidence, `P...`, `H...`, and global `U...` for uncertainties). Uncertainty IDs do not encode ownership; their subject is represented by a `TARGETS` edge, which may point to evidence, a proposition, or a hypothesis. `SPECIALIZES` permits one active parent and many children, rejects cycles, and ignores archived parent edges in active traversal. The persistent graph retains archived nodes/edges; active views exclude them.
-
-The investigator seeds H1 and may pause, stop, correct evidence, or correct interpretation at any UI boundary. Ordinary bounded enquiries and routine revisions proceed autonomously; new hypotheses are reported, while hypothesis removal, conclusions, and unresolved stopping remain human decisions. Initial alternatives declare `competing_root` or `specialization`; specializations require released evidence.
-
-The vNext product path adds explicit runtime state, multi-student source applicability, bounded graph validation, immutable historical report projections, and a local operator UI. Live provider connectivity and real-model reasoning quality are evaluated separately from the offline acceptance suite.
-
-## Run the local vNext prototype
-
-Start the backend in the supported local mode:
+Copy `.env.example` to `.env` (gitignored) or export the same variables in your shell. Set `ANTHROPIC_API_KEY` for the default provider, then start the backend in provider mode:
 
 ```bash
 CASELENS_MODEL_PROVIDER=anthropic \
   uv run python -m investigator.http_api --repository data/cases --host 127.0.0.1 --port 8000
 ```
 
-Every assessment run records a sanitized execution trace. The latest run can
-be downloaded directly from the case workspace, whether it completed or
-failed. The trace does not expose credentials or unsanitized provider
-payloads. A Bedrock read timeout is treated as a provider transport failure
-and is not automatically retried as a new paid inference.
+Start the frontend as in the demo. An assessment with admitted evidence makes paid provider calls; a zero-evidence assessment makes none, so start with the smallest sample you need. Bedrock is available as an explicit alternative with `CASELENS_MODEL_PROVIDER=bedrock`, `BEDROCK_MODEL_ID` and your usual AWS setup. Approved models are listed in `src/investigator/model_registry.py`.
 
-In another terminal, start the frontend:
+Temporary AWS credential overrides from the runtime settings panel are accepted only when `SIMPLIFYNEXT_DEBUG_CREDENTIALS=1`, and they are kept in the running process only.
+
+## How it works
+
+1. **Cases.** A case has one or more configured students. A new case starts with Student 1. Samples come with their own students and evidence.
+2. **Evidence.** Upload readable `.txt` or `.md` records such as statements, reports, logs or correspondence. Only admitted evidence is assessed. There is no minimum count, and an empty case can be assessed, though it produces limited findings.
+3. **Assessment.** Each run assesses every configured student separately against the configured violations. Model output is validated before it touches state: schema, cross-field rules, identifiers and references are checked, and output that fails is rejected rather than applied. Identifiers are kept apart from explanatory text.
+4. **Report.** Each completed run is published as an immutable report. For each student it shows the status, supporting material, limiting or conflicting material, and unresolved points. `NOT_CURRENTLY_SUPPORTED` means the present record does not support the violation. It does not mean innocence has been established.
+5. **Help.** Workspace Help is read-only. It can explain what remains uncertain, what evidence would help next, and why a conclusion is limited. It cannot change the case.
+6. **Trace.** Every run writes a sanitized JSONL trace that can be downloaded from the workspace, whether the run completed or failed. Traces omit credentials and raw provider payloads.
+
+Underneath, a deterministic case-state kernel in `src/investigator/graph/` keeps evidence, propositions, hypotheses and uncertainties as separate records with explicit relationships. Graph strength labels are descriptive, not probabilities.
+
+## Repository layout
+
+| Path | What it holds |
+| --- | --- |
+| `src/investigator/` | Python package: HTTP API (`http_api.py`), case graph, typed models, the assessment path (`vnext/`), model providers (`llm/`), and the Help guide. |
+| `frontend/` | Next.js 16 interface (App Router) and Playwright browser tests. |
+| `scripts/` | Offline demo server, live validation and fixture-loading scripts. |
+| `tests/` | pytest suite, run without any provider key. |
+| `experiments/` | Historical experiment code and its recorded reports. |
+| `validation/` | Notes on which retained validation artifacts are included. |
+| `docs/history/` | Earlier audits and readiness notes. They describe past stages and may be out of date. |
+| `data/cases/` | Local case store, gitignored. |
+
+## Checks
 
 ```bash
+uv sync --all-groups
+uv run ruff check . && uv run ruff format --check .
+uv run pytest -q
+
 cd frontend
 npm ci
-NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npm run dev -- --hostname 127.0.0.1 --port 3000
+npm run lint && npm run format:check && npm run build
+npx playwright test
 ```
 
-Open `http://127.0.0.1:3000`. The supported deployment boundary is a local
-operator process. The API uses an explicit allowed-origin list, but that is not
-authentication. Zero-evidence assessments need no provider credentials. For the
-normal demo path, configure `ANTHROPIC_API_KEY` in the backend environment and
-set `CASELENS_MODEL_PROVIDER=anthropic`; the normal UI uses Claude Opus 4.5.
-Bedrock remains an explicit backend/operator fallback. Temporary AWS credentials
-are process-local debug controls and are only exposed when
-`SIMPLIFYNEXT_DEBUG_CREDENTIALS=1`.
+The browser tests start their own offline backend. They make no provider calls. The same checks run on every pull request through `.github/workflows/checks.yml`.
 
-The final offline acceptance and pre-live checklist are in
-`docs/stage-7-acceptance-audit.md` and `docs/pre-5a-readiness.md`.
+## Limits
 
-## Model provider boundary
+- **Not a detector or a decision-maker.** CaseLens is not a plagiarism detector, an AI-content detector, an automatic cheating detector, or a disciplinary decision-maker. It does not establish guilt or innocence.
+- **Local operator tool.** There is no user authentication. `SIMPLIFYNEXT_ALLOWED_ORIGINS` limits which browser origins may call the API, but that is not access control. Run it on a loopback address or a network you trust.
+- **Text evidence only.** Admitted evidence must be readable `.txt` or `.md`. Images, scans and other formats are not assessed.
+- **Model quality is not established by the tests.** The offline suite and demo use fixed fakes. Live reasoning quality is evaluated separately and is not claimed by this repository.
+- **Paid calls and failures.** An assessment with admitted evidence calls the configured provider, which is billed. A provider read timeout is reported as a failure and is not retried automatically. Runs cannot be resumed after an interruption.
+- **Local JSON storage.** Cases are stored as local JSON files under `data/cases/`. There is no database and no multi-user access control.
 
-The deterministic case-state kernel remains the source of truth. The vNext
-model-call boundary defaults to the direct Anthropic provider and exposes only
-Claude Opus 4.5 in the normal UI; Bedrock remains an explicit provider option
-with its existing inference-profile mappings. No automatic Anthropic-to-Bedrock
-fallback is used, and provider credentials stay backend-only.
+## Licence
 
-For a bounded developer validation, use the explicit live flag and call budget:
-
-```bash
-uv run python scripts/live_validate_anthropic.py --live --case-id case-01 --max-provider-calls 2
-```
-
-Later validation commands can reuse the same production vNext path for the
-5-candidate and 10-candidate fixtures by changing `--case-id` and the call
-budget. This patch does not run live calls.
+CaseLens is released under the [MIT Licence](LICENSE).

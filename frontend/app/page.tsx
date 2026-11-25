@@ -42,7 +42,7 @@ export default function Home() {
             <img src="/caselens-logo.png" alt="CaseLens" className="h-14 w-auto object-contain" />
             <div>
               <div className="text-sm font-black uppercase tracking-[0.24em] text-blue-700">
-                SimplifyNext
+                CaseLens
               </div>
               <h1 className="mt-1 text-xl font-black">Investigation Assistant</h1>
             </div>

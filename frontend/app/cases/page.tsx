@@ -40,7 +40,7 @@ export default function CasesPage() {
                 href="/"
                 className="text-sm font-black uppercase tracking-[0.24em] text-blue-700"
               >
-                SimplifyNext
+                CaseLens
               </Link>
               <h1 className="mt-4 text-4xl font-black">Cases</h1>
               <p className="mt-2 text-slate-600">Choose a sample or open one of your cases.</p>

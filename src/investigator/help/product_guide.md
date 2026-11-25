@@ -1,6 +1,6 @@
-# SimplifyNext Investigation Assistant
+# CaseLens Investigation Assistant
 
-SimplifyNext helps authorised staff review a case using the textual evidence admitted through **Evidence**. It organises source statements, observations, claims, propositions, inferences, contradictions, uncertainties, hypotheses, and policy context without turning any one of them into an automatic truth.
+CaseLens helps authorised staff review a case using the textual evidence admitted through **Evidence**. It organises source statements, observations, claims, propositions, inferences, contradictions, uncertainties, hypotheses, and policy context without turning any one of them into an automatic truth.
 
 ## Create and set up a case
 

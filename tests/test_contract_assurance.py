@@ -140,7 +140,9 @@ def test_registry_has_current_service_contracts():
     assert registry["InvestigatorUpdate"].production_path == "GraphInvestigationCoordinator.apply_investigator_update"
     assert all(not lint_contract(spec) for spec in registry.values())
     validate_registry()
-    documentation = (Path(__file__).resolve().parents[1] / "docs/schema-contracts.md").read_text(encoding="utf-8")
+    documentation = (Path(__file__).resolve().parents[1] / "docs/history/schema-contracts.md").read_text(
+        encoding="utf-8"
+    )
     assert all(f"| {code} |" in documentation for code in ("S0", "S1", "S2", "S3", "S4", "S5", "S6"))
 
 
