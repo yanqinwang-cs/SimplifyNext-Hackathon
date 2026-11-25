@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from investigator.state import CaseRepository
-from investigator.test_fixtures import load_scale_fixture_case_state
+from investigator.public_samples.scale import load_scale_fixture_case_state
 
 
 def main() -> int:

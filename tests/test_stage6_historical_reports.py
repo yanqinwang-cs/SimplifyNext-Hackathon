@@ -10,16 +10,56 @@ import pytest
 from investigator.reporting import build_report_record
 from investigator.public_views import public_assessment_source_handle
 from investigator.http_api import create_server
-from investigator.services.vnext_runner import VNextProductionRunner
+from investigator.services.evidence_requests import HumanEvidenceWorkflow
+from investigator.vnext import AssessmentStatus, Confidence
+from investigator.vnext.semantic import (
+    InvestigatorSemanticAssessment,
+    SemanticSubjectAssessment,
+    SemanticViolationAssessment,
+)
 
-from test_vnext_product import SequenceClient, assessment, start_vnext
+from test_vnext_product import SequenceClient, start_vnext
+
+
+def seeded_display_name(workflow: HumanEvidenceWorkflow) -> str:
+    """The display name of the single subject the case was seeded with (read from case state, not assumed)."""
+
+    subjects = list(workflow.repository.load("case-01").subjects.values())
+    return subjects[0].display_name if subjects else "Student"
+
+
+def assessment() -> InvestigatorSemanticAssessment:
+    """Bounded semantic reply for the default single-subject case (no evidence items)."""
+
+    return InvestigatorSemanticAssessment(
+        subject_assessments=[
+            SemanticSubjectAssessment(
+                subject_id="case_subject",
+                violation_assessments=[
+                    SemanticViolationAssessment(
+                        violation_id=violation_id,
+                        status=AssessmentStatus.NOT_CURRENTLY_SUPPORTED,
+                        reasoning_summary="Bounded fixture assessment.",
+                        confidence=Confidence.HIGH,
+                    )
+                    for violation_id in (
+                        "unauthorized_device",
+                        "unauthorized_external_communication",
+                        "unauthorized_assistance",
+                        "prohibited_collaboration",
+                    )
+                ],
+                furthest_conclusion={"statement": "The configured assessment remains bounded.", "confidence": "high"},
+            )
+        ],
+    )
 
 
 def test_successful_report_is_snapshot_based_and_historical_source_is_exact(tmp_path: Path) -> None:
     workflow = start_vnext(tmp_path, SequenceClient([assessment()]))
     initial = workflow.get_report("case-01")
     assert initial["reportState"] == "available"
-    assert initial["assessment"]["students"][0]["displayName"] == "Student"
+    assert initial["assessment"]["students"][0]["displayName"] == seeded_display_name(workflow)
     run = workflow.get_runs("case-01")[0]
     record = json.loads((tmp_path / "cases/case-01/runs/run_000001/report_record.json").read_text())
     source_handle = public_assessment_source_handle("case-01", record["run_instance_id"], "S1")
@@ -37,9 +77,12 @@ def test_successful_report_is_snapshot_based_and_historical_source_is_exact(tmp_
     current = workflow.get_report("case-01")
     assert current["currentCaseName"] == "Renamed now"
     assert current["assessment"]["caseNameAtAssessment"] == "Business Law Tutorial 5"
-    assert [item["displayName"] for item in current["assessment"]["students"]] == ["Student"]
+    assert [item["displayName"] for item in current["assessment"]["students"]] == [seeded_display_name(workflow)]
     assert current["assessmentIsStale"] is True
-    assert workflow.get_historical_source("case-01", run["run_id"], source_handle)["source"]["content"] == "A source record"
+    assert (
+        workflow.get_historical_source("case-01", run["run_id"], source_handle)["source"]["content"]
+        == "A source record"
+    )
 
 
 def test_pinned_successful_report_is_not_replaced_by_later_success(tmp_path: Path) -> None:
@@ -66,12 +109,13 @@ def test_legacy_success_without_report_record_is_honest(tmp_path: Path) -> None:
 
 
 def test_report_integrity_rejects_missing_student_coverage(tmp_path: Path) -> None:
-    workflow = start_vnext(tmp_path, SequenceClient([assessment()]))
+    start_vnext(tmp_path, SequenceClient([assessment()]))
     snapshot_path = tmp_path / "cases/case-01/runs/run_000001/assessment_input_snapshot.json"
     snapshot = json.loads(snapshot_path.read_text())
     result = json.loads((tmp_path / "cases/case-01/runs/run_000001/vnext_result.json").read_text())["result"]
     result["subject_assessments"] = []
     from investigator.vnext.runner import VNextRunResult
+
     with pytest.raises(ValueError, match="student coverage"):
         build_report_record(snapshot, VNextRunResult.model_validate(result), completed_at="now")
 
@@ -86,9 +130,13 @@ def test_historical_report_and_source_api_are_read_only(tmp_path: Path) -> None:
     thread.start()
     try:
         base = f"http://127.0.0.1:{server.server_port}"
-        pinned = urllib.request.urlopen(f"{base}/api/cases/case-01/assessment-runs/{report['assessment']['runHandle']}/report").read()
-        source = urllib.request.urlopen(f"{base}/api/cases/case-01/assessment-runs/{report['assessment']['runHandle']}/sources/{source_handle}").read()
-        assert json.loads(pinned)["assessment"]["students"][0]["displayName"] == "Student"
+        pinned = urllib.request.urlopen(
+            f"{base}/api/cases/case-01/assessment-runs/{report['assessment']['runHandle']}/report"
+        ).read()
+        source = urllib.request.urlopen(
+            f"{base}/api/cases/case-01/assessment-runs/{report['assessment']['runHandle']}/sources/{source_handle}"
+        ).read()
+        assert json.loads(pinned)["assessment"]["students"][0]["displayName"] == seeded_display_name(workflow)
         assert json.loads(source)["source"]["content"] == "A source record"
     finally:
         server.shutdown()

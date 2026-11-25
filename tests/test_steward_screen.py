@@ -1,7 +1,7 @@
 from investigator.llm import ModelCallMetadata, ModelCallResult, ModelParseError
 
 from experiments.steward_screen.evaluate import evaluate_result
-from experiments.steward_screen.models import MODEL_REGISTRY
+from investigator.model_registry import MODEL_REGISTRY
 from experiments.steward_screen.prompt import build_prompt
 from experiments.steward_screen.report import aggregate
 from experiments.steward_screen.runner import JsonObject, jobs
@@ -9,7 +9,10 @@ from experiments.steward_screen.scenarios import all_scenarios
 
 
 def decision_payload(scenario):
-    payload = {"assessment": "The state supports this case-management decision.", "reason": "The structural view supports it."}
+    payload = {
+        "assessment": "The state supports this case-management decision.",
+        "reason": "The structural view supports it.",
+    }
     payload["operation"] = scenario.expected_operation
     if scenario.expected_target_node_id:
         payload["target_node_id"] = scenario.expected_target_node_id
@@ -21,7 +24,11 @@ def decision_payload(scenario):
 
 
 def fake_result(payload):
-    return ModelCallResult(parsed=JsonObject(root=payload), raw_output=payload, metadata=ModelCallMetadata(provider="mock", model="screen-test", latency_seconds=0.01, parse_success=True))
+    return ModelCallResult(
+        parsed=JsonObject(root=payload),
+        raw_output=payload,
+        metadata=ModelCallMetadata(provider="mock", model="screen-test", latency_seconds=0.01, parse_success=True),
+    )
 
 
 def test_exactly_twelve_valid_scenarios_and_expected_decisions_apply() -> None:
@@ -32,7 +39,9 @@ def test_exactly_twelve_valid_scenarios_and_expected_decisions_apply() -> None:
         for identifier in [scenario.expected_target_node_id, scenario.expected_destination_node_id]:
             if identifier:
                 assert identifier in scenario.graph.nodes
-        result = evaluate_result("mock", "mock", scenario, 1, build_prompt(scenario), fake_result(decision_payload(scenario)))
+        result = evaluate_result(
+            "mock", "mock", scenario, 1, build_prompt(scenario), fake_result(decision_payload(scenario))
+        )
         assert result.schema_valid and result.coordinator_accepted and result.post_state_correct
 
 
@@ -41,7 +50,12 @@ def test_jobs_expand_cartesian_product_and_report_aggregates() -> None:
     selected_model = next(iter(MODEL_REGISTRY))
     expanded = jobs([selected_model], scenario_ids, 3)
     assert len(expanded) == 6
-    results = [evaluate_result("mock", "mock", all_scenarios()[0], index, "prompt", fake_result(decision_payload(all_scenarios()[0]))) for index in range(1, 4)]
+    results = [
+        evaluate_result(
+            "mock", "mock", all_scenarios()[0], index, "prompt", fake_result(decision_payload(all_scenarios()[0]))
+        )
+        for index in range(1, 4)
+    ]
     summary = aggregate(results)
     assert summary.by_model["mock"]["runs"] == 3
     assert summary.by_model["mock"]["fully_correct"] == 3
@@ -57,14 +71,24 @@ def test_anthropic_registry_uses_us_inference_profiles_without_changing_existing
         assert name in MODEL_REGISTRY
         spec = MODEL_REGISTRY[name]
         assert spec.name == name and spec.invocation_id == invocation_id and spec.region == "us-east-1"
-    for name in ("zai.glm-5", "deepseek.v3.2", "moonshot.kimi-k2-thinking", "qwen.qwen3-next-80b-a3b", "openai.gpt-oss-120b-1:0", "amazon.nova-2-lite-v1:0", "zai.glm-4.7-flash"):
+    for name in (
+        "zai.glm-5",
+        "deepseek.v3.2",
+        "moonshot.kimi-k2-thinking",
+        "qwen.qwen3-next-80b-a3b",
+        "openai.gpt-oss-120b-1:0",
+        "amazon.nova-2-lite-v1:0",
+        "zai.glm-4.7-flash",
+    ):
         assert MODEL_REGISTRY[name].invocation_id == name
     assert jobs(list(expected), ["K1"], 1) == [(name, "K1", 1) for name in expected]
 
 
 def test_malformed_output_is_recorded_as_schema_failure() -> None:
     scenario = all_scenarios()[0]
-    result = evaluate_result("mock", "mock", scenario, 1, "prompt", error=ModelParseError("bad JSON", raw_output="not json"))
+    result = evaluate_result(
+        "mock", "mock", scenario, 1, "prompt", error=ModelParseError("bad JSON", raw_output="not json")
+    )
     assert result.error_category == "schema_parse"
     assert result.raw_model_output == "not json"
     assert not result.schema_valid
@@ -72,7 +96,22 @@ def test_malformed_output_is_recorded_as_schema_failure() -> None:
 
 def test_steward_prompt_uses_neutral_ordered_ontology_and_references() -> None:
     prompt = build_prompt(all_scenarios()[0])
-    for section in ["<ROLE>", "<INVESTIGATIVE_PURPOSE>", "<OBJECT_LEGEND>", "<RELATION_LEGEND>", "<POLICY_CONTEXT>", "<POLICY_DISCIPLINE>", "<STEWARD_OPERATIONS>", "<AUTHORITY_BOUNDARY>", "<CASE_PARTICIPANTS>", "<CASEGRAPH>", "<CURRENT_FOCUS>", "<FOCUS_HISTORY>", "<DETERMINISTIC_FEATURES>", "<OUTPUT_CONTRACT>"]:
+    for section in [
+        "<ROLE>",
+        "<INVESTIGATIVE_PURPOSE>",
+        "<OBJECT_LEGEND>",
+        "<RELATION_LEGEND>",
+        "<POLICY_CONTEXT>",
+        "<POLICY_DISCIPLINE>",
+        "<STEWARD_OPERATIONS>",
+        "<AUTHORITY_BOUNDARY>",
+        "<CASE_PARTICIPANTS>",
+        "<CASEGRAPH>",
+        "<CURRENT_FOCUS>",
+        "<FOCUS_HISTORY>",
+        "<DETERMINISTIC_FEATURES>",
+        "<OUTPUT_CONTRACT>",
+    ]:
         assert section in prompt
     assert "PERSON1" in prompt and "PERSON2" in prompt
     assert '"id": "H1"' in prompt and '"id": "E1"' in prompt and "R1.1" in prompt
@@ -85,7 +124,14 @@ def test_steward_prompt_exposes_exact_zero_shot_output_contract() -> None:
     contract = prompt.split("<OUTPUT_CONTRACT>\n", 1)[1].split("\n</OUTPUT_CONTRACT>", 1)[0]
     for operation in ("keep_focus", "shift_focus", "generalize", "archive", "reactivate", "stop_unresolved"):
         assert f'"operation": "{operation}"' in contract
-    for field in ("assessment", "reason", "destination_node_id", "target_node_id", "important_unresolved_ids", "reopening_conditions"):
+    for field in (
+        "assessment",
+        "reason",
+        "destination_node_id",
+        "target_node_id",
+        "important_unresolved_ids",
+        "reopening_conditions",
+    ):
         assert f'"{field}"' in contract
     assert '"decision" instead of "operation"' in contract
     assert '"rationale" instead of "assessment" or "reason"' in contract

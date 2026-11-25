@@ -85,7 +85,15 @@ def clean_reasoning_graph(case_id: str, sources: Mapping[str, Source]) -> CaseGr
             statement=source.name,
             semantic_key=source_id,
             canonical_id=source_id,
-            metadata={"source_type": source.source_type.value, "readable": True, **({"assessment_scope": source.metadata["assessment_scope"]} if "assessment_scope" in source.metadata else {})},
+            metadata={
+                "source_type": source.source_type.value,
+                "readable": True,
+                **(
+                    {"assessment_scope": source.metadata["assessment_scope"]}
+                    if "assessment_scope" in source.metadata
+                    else {}
+                ),
+            },
         )
         for source_id, source in sorted(sources.items())
     }
@@ -126,7 +134,11 @@ class VNextInvestigationRunner:
         reasoning_graph = clean_reasoning_graph(run_input.case_id, run_input.sources)
         raw_assessment = self.investigator(run_input)
         try:
-            assessment = raw_assessment if isinstance(raw_assessment, InvestigatorAssessment) else InvestigatorAssessment.model_validate(raw_assessment)
+            assessment = (
+                raw_assessment
+                if isinstance(raw_assessment, InvestigatorAssessment)
+                else InvestigatorAssessment.model_validate(raw_assessment)
+            )
             assessment = InvestigatorAssessment.model_validate(assessment.model_dump(mode="python"))
             normalized_subjects = self._validate_assessment(assessment, run_input)
         except VNextRunValidationError:
@@ -152,15 +164,16 @@ class VNextInvestigationRunner:
                 )
                 for item in subject.violation_assessments
             }
-            resolved_subject = subject.model_copy(update={
-                "violation_assessments": [
-                    resolved_by_id[item.violation_id]
-                    for item in run_input.rule_preset.violations
-                ],
-                "alternative_explanations": self._resolve_alternatives(
-                    subject.alternative_explanations, applied.local_ref_resolution, applied.graph
-                ),
-            })
+            resolved_subject = subject.model_copy(
+                update={
+                    "violation_assessments": [
+                        resolved_by_id[item.violation_id] for item in run_input.rule_preset.violations
+                    ],
+                    "alternative_explanations": self._resolve_alternatives(
+                        subject.alternative_explanations, applied.local_ref_resolution, applied.graph
+                    ),
+                }
+            )
             self._validate_subject_node_scopes(
                 resolved_subject,
                 subject.subject_id,
@@ -224,12 +237,16 @@ class VNextInvestigationRunner:
                 raise VNextRunValidationError(
                     f"Subject {subject_id!r} conclusion references unknown violation IDs: {unknown_conclusion_ids}"
                 )
-            normalized.append(subject.model_copy(update={
-                "violation_assessments": [
-                    next(item for item in subject.violation_assessments if item.violation_id == violation_id)
-                    for violation_id in expected
-                ]
-            }))
+            normalized.append(
+                subject.model_copy(
+                    update={
+                        "violation_assessments": [
+                            next(item for item in subject.violation_assessments if item.violation_id == violation_id)
+                            for violation_id in expected
+                        ]
+                    }
+                )
+            )
         return normalized
 
     @staticmethod
@@ -248,7 +265,9 @@ class VNextInvestigationRunner:
     ) -> ViolationAssessment:
         values = assessment.model_dump()
         for field_name in ("supporting_node_ids", "conflicting_node_ids", "mitigating_node_ids"):
-            values[field_name] = [cls._resolve_node_id(identifier, local_refs, graph) for identifier in values[field_name]]
+            values[field_name] = [
+                cls._resolve_node_id(identifier, local_refs, graph) for identifier in values[field_name]
+            ]
         return ViolationAssessment.model_validate(values)
 
     @classmethod
@@ -259,9 +278,13 @@ class VNextInvestigationRunner:
         graph: CaseGraph,
     ) -> list[AlternativeExplanation]:
         return [
-            item.model_copy(update={
-                "source_node_ids": [cls._resolve_node_id(identifier, local_refs, graph) for identifier in item.source_node_ids],
-            })
+            item.model_copy(
+                update={
+                    "source_node_ids": [
+                        cls._resolve_node_id(identifier, local_refs, graph) for identifier in item.source_node_ids
+                    ],
+                }
+            )
             for item in alternatives
         ]
 
@@ -275,19 +298,34 @@ class VNextInvestigationRunner:
         subjects: Mapping[str, object],
     ) -> None:
         for violation in assessment.violation_assessments:
-            if len(subjects) > 1 and violation.status in {AssessmentStatus.SUPPORTED, AssessmentStatus.PARTIALLY_SUPPORTED, AssessmentStatus.CONFLICTED} and not violation.supporting_node_ids:
+            if (
+                len(subjects) > 1
+                and violation.status
+                in {AssessmentStatus.SUPPORTED, AssessmentStatus.PARTIALLY_SUPPORTED, AssessmentStatus.CONFLICTED}
+                and not violation.supporting_node_ids
+            ):
                 raise VNextRunValidationError(
                     f"Subject {subject_id!r} status {violation.status.value!r} requires supporting material"
                 )
             for field_name in ("supporting_node_ids", "conflicting_node_ids", "mitigating_node_ids"):
                 for node_id in getattr(violation, field_name):
                     node = graph.nodes[node_id]
-                    if field_name in {"supporting_node_ids", "conflicting_node_ids", "mitigating_node_ids"} and node.node_type not in {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}:
+                    if field_name in {
+                        "supporting_node_ids",
+                        "conflicting_node_ids",
+                        "mitigating_node_ids",
+                    } and node.node_type not in {GraphNodeType.EVIDENCE, GraphNodeType.PROPOSITION}:
                         raise VNextRunValidationError(
                             f"Subject {subject_id!r} supporting material must resolve to evidence or proposition, not {node.node_type.value}"
                         )
-                    if field_name in {"supporting_node_ids", "conflicting_node_ids", "mitigating_node_ids"} and not source_ancestry(graph, node_id):
-                        raise VNextRunValidationError(f"Subject {subject_id!r} supporting material {node_id!r} has no admitted source ancestry")
+                    if field_name in {
+                        "supporting_node_ids",
+                        "conflicting_node_ids",
+                        "mitigating_node_ids",
+                    } and not source_ancestry(graph, node_id):
+                        raise VNextRunValidationError(
+                            f"Subject {subject_id!r} supporting material {node_id!r} has no admitted source ancestry"
+                        )
                     scope = node_scope(node.metadata)
                     if not scope_allows_subject(scope, subject_id, dict(relationships)):
                         raise VNextRunValidationError(
@@ -295,15 +333,22 @@ class VNextInvestigationRunner:
                         )
                     for source_id in source_ancestry(graph, node_id):
                         applicability = source_applicability.get(source_id)
-                        if applicability is not None and not source_applies_to_student(applicability, subject_id, subjects):
+                        if applicability is not None and not source_applies_to_student(
+                            applicability, subject_id, subjects
+                        ):
                             raise VNextRunValidationError(
                                 f"Subject {subject_id!r} references private source {source_id!r} through graph node {node_id!r}"
                             )
-            if len(subjects) > 1 and violation.status in {AssessmentStatus.SUPPORTED, AssessmentStatus.PARTIALLY_SUPPORTED, AssessmentStatus.CONFLICTED}:
-                if not any(node_scope(graph.nodes[node_id].metadata).scope_type is not GraphScopeType.CASE for node_id in violation.supporting_node_ids):
-                    raise VNextRunValidationError(
-                        f"Subject {subject_id!r} cannot be supported by CASE-only material"
-                    )
+            if len(subjects) > 1 and violation.status in {
+                AssessmentStatus.SUPPORTED,
+                AssessmentStatus.PARTIALLY_SUPPORTED,
+                AssessmentStatus.CONFLICTED,
+            }:
+                if not any(
+                    node_scope(graph.nodes[node_id].metadata).scope_type is not GraphScopeType.CASE
+                    for node_id in violation.supporting_node_ids
+                ):
+                    raise VNextRunValidationError(f"Subject {subject_id!r} cannot be supported by CASE-only material")
                 if not any(
                     any(
                         source_applicability.get(source_id) is not None

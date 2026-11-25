@@ -18,4 +18,3 @@ class ExperimentRunner:
             structured_result=call.parsed,
             call_metadata=call.metadata,
         )
-

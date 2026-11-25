@@ -1,5 +1,5 @@
 import pytest
-from pydantic import TypeAdapter, ValidationError
+from pydantic import TypeAdapter
 
 from investigator.cycle import InvestigatorCycleCoordinator
 from investigator.cycle_prompt import build_investigator_cycle_prompt
@@ -7,8 +7,6 @@ from investigator.graph import CaseGraph, GraphNode, GraphNodeType
 from investigator.roles import (
     GraphInvestigationCoordinator,
     InvestigationFocus,
-    INVESTIGATOR_UPDATE_ADAPTER,
-    StewardReviewContext,
 )
 from investigator.roles.procedure import (
     INVESTIGATOR_INTENT_COVERAGE,
@@ -41,20 +39,24 @@ def test_procedure_metadata_covers_every_modeled_intent() -> None:
 
 def test_source_evidence_proposition_path_is_explicit_and_legal() -> None:
     coordinator = GraphInvestigationCoordinator(_graph(), InvestigationFocus(node_id="U1"))
-    coordinator.apply_investigator_update({
-        "operation": "add_evidence",
-        "node_id": "E1",
-        "statement": "The readable record directly states a marker observation.",
-        "source_ids": ["S21"],
-        "reason": "This records the direct source observation before inference.",
-    })
-    coordinator.apply_investigator_update({
-        "operation": "add_proposition",
-        "node_id": "P1",
-        "statement": "The observation supports a smaller claim.",
-        "derived_from_node_ids": ["E1"],
-        "reason": "The claim is a bounded inference from the recorded observation.",
-    })
+    coordinator.apply_investigator_update(
+        {
+            "operation": "add_evidence",
+            "node_id": "E1",
+            "statement": "The readable record directly states a marker observation.",
+            "source_ids": ["S21"],
+            "reason": "This records the direct source observation before inference.",
+        }
+    )
+    coordinator.apply_investigator_update(
+        {
+            "operation": "add_proposition",
+            "node_id": "P1",
+            "statement": "The observation supports a smaller claim.",
+            "derived_from_node_ids": ["E1"],
+            "reason": "The claim is a bounded inference from the recorded observation.",
+        }
+    )
     assert coordinator.graph.nodes["E1"].metadata["source_ids"] == ["S21"]
     assert "P1_DERIVED_FROM_E1" in coordinator.graph.edges
 
@@ -62,13 +64,15 @@ def test_source_evidence_proposition_path_is_explicit_and_legal() -> None:
 def test_invalid_source_and_uncertainty_paths_have_procedural_alternatives() -> None:
     coordinator = GraphInvestigationCoordinator(_graph(), InvestigationFocus(node_id="U1"))
     with pytest.raises(ValueError, match="Unknown graph node"):
-        coordinator.apply_investigator_update({
-            "operation": "add_proposition",
-            "node_id": "P1",
-            "statement": "bad",
-            "derived_from_node_ids": ["S21"],
-            "reason": "not legal",
-        })
+        coordinator.apply_investigator_update(
+            {
+                "operation": "add_proposition",
+                "node_id": "P1",
+                "statement": "bad",
+                "derived_from_node_ids": ["S21"],
+                "reason": "not legal",
+            }
+        )
     assert "add_evidence" in render_procedure("investigator")
     assert "request_open" in render_procedure("investigator")
     assert "request_steward_review" in render_procedure("investigator")

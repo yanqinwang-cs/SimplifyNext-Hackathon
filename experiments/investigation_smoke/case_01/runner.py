@@ -11,9 +11,6 @@ from dotenv import load_dotenv
 # Keep the documented direct script invocation import-safe.
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from experiments.investigation_smoke.case_01.artifacts import render_artifact
-from experiments.investigation_smoke.case_01.catalog import artifact_path, get_action
-from experiments.investigation_smoke.case_01.prompts import initial_prompt, revision_prompt, visible_case_input
 from experiments.investigation_smoke.case_01.schemas import (
     ControlledRunTrace,
     HypothesisProposal,
@@ -24,21 +21,15 @@ from experiments.investigation_smoke.case_01.schemas import (
 from investigator.llm.base import ModelClient, ModelParseError
 from investigator.llm.bedrock import BedrockModelClient
 from investigator.models import (
-    EvidenceItem,
-    EvidenceKind,
     Hypothesis,
     HypothesisOrigin,
     HypothesisStatus,
-    Source,
-    SourceType,
     Uncertainty,
     UncertaintyKind,
-    UncertaintyTransitionType,
 )
 from investigator.state import CaseState, apply_revision as apply_core_revision
 from investigator.services import InvestigationService
 from investigator.environments.case_01 import Case1ControlledEnvironment
-from experiments.model_screen.cases import get_case
 
 
 def _safe_model_name(model_id: str) -> str:
@@ -108,10 +99,12 @@ def run(
     trace = ControlledRunTrace(model_id=resolved_model_id, initial_case_input=case_input, initial_prompt=first_prompt)
     trace_path = output_dir / "trace.json"
 
-    def failed(current: ControlledRunTrace, stage: str, error: Exception, raw_output=... ) -> Path:
+    def failed(current: ControlledRunTrace, stage: str, error: Exception, raw_output=...) -> Path:
         update = {"failure_stage": stage, "error_message": str(error), "parse_success": False}
         if raw_output is not ...:
-            update["initial_raw_model_output" if stage.startswith("initial") else "revision_raw_model_output"] = raw_output
+            update["initial_raw_model_output" if stage.startswith("initial") else "revision_raw_model_output"] = (
+                raw_output
+            )
         failed_trace = current.model_copy(update=update)
         _write_trace(trace_path, failed_trace)
         return trace_path
@@ -126,41 +119,49 @@ def run(
             return failed(trace, "initial_call", exc)
         initial_response = session.initial_response
         action = session.pending_action
-        trace = trace.model_copy(update={
-            "initial_raw_model_output": session.initial_raw_model_output,
-            "initial_metadata": session.initial_metadata,
-            "initial_response": initial_response,
-            "initial_hypothesis_state": session.initial_case_state,
-            "selected_action_id": action.action_id,
-            "target_uncertainty": initial_response.target_uncertainty,
-            "expected_information_value": initial_response.expected_information_value,
-            "why_this_action_now": initial_response.why_this_action_now,
-        })
+        trace = trace.model_copy(
+            update={
+                "initial_raw_model_output": session.initial_raw_model_output,
+                "initial_metadata": session.initial_metadata,
+                "initial_response": initial_response,
+                "initial_hypothesis_state": session.initial_case_state,
+                "selected_action_id": action.action_id,
+                "target_uncertainty": initial_response.target_uncertainty,
+                "expected_information_value": initial_response.expected_information_value,
+                "why_this_action_now": initial_response.why_this_action_now,
+            }
+        )
         try:
             service.set_human_action(session, action.action_id)
             service.execute_action(session)
             service.propose_revision(session)
         except ModelParseError as exc:
-            return failed(trace.model_copy(update={"release": session.pending_release}), "revision_parse", exc, exc.raw_output)
+            return failed(
+                trace.model_copy(update={"release": session.pending_release}), "revision_parse", exc, exc.raw_output
+            )
         except Exception as exc:
             return failed(trace.model_copy(update={"release": session.pending_release}), "revision_call", exc)
         revision_response = session.pending_revision
-        trace = trace.model_copy(update={
-            "release": session.pending_release,
-            "revision_prompt": session.revision_prompt,
-            "revision_raw_model_output": session.revision_raw_model_output,
-            "revision_metadata": session.revision_metadata,
-            "revision_response": revision_response,
-        })
+        trace = trace.model_copy(
+            update={
+                "release": session.pending_release,
+                "revision_prompt": session.revision_prompt,
+                "revision_raw_model_output": session.revision_raw_model_output,
+                "revision_metadata": session.revision_metadata,
+                "revision_response": revision_response,
+            }
+        )
         try:
             service.apply_revision(session)
         except Exception as exc:
             return failed(trace, "state_apply", exc)
-        trace = trace.model_copy(update={
-            "final_hypothesis_state": session.case_state,
-            "parse_success": True,
-            "unsupported_operations": session.unsupported_operations,
-        })
+        trace = trace.model_copy(
+            update={
+                "final_hypothesis_state": session.case_state,
+                "parse_success": True,
+                "unsupported_operations": session.unsupported_operations,
+            }
+        )
     except Exception as exc:
         return failed(trace, "state_apply", exc)
     _write_trace(trace_path, trace)

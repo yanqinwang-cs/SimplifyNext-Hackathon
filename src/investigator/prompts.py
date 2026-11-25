@@ -14,7 +14,11 @@ Policy defines what conduct would be permitted or prohibited if matching factual
 
 def render_assessment_context() -> str:
     from investigator.policy import render_policy_profile
-    return "90-minute closed-book quantitative methods examination; 40 multiple-choice questions; held at an examination venue. Context is not evidence.\n\n" + render_policy_profile()
+
+    return (
+        "90-minute closed-book quantitative methods examination; 40 multiple-choice questions; held at an examination venue. Context is not evidence.\n\n"
+        + render_policy_profile()
+    )
 
 
 def render_current_case(case_input: str, hypotheses: list[dict], uncertainties: list[dict]) -> str:

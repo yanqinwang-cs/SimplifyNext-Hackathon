@@ -9,8 +9,18 @@ from typing import TYPE_CHECKING, Annotated, TypeAlias
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from investigator.models.source import Source
-from investigator.models.assessment import AssessmentContext, AssessmentSubject, SubjectRelationship, validate_identity_references, validate_vnext_relationship_provenance
-from investigator.vnext.relationships import RelationshipScopeProposal, RunRelationshipScope, existing_relationship_scopes
+from investigator.models.assessment import (
+    AssessmentContext,
+    AssessmentSubject,
+    SubjectRelationship,
+    validate_identity_references,
+    validate_vnext_relationship_provenance,
+)
+from investigator.vnext.relationships import (
+    RelationshipScopeProposal,
+    RunRelationshipScope,
+    existing_relationship_scopes,
+)
 from investigator.vnext.source_applicability import SourceApplicability, build_source_applicability
 
 if TYPE_CHECKING:
@@ -119,7 +129,9 @@ class VNextRunInput(BaseModel):
         validate_identity_references(self.subjects, self.subject_relationships, self.sources)
         validate_vnext_relationship_provenance(self.subject_relationships)
         if not self.source_applicability:
-            self.source_applicability = build_source_applicability(self.sources, self.subjects, self.subject_relationships)
+            self.source_applicability = build_source_applicability(
+                self.sources, self.subjects, self.subject_relationships
+            )
         elif set(self.source_applicability) != set(self.sources):
             raise ValueError("source_applicability must cover exactly the admitted sources")
         if not self.relationship_scopes:
@@ -140,7 +152,9 @@ class VNextRunInput(BaseModel):
             sources=case_state.sources,
             subjects=case_state.subjects,
             subject_relationships=case_state.subject_relationships,
-            source_applicability=build_source_applicability(case_state.sources, case_state.subjects, case_state.subject_relationships),
+            source_applicability=build_source_applicability(
+                case_state.sources, case_state.subjects, case_state.subject_relationships
+            ),
             rule_preset=rule_preset,
             retry_constraints=list(retry_constraints or []),
             human_inputs=dict(human_inputs or {}),
@@ -196,13 +210,19 @@ class InvestigatorAssessment(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def adapt_legacy_single_subject_shape(cls, value: object) -> object:
-        if isinstance(value, dict) and "subject_assessments" not in value and {"violation_assessments", "furthest_conclusion"} <= value.keys():
+        if (
+            isinstance(value, dict)
+            and "subject_assessments" not in value
+            and {"violation_assessments", "furthest_conclusion"} <= value.keys()
+        ):
             legacy = dict(value)
-            legacy["subject_assessments"] = [{
-                "subject_id": "case_subject",
-                "violation_assessments": legacy.pop("violation_assessments"),
-                "furthest_conclusion": legacy.pop("furthest_conclusion"),
-            }]
+            legacy["subject_assessments"] = [
+                {
+                    "subject_id": "case_subject",
+                    "violation_assessments": legacy.pop("violation_assessments"),
+                    "furthest_conclusion": legacy.pop("furthest_conclusion"),
+                }
+            ]
             return legacy
         return value
 

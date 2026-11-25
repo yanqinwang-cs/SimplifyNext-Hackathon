@@ -3,7 +3,11 @@ import json
 from experiments.model_screen.cases import get_case, render_case
 from experiments.investigation_smoke.case_01.catalog import ENQUIRY_CATALOG
 from experiments.investigation_smoke.context import render_assessment_context
-from experiments.investigation_smoke.prompt_layers import GLOBAL_INVESTIGATION_RULES, render_assessment_layer, render_current_case
+from experiments.investigation_smoke.prompt_layers import (
+    GLOBAL_INVESTIGATION_RULES,
+    render_assessment_layer,
+    render_current_case,
+)
 
 
 RULES = GLOBAL_INVESTIGATION_RULES
@@ -19,12 +23,18 @@ def catalogue_text() -> str:
 
 def initial_output_template() -> dict:
     return {
-        "hypotheses": [{
-            "id": "H1", "parent_id": None, "statement": "A broad evidence-grounded explanation.", "status": "active",
-            "supported_by": ["E1"], "conflicted_by": [],
-            "unresolved": ["An important uncertainty that remains unresolved."],
-            "specificity_basis_evidence_ids": [],
-        }],
+        "hypotheses": [
+            {
+                "id": "H1",
+                "parent_id": None,
+                "statement": "A broad evidence-grounded explanation.",
+                "status": "active",
+                "supported_by": ["E1"],
+                "conflicted_by": [],
+                "unresolved": ["An important uncertainty that remains unresolved."],
+                "specificity_basis_evidence_ids": [],
+            }
+        ],
         "selected_action_id": "A1",
         "target_uncertainty": "REPLACE_WITH_TARGET_UNCERTAINTY",
         "expected_information_value": "REPLACE_WITH_EXPECTED_INFORMATION_VALUE",
@@ -34,22 +44,32 @@ def initial_output_template() -> dict:
 
 def revision_output_template(release_evidence_id: str) -> dict:
     return {
-        "hypothesis_updates": [{
-            "hypothesis_id": "H1", "transition": "keep",
-            "reason": "Why this update is justified by the newly released evidence.",
-            "add_supporting_evidence_ids": [release_evidence_id],
-            "add_conflicting_evidence_ids": [], "add_specificity_basis_evidence_ids": [],
-            "requested_operation_name": None, "requested_effect": None,
-            "why_existing_operations_do_not_fit": None,
-        }],
+        "hypothesis_updates": [
+            {
+                "hypothesis_id": "H1",
+                "transition": "keep",
+                "reason": "Why this update is justified by the newly released evidence.",
+                "add_supporting_evidence_ids": [release_evidence_id],
+                "add_conflicting_evidence_ids": [],
+                "add_specificity_basis_evidence_ids": [],
+                "requested_operation_name": None,
+                "requested_effect": None,
+                "why_existing_operations_do_not_fit": None,
+            }
+        ],
         "new_hypotheses": [],
-        "uncertainty_updates": [{
-            "uncertainty_id": "U1", "transition": "refine",
-            "reason": "Why this uncertainty changed.", "new_description": "A more precise unresolved question.",
-            "basis_evidence_ids": [release_evidence_id],
-            "requested_operation_name": None, "requested_effect": None,
-            "why_existing_operations_do_not_fit": None,
-        }],
+        "uncertainty_updates": [
+            {
+                "uncertainty_id": "U1",
+                "transition": "refine",
+                "reason": "Why this uncertainty changed.",
+                "new_description": "A more precise unresolved question.",
+                "basis_evidence_ids": [release_evidence_id],
+                "requested_operation_name": None,
+                "requested_effect": None,
+                "why_existing_operations_do_not_fit": None,
+            }
+        ],
         "new_uncertainties": [],
         "revision_rationale": "Short explanation of how the new evidence changed the state.",
     }
@@ -93,9 +113,9 @@ ASSESSMENT ONTOLOGY / POLICY
 {render_assessment_context()}
 
 CURRENT CASE EVIDENCE / PRIOR STATE
-{render_current_case(case_input, case_state.get('hypotheses', []), case_state.get('uncertainties', []))}
+{render_current_case(case_input, case_state.get("hypotheses", []), case_state.get("uncertainties", []))}
 Current state evidence inventory (actual evidence only; context resources are not evidence):
-{json.dumps(case_state.get('evidence', []), indent=2)}
+{json.dumps(case_state.get("evidence", []), indent=2)}
 
 TASK-SPECIFIC INSTRUCTION
 Select exactly one currently available enquiry. Explain the uncertainty it targets and how it may change the explanation space. Do not revise state, execute an enquiry, invent an action, or cite assessment-context resource IDs as evidence.
@@ -108,7 +128,15 @@ Available enquiries:
 {json.dumps(available_actions, indent=2)}"""
 
 
-def revision_prompt(case_input: str, prior_hypotheses: list[dict], prior_uncertainties: list[dict], selected_action: dict, release_evidence_id: str, release_content: str, current_evidence: list[dict] | None = None) -> str:
+def revision_prompt(
+    case_input: str,
+    prior_hypotheses: list[dict],
+    prior_uncertainties: list[dict],
+    selected_action: dict,
+    release_evidence_id: str,
+    release_content: str,
+    current_evidence: list[dict] | None = None,
+) -> str:
     task = """TASK-SPECIFIC INSTRUCTION
 Revise the existing hypothesis tree after one controlled evidence release. Only original case evidence plus the newly released artefact may justify revision. Preserve viable broad parents and narrow only when justified. Do not select another enquiry. Use uncertainty updates for unresolved questions; do not invent mechanisms."""
     return f"""{RULES}

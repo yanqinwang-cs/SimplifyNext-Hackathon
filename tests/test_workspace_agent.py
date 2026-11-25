@@ -17,23 +17,46 @@ class FakeWorkspaceClient:
 
 
 def text_response(text):
-    return ModelNativeCall(text_blocks=[ModelTextBlock(text=text)], metadata=ModelCallMetadata(provider="fake", model="workspace-test", latency_seconds=0, parse_success=True))
+    return ModelNativeCall(
+        text_blocks=[ModelTextBlock(text=text)],
+        metadata=ModelCallMetadata(provider="fake", model="workspace-test", latency_seconds=0, parse_success=True),
+    )
 
 
 def tool_response(name, arguments=None, call_id="call_001"):
-    return ModelNativeCall(tool_uses=[ModelToolUse(call_id=call_id, name=name, arguments=arguments or {})], metadata=ModelCallMetadata(provider="fake", model="workspace-test", latency_seconds=0, parse_success=True))
+    return ModelNativeCall(
+        tool_uses=[ModelToolUse(call_id=call_id, name=name, arguments=arguments or {})],
+        metadata=ModelCallMetadata(provider="fake", model="workspace-test", latency_seconds=0, parse_success=True),
+    )
 
 
 def make_workflow(tmp_path):
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
-    state = CaseState(case_id="case-01", title="Test case", reasoning_graph=CaseGraph(case_id="case-01", nodes={"U1": GraphNode(id="U1", node_type=GraphNodeType.UNCERTAINTY, statement="Open question")}, edges={}), focus_node_id="U1")
+    state = CaseState(
+        case_id="case-01",
+        title="Test case",
+        reasoning_graph=CaseGraph(
+            case_id="case-01",
+            nodes={"U1": GraphNode(id="U1", node_type=GraphNodeType.UNCERTAINTY, statement="Open question")},
+            edges={},
+        ),
+        focus_node_id="U1",
+    )
     workflow.repository.save(state)
     return workflow
 
 
 def test_workspace_read_is_deterministic_and_does_not_mutate(tmp_path):
     workflow = make_workflow(tmp_path)
-    agent = WorkspaceAgent(workflow, FakeWorkspaceClient([tool_response("LIST_SOURCES"), text_response("The current case is active and has one unresolved question.")]))
+    agent = WorkspaceAgent(
+        workflow,
+        FakeWorkspaceClient(
+            [
+                tool_response("LIST_SOURCES"),
+                text_response("The current case is active and has one unresolved question."),
+            ]
+        ),
+    )
     before = workflow.ensure_case("case-01").model_dump(mode="json")
     result = agent.chat("case-01", "Explain the current case")
     after = workflow.ensure_case("case-01")
@@ -79,13 +102,19 @@ def test_vnext_help_tools_and_conversation_boundary_remain_unchanged(tmp_path):
     workflow = make_workflow(tmp_path)
     agent = WorkspaceAgent(workflow, FakeWorkspaceClient([]))
     assert {tool["name"] for tool in agent.tool_specs()} == {
-        "GET_CASE_GUIDANCE_CONTEXT", "GET_PRODUCT_GUIDE", "LIST_SOURCES", "READ_SOURCE"
+        "GET_CASE_GUIDANCE_CONTEXT",
+        "GET_PRODUCT_GUIDE",
+        "LIST_SOURCES",
+        "READ_SOURCE",
     }
     assert "must never mutate the case" in agent.system_prompt()
 
 
 def test_workspace_direct_answer_uses_native_text(tmp_path):
-    result = WorkspaceAgent(make_workflow(tmp_path), FakeWorkspaceClient([text_response("The investigation is waiting for a human response.")])).chat("case-01", "Tell me something unusual")
+    result = WorkspaceAgent(
+        make_workflow(tmp_path),
+        FakeWorkspaceClient([text_response("The investigation is waiting for a human response.")]),
+    ).chat("case-01", "Tell me something unusual")
     assert result.response == "The investigation is waiting for a human response."
 
 
@@ -111,7 +140,13 @@ def test_failed_tool_call_is_paired_and_next_user_turn_remains_valid(tmp_path):
     state = workflow.ensure_case("case-01")
     state.case_status = "CLOSED"
     workflow.repository.save(state)
-    client = FakeWorkspaceClient([tool_response("add_evidence"), text_response("The investigation could not be started from the current state."), text_response("The previous run remains recorded.")])
+    client = FakeWorkspaceClient(
+        [
+            tool_response("add_evidence"),
+            text_response("The investigation could not be started from the current state."),
+            text_response("The previous run remains recorded."),
+        ]
+    )
     agent = WorkspaceAgent(workflow, client)
     first = agent.chat("case-01", "run the investigation")
     assert first.response == "The investigation could not be started from the current state."
@@ -129,13 +164,22 @@ def test_failed_tool_call_is_paired_and_next_user_turn_remains_valid(tmp_path):
 def test_workspace_sends_full_session_history_to_followup(tmp_path):
     workflow = make_workflow(tmp_path)
     workflow.run_callback = lambda case_id, service: None
-    client = FakeWorkspaceClient([text_response("Would you like me to run the investigation?"), tool_response("LIST_SOURCES"), text_response("Run started.")])
+    client = FakeWorkspaceClient(
+        [
+            text_response("Would you like me to run the investigation?"),
+            tool_response("LIST_SOURCES"),
+            text_response("Run started."),
+        ]
+    )
     agent = WorkspaceAgent(workflow, client)
     agent.chat("case-01", "run the investigation")
     agent.chat("case-01", "yes")
     assert len(client.calls) == 3
     followup_messages = client.calls[1][0]
-    assert [message["text"] for message in followup_messages if message.get("role") == "user"][-2:] == ["run the investigation", "yes"]
+    assert [message["text"] for message in followup_messages if message.get("role") == "user"][-2:] == [
+        "run the investigation",
+        "yes",
+    ]
     assert any(message.get("text") == "Would you like me to run the investigation?" for message in followup_messages)
 
 

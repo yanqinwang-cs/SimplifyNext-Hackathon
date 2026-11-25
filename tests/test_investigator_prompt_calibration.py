@@ -65,7 +65,10 @@ def test_prompt_keeps_structural_scope_and_relationship_boundaries() -> None:
 
 def test_prompt_allows_relationship_hypotheses_without_joint_evidence_basis() -> None:
     prompt = build_prompt(_run_input())
-    assert "A multi-student hypothesis may concern an existing exact relationship context without evidential support" in prompt
+    assert (
+        "A multi-student hypothesis may concern an existing exact relationship context without evidential support"
+        in prompt
+    )
     assert "Multi-student evidence statements and propositions must obey current source and scope rules" in prompt
     assert "requires a genuinely admitted relationship- or case-scoped basis" in prompt
     assert "is not subject to the evidence-statement/proposition source-basis requirement" in prompt

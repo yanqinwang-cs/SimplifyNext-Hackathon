@@ -7,8 +7,14 @@ from investigator.tracing import InteractiveTrace, InteractiveTraceWriter, new_s
 def make_trace() -> InteractiveTrace:
     now = utc_now()
     return InteractiveTrace(
-        session_id=new_session_id(), case_id="case_01", environment_id="case_01_controlled",
-        model_id="fixture", started_at=now, updated_at=now, status="starting", initial_prompt="prompt",
+        session_id=new_session_id(),
+        case_id="case_01",
+        environment_id="case_01_controlled",
+        model_id="fixture",
+        started_at=now,
+        updated_at=now,
+        status="starting",
+        initial_prompt="prompt",
     )
 
 

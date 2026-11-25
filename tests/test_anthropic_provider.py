@@ -54,10 +54,24 @@ def test_structured_call_extracts_system_and_preserves_metadata_without_network(
 
 
 def test_native_call_translates_tools_and_tool_results():
-    fake = FakeClient(response(SimpleNamespace(type="text", text="Reading source."), SimpleNamespace(type="tool_use", id="t1", name="READ_SOURCE", input={"sourceHandle": "S1"})))
+    fake = FakeClient(
+        response(
+            SimpleNamespace(type="text", text="Reading source."),
+            SimpleNamespace(type="tool_use", id="t1", name="READ_SOURCE", input={"sourceHandle": "S1"}),
+        )
+    )
     client = AnthropicModelClient(model_id="claude-opus-4-5-20251101", client=fake)
     result = client.call_native(
-        [{"role": "system", "text": "Read only."}, {"role": "user", "text": "Read S1."}, {"role": "assistant", "text": "", "tool_uses": [{"call_id": "t1", "name": "READ_SOURCE", "arguments": {"sourceHandle": "S1"}}]}, {"role": "tool", "call_id": "t1", "result": {"ok": True}}],
+        [
+            {"role": "system", "text": "Read only."},
+            {"role": "user", "text": "Read S1."},
+            {
+                "role": "assistant",
+                "text": "",
+                "tool_uses": [{"call_id": "t1", "name": "READ_SOURCE", "arguments": {"sourceHandle": "S1"}}],
+            },
+            {"role": "tool", "call_id": "t1", "result": {"ok": True}},
+        ],
         [{"name": "READ_SOURCE", "description": "read", "inputSchema": {"type": "object"}}],
     )
     assert result.tool_uses[0].call_id == "t1"

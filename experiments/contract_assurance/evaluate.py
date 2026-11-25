@@ -13,7 +13,16 @@ def _validation_code(exc: ValidationError) -> FailureCode:
     errors = exc.errors()
     messages = [str(error.get("msg", "")) for error in errors]
     error_types = [str(error.get("type", "")) for error in errors]
-    if any("requires" in message or "must belong" in message or "only valid" in message or "cannot contain" in message or "at most one transition" in message or "Substantive text" in message or "Template placeholder" in message for message in messages):
+    if any(
+        "requires" in message
+        or "must belong" in message
+        or "only valid" in message
+        or "cannot contain" in message
+        or "at most one transition" in message
+        or "Substantive text" in message
+        or "Template placeholder" in message
+        for message in messages
+    ):
         return FailureCode.S4
     if any("literal_error" in kind or "pattern" in kind or "enum" in kind for kind in error_types):
         return FailureCode.S2
@@ -34,7 +43,13 @@ class Evaluation:
 
 def evaluate_raw(raw_output: Any, schema: type[Any]) -> Evaluation:
     if isinstance(raw_output, (bytes, bytearray)):
-        return Evaluation(False, FailureCode.S0, "serialization", "binary output is not an accepted response medium", raw_output=raw_output)
+        return Evaluation(
+            False,
+            FailureCode.S0,
+            "serialization",
+            "binary output is not an accepted response medium",
+            raw_output=raw_output,
+        )
     if not isinstance(raw_output, str):
         try:
             parsed = schema.model_validate(raw_output)
@@ -48,7 +63,9 @@ def evaluate_raw(raw_output: Any, schema: type[Any]) -> Evaluation:
     except json.JSONDecodeError as exc:
         return Evaluation(False, FailureCode.S0, "serialization", str(exc), raw_output=raw_output)
     if not isinstance(value, dict):
-        return Evaluation(False, FailureCode.S0, "serialization", "top-level JSON value must be an object", raw_output=raw_output)
+        return Evaluation(
+            False, FailureCode.S0, "serialization", "top-level JSON value must be an object", raw_output=raw_output
+        )
     try:
         parsed = schema.model_validate(value)
     except ValidationError as exc:
@@ -86,7 +103,9 @@ def evaluate_revision(raw_output: Any, state: Any) -> Evaluation:
     return result
 
 
-def evaluate_initial(raw_output: Any, *, schema: type[Any], build_state: Any, available_action_ids: set[str] | None = None) -> Evaluation:
+def evaluate_initial(
+    raw_output: Any, *, schema: type[Any], build_state: Any, available_action_ids: set[str] | None = None
+) -> Evaluation:
     """Evaluate an initial response through schema validation and state construction."""
     result = evaluate_raw(raw_output, schema)
     if not result.accepted:
@@ -126,13 +145,37 @@ def evaluate_steward(raw_output: Any, *, scenario: Any) -> Evaluation:
         code = FailureCode.S0 if isinstance(exc, json.JSONDecodeError) else FailureCode.S1
         stage = "serialization" if code is FailureCode.S0 else "schema"
         return Evaluation(False, code, stage, str(exc), raw_output=raw_output)
-    call_result = ModelCallResult(parsed=parsed, raw_output=raw_output, metadata=ModelCallMetadata(provider="offline", model="contract-assurance", latency_seconds=0.0, parse_success=True))
+    call_result = ModelCallResult(
+        parsed=parsed,
+        raw_output=raw_output,
+        metadata=ModelCallMetadata(
+            provider="offline", model="contract-assurance", latency_seconds=0.0, parse_success=True
+        ),
+    )
     screen = evaluate_result("contract-assurance", "offline", scenario, 1, prompt, call_result)
     if not screen.schema_valid:
-        return Evaluation(False, FailureCode.S1, "schema", screen.error_message or "StewardDecision schema validation failed", raw_output=raw_output)
+        return Evaluation(
+            False,
+            FailureCode.S1,
+            "schema",
+            screen.error_message or "StewardDecision schema validation failed",
+            raw_output=raw_output,
+        )
     if not screen.coordinator_accepted or not screen.post_state_correct:
-        return Evaluation(False, FailureCode.S4, "coordinator_preflight", screen.error_message or "StewardDecision was not accepted by the coordinator", raw_output=raw_output)
-    return Evaluation(True, stage="coordinator", parsed=screen.parsed_decision, raw_output=raw_output, details={"operation_correct": screen.operation_correct, "identifier_correct": screen.identifier_correct})
+        return Evaluation(
+            False,
+            FailureCode.S4,
+            "coordinator_preflight",
+            screen.error_message or "StewardDecision was not accepted by the coordinator",
+            raw_output=raw_output,
+        )
+    return Evaluation(
+        True,
+        stage="coordinator",
+        parsed=screen.parsed_decision,
+        raw_output=raw_output,
+        details={"operation_correct": screen.operation_correct, "identifier_correct": screen.identifier_correct},
+    )
 
 
 def persist_evaluations(evaluations: list[Evaluation], destination: Any) -> Any:
@@ -141,6 +184,17 @@ def persist_evaluations(evaluations: list[Evaluation], destination: Any) -> Any:
 
     path = Path(destination)
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = [{"accepted": item.accepted, "code": item.code.value if item.code else None, "stage": item.stage, "message": item.message, "raw_output": item.raw_output, "state_mutated": item.state_mutated, "details": item.details} for item in evaluations]
+    payload = [
+        {
+            "accepted": item.accepted,
+            "code": item.code.value if item.code else None,
+            "stage": item.stage,
+            "message": item.message,
+            "raw_output": item.raw_output,
+            "state_mutated": item.state_mutated,
+            "details": item.details,
+        }
+        for item in evaluations
+    ]
     path.write_text(json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
     return path

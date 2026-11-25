@@ -7,7 +7,6 @@ import pytest
 from investigator.cycle import RequestEvidence
 from investigator.http_api import create_case, product_guide, reset_sample_case, sample_cases, seed_sample_case
 from investigator.graph import GraphNode, GraphNodeType
-from investigator.llm import ModelCallMetadata, ModelNativeCall, ModelTextBlock
 from investigator.models.evidence_request import EvidenceRequestStatus
 from investigator.services.evidence_requests import HumanEvidenceWorkflow
 from investigator.state import CaseRepository, CaseState
@@ -39,16 +38,24 @@ def make_case(tmp_path: Path, mode: str) -> HumanEvidenceWorkflow:
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / mode))
     state = CaseState(case_id="case-01", title="Test", reasoning_graph=None)
     state.reasoning_graph = __import__("investigator.graph", fromlist=["CaseGraph"]).CaseGraph(
-        case_id="case-01", nodes={"U1": GraphNode(id="U1", node_type=GraphNodeType.UNCERTAINTY, statement="Open")}, edges={}
+        case_id="case-01",
+        nodes={"U1": GraphNode(id="U1", node_type=GraphNodeType.UNCERTAINTY, statement="Open")},
+        edges={},
     )
     workflow.repository.save(state)
     return workflow
 
 
 def add_pending(workflow: HumanEvidenceWorkflow) -> None:
-    workflow.request_evidence("case-01", RequestEvidence(
-        target_uncertainty_id="U1", information_sought="More records", reason="Need context", expected_information_value="Could resolve uncertainty"
-    ))
+    workflow.request_evidence(
+        "case-01",
+        RequestEvidence(
+            target_uncertainty_id="U1",
+            information_sought="More records",
+            reason="Need context",
+            expected_information_value="Could resolve uncertainty",
+        ),
+    )
 
 
 def complete_callback(case_id: str, workflow: HumanEvidenceWorkflow) -> None:
@@ -107,10 +114,25 @@ def test_fixture_variants_are_runtime_visible_but_evaluator_material_is_not(tmp_
         assert set(state.subjects) == {"subject_A", "subject_B", "subject_C", "subject_D", "subject_E"}
         assert len(state.sources) == 14
         for subject_id in state.subjects:
-            assert sum(f"{subject_id.split('_')[-1]}_marker_report" in source.metadata.get("filename", "") for source in state.sources.values()) == 1
-            assert sum(f"{subject_id.split('_')[-1]}_invigilator_report" in source.metadata.get("filename", "") for source in state.sources.values()) == 1
+            assert (
+                sum(
+                    f"{subject_id.split('_')[-1]}_marker_report" in source.metadata.get("filename", "")
+                    for source in state.sources.values()
+                )
+                == 1
+            )
+            assert (
+                sum(
+                    f"{subject_id.split('_')[-1]}_invigilator_report" in source.metadata.get("filename", "")
+                    for source in state.sources.values()
+                )
+                == 1
+            )
             for source in state.sources.values():
-                if subject_id.split("_")[-1] in source.metadata.get("filename", "") and ("marker_report" in source.metadata.get("filename", "") or "invigilator_report" in source.metadata.get("filename", "")):
+                if subject_id.split("_")[-1] in source.metadata.get("filename", "") and (
+                    "marker_report" in source.metadata.get("filename", "")
+                    or "invigilator_report" in source.metadata.get("filename", "")
+                ):
                     assert source.metadata["assessment_scope"]["scope_type"] == "subject"
                     assert source.metadata["assessment_scope"]["subject_id"] == subject_id
         run_input_from_case_state(state, preset_for_case(state))
@@ -137,33 +159,97 @@ def test_vnext_activity_uses_current_product_language(tmp_path: Path) -> None:
     wait_for(workflow, "COMPLETED")
     summaries = [event["human_summary"].lower() for event in workflow.workspace_events("case-01")]
     assert "assessment started." in summaries
-    assert not any(term in summary for summary in summaries for term in ("steward", "autonomous investigation", "waiting for evidence", "failed turn", "resume"))
+    assert not any(
+        term in summary
+        for summary in summaries
+        for term in ("steward", "autonomous investigation", "waiting for evidence", "failed turn", "resume")
+    )
 
 
 def test_guidance_resolves_subject_and_material_names(tmp_path: Path) -> None:
     workflow = make_case(tmp_path, "vnext")
     state = workflow.ensure_case("case-01")
-    state.subjects = {"subject_A": __import__("investigator.models", fromlist=["AssessmentSubject"]).AssessmentSubject(subject_id="subject_A", display_name="Candidate A", candidate_number="BL-041")}
-    state.sources["S1"] = __import__("investigator.models", fromlist=["Source"]).Source(id="S1", name="Invigilator report", source_type="document", content="record")
+    state.subjects = {
+        "subject_A": __import__("investigator.models", fromlist=["AssessmentSubject"]).AssessmentSubject(
+            subject_id="subject_A", display_name="Candidate A", candidate_number="BL-041"
+        )
+    }
+    state.sources["S1"] = __import__("investigator.models", fromlist=["Source"]).Source(
+        id="S1", name="Invigilator report", source_type="document", content="record"
+    )
     workflow.repository.save(state)
     run_dir = tmp_path / "vnext" / "case-01" / "runs" / "run_000001"
     run_dir.mkdir(parents=True)
-    (run_dir / "run_result.json").write_text(json.dumps({"run_id": "run_000001", "vnext_status": "completed", "start_revision": 0, "vnext_result_path": str(run_dir / "vnext_result.json")}))
-    (run_dir / "vnext_result.json").write_text(json.dumps({"result": {"graph": {"nodes": {"node_abc123": {"statement": "Candidate A looked toward the adjacent seat.", "metadata": {"source_id": "S1"}}}}, "subject_assessments": [{"subject_id": "subject_A", "violation_assessments": [{"violation_id": "V1", "status": "supported", "reasoning_summary": "bounded", "supporting_node_ids": ["node_abc123"], "mitigating_node_ids": [], "unresolved_points": []}], "furthest_conclusion": {"statement": "bounded", "confidence": "low"}}]}}))
+    (run_dir / "run_result.json").write_text(
+        json.dumps(
+            {
+                "run_id": "run_000001",
+                "vnext_status": "completed",
+                "start_revision": 0,
+                "vnext_result_path": str(run_dir / "vnext_result.json"),
+            }
+        )
+    )
+    (run_dir / "vnext_result.json").write_text(
+        json.dumps(
+            {
+                "result": {
+                    "graph": {
+                        "nodes": {
+                            "node_abc123": {
+                                "statement": "Candidate A looked toward the adjacent seat.",
+                                "metadata": {"source_id": "S1"},
+                            }
+                        }
+                    },
+                    "subject_assessments": [
+                        {
+                            "subject_id": "subject_A",
+                            "violation_assessments": [
+                                {
+                                    "violation_id": "V1",
+                                    "status": "supported",
+                                    "reasoning_summary": "bounded",
+                                    "supporting_node_ids": ["node_abc123"],
+                                    "mitigating_node_ids": [],
+                                    "unresolved_points": [],
+                                }
+                            ],
+                            "furthest_conclusion": {"statement": "bounded", "confidence": "low"},
+                        }
+                    ],
+                }
+            }
+        )
+    )
     context = workflow.get_guidance_context("case-01")
     assessment = context["per_subject_assessments"][0]
     assert assessment["subject_display_name"] == "Candidate A"
     assert assessment["subject_candidate_number"] == "BL-041"
-    assert assessment["violation_assessments"][0]["supporting_material"][0]["statement"] == "Candidate A looked toward the adjacent seat."
+    assert (
+        assessment["violation_assessments"][0]["supporting_material"][0]["statement"]
+        == "Candidate A looked toward the adjacent seat."
+    )
     assert assessment["violation_assessments"][0]["supporting_material"][0]["source_labels"] == ["Invigilator report"]
 
 
 def test_case_creation_and_public_sample_catalog_are_minimal(tmp_path: Path) -> None:
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
-    workspace = create_case(workflow, {"title": "New review", "description": "Context", "assessment": {"title": "Assessment", "assessment_type": "closed notes"}})
+    workspace = create_case(
+        workflow,
+        {
+            "title": "New review",
+            "description": "Context",
+            "assessment": {"title": "Assessment", "assessment_type": "closed notes"},
+        },
+    )
     assert workspace["caseId"] == "case-000001"
     assert workspace["assessmentContext"]["title"] == "Assessment"
-    assert [item["title"] for item in sample_cases()] == ["Law Exam Investigation", "Multi-Candidate Collaboration Review — 5 Candidates", "Multi-Candidate Collaboration Review — 10 Candidates"]
+    assert [item["title"] for item in sample_cases()] == [
+        "Law Exam Investigation",
+        "Multi-Candidate Collaboration Review — 5 Candidates",
+        "Multi-Candidate Collaboration Review — 10 Candidates",
+    ]
     assert "evaluator_only" not in product_guide()
 
 
@@ -172,13 +258,19 @@ def test_public_samples_seed_real_visible_sources_without_hidden_material(tmp_pa
     law = seed_sample_case(workflow, "law-exam", "law-exam-working")
     multi = seed_sample_case(workflow, "multi-candidate", "multi-candidate-working")
     assert len(law["visibleSources"]) == 17
-    assert all("source" not in item["name"].lower() or "source 1" not in item["name"].lower() for item in multi["visibleSources"])
+    assert all(
+        "source" not in item["name"].lower() or "source 1" not in item["name"].lower()
+        for item in multi["visibleSources"]
+    )
     assert len(multi["visibleSources"]) == 14
     assert all("evaluator_only" not in item["content"] for item in multi["visibleSources"])
     scale = seed_sample_case(workflow, "multi-candidate-10", "multi-candidate-10-working")
     assert len(scale["visibleSources"]) == 24
     assert [item["display_name"] for item in scale["subjects"]] == [f"Candidate {letter}" for letter in "ABCDEFGHIJ"]
-    assert all("evaluator_only" not in source.content for source in workflow.repository.load("multi-candidate-10-working").sources.values())
+    assert all(
+        "evaluator_only" not in source.content
+        for source in workflow.repository.load("multi-candidate-10-working").sources.values()
+    )
 
 
 def test_ten_candidate_sample_opens_and_resets_as_a_clean_public_sample(tmp_path: Path) -> None:
@@ -193,26 +285,51 @@ def test_ten_candidate_sample_opens_and_resets_as_a_clean_public_sample(tmp_path
     clean = workflow.get_workspace(reset_case_id)
     assert len(clean["visibleSources"]) == 24
     assert clean["runs"] == []
-    assert all("evaluator_only" not in source.content for source in workflow.repository.load(reset_case_id).sources.values())
+    assert all(
+        "evaluator_only" not in source.content for source in workflow.repository.load(reset_case_id).sources.values()
+    )
 
 
 def test_public_sample_fixture_integrity() -> None:
     law_expected = {
-        "blank_tutorial.md", "student_script.md", "marker_report.md", "invigilator_report.md",
-        "assessment_rules.md", "course_materials.md", "prior_assessed_work.md", "student_support_session.md",
-        "assessment_logistics.md", "entry_permitted_items_record.md", "device_examination_report.md",
-        "smart_glasses_activity_record.md", "external_ai_service_record.md", "device_account_linkage_record.md",
-        "network_connectivity_record.md", "deterministic_timeline.md", "student_clarification_record.md",
+        "blank_tutorial.md",
+        "student_script.md",
+        "marker_report.md",
+        "invigilator_report.md",
+        "assessment_rules.md",
+        "course_materials.md",
+        "prior_assessed_work.md",
+        "student_support_session.md",
+        "assessment_logistics.md",
+        "entry_permitted_items_record.md",
+        "device_examination_report.md",
+        "smart_glasses_activity_record.md",
+        "external_ai_service_record.md",
+        "device_account_linkage_record.md",
+        "network_connectivity_record.md",
+        "deterministic_timeline.md",
+        "student_clarification_record.md",
     }
     law_root = Path("src/investigator/public_samples/law_exam/sources")
     assert {path.name for path in law_root.glob("*.md")} == law_expected
-    assert not any((law_root / name).exists() for name in ("case_context_note.txt", "assessment_rule_clarification.txt", "student_b_witness_statement.md", "observation_timing_record.md"))
+    assert not any(
+        (law_root / name).exists()
+        for name in (
+            "case_context_note.txt",
+            "assessment_rule_clarification.txt",
+            "student_b_witness_statement.md",
+            "observation_timing_record.md",
+        )
+    )
 
     multi_root = Path("src/investigator/public_samples/multi_candidate/sources")
     multi_files = {path.name for path in multi_root.glob("*.md")}
     assert len(multi_files) == 14
     assert all("source 1" not in path.lower() and "source 2" not in path.lower() for path in multi_files)
-    assert all("visible sample source material" not in path.read_text(encoding="utf-8").lower() for path in multi_root.glob("*.md"))
+    assert all(
+        "visible sample source material" not in path.read_text(encoding="utf-8").lower()
+        for path in multi_root.glob("*.md")
+    )
     assert not any("evaluator_only" in path.parts for path in multi_root.rglob("*"))
 
 
@@ -246,12 +363,24 @@ def test_student_identity_is_explicit_and_samples_keep_their_configuration(tmp_p
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     user = create_case(workflow, {"title": "Explicit students"})
     before = workflow.ensure_case(user["caseId"])
-    workflow.add_direct_source(user["caseId"], display_name="Evidence", content="Candidate A appears in prose", source_type="document", expected_case_revision=before.revision)
+    workflow.add_direct_source(
+        user["caseId"],
+        display_name="Evidence",
+        content="Candidate A appears in prose",
+        source_type="document",
+        expected_case_revision=before.revision,
+    )
     assert [item.display_name for item in workflow.ensure_case(user["caseId"]).subjects.values()] == ["Student 1"]
     law = seed_sample_case(workflow, "law-exam", "law-exam-working")
     multi = seed_sample_case(workflow, "multi-candidate", "multi-candidate-working")
     assert [item["display_name"] for item in law["subjects"]] == ["Candidate A"]
-    assert [item["display_name"] for item in multi["subjects"]] == ["Candidate A", "Candidate B", "Candidate C", "Candidate D", "Candidate E"]
+    assert [item["display_name"] for item in multi["subjects"]] == [
+        "Candidate A",
+        "Candidate B",
+        "Candidate C",
+        "Candidate D",
+        "Candidate E",
+    ]
 
 
 def test_onboarding_and_case_selection_contract() -> None:

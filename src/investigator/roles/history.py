@@ -29,7 +29,12 @@ class GraphHistory(BaseModel):
         return self.snapshots[-2]
 
     def append(self, graph: CaseGraph, focus: InvestigationFocus, reason: str = "") -> GraphSnapshot:
-        snapshot = GraphSnapshot(version=len(self.snapshots), graph=graph.model_copy(deep=True), focus=focus.model_copy(deep=True), mutation_reason=reason)
+        snapshot = GraphSnapshot(
+            version=len(self.snapshots),
+            graph=graph.model_copy(deep=True),
+            focus=focus.model_copy(deep=True),
+            mutation_reason=reason,
+        )
         self.snapshots.append(snapshot)
         return snapshot
 

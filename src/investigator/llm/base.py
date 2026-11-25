@@ -59,6 +59,7 @@ class ModelToolUse(BaseModel):
 
 class ModelNativeCall(BaseModel):
     """Provider-neutral conversational response after adapter translation."""
+
     text_blocks: list[ModelTextBlock] = Field(default_factory=list)
     tool_uses: list[ModelToolUse] = Field(default_factory=list)
     metadata: ModelCallMetadata
@@ -81,6 +82,4 @@ def parse_model_output(raw_output: Any, output_schema: type[T]) -> T:
             raw_output = json.loads(normalize_json_text(raw_output))
         return output_schema.model_validate(raw_output)
     except Exception as exc:
-        raise ModelParseError(
-            f"Could not parse model output as {output_schema.__name__}: {exc}"
-        ) from exc
+        raise ModelParseError(f"Could not parse model output as {output_schema.__name__}: {exc}") from exc

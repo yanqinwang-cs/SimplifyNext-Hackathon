@@ -10,7 +10,9 @@ def _disclosed_implementation_path(path: str) -> bool:
     """Treat self-reported implementation/test paths as contamination evidence."""
     normalized = path.replace("\\", "/").lower().strip("/")
     parts = set(normalized.split("/"))
-    return bool(parts & {"src", "tests", "test", ".git", "implementation", "contract_assurance", "results"}) or normalized in {"repo", "repository", "worktree"}
+    return bool(
+        parts & {"src", "tests", "test", ".git", "implementation", "contract_assurance", "results"}
+    ) or normalized in {"repo", "repository", "worktree"}
 
 
 @dataclass(frozen=True)
@@ -27,7 +29,13 @@ class BlindBatchAudit:
     @property
     def qualifies_as_blind(self) -> bool:
         disclosed_paths = tuple(path for path in self.provided_files if _disclosed_implementation_path(path))
-        return self.repository_access_disabled and not self.implementation_access_available and not self.contamination_risks and not disclosed_paths and bool(self.isolation_evidence)
+        return (
+            self.repository_access_disabled
+            and not self.implementation_access_available
+            and not self.contamination_risks
+            and not disclosed_paths
+            and bool(self.isolation_evidence)
+        )
 
     def manifest(self) -> dict[str, Any]:
         return {**asdict(self), "qualifies_as_blind": self.qualifies_as_blind}

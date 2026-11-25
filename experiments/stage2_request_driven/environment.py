@@ -1,4 +1,5 @@
 """Controlled human-response environment; hidden matching is audit-only."""
+
 from dataclasses import dataclass
 from typing import Any
 
@@ -32,17 +33,58 @@ class ControlledEvidenceEnvironment:
 
     def respond(self, case_id: str, request: Any) -> Fulfilment:
         visible_sources = self.visible_sources(case_id)
-        visible_check = self.matcher.visible_match(request.information_sought, [(source.name, source.content) for source in visible_sources])
+        visible_check = self.matcher.visible_match(
+            request.information_sought, [(source.name, source.content) for source in visible_sources]
+        )
         if visible_check.answerable:
-            note = "Responsive information is already present in current case sources. No additional source was released."
-            self.workflow.respond(case_id, request.request_id, EvidenceRequestResponse(request_id=request.request_id, status="unavailable", note=note))
-            return Fulfilment(request.request_id, "no_new_source", None, MatchResult(None, "none", "Hidden matcher was not invoked after visible-source match."), note, "unavailable", visible_check)
+            note = (
+                "Responsive information is already present in current case sources. No additional source was released."
+            )
+            self.workflow.respond(
+                case_id,
+                request.request_id,
+                EvidenceRequestResponse(request_id=request.request_id, status="unavailable", note=note),
+            )
+            return Fulfilment(
+                request.request_id,
+                "no_new_source",
+                None,
+                MatchResult(None, "none", "Hidden matcher was not invoked after visible-source match."),
+                note,
+                "unavailable",
+                visible_check,
+            )
         match = self.matcher.match(request.information_sought, self.released)
         if match.fixture is None:
             note = "The requested material is unavailable; this is not evidence of absence."
-            self.workflow.respond(case_id, request.request_id, EvidenceRequestResponse(request_id=request.request_id, status="unavailable", note=note))
+            self.workflow.respond(
+                case_id,
+                request.request_id,
+                EvidenceRequestResponse(request_id=request.request_id, status="unavailable", note=note),
+            )
             return Fulfilment(request.request_id, "unavailable", None, match, note, "unavailable", visible_check)
         fixture = match.fixture
-        completed = self.workflow.respond(case_id, request.request_id, EvidenceRequestResponse(request_id=request.request_id, status="fulfilled", note="Controlled fixture supplied."), [{"display_name": fixture.filename, "content": fixture.content, "metadata": {"controlled_fixture": True, "fixture_key": fixture.key}}])
+        completed = self.workflow.respond(
+            case_id,
+            request.request_id,
+            EvidenceRequestResponse(
+                request_id=request.request_id, status="fulfilled", note="Controlled fixture supplied."
+            ),
+            [
+                {
+                    "display_name": fixture.filename,
+                    "content": fixture.content,
+                    "metadata": {"controlled_fixture": True, "fixture_key": fixture.key},
+                }
+            ],
+        )
         self.released.add(fixture.key)
-        return Fulfilment(request.request_id, "fulfilled", completed.released_source_ids[0], match, "Supplied as a raw source; no graph evidence was created automatically.", "fulfilled", visible_check)
+        return Fulfilment(
+            request.request_id,
+            "fulfilled",
+            completed.released_source_ids[0],
+            match,
+            "Supplied as a raw source; no graph evidence was created automatically.",
+            "fulfilled",
+            visible_check,
+        )

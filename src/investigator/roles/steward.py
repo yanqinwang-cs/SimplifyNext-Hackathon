@@ -99,14 +99,29 @@ class StewardRequestInformationDecision(BaseModel):
 
 
 StewardDecision: TypeAlias = Annotated[
-    KeepFocusDecision | ShiftFocusDecision | GeneralizeDecision | ArchiveDecision | ReactivateDecision | StopUnresolvedDecision | StewardRequestOpenDecision | StewardRequestEvidenceDecision,
+    KeepFocusDecision
+    | ShiftFocusDecision
+    | GeneralizeDecision
+    | ArchiveDecision
+    | ReactivateDecision
+    | StopUnresolvedDecision
+    | StewardRequestOpenDecision
+    | StewardRequestEvidenceDecision,
     Field(discriminator="operation"),
 ]
 
 # Production may use the common request contract without changing the frozen
 # StewardDecision schema consumed by experiment assurance snapshots.
 ProductionStewardDecision: TypeAlias = Annotated[
-    KeepFocusDecision | ShiftFocusDecision | GeneralizeDecision | ArchiveDecision | ReactivateDecision | StopUnresolvedDecision | StewardRequestInformationDecision | StewardRequestOpenDecision | StewardRequestEvidenceDecision,
+    KeepFocusDecision
+    | ShiftFocusDecision
+    | GeneralizeDecision
+    | ArchiveDecision
+    | ReactivateDecision
+    | StopUnresolvedDecision
+    | StewardRequestInformationDecision
+    | StewardRequestOpenDecision
+    | StewardRequestEvidenceDecision,
     Field(discriminator="operation"),
 ]
 
@@ -137,14 +152,18 @@ def render_production_steward_contract() -> str:
         if operation in {"request_open", "request_evidence"}:
             continue
         required = [name for name, field in branch.model_fields.items() if name != "operation" and field.is_required()]
-        optional = [name for name, field in branch.model_fields.items() if name != "operation" and not field.is_required()]
+        optional = [
+            name for name, field in branch.model_fields.items() if name != "operation" and not field.is_required()
+        ]
         line = f'- "{operation}": required [{", ".join(required)}]'
         if optional:
-            line += f'; optional [{", ".join(optional)}]'
+            line += f"; optional [{', '.join(optional)}]"
         lines.append(line)
-    lines.extend([
-        "Example valid stop_unresolved response:",
-        '{"operation":"stop_unresolved","assessment":"The useful investigative frontier has been exhausted.","reason":"No materially useful enquiry remains based on the current case state.","important_unresolved_ids":["<valid unresolved id>"],"reopening_conditions":"New material evidence or corrected case information."}',
-        'A response such as {"decision":"stop_unresolved",...} is INVALID.',
-    ])
+    lines.extend(
+        [
+            "Example valid stop_unresolved response:",
+            '{"operation":"stop_unresolved","assessment":"The useful investigative frontier has been exhausted.","reason":"No materially useful enquiry remains based on the current case state.","important_unresolved_ids":["<valid unresolved id>"],"reopening_conditions":"New material evidence or corrected case information."}',
+            'A response such as {"decision":"stop_unresolved",...} is INVALID.',
+        ]
+    )
     return "\n".join(lines)

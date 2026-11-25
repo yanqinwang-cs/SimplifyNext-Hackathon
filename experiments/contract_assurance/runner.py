@@ -1,16 +1,30 @@
 """Run the deterministic assurance slice; no network or model calls."""
 
 import json
+import tempfile
 from pathlib import Path
 from typing import Any
 
 from .evaluate import evaluate_initial, evaluate_next_action, evaluate_raw, evaluate_revision, evaluate_steward
-from .inventory import assert_complete_inventory, assert_dynamic_structured_boundaries, assert_inventory_paths, inventory
+from .inventory import (
+    assert_complete_inventory,
+    assert_dynamic_structured_boundaries,
+    assert_inventory_paths,
+    inventory,
+)
 from .lint import lint_contract
 from .snapshot import fingerprint, verify_snapshot_against_contract
 from .mutations import deduplicate, mutations, write_fixture_manifest
 from .registry import contract_registry
-from .report import coverage_ledger, deterministic_correctness, deterministic_correctness_by_contract, failure_rate_statistics, summarize, summarize_by_contract, write_history
+from .report import (
+    coverage_ledger,
+    deterministic_correctness,
+    deterministic_correctness_by_contract,
+    failure_rate_statistics,
+    summarize,
+    summarize_by_contract,
+    write_history,
+)
 
 
 def run_deterministic(
@@ -30,12 +44,15 @@ def run_deterministic(
     if prompt_lint["issues"]:
         raise ValueError("Prompt/schema/template lint failed: " + "; ".join(prompt_lint["issues"]))
     results = []
-    fixture_dir = root / "experiments/contract_assurance/fixtures"
+    # Manifests are scratch output: the committed fixtures stay untouched by a run.
+    fixture_scratch = tempfile.TemporaryDirectory(prefix="contract-fixtures-")
+    fixture_dir = Path(fixture_scratch.name)
     revision_state = _revision_state(root)
     environment = _case1_environment(root)
     steward_scenario = None
     if "StewardDecisionResponse" in contract_registry():
         from experiments.steward_screen.scenarios import all_scenarios
+
         steward_scenario = all_scenarios()[0]
     for name, spec in contract_registry().items():
         sample = _sample_for(spec.schema)
@@ -49,33 +66,90 @@ def run_deterministic(
             elif name == "RevisionResponse":
                 result = evaluate_revision(mutation.raw_output, revision_state)
             elif name == "InitialResponse":
-                result = evaluate_initial(mutation.raw_output, schema=spec.schema, build_state=environment.build_initial_state, available_action_ids={"A1"})
+                result = evaluate_initial(
+                    mutation.raw_output,
+                    schema=spec.schema,
+                    build_state=environment.build_initial_state,
+                    available_action_ids={"A1"},
+                )
             elif name == "InitialExpansionResponse":
                 result = evaluate_initial(
                     mutation.raw_output,
                     schema=spec.schema,
-                    build_state=lambda response: environment.build_seeded_initial_state("A human-seeded explanation.", response),
+                    build_state=lambda response: environment.build_seeded_initial_state(
+                        "A human-seeded explanation.", response
+                    ),
                     available_action_ids={"A1"},
                 )
             elif name == "StewardDecisionResponse":
                 result = evaluate_steward(mutation.raw_output, scenario=steward_scenario)
             else:
                 result = evaluate_raw(mutation.raw_output, spec.schema)
-            result.details.update({"contract": name, "mutation": mutation.name, "intended_code": mutation.intended_code})
+            result.details.update(
+                {"contract": name, "mutation": mutation.name, "intended_code": mutation.intended_code}
+            )
             results.append(result)
         if name == "StewardDecisionResponse":
             for scenario in _steward_scenarios():
-                result = evaluate_steward(json.dumps(_steward_decision_payload(scenario), sort_keys=True), scenario=scenario)
-                result.details.update({"contract": name, "mutation": f"canonical_scenario_{scenario.scenario_id}", "intended_code": "valid"})
+                result = evaluate_steward(
+                    json.dumps(_steward_decision_payload(scenario), sort_keys=True), scenario=scenario
+                )
+                result.details.update(
+                    {
+                        "contract": name,
+                        "mutation": f"canonical_scenario_{scenario.scenario_id}",
+                        "intended_code": "valid",
+                    }
+                )
                 results.append(result)
+    fixture_scratch.cleanup()
     summary = summarize(results)
-    summary["unexpected_accepts"] = sum(item.accepted and item.details.get("intended_code") != "valid" for item in results)
-    summary["unexpected_rejects"] = sum((not item.accepted) and item.details.get("intended_code") == "valid" for item in results)
+    summary["unexpected_accepts"] = sum(
+        item.accepted and item.details.get("intended_code") != "valid" for item in results
+    )
+    summary["unexpected_rejects"] = sum(
+        (not item.accepted) and item.details.get("intended_code") == "valid" for item in results
+    )
     blind = blind_compliance_summary(root, results_root=blind_results_root)
-    limitations = ["S6 reasoning and semantic quality are not assessed by deterministic schema assurance.", "SmokeResponse is schema-sampled offline; its live Bedrock path is excluded from this offline cycle."]
-    report = {"inventory": inventory(root, commit), "prompt_lint": prompt_lint, "deterministic": summary, "deterministic_failure_rate": failure_rate_statistics(results), "deterministic_correctness": deterministic_correctness(results), "deterministic_correctness_by_contract": deterministic_correctness_by_contract(results), "deterministic_by_contract": summarize_by_contract(results), "coverage_ledger": coverage_ledger(results), "blind_results_included": False, "blind_compliance": blind, "human_review_required": summary.get("s5_candidates", 0) > 0, "semantic_limitations": limitations, "changes_made": ["Deterministic fixtures evaluated through registered production-path adapters.", "Registered prompt/schema/template lint runs as a deterministic gate.", "Qualified blind manifests and output metrics aggregated without admitting NOT_BLIND results."], "regressions": {"unexpected_accepts": summary["unexpected_accepts"], "unexpected_rejects": summary["unexpected_rejects"], "status": "clean" if not summary["unexpected_accepts"] and not summary["unexpected_rejects"] else "regressions detected"}, "remaining_risks": ["S6 reasoning and semantic quality require a separate semantic checker.", "SmokeResponse live Bedrock execution remains excluded by the no-AWS constraint.", "Historical NOT_BLIND batches remain excluded from blind compliance statistics."]}
+    limitations = [
+        "S6 reasoning and semantic quality are not assessed by deterministic schema assurance.",
+        "SmokeResponse is schema-sampled offline; its live Bedrock path is excluded from this offline cycle.",
+    ]
+    report = {
+        "inventory": inventory(root, commit),
+        "prompt_lint": prompt_lint,
+        "deterministic": summary,
+        "deterministic_failure_rate": failure_rate_statistics(results),
+        "deterministic_correctness": deterministic_correctness(results),
+        "deterministic_correctness_by_contract": deterministic_correctness_by_contract(results),
+        "deterministic_by_contract": summarize_by_contract(results),
+        "coverage_ledger": coverage_ledger(results),
+        "blind_results_included": False,
+        "blind_compliance": blind,
+        "human_review_required": summary.get("s5_candidates", 0) > 0,
+        "semantic_limitations": limitations,
+        "changes_made": [
+            "Deterministic fixtures evaluated through registered production-path adapters.",
+            "Registered prompt/schema/template lint runs as a deterministic gate.",
+            "Qualified blind manifests and output metrics aggregated without admitting NOT_BLIND results.",
+        ],
+        "regressions": {
+            "unexpected_accepts": summary["unexpected_accepts"],
+            "unexpected_rejects": summary["unexpected_rejects"],
+            "status": "clean"
+            if not summary["unexpected_accepts"] and not summary["unexpected_rejects"]
+            else "regressions detected",
+        },
+        "remaining_risks": [
+            "S6 reasoning and semantic quality require a separate semantic checker.",
+            "SmokeResponse live Bedrock execution remains excluded by the no-AWS constraint.",
+            "Historical NOT_BLIND batches remain excluded from blind compliance statistics.",
+        ],
+    }
     write_history(output_dir, report)
-    (output_dir / "inventory.json").write_text(json.dumps(report["inventory"], indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
+    (output_dir / "inventory.json").write_text(
+        json.dumps(report["inventory"], indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8"
+    )
     return report
 
 
@@ -83,7 +157,9 @@ def _lint_registered_prompts(root: Path) -> dict[str, Any]:
     issues: list[str] = []
     fixture_dir = root / "experiments/contract_assurance/fixtures"
     for name, spec in contract_registry().items():
-        prompt = "\n".join((root / source).read_text(encoding="utf-8") for source in spec.prompt_sources if (root / source).is_file())
+        prompt = "\n".join(
+            (root / source).read_text(encoding="utf-8") for source in spec.prompt_sources if (root / source).is_file()
+        )
         template = None
         fixture_path = fixture_dir / f"{name}.json"
         if fixture_path.is_file():
@@ -102,9 +178,26 @@ def blind_compliance_summary(root: Path, *, results_root: Path | None = None) ->
     excluded = 0
     qualified = 0
     qualified_evaluations = qualified_accepted = qualified_rejected = 0
-    qualified_output_metrics = {"outputs": 0, "placeholder_copy": 0, "fence_usage": 0, "total_output_chars": 0, "average_output_chars": 0.0}
+    qualified_output_metrics = {
+        "outputs": 0,
+        "placeholder_copy": 0,
+        "fence_usage": 0,
+        "total_output_chars": 0,
+        "average_output_chars": 0.0,
+    }
     adversary_resistance = {"evaluations": 0, "correctly_rejected": 0, "accepted_outputs_semantics_unassessed": 0}
-    role_template = {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "recorded_evaluations": 0, "recorded_accepted": 0, "recorded_rejected": 0, "evaluations": 0, "accepted": 0, "rejected": 0, "failure_codes": {}}
+    role_template = {
+        "batches": 0,
+        "qualified": 0,
+        "excluded_not_blind": 0,
+        "recorded_evaluations": 0,
+        "recorded_accepted": 0,
+        "recorded_rejected": 0,
+        "evaluations": 0,
+        "accepted": 0,
+        "rejected": 0,
+        "failure_codes": {},
+    }
     by_role = {"producer": {**role_template, "failure_codes": {}}, "adversary": {**role_template, "failure_codes": {}}}
     by_contract: dict[str, dict[str, int]] = {}
     by_contract_role: dict[str, dict[str, dict[str, int]]] = {}
@@ -136,15 +229,36 @@ def blind_compliance_summary(root: Path, *, results_root: Path | None = None) ->
                 continue
             package_path = root / "experiments/contract_assurance/blind/packages" / f"{audit.get('contract', '')}.json"
             try:
-                package_hash_matches &= fingerprint(json.loads(package_path.read_text(encoding="utf-8"))) == recorded_hash
+                package_hash_matches &= (
+                    fingerprint(json.loads(package_path.read_text(encoding="utf-8"))) == recorded_hash
+                )
             except (OSError, json.JSONDecodeError):
                 package_hash_matches = False
-        is_qualified = status == "BLIND" and all(bool(item.get("qualifies_as_blind")) for item in audits) and evaluation_count_matches and package_hash_matches
+        is_qualified = (
+            status == "BLIND"
+            and all(bool(item.get("qualifies_as_blind")) for item in audits)
+            and evaluation_count_matches
+            and package_hash_matches
+        )
         qualified += int(is_qualified)
         excluded += int(not is_qualified)
         contracts = {str(item.get("contract", "unknown")) for item in audits}
         for contract in contracts:
-            stats = by_contract.setdefault(contract, {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "recorded_evaluations": 0, "recorded_accepted": 0, "recorded_rejected": 0, "evaluations": 0, "accepted": 0, "rejected": 0, "failure_codes": {}})
+            stats = by_contract.setdefault(
+                contract,
+                {
+                    "batches": 0,
+                    "qualified": 0,
+                    "excluded_not_blind": 0,
+                    "recorded_evaluations": 0,
+                    "recorded_accepted": 0,
+                    "recorded_rejected": 0,
+                    "evaluations": 0,
+                    "accepted": 0,
+                    "rejected": 0,
+                    "failure_codes": {},
+                },
+            )
             stats["batches"] += 1
             stats["qualified"] += int(is_qualified)
             stats["excluded_not_blind"] += int(not is_qualified)
@@ -153,7 +267,17 @@ def blind_compliance_summary(root: Path, *, results_root: Path | None = None) ->
             role = "adversary" if "adversary" in worker_id else "producer" if "producer" in worker_id else None
             if role:
                 item_contract = str(item.get("contract", "unknown"))
-                contract_role = by_contract_role.setdefault(item_contract, {}).setdefault(role, {"batches": 0, "qualified": 0, "excluded_not_blind": 0, "evaluations": 0, "accepted": 0, "rejected": 0})
+                contract_role = by_contract_role.setdefault(item_contract, {}).setdefault(
+                    role,
+                    {
+                        "batches": 0,
+                        "qualified": 0,
+                        "excluded_not_blind": 0,
+                        "evaluations": 0,
+                        "accepted": 0,
+                        "rejected": 0,
+                    },
+                )
                 contract_role["batches"] += 1
                 contract_role["qualified"] += int(is_qualified)
                 contract_role["excluded_not_blind"] += int(not is_qualified)
@@ -162,8 +286,12 @@ def blind_compliance_summary(root: Path, *, results_root: Path | None = None) ->
                 by_role[role]["excluded_not_blind"] += int(not is_qualified)
                 evaluations = batch_evaluations if isinstance(batch_evaluations, list) else []
                 if isinstance(evaluations, list):
-                    recorded_accepted = sum(bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
-                    recorded_rejected = sum(not bool(item.get("accepted")) for item in evaluations if isinstance(item, dict))
+                    recorded_accepted = sum(
+                        bool(item.get("accepted")) for item in evaluations if isinstance(item, dict)
+                    )
+                    recorded_rejected = sum(
+                        not bool(item.get("accepted")) for item in evaluations if isinstance(item, dict)
+                    )
                     by_role[role]["recorded_evaluations"] += len(evaluations)
                     by_role[role]["recorded_accepted"] += recorded_accepted
                     by_role[role]["recorded_rejected"] += recorded_rejected
@@ -180,12 +308,18 @@ def blind_compliance_summary(root: Path, *, results_root: Path | None = None) ->
                                 qualified_output_metrics["placeholder_copy"] += int("REPLACE_WITH_" in raw_text)
                                 qualified_output_metrics["fence_usage"] += int("```" in raw_text)
                                 qualified_output_metrics["total_output_chars"] += len(raw_text)
-                        codes = {str(item.get("code")) for item in evaluations if isinstance(item, dict) and item.get("code")}
+                        codes = {
+                            str(item.get("code")) for item in evaluations if isinstance(item, dict) and item.get("code")
+                        }
                         for code in sorted(codes):
-                            count = sum(1 for item in evaluations if isinstance(item, dict) and item.get("code") == code)
+                            count = sum(
+                                1 for item in evaluations if isinstance(item, dict) and item.get("code") == code
+                            )
                             by_role[role]["failure_codes"][code] = by_role[role]["failure_codes"].get(code, 0) + count
                             for contract in contracts:
-                                by_contract[contract]["failure_codes"][code] = by_contract[contract]["failure_codes"].get(code, 0) + count
+                                by_contract[contract]["failure_codes"][code] = (
+                                    by_contract[contract]["failure_codes"].get(code, 0) + count
+                                )
                         by_role[role]["evaluations"] += len(evaluations)
                         by_role[role]["accepted"] += recorded_accepted
                         by_role[role]["rejected"] += recorded_rejected
@@ -203,10 +337,36 @@ def blind_compliance_summary(root: Path, *, results_root: Path | None = None) ->
                             contract_role["evaluations"] += len(evaluations)
                             contract_role["accepted"] += recorded_accepted
                             contract_role["rejected"] += recorded_rejected
-    qualified_output_metrics["average_output_chars"] = qualified_output_metrics["total_output_chars"] / qualified_output_metrics["outputs"] if qualified_output_metrics["outputs"] else 0.0
-    qualified_failure_codes = {code: sum(data["failure_codes"].get(code, 0) for data in by_role.values()) for code in sorted({code for data in by_role.values() for code in data["failure_codes"]})}
-    coverage_gaps = sorted(contract for contract in contract_registry() if by_contract.get(contract, {}).get("qualified", 0) == 0)
-    return {"status": "BLIND" if batches and qualified == batches else "NOT_BLIND", "batches": batches, "qualified_batches": qualified, "excluded_not_blind": excluded, "qualified_evaluations": qualified_evaluations, "qualified_accepted": qualified_accepted, "qualified_rejected": qualified_rejected, "qualified_failure_codes": qualified_failure_codes, "qualified_output_metrics": qualified_output_metrics, "adversary_resistance": adversary_resistance, "coverage_gaps": coverage_gaps, "by_role": by_role, "by_contract": dict(sorted(by_contract.items())), "by_contract_role": {contract: dict(sorted(roles.items())) for contract, roles in sorted(by_contract_role.items())}}
+    qualified_output_metrics["average_output_chars"] = (
+        qualified_output_metrics["total_output_chars"] / qualified_output_metrics["outputs"]
+        if qualified_output_metrics["outputs"]
+        else 0.0
+    )
+    qualified_failure_codes = {
+        code: sum(data["failure_codes"].get(code, 0) for data in by_role.values())
+        for code in sorted({code for data in by_role.values() for code in data["failure_codes"]})
+    }
+    coverage_gaps = sorted(
+        contract for contract in contract_registry() if by_contract.get(contract, {}).get("qualified", 0) == 0
+    )
+    return {
+        "status": "BLIND" if batches and qualified == batches else "NOT_BLIND",
+        "batches": batches,
+        "qualified_batches": qualified,
+        "excluded_not_blind": excluded,
+        "qualified_evaluations": qualified_evaluations,
+        "qualified_accepted": qualified_accepted,
+        "qualified_rejected": qualified_rejected,
+        "qualified_failure_codes": qualified_failure_codes,
+        "qualified_output_metrics": qualified_output_metrics,
+        "adversary_resistance": adversary_resistance,
+        "coverage_gaps": coverage_gaps,
+        "by_role": by_role,
+        "by_contract": dict(sorted(by_contract.items())),
+        "by_contract_role": {
+            contract: dict(sorted(roles.items())) for contract, roles in sorted(by_contract_role.items())
+        },
+    }
 
 
 def _revision_state(root: Path) -> Any:
@@ -231,7 +391,11 @@ def _steward_scenarios() -> list[Any]:
 
 
 def _steward_decision_payload(scenario: Any) -> dict[str, Any]:
-    payload: dict[str, Any] = {"assessment": "The state supports this case-management decision.", "reason": "The structural view supports it.", "operation": scenario.expected_operation}
+    payload: dict[str, Any] = {
+        "assessment": "The state supports this case-management decision.",
+        "reason": "The structural view supports it.",
+        "operation": scenario.expected_operation,
+    }
     if scenario.expected_target_node_id:
         payload["target_node_id"] = scenario.expected_target_node_id
     if scenario.expected_destination_node_id:
@@ -259,7 +423,10 @@ def verify_committed_packages(root: Path) -> list[str]:
             issues.append(f"{path.name}: unknown contract")
             continue
         issues.extend(f"{path.name}: {issue}" for issue in verify_snapshot_against_contract(payload, spec))
-        issues.extend(f"{path.name}: {issue.message}" for issue in lint_contract(spec, prompt=payload.get("prompt", ""), template=payload.get("template")))
+        issues.extend(
+            f"{path.name}: {issue.message}"
+            for issue in lint_contract(spec, prompt=payload.get("prompt", ""), template=payload.get("template"))
+        )
     return issues
 
 
@@ -267,21 +434,108 @@ def _sample_for(schema: type[Any]) -> dict[str, Any] | None:
     if schema.__name__ == "SmokeResponse":
         return {"answer": "4"}
     if schema.__name__ == "NextStepResponse":
-        return {"step_type": "action", "selected_action_id": "A1", "target_uncertainty": "An open question.", "expected_information_value": "The result can distinguish explanations.", "why_this_action_now": "This enquiry is available now.", "conclusion_hypothesis_id": None, "conclusion_reason": None, "remaining_uncertainty_ids": []}
+        return {
+            "step_type": "action",
+            "selected_action_id": "A1",
+            "target_uncertainty": "An open question.",
+            "expected_information_value": "The result can distinguish explanations.",
+            "why_this_action_now": "This enquiry is available now.",
+            "conclusion_hypothesis_id": None,
+            "conclusion_reason": None,
+            "remaining_uncertainty_ids": [],
+        }
     if schema.__name__ == "StewardDecisionResponse":
-        return {"operation": "keep_focus", "assessment": "The current focus remains useful.", "reason": "The supplied frontier evidence supports retaining focus."}
+        return {
+            "operation": "keep_focus",
+            "assessment": "The current focus remains useful.",
+            "reason": "The supplied frontier evidence supports retaining focus.",
+        }
     if schema.__name__ == "InvestigatorUpdateResponse":
-        return {"operation": "add_hypothesis", "node_id": "H3", "statement": "A local possibility.", "reason": "It is a useful local hypothesis."}
+        return {
+            "operation": "add_hypothesis",
+            "node_id": "H3",
+            "statement": "A local possibility.",
+            "reason": "It is a useful local hypothesis.",
+        }
     if schema.__name__ == "InvestigatorTurnResponse":
-        return {"graph_updates": [{"operation": "add_hypothesis", "node_id": "H3", "statement": "A local possibility.", "reason": "It is a useful local hypothesis."}], "next_step": {"type": "continue_local", "reason": "Another bounded local step is useful."}}
+        return {
+            "graph_updates": [
+                {
+                    "operation": "add_hypothesis",
+                    "node_id": "H3",
+                    "statement": "A local possibility.",
+                    "reason": "It is a useful local hypothesis.",
+                }
+            ],
+            "next_step": {"type": "continue_local", "reason": "Another bounded local step is useful."},
+        }
     if schema.__name__ == "InitialResponse":
-        return {"hypotheses": [{"id": "H1", "parent_id": None, "statement": "A broad explanation.", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["What evidence would distinguish alternatives?"], "specificity_basis_evidence_ids": []}], "selected_action_id": "A1", "target_uncertainty": "Whether the claimed event occurred.", "expected_information_value": "The result can distinguish explanations.", "why_this_action_now": "This enquiry is available and relevant."}
+        return {
+            "hypotheses": [
+                {
+                    "id": "H1",
+                    "parent_id": None,
+                    "statement": "A broad explanation.",
+                    "status": "active",
+                    "supported_by": ["E1"],
+                    "conflicted_by": [],
+                    "unresolved": ["What evidence would distinguish alternatives?"],
+                    "specificity_basis_evidence_ids": [],
+                }
+            ],
+            "selected_action_id": "A1",
+            "target_uncertainty": "Whether the claimed event occurred.",
+            "expected_information_value": "The result can distinguish explanations.",
+            "why_this_action_now": "This enquiry is available and relevant.",
+        }
     if schema.__name__ == "InitialExpansionResponse":
-        return {"seed_analysis": {"supported_by": ["E1"], "conflicted_by": [], "unresolved": ["What remains uncertain?"], "specificity_basis_evidence_ids": []}, "competing_hypotheses": [{"id": "H2", "parent_id": None, "statement": "A materially different explanation.", "status": "active", "supported_by": ["E2"], "conflicted_by": [], "unresolved": ["Which account is better supported?"], "specificity_basis_evidence_ids": [], "relationship": "competing_root", "contrasted_hypothesis_id": "H1", "material_difference": "It proposes a different cause."}], "selected_action_id": "A1", "target_uncertainty": "Whether the claimed event occurred.", "expected_information_value": "The result can distinguish explanations.", "why_this_action_now": "This enquiry is available and relevant."}
+        return {
+            "seed_analysis": {
+                "supported_by": ["E1"],
+                "conflicted_by": [],
+                "unresolved": ["What remains uncertain?"],
+                "specificity_basis_evidence_ids": [],
+            },
+            "competing_hypotheses": [
+                {
+                    "id": "H2",
+                    "parent_id": None,
+                    "statement": "A materially different explanation.",
+                    "status": "active",
+                    "supported_by": ["E2"],
+                    "conflicted_by": [],
+                    "unresolved": ["Which account is better supported?"],
+                    "specificity_basis_evidence_ids": [],
+                    "relationship": "competing_root",
+                    "contrasted_hypothesis_id": "H1",
+                    "material_difference": "It proposes a different cause.",
+                }
+            ],
+            "selected_action_id": "A1",
+            "target_uncertainty": "Whether the claimed event occurred.",
+            "expected_information_value": "The result can distinguish explanations.",
+            "why_this_action_now": "This enquiry is available and relevant.",
+        }
     if schema.__name__ == "RevisionResponse":
-        return {"hypothesis_updates": [], "new_hypotheses": [], "uncertainty_updates": [], "new_uncertainties": [], "revision_rationale": "No state change is justified by this release."}
+        return {
+            "hypothesis_updates": [],
+            "new_hypotheses": [],
+            "uncertainty_updates": [],
+            "new_uncertainties": [],
+            "revision_rationale": "No state change is justified by this release.",
+        }
     if schema.__name__ == "NextActionResponse":
-        return {"selected_action_id": "A1", "target_uncertainty": "An open question.", "expected_information_value": "It may distinguish explanations.", "why_this_action_now": "It is available now."}
+        return {
+            "selected_action_id": "A1",
+            "target_uncertainty": "An open question.",
+            "expected_information_value": "It may distinguish explanations.",
+            "why_this_action_now": "It is available now.",
+        }
     if schema.__name__ == "HypothesisResponse":
-        return {"hypotheses": [{"statement": "A", "justification": "Because", "uncertainty": "Unknown"}, {"statement": "B", "justification": "Because", "uncertainty": "Unknown"}]}
+        return {
+            "hypotheses": [
+                {"statement": "A", "justification": "Because", "uncertainty": "Unknown"},
+                {"statement": "B", "justification": "Because", "uncertainty": "Unknown"},
+            ]
+        }
     return None

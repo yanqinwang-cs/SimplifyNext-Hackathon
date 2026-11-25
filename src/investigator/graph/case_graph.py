@@ -3,7 +3,15 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from investigator.graph.models import EdgeRelation, EdgeStatus, GraphEdge, GraphNode, GraphNodeType, GraphStatus, make_edge_id
+from investigator.graph.models import (
+    EdgeRelation,
+    EdgeStatus,
+    GraphEdge,
+    GraphNode,
+    GraphNodeType,
+    GraphStatus,
+    make_edge_id,
+)
 from investigator.graph.specs import OperationSpecRegistry
 
 
@@ -33,7 +41,10 @@ class CaseGraph(BaseModel):
         active_parent_by_child: dict[str, str] = {}
         for edge in self.edges.values():
             if edge.relation is EdgeRelation.SPECIALIZES and edge.status is EdgeStatus.ACTIVE:
-                if edge.source_id in active_parent_by_child and active_parent_by_child[edge.source_id] != edge.target_id:
+                if (
+                    edge.source_id in active_parent_by_child
+                    and active_parent_by_child[edge.source_id] != edge.target_id
+                ):
                     raise ValueError(f"Hypothesis {edge.source_id!r} has more than one active specialization parent")
                 active_parent_by_child[edge.source_id] = edge.target_id
         self._ensure_no_specialization_cycle()
@@ -71,15 +82,31 @@ class CaseGraph(BaseModel):
         edges = [edge for edge in self.edges.values() if not active_only or edge.status is EdgeStatus.ACTIVE]
         ids = {edge.source_id for edge in edges if edge.target_id == node_id}
         ids.update(edge.target_id for edge in edges if edge.source_id == node_id)
-        return [self.nodes[identifier] for identifier in sorted(ids) if not active_only or self.nodes[identifier].status is GraphStatus.ACTIVE]
+        return [
+            self.nodes[identifier]
+            for identifier in sorted(ids)
+            if not active_only or self.nodes[identifier].status is GraphStatus.ACTIVE
+        ]
 
     def incoming(self, node_id: str, relation: EdgeRelation | None = None, active_only: bool = True) -> list[GraphEdge]:
         self.get_node(node_id)
-        return [edge for edge in sorted(self.edges.values(), key=lambda item: item.id) if edge.target_id == node_id and (relation is None or edge.relation is relation) and (not active_only or edge.status is EdgeStatus.ACTIVE)]
+        return [
+            edge
+            for edge in sorted(self.edges.values(), key=lambda item: item.id)
+            if edge.target_id == node_id
+            and (relation is None or edge.relation is relation)
+            and (not active_only or edge.status is EdgeStatus.ACTIVE)
+        ]
 
     def outgoing(self, node_id: str, relation: EdgeRelation | None = None, active_only: bool = True) -> list[GraphEdge]:
         self.get_node(node_id)
-        return [edge for edge in sorted(self.edges.values(), key=lambda item: item.id) if edge.source_id == node_id and (relation is None or edge.relation is relation) and (not active_only or edge.status is EdgeStatus.ACTIVE)]
+        return [
+            edge
+            for edge in sorted(self.edges.values(), key=lambda item: item.id)
+            if edge.source_id == node_id
+            and (relation is None or edge.relation is relation)
+            and (not active_only or edge.status is EdgeStatus.ACTIVE)
+        ]
 
     def ancestors(self, node_id: str, relation: EdgeRelation = EdgeRelation.SPECIALIZES) -> list[GraphNode]:
         self.get_node(node_id)
@@ -104,7 +131,14 @@ class CaseGraph(BaseModel):
                 pending.append(child)
         return result
 
-    def neighborhood(self, node_id: str, depth: int = 1, relations: set[EdgeRelation] | None = None, node_types: set[GraphNodeType] | None = None, active_only: bool = True) -> "CaseGraph":
+    def neighborhood(
+        self,
+        node_id: str,
+        depth: int = 1,
+        relations: set[EdgeRelation] | None = None,
+        node_types: set[GraphNodeType] | None = None,
+        active_only: bool = True,
+    ) -> "CaseGraph":
         if depth < 0:
             raise ValueError("Neighborhood depth cannot be negative")
         self.get_node(node_id)
@@ -121,13 +155,30 @@ class CaseGraph(BaseModel):
                     next_frontier.add(edge.source_id)
             included.update(next_frontier)
             frontier = next_frontier
-        nodes = {identifier: node for identifier, node in self.nodes.items() if identifier in included and (not active_only or node.status is GraphStatus.ACTIVE) and (node_types is None or node.node_type in node_types)}
-        edges = {identifier: edge for identifier, edge in self.edges.items() if edge.source_id in nodes and edge.target_id in nodes and (not active_only or edge.status is EdgeStatus.ACTIVE) and (relations is None or edge.relation in relations)}
+        nodes = {
+            identifier: node
+            for identifier, node in self.nodes.items()
+            if identifier in included
+            and (not active_only or node.status is GraphStatus.ACTIVE)
+            and (node_types is None or node.node_type in node_types)
+        }
+        edges = {
+            identifier: edge
+            for identifier, edge in self.edges.items()
+            if edge.source_id in nodes
+            and edge.target_id in nodes
+            and (not active_only or edge.status is EdgeStatus.ACTIVE)
+            and (relations is None or edge.relation in relations)
+        }
         return CaseGraph(case_id=self.case_id, nodes=nodes, edges=edges)
 
     def active_subgraph(self) -> "CaseGraph":
         nodes = {identifier: node for identifier, node in self.nodes.items() if node.status is GraphStatus.ACTIVE}
-        edges = {identifier: edge for identifier, edge in self.edges.items() if edge.status is EdgeStatus.ACTIVE and edge.source_id in nodes and edge.target_id in nodes}
+        edges = {
+            identifier: edge
+            for identifier, edge in self.edges.items()
+            if edge.status is EdgeStatus.ACTIVE and edge.source_id in nodes and edge.target_id in nodes
+        }
         return CaseGraph(case_id=self.case_id, nodes=nodes, edges=edges)
 
     def specialize(self, parent_id: str, child_node: GraphNode, basis_evidence_ids: Iterable[str] = ()) -> "CaseGraph":
@@ -142,7 +193,15 @@ class CaseGraph(BaseModel):
         edge_id = make_edge_id(child_node.id, EdgeRelation.SPECIALIZES, parent_id)
         metadata = {"basis_evidence_ids": list(basis_evidence_ids)}
         try:
-            self.add_edge(GraphEdge(id=edge_id, source_id=child_node.id, target_id=parent_id, relation=EdgeRelation.SPECIALIZES, metadata=metadata))
+            self.add_edge(
+                GraphEdge(
+                    id=edge_id,
+                    source_id=child_node.id,
+                    target_id=parent_id,
+                    relation=EdgeRelation.SPECIALIZES,
+                    metadata=metadata,
+                )
+            )
         except Exception:
             if added:
                 self.nodes.pop(child_node.id, None)
@@ -185,30 +244,74 @@ class CaseGraph(BaseModel):
 
         nodes: dict[str, GraphNode] = {}
         for evidence_id, evidence in sorted(case_state.evidence.items()):
-            nodes[evidence_id] = GraphNode(id=evidence_id, node_type=GraphNodeType.EVIDENCE, statement=evidence.raw_content, metadata={"source_id": evidence.source_id, "kind": evidence.kind.value, **evidence.metadata})
+            nodes[evidence_id] = GraphNode(
+                id=evidence_id,
+                node_type=GraphNodeType.EVIDENCE,
+                statement=evidence.raw_content,
+                metadata={"source_id": evidence.source_id, "kind": evidence.kind.value, **evidence.metadata},
+            )
         for hypothesis_id, hypothesis in sorted(case_state.hypotheses.items()):
-            lifecycle = GraphStatus.ARCHIVED if hypothesis.status in {HypothesisStatus.REMOVED, HypothesisStatus.REJECTED, HypothesisStatus.ARCHIVED} else GraphStatus.ACTIVE
-            nodes[hypothesis_id] = GraphNode(id=hypothesis_id, node_type=GraphNodeType.HYPOTHESIS, statement=hypothesis.statement, status=lifecycle, metadata={"origin": hypothesis.origin.value, "hypothesis_status": hypothesis.status.value})
+            lifecycle = (
+                GraphStatus.ARCHIVED
+                if hypothesis.status in {HypothesisStatus.REMOVED, HypothesisStatus.REJECTED, HypothesisStatus.ARCHIVED}
+                else GraphStatus.ACTIVE
+            )
+            nodes[hypothesis_id] = GraphNode(
+                id=hypothesis_id,
+                node_type=GraphNodeType.HYPOTHESIS,
+                statement=hypothesis.statement,
+                status=lifecycle,
+                metadata={"origin": hypothesis.origin.value, "hypothesis_status": hypothesis.status.value},
+            )
         for uncertainty_id, uncertainty in sorted(case_state.uncertainties.items()):
-            nodes[uncertainty_id] = GraphNode(id=uncertainty_id, node_type=GraphNodeType.UNCERTAINTY, statement=uncertainty.description, metadata={"kind": uncertainty.kind.value, "evidence_ids": list(uncertainty.evidence_ids)})
+            nodes[uncertainty_id] = GraphNode(
+                id=uncertainty_id,
+                node_type=GraphNodeType.UNCERTAINTY,
+                statement=uncertainty.description,
+                metadata={"kind": uncertainty.kind.value, "evidence_ids": list(uncertainty.evidence_ids)},
+            )
         edges: dict[str, GraphEdge] = {}
         for hypothesis_id, hypothesis in sorted(case_state.hypotheses.items()):
             if hypothesis.parent_hypothesis_id:
-                edge = GraphEdge(id=make_edge_id(hypothesis_id, EdgeRelation.SPECIALIZES, hypothesis.parent_hypothesis_id), source_id=hypothesis_id, target_id=hypothesis.parent_hypothesis_id, relation=EdgeRelation.SPECIALIZES)
+                edge = GraphEdge(
+                    id=make_edge_id(hypothesis_id, EdgeRelation.SPECIALIZES, hypothesis.parent_hypothesis_id),
+                    source_id=hypothesis_id,
+                    target_id=hypothesis.parent_hypothesis_id,
+                    relation=EdgeRelation.SPECIALIZES,
+                )
                 edges[edge.id] = edge
             for evidence_id in hypothesis.supporting_evidence_ids:
-                edge = GraphEdge(id=make_edge_id(evidence_id, EdgeRelation.SUPPORTS, hypothesis_id), source_id=evidence_id, target_id=hypothesis_id, relation=EdgeRelation.SUPPORTS)
+                edge = GraphEdge(
+                    id=make_edge_id(evidence_id, EdgeRelation.SUPPORTS, hypothesis_id),
+                    source_id=evidence_id,
+                    target_id=hypothesis_id,
+                    relation=EdgeRelation.SUPPORTS,
+                )
                 edges[edge.id] = edge
             for evidence_id in hypothesis.conflicting_evidence_ids:
-                edge = GraphEdge(id=make_edge_id(evidence_id, EdgeRelation.CONFLICTS, hypothesis_id), source_id=evidence_id, target_id=hypothesis_id, relation=EdgeRelation.CONFLICTS)
+                edge = GraphEdge(
+                    id=make_edge_id(evidence_id, EdgeRelation.CONFLICTS, hypothesis_id),
+                    source_id=evidence_id,
+                    target_id=hypothesis_id,
+                    relation=EdgeRelation.CONFLICTS,
+                )
                 edges[edge.id] = edge
             for uncertainty_id in hypothesis.unresolved_issue_ids:
-                edge = GraphEdge(id=make_edge_id(uncertainty_id, EdgeRelation.TARGETS, hypothesis_id), source_id=uncertainty_id, target_id=hypothesis_id, relation=EdgeRelation.TARGETS)
+                edge = GraphEdge(
+                    id=make_edge_id(uncertainty_id, EdgeRelation.TARGETS, hypothesis_id),
+                    source_id=uncertainty_id,
+                    target_id=hypothesis_id,
+                    relation=EdgeRelation.TARGETS,
+                )
                 edges[edge.id] = edge
         return cls(case_id=case_state.case_id, nodes=nodes, edges=edges)
 
     def _ensure_no_specialization_cycle(self) -> None:
-        parent_by_child = {edge.source_id: edge.target_id for edge in self.edges.values() if edge.relation is EdgeRelation.SPECIALIZES and edge.status is EdgeStatus.ACTIVE}
+        parent_by_child = {
+            edge.source_id: edge.target_id
+            for edge in self.edges.values()
+            if edge.relation is EdgeRelation.SPECIALIZES and edge.status is EdgeStatus.ACTIVE
+        }
         for node_id in parent_by_child:
             seen: set[str] = set()
             current = node_id

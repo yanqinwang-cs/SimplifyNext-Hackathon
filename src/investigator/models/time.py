@@ -30,4 +30,3 @@ class RelativeTime(BaseModel):
     kind: str = "relative"
     relation: RelativeRelation
     reference_id: str
-

@@ -23,30 +23,198 @@ class ProcedureSpec:
 
 
 INVESTIGATOR_PROCEDURE = (
-    ProcedureSpec("add_evidence", "Record a direct observation grounded in readable raw sources.", "At least one relevant readable source is available.", "Preserves raw-source provenance before semantic inference.", "Deriving a proposition directly from a SOURCE.", "add_evidence(source) -> add_proposition from E/P if inference is justified.", "investigator"),
-    ProcedureSpec("add_proposition", "State a smaller truth-apt inference.", "A legal active EVIDENCE or PROPOSITION basis is already determined.", "Separates inference from the record that supports it.", "Using a raw SOURCE or UNCERTAINTY as a derivation basis.", "add_evidence first, then add_proposition.", "investigator"),
-    ProcedureSpec("add_hypothesis", "Create a broader explanation when no suitable existing hypothesis can be reused.", "A materially useful explanation is already formulated.", "Keeps competing explanations explicit.", "Creating a hypothesis merely because a source exists.", "Reuse an equivalent HYPOTHESIS or add supporting E/P first.", "investigator"),
-    ProcedureSpec("add_uncertainty", "Record a consequential unresolved question.", "The question is materially relevant and has a legal active target.", "Questions guide the next investigation without pretending to be claims.", "Using an uncertainty as evidence or a proposition.", "Represent an answer as EVIDENCE or PROPOSITION.", "investigator"),
-    ProcedureSpec("add_support", "Record positive evidential bearing on a proposition or hypothesis.", "A legal E/P source and P/H target are already identified.", "Makes evidential bearing auditable.", "Using SUPPORTS as a substitute for inferential provenance.", "Use add_derivation for why a proposition exists.", "investigator"),
-    ProcedureSpec("add_conflict", "Record materially incompatible evidence or claim.", "A legal E/P source and P/H target are materially incompatible.", "Distinguishes contradiction from mere reduced confidence or alternatives.", "Calling an alternative explanation or unresolved question a conflict.", "Represent alternatives as propositions/hypotheses.", "investigator"),
-    ProcedureSpec("add_derivation", "Record why a proposition was inferred.", "The proposition and legal E/P basis already exist.", "Captures inferential provenance separately from evidential bearing.", "Using SUPPORTS merely to explain derivation.", "add_evidence -> add_proposition -> add_derivation.", "investigator"),
-    ProcedureSpec("add_specialization", "Connect a specific explanation to a broader parent.", "Both active hypotheses and the child-parent relationship are already determined.", "Preserves explanatory hierarchy.", "Inventing a parent after selecting the operation.", "Add or reuse the broader hypothesis first.", "investigator"),
-    ProcedureSpec("move_focus", "Move the current area of Investigator attention.", "The destination is a legal canonical graph node.", "Guides attention without changing graph visibility or global case management.", "Directly changing global focus.", "request_steward_review.", "investigator"),
-    ProcedureSpec("request_information", "Ask for useful human information or clarification.", "A concrete, case-relevant question is formulated; target metadata is optional.", "Keeps the substantive investigative question while the system owns request bookkeeping.", "A vague request that outsources investigation to the human.", "request_steward_review when global reassessment is needed.", "investigator"),
-    ProcedureSpec("request_steward_review", "Ask for global case-management review.", "Local reasoning is exhausted or global reassessment is materially useful.", "Separates global attention management from local extraction.", "Investigator mutating distant/global focus.", "Continue locally when useful work remains.", "investigator"),
-    ProcedureSpec("request_enquiry", "Select one explicitly available legacy predefined enquiry.", "A listed action and addressable active local uncertainty are already identified.", "Preserves the existing Stage 1 path.", "Inventing an action or targeting an unavailable uncertainty.", "request_information when a human request is appropriate.", "investigator"),
-    ProcedureSpec("continue_local", "Continue bounded local reasoning.", "At least one graph update is ready.", "Prevents no-op turns.", "Continuing without graph work.", "local_exhausted or request_steward_review.", "investigator"),
-    ProcedureSpec("local_exhausted", "Declare that the local frontier has no useful next step.", "Local useful work is genuinely exhausted.", "Creates a controlled Steward boundary.", "Using it while useful local work remains.", "continue_local or request_steward_review.", "investigator"),
+    ProcedureSpec(
+        "add_evidence",
+        "Record a direct observation grounded in readable raw sources.",
+        "At least one relevant readable source is available.",
+        "Preserves raw-source provenance before semantic inference.",
+        "Deriving a proposition directly from a SOURCE.",
+        "add_evidence(source) -> add_proposition from E/P if inference is justified.",
+        "investigator",
+    ),
+    ProcedureSpec(
+        "add_proposition",
+        "State a smaller truth-apt inference.",
+        "A legal active EVIDENCE or PROPOSITION basis is already determined.",
+        "Separates inference from the record that supports it.",
+        "Using a raw SOURCE or UNCERTAINTY as a derivation basis.",
+        "add_evidence first, then add_proposition.",
+        "investigator",
+    ),
+    ProcedureSpec(
+        "add_hypothesis",
+        "Create a broader explanation when no suitable existing hypothesis can be reused.",
+        "A materially useful explanation is already formulated.",
+        "Keeps competing explanations explicit.",
+        "Creating a hypothesis merely because a source exists.",
+        "Reuse an equivalent HYPOTHESIS or add supporting E/P first.",
+        "investigator",
+    ),
+    ProcedureSpec(
+        "add_uncertainty",
+        "Record a consequential unresolved question.",
+        "The question is materially relevant and has a legal active target.",
+        "Questions guide the next investigation without pretending to be claims.",
+        "Using an uncertainty as evidence or a proposition.",
+        "Represent an answer as EVIDENCE or PROPOSITION.",
+        "investigator",
+    ),
+    ProcedureSpec(
+        "add_support",
+        "Record positive evidential bearing on a proposition or hypothesis.",
+        "A legal E/P source and P/H target are already identified.",
+        "Makes evidential bearing auditable.",
+        "Using SUPPORTS as a substitute for inferential provenance.",
+        "Use add_derivation for why a proposition exists.",
+        "investigator",
+    ),
+    ProcedureSpec(
+        "add_conflict",
+        "Record materially incompatible evidence or claim.",
+        "A legal E/P source and P/H target are materially incompatible.",
+        "Distinguishes contradiction from mere reduced confidence or alternatives.",
+        "Calling an alternative explanation or unresolved question a conflict.",
+        "Represent alternatives as propositions/hypotheses.",
+        "investigator",
+    ),
+    ProcedureSpec(
+        "add_derivation",
+        "Record why a proposition was inferred.",
+        "The proposition and legal E/P basis already exist.",
+        "Captures inferential provenance separately from evidential bearing.",
+        "Using SUPPORTS merely to explain derivation.",
+        "add_evidence -> add_proposition -> add_derivation.",
+        "investigator",
+    ),
+    ProcedureSpec(
+        "add_specialization",
+        "Connect a specific explanation to a broader parent.",
+        "Both active hypotheses and the child-parent relationship are already determined.",
+        "Preserves explanatory hierarchy.",
+        "Inventing a parent after selecting the operation.",
+        "Add or reuse the broader hypothesis first.",
+        "investigator",
+    ),
+    ProcedureSpec(
+        "move_focus",
+        "Move the current area of Investigator attention.",
+        "The destination is a legal canonical graph node.",
+        "Guides attention without changing graph visibility or global case management.",
+        "Directly changing global focus.",
+        "request_steward_review.",
+        "investigator",
+    ),
+    ProcedureSpec(
+        "request_information",
+        "Ask for useful human information or clarification.",
+        "A concrete, case-relevant question is formulated; target metadata is optional.",
+        "Keeps the substantive investigative question while the system owns request bookkeeping.",
+        "A vague request that outsources investigation to the human.",
+        "request_steward_review when global reassessment is needed.",
+        "investigator",
+    ),
+    ProcedureSpec(
+        "request_steward_review",
+        "Ask for global case-management review.",
+        "Local reasoning is exhausted or global reassessment is materially useful.",
+        "Separates global attention management from local extraction.",
+        "Investigator mutating distant/global focus.",
+        "Continue locally when useful work remains.",
+        "investigator",
+    ),
+    ProcedureSpec(
+        "request_enquiry",
+        "Select one explicitly available legacy predefined enquiry.",
+        "A listed action and addressable active local uncertainty are already identified.",
+        "Preserves the existing Stage 1 path.",
+        "Inventing an action or targeting an unavailable uncertainty.",
+        "request_information when a human request is appropriate.",
+        "investigator",
+    ),
+    ProcedureSpec(
+        "continue_local",
+        "Continue bounded local reasoning.",
+        "At least one graph update is ready.",
+        "Prevents no-op turns.",
+        "Continuing without graph work.",
+        "local_exhausted or request_steward_review.",
+        "investigator",
+    ),
+    ProcedureSpec(
+        "local_exhausted",
+        "Declare that the local frontier has no useful next step.",
+        "Local useful work is genuinely exhausted.",
+        "Creates a controlled Steward boundary.",
+        "Using it while useful local work remains.",
+        "continue_local or request_steward_review.",
+        "investigator",
+    ),
 )
 
 STEWARD_PROCEDURE = (
-    ProcedureSpec("keep_focus", "Retain a productive current focus.", "No materially better global branch requires attention.", "Avoids unnecessary focus churn.", "Shifting without a better branch.", "shift_focus when another branch is materially better.", "steward"),
-    ProcedureSpec("shift_focus", "Move global attention to a materially better graph branch.", "A valid active destination is identified and globally more useful.", "Manages global attention and monitors neglected branches.", "Investigator directly changing global focus.", "request_steward_review.", "steward"),
-    ProcedureSpec("generalize", "Retreat from an unsupported specific child to a viable parent.", "An active child-parent SPECIALIZES edge exists; child is no longer justified; parent remains viable.", "Preserves the broader explanation while dropping unsupported specificity.", "Selecting generalize before finding a parent.", "keep_focus or archive the stale child.", "steward"),
-    ProcedureSpec("archive", "Remove a stale or superseded branch from active attention while retaining history.", "The target is stale/superseded; current-focus archive has an active destination.", "Keeps historical state auditable without active distraction.", "Deleting or silently mutating a branch.", "generalize or keep_focus when the branch remains useful.", "steward"),
-    ProcedureSpec("reactivate", "Return archived material when it becomes materially relevant.", "Archived target is identified and newly relevant.", "Allows historical evidence/branches to re-enter active reasoning.", "Creating a duplicate replacement branch.", "shift_focus or keep_focus if it is already active.", "steward"),
-    ProcedureSpec("stop_unresolved", "Hand an unresolved frontier to the human decision-maker after review.", "Trusted global frontier assessed; no useful region/action remains; local work is exhausted.", "Makes unresolved termination explicit without having Steward decide guilt.", "Stopping because evidence is merely unavailable or confidence is reduced.", "keep_focus, shift_focus, or request further local work.", "steward"),
-    ProcedureSpec("request_information", "Ask the human for useful case information or clarification.", "A concrete, case-relevant question is formulated; target metadata is optional.", "Uses the same request intent as Investigator while preserving Steward authority over when to ask.", "A vague request for more information.", "keep_focus or shift_focus when no human request is justified.", "steward"),
+    ProcedureSpec(
+        "keep_focus",
+        "Retain a productive current focus.",
+        "No materially better global branch requires attention.",
+        "Avoids unnecessary focus churn.",
+        "Shifting without a better branch.",
+        "shift_focus when another branch is materially better.",
+        "steward",
+    ),
+    ProcedureSpec(
+        "shift_focus",
+        "Move global attention to a materially better graph branch.",
+        "A valid active destination is identified and globally more useful.",
+        "Manages global attention and monitors neglected branches.",
+        "Investigator directly changing global focus.",
+        "request_steward_review.",
+        "steward",
+    ),
+    ProcedureSpec(
+        "generalize",
+        "Retreat from an unsupported specific child to a viable parent.",
+        "An active child-parent SPECIALIZES edge exists; child is no longer justified; parent remains viable.",
+        "Preserves the broader explanation while dropping unsupported specificity.",
+        "Selecting generalize before finding a parent.",
+        "keep_focus or archive the stale child.",
+        "steward",
+    ),
+    ProcedureSpec(
+        "archive",
+        "Remove a stale or superseded branch from active attention while retaining history.",
+        "The target is stale/superseded; current-focus archive has an active destination.",
+        "Keeps historical state auditable without active distraction.",
+        "Deleting or silently mutating a branch.",
+        "generalize or keep_focus when the branch remains useful.",
+        "steward",
+    ),
+    ProcedureSpec(
+        "reactivate",
+        "Return archived material when it becomes materially relevant.",
+        "Archived target is identified and newly relevant.",
+        "Allows historical evidence/branches to re-enter active reasoning.",
+        "Creating a duplicate replacement branch.",
+        "shift_focus or keep_focus if it is already active.",
+        "steward",
+    ),
+    ProcedureSpec(
+        "stop_unresolved",
+        "Hand an unresolved frontier to the human decision-maker after review.",
+        "Trusted global frontier assessed; no useful region/action remains; local work is exhausted.",
+        "Makes unresolved termination explicit without having Steward decide guilt.",
+        "Stopping because evidence is merely unavailable or confidence is reduced.",
+        "keep_focus, shift_focus, or request further local work.",
+        "steward",
+    ),
+    ProcedureSpec(
+        "request_information",
+        "Ask the human for useful case information or clarification.",
+        "A concrete, case-relevant question is formulated; target metadata is optional.",
+        "Uses the same request intent as Investigator while preserving Steward authority over when to ask.",
+        "A vague request for more information.",
+        "keep_focus or shift_focus when no human request is justified.",
+        "steward",
+    ),
 )
 
 INVESTIGATOR_INTENT_COVERAGE = {
@@ -96,15 +264,22 @@ def procedure_for(role: str) -> tuple[ProcedureSpec, ...]:
 def render_procedure(role: str) -> str:
     lines = ["Reason first, operation second. Choose an operation only after its prerequisites are satisfied."]
     for spec in procedure_for(role):
-        lines.append(f"- {spec.operation}: purpose={spec.purpose} prerequisites={spec.prerequisites} why={spec.rationale} invalid_substitute={spec.invalid_substitute} valid_alternative={spec.valid_alternative}")
+        lines.append(
+            f"- {spec.operation}: purpose={spec.purpose} prerequisites={spec.prerequisites} why={spec.rationale} invalid_substitute={spec.invalid_substitute} valid_alternative={spec.valid_alternative}"
+        )
     if role == "investigator":
-        lines.append("- legacy compatibility: request_open and request_evidence payloads are accepted only for migration and normalized to request_information; do not select those legacy names in new production responses.")
+        lines.append(
+            "- legacy compatibility: request_open and request_evidence payloads are accepted only for migration and normalized to request_information; do not select those legacy names in new production responses."
+        )
     return "\n".join(lines)
 
 
 def procedural_contract_errors() -> list[str]:
     errors: list[str] = []
-    for role, coverage, specs in (("investigator", INVESTIGATOR_INTENT_COVERAGE, INVESTIGATOR_PROCEDURE), ("steward", STEWARD_INTENT_COVERAGE, STEWARD_PROCEDURE)):
+    for role, coverage, specs in (
+        ("investigator", INVESTIGATOR_INTENT_COVERAGE, INVESTIGATOR_PROCEDURE),
+        ("steward", STEWARD_INTENT_COVERAGE, STEWARD_PROCEDURE),
+    ):
         by_operation = {item.operation: item for item in specs}
         for intent, operation in coverage.items():
             item = by_operation.get(operation)

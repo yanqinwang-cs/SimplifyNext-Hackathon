@@ -1,4 +1,5 @@
 """Direct Anthropic Messages API adapter for bounded production calls."""
+
 from __future__ import annotations
 
 import json
@@ -7,8 +8,15 @@ from time import perf_counter
 from typing import Any, Mapping, Sequence
 
 from investigator.llm.base import (
-    MessageInput, ModelCallMetadata, ModelCallResult, ModelClient, ModelNativeCall,
-    ModelParseError, ModelTextBlock, ModelToolUse, parse_model_output,
+    MessageInput,
+    ModelCallMetadata,
+    ModelCallResult,
+    ModelClient,
+    ModelNativeCall,
+    ModelParseError,
+    ModelTextBlock,
+    ModelToolUse,
+    parse_model_output,
 )
 
 ANTHROPIC_CONNECT_TIMEOUT_SECONDS = 10
@@ -102,7 +110,9 @@ class AnthropicModelClient(ModelClient):
             if role == "system":
                 system.append(_text_from_content(content))
             elif role in {"user", "assistant"}:
-                messages.append({"role": role, "content": content if isinstance(content, (str, list)) else str(content)})
+                messages.append(
+                    {"role": role, "content": content if isinstance(content, (str, list)) else str(content)}
+                )
         return ("\n\n".join(system) or None), messages
 
     @staticmethod
@@ -118,17 +128,32 @@ class AnthropicModelClient(ModelClient):
                 continue
             if role == "tool":
                 result = item.get("result", "")
-                messages.append({"role": "user", "content": [{
-                    "type": "tool_result", "tool_use_id": item.get("call_id", ""),
-                    "content": result if isinstance(result, str) else json.dumps(result, sort_keys=True),
-                }]})
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": item.get("call_id", ""),
+                                "content": result if isinstance(result, str) else json.dumps(result, sort_keys=True),
+                            }
+                        ],
+                    }
+                )
                 continue
             content: list[dict[str, Any]] = []
             text = item.get("text")
             if text:
                 content.append({"type": "text", "text": str(text)})
             for use in item.get("tool_uses", []) or []:
-                content.append({"type": "tool_use", "id": use.get("call_id", ""), "name": use.get("name", ""), "input": use.get("arguments", {})})
+                content.append(
+                    {
+                        "type": "tool_use",
+                        "id": use.get("call_id", ""),
+                        "name": use.get("name", ""),
+                        "input": use.get("arguments", {}),
+                    }
+                )
             if not content:
                 raw = item.get("content", "")
                 content = raw if isinstance(raw, list) else [{"type": "text", "text": str(raw)}]
@@ -138,16 +163,24 @@ class AnthropicModelClient(ModelClient):
     def _metadata(self, response: Any, started: float) -> ModelCallMetadata:
         usage = _field(response, "usage", {}) or {}
         return ModelCallMetadata(
-            provider="anthropic", model=str(_field(response, "model", self.model_id)),
-            input_tokens=_field(usage, "input_tokens"), output_tokens=_field(usage, "output_tokens"),
-            latency_seconds=perf_counter() - started, parse_success=True,
+            provider="anthropic",
+            model=str(_field(response, "model", self.model_id)),
+            input_tokens=_field(usage, "input_tokens"),
+            output_tokens=_field(usage, "output_tokens"),
+            latency_seconds=perf_counter() - started,
+            parse_success=True,
             finish_reason=_field(response, "stop_reason"),
         )
 
     def call(self, input_data: MessageInput, output_schema: type[Any]) -> ModelCallResult:
         system, messages = self._messages(input_data)
         started = perf_counter()
-        kwargs: dict[str, Any] = {"model": self.model_id, "max_tokens": self.investigator_max_tokens, "temperature": 0, "messages": messages}
+        kwargs: dict[str, Any] = {
+            "model": self.model_id,
+            "max_tokens": self.investigator_max_tokens,
+            "temperature": 0,
+            "messages": messages,
+        }
         if system:
             kwargs["system"] = system
         response = self._client_for_call().messages.create(**kwargs)
@@ -156,13 +189,24 @@ class AnthropicModelClient(ModelClient):
             parsed = parse_model_output(raw_text, output_schema)
         except ModelParseError as exc:
             raise ModelParseError("Anthropic returned invalid structured output", raw_output=raw_text) from exc
-        return ModelCallResult(parsed=parsed, metadata=self._metadata(response, started), raw_output=_safe_value(response))
+        return ModelCallResult(
+            parsed=parsed, metadata=self._metadata(response, started), raw_output=_safe_value(response)
+        )
 
     def call_native(self, input_data: MessageInput, tools: Sequence[Mapping[str, Any]]) -> ModelNativeCall:
         system, messages = self._native_messages(input_data)
         started = perf_counter()
-        translated = [{"name": tool["name"], "description": tool.get("description", ""), "input_schema": tool["inputSchema"]} for tool in tools]
-        kwargs: dict[str, Any] = {"model": self.model_id, "max_tokens": self.help_max_tokens, "temperature": 0, "messages": messages, "tools": translated}
+        translated = [
+            {"name": tool["name"], "description": tool.get("description", ""), "input_schema": tool["inputSchema"]}
+            for tool in tools
+        ]
+        kwargs: dict[str, Any] = {
+            "model": self.model_id,
+            "max_tokens": self.help_max_tokens,
+            "temperature": 0,
+            "messages": messages,
+            "tools": translated,
+        }
         if system:
             kwargs["system"] = system
         response = self._client_for_call().messages.create(**kwargs)
@@ -173,5 +217,16 @@ class AnthropicModelClient(ModelClient):
             if kind == "text":
                 text_blocks.append(ModelTextBlock(text=str(_field(block, "text", ""))))
             elif kind == "tool_use":
-                tool_uses.append(ModelToolUse(call_id=str(_field(block, "id", "")), name=str(_field(block, "name", "")), arguments=dict(_field(block, "input", {}) or {})))
-        return ModelNativeCall(text_blocks=text_blocks, tool_uses=tool_uses, metadata=self._metadata(response, started), raw_output=_safe_value(response))
+                tool_uses.append(
+                    ModelToolUse(
+                        call_id=str(_field(block, "id", "")),
+                        name=str(_field(block, "name", "")),
+                        arguments=dict(_field(block, "input", {}) or {}),
+                    )
+                )
+        return ModelNativeCall(
+            text_blocks=text_blocks,
+            tool_uses=tool_uses,
+            metadata=self._metadata(response, started),
+            raw_output=_safe_value(response),
+        )

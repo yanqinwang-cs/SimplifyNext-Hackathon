@@ -86,6 +86,4 @@ def validate_vnext_relationship_provenance(
     """Require source provenance before a relationship enters normal vNext input."""
     for relationship in relationships.values():
         if not relationship.source_ids:
-            raise ValueError(
-                f"Relationship {relationship.relationship_id!r} requires source provenance for vNext"
-            )
+            raise ValueError(f"Relationship {relationship.relationship_id!r} requires source provenance for vNext")

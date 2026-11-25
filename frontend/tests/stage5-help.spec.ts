@@ -2,12 +2,57 @@ import { test, expect } from "@playwright/test";
 
 const guide = `# Investigation Assistant\n\n## Create a case\n\n1. Enter a case name.\n2. A new case begins with **Student 1**.\n\n- Add readable .txt or .md evidence.\n\nThere is no minimum evidence count. Final institutional judgment remains human.`;
 
-function workspace(title = "Original case", sample = false, chatHistory: { role: string; text: string }[] = []) {
-  return { caseId: "case-01", caseRevision: 0, title, status: "ready", institutionalStatus: "Investigating", currentFocus: "", messages: [], caseStatus: "ACTIVE", caseKind: sample ? "sample" : "user", sample: sample ? { sampleId: "law-exam", title: "Law Exam Investigation" } : null, capabilities: { editStudents: !sample, addEvidence: !sample, resetSample: sample, runAssessment: true, useHelp: true, viewSources: true }, preloadedSourceCount: 0, runtimeStatus: "IDLE", currentActor: "NONE", sources: [{ sourceHandle: "source-public", fileName: "record.md", documentFormat: "markdown" }], students: sample ? ["A", "B", "C", "D", "E"].map((letter) => ({ studentHandle: `student-${letter}`, displayName: `Candidate ${letter}` })) : [{ studentHandle: "student-public", displayName: "Student 1" }], report: { state: "unavailable", assessmentIsStale: false }, assessment: { state: "not_started", activeRun: null, latestAttempt: null, reportAvailable: false, reportStale: false }, chatHistory, activity: [] };
+function workspace(
+  title = "Original case",
+  sample = false,
+  chatHistory: { role: string; text: string }[] = [],
+) {
+  return {
+    caseId: "case-01",
+    caseRevision: 0,
+    title,
+    status: "ready",
+    institutionalStatus: "Investigating",
+    currentFocus: "",
+    messages: [],
+    caseStatus: "ACTIVE",
+    caseKind: sample ? "sample" : "user",
+    sample: sample ? { sampleId: "law-exam", title: "Law Exam Investigation" } : null,
+    capabilities: {
+      editStudents: !sample,
+      addEvidence: !sample,
+      resetSample: sample,
+      runAssessment: true,
+      useHelp: true,
+      viewSources: true,
+    },
+    preloadedSourceCount: 0,
+    runtimeStatus: "IDLE",
+    currentActor: "NONE",
+    sources: [{ sourceHandle: "source-public", fileName: "record.md", documentFormat: "markdown" }],
+    students: sample
+      ? ["A", "B", "C", "D", "E"].map((letter) => ({
+          studentHandle: `student-${letter}`,
+          displayName: `Candidate ${letter}`,
+        }))
+      : [{ studentHandle: "student-public", displayName: "Student 1" }],
+    report: { state: "unavailable", assessmentIsStale: false },
+    assessment: {
+      state: "not_started",
+      activeRun: null,
+      latestAttempt: null,
+      reportAvailable: false,
+      reportStale: false,
+    },
+    chatHistory,
+    activity: [],
+  };
 }
 
 test("guide renders authoritative markdown with current workflow", async ({ page }, testInfo) => {
-  await page.route("**/api/product-guide", (route) => route.fulfill({ status: 200, contentType: "text/markdown", body: guide }));
+  await page.route("**/api/product-guide", (route) =>
+    route.fulfill({ status: 200, contentType: "text/markdown", body: guide }),
+  );
   await page.goto("/help");
   await expect(page.getByRole("heading", { name: "Investigation Assistant" })).toBeVisible();
   await expect(page.getByRole("list").first()).toBeVisible();
@@ -19,20 +64,45 @@ test("guide renders authoritative markdown with current workflow", async ({ page
   await expect(page).toHaveURL(/\/cases$/);
 });
 
-test("user case title editing and Help quick prompts use isolated normal paths", async ({ page }, testInfo) => {
+test("user case title editing and Help quick prompts use isolated normal paths", async ({
+  page,
+}, testInfo) => {
   let current = workspace();
   const helpRequests: string[] = [];
   await page.route("**/api/cases/case-01/workspace", (route) => route.fulfill({ json: current }));
-  await page.route("**/api/cases/case-01/report", (route) => route.fulfill({ json: { caseId: "case-01", title: current.title, reportState: "unavailable", assessmentIsStale: false, latestSuccessfulRun: null, students: [] } }));
+  await page.route("**/api/cases/case-01/report", (route) =>
+    route.fulfill({
+      json: {
+        caseId: "case-01",
+        title: current.title,
+        reportState: "unavailable",
+        assessmentIsStale: false,
+        latestSuccessfulRun: null,
+        students: [],
+      },
+    }),
+  );
   await page.route("**/api/cases/case-01", async (route) => {
     const body = route.request().postDataJSON?.() ?? {};
-    if (route.request().method() === "PATCH") { current = workspace(body.title); return route.fulfill({ json: { workspace: current } }); }
+    if (route.request().method() === "PATCH") {
+      current = workspace(body.title);
+      return route.fulfill({ json: { workspace: current } });
+    }
     return route.fulfill({ status: 404, json: { error: "not found" } });
   });
   await page.route("**/api/cases/case-01/workspace/chat", async (route) => {
     helpRequests.push(route.request().postDataJSON().message);
-    current = workspace(current.title, false, [{ role: "human", text: "What remains uncertain?" }, { role: "workspace", text: "The current record leaves one uncertainty unresolved." }]);
-    return route.fulfill({ json: { response: "The current record leaves one uncertainty unresolved.", actions: [], recovery: false } });
+    current = workspace(current.title, false, [
+      { role: "human", text: "What remains uncertain?" },
+      { role: "workspace", text: "The current record leaves one uncertainty unresolved." },
+    ]);
+    return route.fulfill({
+      json: {
+        response: "The current record leaves one uncertainty unresolved.",
+        actions: [],
+        recovery: false,
+      },
+    });
   });
   await page.goto("/cases/case-01");
   await page.getByRole("button", { name: "Edit" }).click();
@@ -41,40 +111,89 @@ test("user case title editing and Help quick prompts use isolated normal paths",
   await expect(page.getByRole("heading", { name: "Renamed case" })).toBeVisible();
   await expect(page.getByText("Assessment status")).toBeVisible();
   await page.getByRole("button", { name: "What remains uncertain?" }).click();
-  await expect(page.getByText("The current record leaves one uncertainty unresolved.")).toBeVisible();
+  await expect(
+    page.getByText("The current record leaves one uncertainty unresolved."),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Shortest summary" }).click();
   await expect.poll(() => helpRequests.at(-1) ?? "").toContain("exactly one sentence");
-  await expect.poll(() => helpRequests.at(-1) ?? "").toContain("single most important remaining uncertainty");
-  await expect(page.getByText("The current record leaves one uncertainty unresolved.")).toBeVisible();
+  await expect
+    .poll(() => helpRequests.at(-1) ?? "")
+    .toContain("single most important remaining uncertainty");
+  await expect(
+    page.getByText("The current record leaves one uncertainty unresolved."),
+  ).toBeVisible();
   await expect(page.getByText("Assessment running")).toHaveCount(0);
-  await page.screenshot({ path: testInfo.outputPath("workspace-help-and-title.png"), fullPage: true });
+  await page.screenshot({
+    path: testInfo.outputPath("workspace-help-and-title.png"),
+    fullPage: true,
+  });
 });
 
-test("Workspace Help keeps a bounded scrollable transcript and visible composer", async ({ page }) => {
-  const history = Array.from({ length: 30 }, (_, index) => ({ role: index % 2 ? "workspace" : "human", text: `Help history message ${index + 1}` }));
+test("Workspace Help keeps a bounded scrollable transcript and visible composer", async ({
+  page,
+}) => {
+  const history = Array.from({ length: 30 }, (_, index) => ({
+    role: index % 2 ? "workspace" : "human",
+    text: `Help history message ${index + 1}`,
+  }));
   let current = workspace("Scrollable case", false, history);
   await page.route("**/api/cases/case-01/workspace", (route) => route.fulfill({ json: current }));
-  await page.route("**/api/cases/case-01/report", (route) => route.fulfill({ json: { caseId: "case-01", title: current.title, reportState: "unavailable", assessmentIsStale: false, latestSuccessfulRun: null, students: [] } }));
+  await page.route("**/api/cases/case-01/report", (route) =>
+    route.fulfill({
+      json: {
+        caseId: "case-01",
+        title: current.title,
+        reportState: "unavailable",
+        assessmentIsStale: false,
+        latestSuccessfulRun: null,
+        students: [],
+      },
+    }),
+  );
   await page.route("**/api/cases/case-01/workspace/chat", async (route) => {
-    current = workspace(current.title, false, [...current.chatHistory, { role: "human", text: "A new question" }, { role: "workspace", text: "The newest Help response" }]);
-    return route.fulfill({ json: { response: "The newest Help response", actions: [], recovery: false } });
+    current = workspace(current.title, false, [
+      ...current.chatHistory,
+      { role: "human", text: "A new question" },
+      { role: "workspace", text: "The newest Help response" },
+    ]);
+    return route.fulfill({
+      json: { response: "The newest Help response", actions: [], recovery: false },
+    });
   });
   await page.goto("/cases/case-01");
   const transcript = page.locator("#workspace-help-transcript");
   await expect(transcript).toBeVisible();
-  const metrics = await transcript.evaluate((element) => ({ scrollHeight: element.scrollHeight, clientHeight: element.clientHeight, overflowY: getComputedStyle(element).overflowY }));
+  const metrics = await transcript.evaluate((element) => ({
+    scrollHeight: element.scrollHeight,
+    clientHeight: element.clientHeight,
+    overflowY: getComputedStyle(element).overflowY,
+  }));
   expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
   expect(metrics.overflowY).toBe("auto");
   await expect(page.getByLabel("Ask Workspace Help")).toBeVisible();
   await page.getByRole("button", { name: "Shortest summary" }).click();
   await expect(page.getByText("The newest Help response")).toBeVisible();
-  await expect(transcript).toHaveJSProperty("scrollTop", await transcript.evaluate((element) => element.scrollHeight - element.clientHeight));
+  await expect(transcript).toHaveJSProperty(
+    "scrollTop",
+    await transcript.evaluate((element) => element.scrollHeight - element.clientHeight),
+  );
 });
 
 test("sample case keeps its fixed name and has no edit control", async ({ page }, testInfo) => {
   const sample = workspace("Law Exam Investigation", true);
   await page.route("**/api/cases/case-01/workspace", (route) => route.fulfill({ json: sample }));
-  await page.route("**/api/cases/case-01/report", (route) => route.fulfill({ json: { caseId: "case-01", title: sample.title, reportState: "unavailable", assessmentIsStale: false, latestSuccessfulRun: null, students: [] } }));
+  await page.route("**/api/cases/case-01/report", (route) =>
+    route.fulfill({
+      json: {
+        caseId: "case-01",
+        title: sample.title,
+        reportState: "unavailable",
+        assessmentIsStale: false,
+        latestSuccessfulRun: null,
+        students: [],
+      },
+    }),
+  );
   await page.goto("/cases/case-01");
   await expect(page.getByRole("heading", { name: "Law Exam Investigation" })).toBeVisible();
   await expect(page.getByText("Sample", { exact: true })).toBeVisible();

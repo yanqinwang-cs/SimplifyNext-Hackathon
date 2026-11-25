@@ -15,4 +15,3 @@ class Claim(BaseModel):
     asserted_by_source_id: str | None = None
     evidence_ids: list[str] = Field(default_factory=list)
     status: ClaimStatus = ClaimStatus.ASSERTED
-

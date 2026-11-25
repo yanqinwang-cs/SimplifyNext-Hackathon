@@ -17,14 +17,18 @@ def _run_input() -> VNextRunInput:
         subjects=subjects,
         subject_relationships={
             "rel_AB": SubjectRelationship(
-                relationship_id="rel_AB", subject_ids=["subject_A", "subject_B"],
-                relationship_type="observed_communication", source_ids=["S1"],
+                relationship_id="rel_AB",
+                subject_ids=["subject_A", "subject_B"],
+                relationship_type="observed_communication",
+                source_ids=["S1"],
             ),
         },
         sources={"S1": source},
         rule_preset=AssessmentRulePreset(
             preset_id="preset",
-            violations=[ViolationDefinition(violation_id="V1", label="Rule", rule_text="Rule", prohibited_conduct="Conduct")],
+            violations=[
+                ViolationDefinition(violation_id="V1", label="Rule", rule_text="Rule", prohibited_conduct="Conduct")
+            ],
         ),
     )
 

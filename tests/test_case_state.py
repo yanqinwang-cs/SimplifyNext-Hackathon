@@ -1,7 +1,16 @@
 from investigator.models import (
-    ApproximateTime, Claim, ClaimStatus, EvidenceItem, EvidenceKind,
-    Hypothesis, HypothesisOrigin, HypothesisStatus, Source, SourceType,
-    HypothesisTransformation, TransformationType, Uncertainty, UncertaintyKind,
+    ApproximateTime,
+    Claim,
+    ClaimStatus,
+    EvidenceItem,
+    EvidenceKind,
+    Hypothesis,
+    HypothesisOrigin,
+    HypothesisStatus,
+    Source,
+    SourceType,
+    HypothesisTransformation,
+    TransformationType,
 )
 from investigator.state import CaseState
 
@@ -30,8 +39,11 @@ def test_witness_statement_is_not_automatically_a_fact() -> None:
 
 def test_hypothesis_has_independent_support_and_conflict() -> None:
     hypothesis = Hypothesis(
-        id="h1", statement="Alice controlled Account X", origin=HypothesisOrigin.HUMAN,
-        supporting_evidence_ids=["e3"], conflicting_evidence_ids=["e2"],
+        id="h1",
+        statement="Alice controlled Account X",
+        origin=HypothesisOrigin.HUMAN,
+        supporting_evidence_ids=["e3"],
+        conflicting_evidence_ids=["e2"],
     )
     assert hypothesis.status is HypothesisStatus.PROPOSED
     assert hypothesis.supporting_evidence_ids == ["e3"]
@@ -45,7 +57,8 @@ def test_approximate_time_preserves_raw_language() -> None:
 
 def test_hypothesis_transformation_relationship_is_preserved() -> None:
     transformation = HypothesisTransformation(
-        parent_hypothesis_id="h1", child_hypothesis_id="h2",
+        parent_hypothesis_id="h1",
+        child_hypothesis_id="h2",
         transformation_type=TransformationType.NARROWING,
     )
     state = CaseState(case_id="case-1", title="Example", transformations=[transformation])

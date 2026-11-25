@@ -2,7 +2,21 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-REQUIRED_FIELDS = ("change_id", "contract", "discovery_source", "baseline_failure", "classification", "legitimate_semantic_need", "why_existing_contract_insufficient", "implementation_change", "tests_added", "expected_reclassifications", "unexpected_regressions", "before_after_compliance", "commit")
+REQUIRED_FIELDS = (
+    "change_id",
+    "contract",
+    "discovery_source",
+    "baseline_failure",
+    "classification",
+    "legitimate_semantic_need",
+    "why_existing_contract_insufficient",
+    "implementation_change",
+    "tests_added",
+    "expected_reclassifications",
+    "unexpected_regressions",
+    "before_after_compliance",
+    "commit",
+)
 
 
 @dataclass(frozen=True)

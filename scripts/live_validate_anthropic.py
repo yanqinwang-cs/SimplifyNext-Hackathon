@@ -1,4 +1,5 @@
 """Developer-only bounded live validation of the production vNext path."""
+
 from __future__ import annotations
 
 import argparse
@@ -52,7 +53,13 @@ def admit_vnext_run(workflow: HumanEvidenceWorkflow, case_id: str) -> tuple[str,
         or not (directory / "run_result.json").is_file()
         or workflow.repository.require_case(case_id).runtime_status != "RUNNING"
     ):
-        workflow.set_runtime(case_id, "FAILED", "NONE", failure_category="RUN_ADMISSION", message="Required vNext run artifacts were not admitted")
+        workflow.set_runtime(
+            case_id,
+            "FAILED",
+            "NONE",
+            failure_category="RUN_ADMISSION",
+            message="Required vNext run artifacts were not admitted",
+        )
         workflow.finalize_run(case_id, expected_run_id=run_id, termination_reason="admission_failed")
         raise RuntimeError("vNext run admission did not produce the required active artifacts")
     return run_id, directory
@@ -65,7 +72,9 @@ def run_admitted_validation(workflow: HumanEvidenceWorkflow, case_id: str, clien
         result = VNextProductionRunner(client=client).run(case_id, workflow)
     except Exception as exc:
         workflow.set_runtime(case_id, "FAILED", "NONE", failure_category=type(exc).__name__, message=str(exc))
-        workflow.finalize_run(case_id, termination_reason="failed", final_error={"type": type(exc).__name__, "message": str(exc)})
+        workflow.finalize_run(
+            case_id, termination_reason="failed", final_error={"type": type(exc).__name__, "message": str(exc)}
+        )
         raise
     workflow.set_runtime(case_id, "IDLE", "NONE")
     workflow.finalize_run(case_id, termination_reason="completed")
@@ -74,7 +83,9 @@ def run_admitted_validation(workflow: HumanEvidenceWorkflow, case_id: str, clien
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--live", action="store_true", help="required acknowledgement that this makes paid provider calls")
+    parser.add_argument(
+        "--live", action="store_true", help="required acknowledgement that this makes paid provider calls"
+    )
     parser.add_argument("--case-id", default="case-01")
     parser.add_argument("--repository", default="data/cases")
     parser.add_argument("--output-dir", default="artifacts/live-validation")
@@ -114,7 +125,16 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / "anthropic_validation.json"
     output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(json.dumps({"output": str(output_path.resolve()), "provider_calls": client.calls, "model": model_spec.anthropic_model_id}, indent=2))
+    print(
+        json.dumps(
+            {
+                "output": str(output_path.resolve()),
+                "provider_calls": client.calls,
+                "model": model_spec.anthropic_model_id,
+            },
+            indent=2,
+        )
+    )
     return 1 if error else 0
 
 

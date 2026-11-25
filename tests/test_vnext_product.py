@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from investigator.graph import GraphNodeType
 from investigator.llm import ModelCallMetadata, ModelCallResult, ModelParseError
+from investigator.models.assessment import AssessmentSubject
 from investigator.models.source import Source, SourceType
 from investigator.services.evidence_requests import HumanEvidenceWorkflow
 from investigator.services.vnext_runner import VNextProductionRunner
@@ -13,10 +13,13 @@ from investigator.state import CaseRepository
 from investigator.vnext import (
     AssessmentStatus,
     Confidence,
-    FurthestJustifiedConclusion,
-    InvestigatorAssessment,
-    InvestigatorProposal,
-    ViolationAssessment,
+)
+from investigator.vnext.semantic import (
+    InvestigatorSemanticAssessment,
+    SemanticItem,
+    SemanticItemKind,
+    SemanticSubjectAssessment,
+    SemanticViolationAssessment,
 )
 
 
@@ -50,37 +53,55 @@ def source(source_id: str = "S1", content: str = "A source record") -> Source:
     return Source(id=source_id, name=source_id, source_type=SourceType.DOCUMENT, content=content)
 
 
-def assessment(*, supported: bool = False, proposal: InvestigatorProposal | None = None) -> InvestigatorAssessment:
-    return InvestigatorAssessment(
-        proposal=proposal or InvestigatorProposal(),
-        violation_assessments=[
-            ViolationAssessment(
-                violation_id=violation_id,
-                status=AssessmentStatus.SUPPORTED if supported and violation_id == "unauthorized_device" else AssessmentStatus.NOT_CURRENTLY_SUPPORTED,
-                supporting_node_ids=["device"] if supported and violation_id == "unauthorized_device" else [],
-                mitigating_node_ids=[],
-                unresolved_points=[],
-                reasoning_summary="Bounded fixture assessment.",
-                confidence=Confidence.HIGH,
-            )
-            for violation_id in (
-                "unauthorized_device",
-                "unauthorized_external_communication",
-                "unauthorized_assistance",
-                "prohibited_collaboration",
+def assessment(
+    *, supported: bool = False, semantic_items: list[object] | None = None
+) -> InvestigatorSemanticAssessment:
+    return InvestigatorSemanticAssessment(
+        semantic_items=semantic_items or [],
+        subject_assessments=[
+            SemanticSubjectAssessment(
+                subject_id="case_subject",
+                violation_assessments=[
+                    SemanticViolationAssessment(
+                        violation_id=violation_id,
+                        status=AssessmentStatus.SUPPORTED
+                        if supported and violation_id == "unauthorized_device"
+                        else AssessmentStatus.NOT_CURRENTLY_SUPPORTED,
+                        supporting_item_refs=["device"] if supported and violation_id == "unauthorized_device" else [],
+                        unresolved_points=[],
+                        reasoning_summary="Bounded fixture assessment.",
+                        confidence=Confidence.HIGH,
+                    )
+                    for violation_id in (
+                        "unauthorized_device",
+                        "unauthorized_external_communication",
+                        "unauthorized_assistance",
+                        "prohibited_collaboration",
+                    )
+                ],
+                furthest_conclusion={
+                    "statement": "The configured assessment remains bounded.",
+                    "based_on_violation_ids": ["unauthorized_device"] if supported else [],
+                    "confidence": "high",
+                },
             )
         ],
-        furthest_conclusion=FurthestJustifiedConclusion(
-            statement="The configured assessment remains bounded.",
-            based_on_violation_ids=["unauthorized_device"] if supported else [],
-            confidence=Confidence.HIGH,
-        ),
+    )
+
+
+def device_item() -> SemanticItem:
+    return SemanticItem(
+        local_ref="device",
+        kind=SemanticItemKind.EVIDENCE_STATEMENT,
+        statement="Device present.",
+        basis_source_ids=["S1"],
     )
 
 
 def start_vnext(tmp_path: Path, client: SequenceClient) -> HumanEvidenceWorkflow:
     workflow = HumanEvidenceWorkflow(CaseRepository(tmp_path / "cases"))
     state = workflow.ensure_case("case-01")
+    state.subjects["case_subject"] = AssessmentSubject(subject_id="case_subject", display_name="Case subject")
     state.sources["S1"] = source()
     workflow.repository.save(state)
     workflow.run_callback = VNextProductionRunner(client).run
@@ -93,10 +114,7 @@ def start_vnext(tmp_path: Path, client: SequenceClient) -> HumanEvidenceWorkflow
 
 
 def test_product_vnext_success_persists_result_and_never_requests_or_uses_steward(tmp_path: Path) -> None:
-    proposal = InvestigatorProposal.model_validate(
-        {"graph_updates": [{"operation": "add_evidence", "local_ref": "device", "statement": "Device present.", "source_ids": ["S1"], "reason": "Record the source observation."}]}
-    )
-    client = SequenceClient([assessment(supported=True, proposal=proposal)])
+    client = SequenceClient([assessment(supported=True, semantic_items=[device_item()])])
     workflow = start_vnext(tmp_path, client)
 
     workspace = workflow.get_workspace("case-01")
@@ -116,11 +134,13 @@ def test_product_vnext_success_persists_result_and_never_requests_or_uses_stewar
         "vnext_attempt_started",
         "vnext_model_call_started",
         "vnext_model_call_completed",
+        "vnext_semantic_compilation_started",
+        "vnext_semantic_compilation_completed",
         "vnext_completed",
     ]
     completed = next(item for item in traces if item["event"] == "vnext_model_call_completed")
     assert completed["model_call_number"] == 1
-    assert completed["call_kind"] == "initial"
+    assert completed["call_kind"] == "semantic_initial"
     assert completed["raw_output"]
     assert completed["parsed_output"]["subject_assessments"]
 
@@ -130,7 +150,10 @@ def test_sparse_product_vnext_completes_with_zero_graph_updates(tmp_path: Path) 
     workflow = start_vnext(tmp_path, client)
     result = json.loads((tmp_path / "cases" / "case-01" / "runs" / "run_000001" / "vnext_result.json").read_text())
     assert workflow.get_workspace("case-01")["runtimeStatus"] == "COMPLETED"
-    assert result["result"]["metadata"]["proposal_update_count"] == 0
+    # The model declares no semantic items. The compiler still adds one
+    # deterministic evaluation target per configured violation, and nothing else.
+    assert result["result"]["metadata"]["proposal_update_count"] == 4
+    assert {node["node_type"] for node in result["result"]["graph"]["nodes"].values()} == {"source", "hypothesis"}
     run = workflow.get_workspace("case-01")["runs"][0]
     assert run["model_calls"] == 1
     assert run["proposal_correction_calls"] == 0
@@ -165,7 +188,9 @@ def test_product_retry_failure_is_failed_without_successful_result(tmp_path: Pat
     assert workspace["runtimeStatus"] == "FAILED"
     assert len(client.calls) == 2
     assert not (artifact / "vnext_result.json").exists()
-    assert [trace["attempt_number"] for trace in workflow.get_traces("case-01") if trace["event"] == "vnext_attempt_failed"] == [1, 2]
+    assert [
+        trace["attempt_number"] for trace in workflow.get_traces("case-01") if trace["event"] == "vnext_attempt_failed"
+    ] == [1, 2]
     assert run["model_calls"] == 2
     assert run["proposal_correction_calls"] == 0
     assert run["clean_execution_retries"] == 1
@@ -186,7 +211,7 @@ def test_missing_preset_fails_without_model_retry(tmp_path: Path) -> None:
 
 
 def test_clean_rerun_has_distinct_history_and_does_not_use_prior_reasoning_graph(tmp_path: Path) -> None:
-    client = SequenceClient([assessment(), assessment()])
+    client = SequenceClient([assessment(supported=True, semantic_items=[device_item()]), assessment()])
     workflow = start_vnext(tmp_path, client)
     first_run_id = workflow.get_workspace("case-01")["runs"][0]["run_id"]
     state = workflow.repository.load("case-01")
@@ -200,8 +225,12 @@ def test_clean_rerun_has_distinct_history_and_does_not_use_prior_reasoning_graph
     runs = workflow.get_workspace("case-01")["runs"]
     assert len(client.calls) == 2
     assert [run["run_id"] for run in runs] == [first_run_id, "run_000002"]
-    second_result = json.loads((tmp_path / "cases" / "case-01" / "runs" / "run_000002" / "vnext_result.json").read_text())
-    assert set(second_result["result"]["graph"]["nodes"]) == {"S1", "S2"}
-    assert all(node["node_type"] == "source" for node in second_result["result"]["graph"]["nodes"].values())
-
-
+    second_result = json.loads(
+        (tmp_path / "cases" / "case-01" / "runs" / "run_000002" / "vnext_result.json").read_text()
+    )
+    second_nodes = second_result["result"]["graph"]["nodes"]
+    assert {"S1", "S2"} <= set(second_nodes)
+    # The first run's "device" evidence must not carry over; only the second run's
+    # deterministic evaluation targets and the sources remain.
+    assert {node["node_type"] for node in second_nodes.values()} == {"source", "hypothesis"}
+    assert not any(node["statement"] == "Device present." for node in second_nodes.values())

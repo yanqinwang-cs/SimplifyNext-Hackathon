@@ -2,11 +2,27 @@ import json
 
 from investigator.environments.case_01 import Case1ControlledEnvironment
 from investigator.prompts import GLOBAL_INVESTIGATION_RULES, render_assessment_context, render_current_case
-from investigator.services.contracts import InitialResponse, NextActionResponse, RevisionResponse
 
 
 def _initial_template() -> dict:
-    return {"hypotheses": [{"id": "H1", "parent_id": None, "statement": "A broad evidence-grounded explanation.", "status": "active", "supported_by": ["E1"], "conflicted_by": [], "unresolved": ["An important uncertainty that remains unresolved."], "specificity_basis_evidence_ids": []}], "selected_action_id": "A1", "target_uncertainty": "REPLACE_WITH_TARGET_UNCERTAINTY", "expected_information_value": "REPLACE_WITH_EXPECTED_INFORMATION_VALUE", "why_this_action_now": "REPLACE_WITH_ACTION_REASON"}
+    return {
+        "hypotheses": [
+            {
+                "id": "H1",
+                "parent_id": None,
+                "statement": "A broad evidence-grounded explanation.",
+                "status": "active",
+                "supported_by": ["E1"],
+                "conflicted_by": [],
+                "unresolved": ["An important uncertainty that remains unresolved."],
+                "specificity_basis_evidence_ids": [],
+            }
+        ],
+        "selected_action_id": "A1",
+        "target_uncertainty": "REPLACE_WITH_TARGET_UNCERTAINTY",
+        "expected_information_value": "REPLACE_WITH_EXPECTED_INFORMATION_VALUE",
+        "why_this_action_now": "REPLACE_WITH_ACTION_REASON",
+    }
 
 
 def initial_prompt(environment: Case1ControlledEnvironment) -> str:
@@ -15,19 +31,59 @@ def initial_prompt(environment: Case1ControlledEnvironment) -> str:
 
 def initial_expansion_prompt(environment: Case1ControlledEnvironment, seed_statement: str) -> str:
     template = {
-        "seed_analysis": {"supported_by": ["E1"], "conflicted_by": [], "unresolved": ["A substantive unresolved question."], "specificity_basis_evidence_ids": []},
-        "competing_hypotheses": [{"id": "H2", "parent_id": None, "statement": "A materially different broad explanation.", "status": "active", "supported_by": ["E2"], "conflicted_by": [], "unresolved": ["A substantive unresolved question."], "specificity_basis_evidence_ids": [], "relationship": "competing_root", "contrasted_hypothesis_id": "H1", "material_difference": "The material proposition that differs from H1."}],
-        "selected_action_id": "A1", "target_uncertainty": "REPLACE_WITH_TARGET_UNCERTAINTY", "expected_information_value": "REPLACE_WITH_EXPECTED_INFORMATION_VALUE", "why_this_action_now": "REPLACE_WITH_ACTION_REASON",
+        "seed_analysis": {
+            "supported_by": ["E1"],
+            "conflicted_by": [],
+            "unresolved": ["A substantive unresolved question."],
+            "specificity_basis_evidence_ids": [],
+        },
+        "competing_hypotheses": [
+            {
+                "id": "H2",
+                "parent_id": None,
+                "statement": "A materially different broad explanation.",
+                "status": "active",
+                "supported_by": ["E2"],
+                "conflicted_by": [],
+                "unresolved": ["A substantive unresolved question."],
+                "specificity_basis_evidence_ids": [],
+                "relationship": "competing_root",
+                "contrasted_hypothesis_id": "H1",
+                "material_difference": "The material proposition that differs from H1.",
+            }
+        ],
+        "selected_action_id": "A1",
+        "target_uncertainty": "REPLACE_WITH_TARGET_UNCERTAINTY",
+        "expected_information_value": "REPLACE_WITH_EXPECTED_INFORMATION_VALUE",
+        "why_this_action_now": "REPLACE_WITH_ACTION_REASON",
     }
     return f"""{GLOBAL_INVESTIGATION_RULES}\n\nASSESSMENT ONTOLOGY / POLICY\n{render_assessment_context()}\n\nCURRENT CASE EVIDENCE / PRIOR STATE\n{environment.initial_case_input()}\n\nINVESTIGATOR-SEEDED H1\n{seed_statement}\nPreserve this wording exactly as H1. It is human input, not evidence.\n\nTASK-SPECIFIC INSTRUCTION\nAnalyse H1 and generate at least one materially distinct competing top-level explanation. Do not rewrite H1. A competing_root has parent_id null and must explain its material difference from H1. A specialization must name an existing parent and use released evidence in specificity_basis_evidence_ids; do not speculate about mechanisms without positive evidence. Every emitted hypothesis is active and has at least one substantive unresolved question. Use only released evidence; context and H1 are not evidence. Return raw JSON only, with exactly the fields in the template and no prose or markdown commentary.\n\nCANONICAL JSON OUTPUT TEMPLATE\n{json.dumps(template, indent=2)}\nUse bare canonical IDs in ID fields and arrays even when empty."""
 
 
 def next_action_prompt(environment, session, available_actions) -> str:
     state = session.case_state.model_dump(mode="json")
-    return f"""{GLOBAL_INVESTIGATION_RULES}\n\nASSESSMENT ONTOLOGY / POLICY\n{render_assessment_context()}\n\nCURRENT CASE EVIDENCE / PRIOR STATE\n{render_current_case(environment.initial_case_input(), list(state['hypotheses'].values()), list(state['uncertainties'].values()))}\nCurrent evidence: {json.dumps(list(state['evidence'].values()), indent=2)}\n\nTASK-SPECIFIC INSTRUCTION\nSelect exactly one currently available enquiry. Do not revise state, execute an enquiry, or invent an action.\n\nCANONICAL JSON OUTPUT TEMPLATE\n{json.dumps({'selected_action_id': 'A2', 'target_uncertainty': 'REPLACE_WITH_TARGET_UNCERTAINTY', 'expected_information_value': 'REPLACE_WITH_EXPECTED_INFORMATION_VALUE', 'why_this_action_now': 'REPLACE_WITH_ACTION_REASON'}, indent=2)}\nUse exactly these fields, bare IDs in ID fields, and natural language in text fields. Return JSON only.\n\nAvailable enquiries:\n{json.dumps([a.__dict__ for a in available_actions], indent=2)}"""
+    return f"""{GLOBAL_INVESTIGATION_RULES}\n\nASSESSMENT ONTOLOGY / POLICY\n{render_assessment_context()}\n\nCURRENT CASE EVIDENCE / PRIOR STATE\n{render_current_case(environment.initial_case_input(), list(state["hypotheses"].values()), list(state["uncertainties"].values()))}\nCurrent evidence: {json.dumps(list(state["evidence"].values()), indent=2)}\n\nTASK-SPECIFIC INSTRUCTION\nSelect exactly one currently available enquiry. Do not revise state, execute an enquiry, or invent an action.\n\nCANONICAL JSON OUTPUT TEMPLATE\n{json.dumps({"selected_action_id": "A2", "target_uncertainty": "REPLACE_WITH_TARGET_UNCERTAINTY", "expected_information_value": "REPLACE_WITH_EXPECTED_INFORMATION_VALUE", "why_this_action_now": "REPLACE_WITH_ACTION_REASON"}, indent=2)}\nUse exactly these fields, bare IDs in ID fields, and natural language in text fields. Return JSON only.\n\nAvailable enquiries:\n{json.dumps([a.__dict__ for a in available_actions], indent=2)}"""
 
 
 def revision_prompt(environment, session, release) -> str:
     state = session.case_state.model_dump(mode="json")
-    template = {"hypothesis_updates": [{"hypothesis_id": "H1", "transition": "keep", "reason": "Why this update is justified.", "add_supporting_evidence_ids": [release.artifact_id], "add_conflicting_evidence_ids": [], "add_specificity_basis_evidence_ids": [], "requested_operation_name": None, "requested_effect": None, "why_existing_operations_do_not_fit": None}], "new_hypotheses": [], "uncertainty_updates": [], "new_uncertainties": [], "revision_rationale": "No state change is justified by this release."}
-    return f"""{GLOBAL_INVESTIGATION_RULES}\n\nASSESSMENT ONTOLOGY / POLICY\n{render_assessment_context()}\n\nCURRENT CASE EVIDENCE / PRIOR STATE\n{render_current_case(environment.initial_case_input(), list(state['hypotheses'].values()), list(state['uncertainties'].values()))}\nCurrent released evidence/state inventory:\n{json.dumps(list(state['evidence'].values()), indent=2)}\n\nTASK-SPECIFIC INSTRUCTION\nRevise the existing hypothesis tree after the controlled evidence release. Preserve viable broad parents and use only released evidence. Return JSON only with exactly these fields. `reason` is required for every update. Keep evidence-reference fields as arrays of bare IDs.\n\nCANONICAL JSON OUTPUT TEMPLATE\n{json.dumps(template, indent=2)}\nID FIELDS contain bare IDs only; TEXT FIELDS contain natural language only. Do not place explanations in any field ending with `_id`, `_ids`, or `_evidence_ids`.\n\nSelected enquiry/action ID: {release.action_id}\nNewly released evidence ID: {release.artifact_id}\nThe action ID must not appear in any evidence-reference field.\nNewly released artefact content:\n{release.content}"""
+    template = {
+        "hypothesis_updates": [
+            {
+                "hypothesis_id": "H1",
+                "transition": "keep",
+                "reason": "Why this update is justified.",
+                "add_supporting_evidence_ids": [release.artifact_id],
+                "add_conflicting_evidence_ids": [],
+                "add_specificity_basis_evidence_ids": [],
+                "requested_operation_name": None,
+                "requested_effect": None,
+                "why_existing_operations_do_not_fit": None,
+            }
+        ],
+        "new_hypotheses": [],
+        "uncertainty_updates": [],
+        "new_uncertainties": [],
+        "revision_rationale": "No state change is justified by this release.",
+    }
+    return f"""{GLOBAL_INVESTIGATION_RULES}\n\nASSESSMENT ONTOLOGY / POLICY\n{render_assessment_context()}\n\nCURRENT CASE EVIDENCE / PRIOR STATE\n{render_current_case(environment.initial_case_input(), list(state["hypotheses"].values()), list(state["uncertainties"].values()))}\nCurrent released evidence/state inventory:\n{json.dumps(list(state["evidence"].values()), indent=2)}\n\nTASK-SPECIFIC INSTRUCTION\nRevise the existing hypothesis tree after the controlled evidence release. Preserve viable broad parents and use only released evidence. Return JSON only with exactly these fields. `reason` is required for every update. Keep evidence-reference fields as arrays of bare IDs.\n\nCANONICAL JSON OUTPUT TEMPLATE\n{json.dumps(template, indent=2)}\nID FIELDS contain bare IDs only; TEXT FIELDS contain natural language only. Do not place explanations in any field ending with `_id`, `_ids`, or `_evidence_ids`.\n\nSelected enquiry/action ID: {release.action_id}\nNewly released evidence ID: {release.artifact_id}\nThe action ID must not appear in any evidence-reference field.\nNewly released artefact content:\n{release.content}"""

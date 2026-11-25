@@ -56,21 +56,30 @@ def proposal(updates: list[dict], relationships: list[dict] | None = None) -> In
     return InvestigatorProposal.model_validate({"graph_updates": updates, "relationship_scopes": relationships or []})
 
 
-def assessment_for(*, proposal_value: InvestigatorProposal, refs: dict[str, list[str]], statuses: dict[str, AssessmentStatus] | None = None) -> InvestigatorAssessment:
+def assessment_for(
+    *,
+    proposal_value: InvestigatorProposal,
+    refs: dict[str, list[str]],
+    statuses: dict[str, AssessmentStatus] | None = None,
+) -> InvestigatorAssessment:
     statuses = statuses or {student_id: AssessmentStatus.NOT_CURRENTLY_SUPPORTED for student_id in students()}
     return InvestigatorAssessment(
         proposal=proposal_value,
         subject_assessments=[
             SubjectAssessment(
                 subject_id=student_id,
-                violation_assessments=[ViolationAssessment(
-                    violation_id="V1",
-                    status=statuses[student_id],
-                    supporting_node_ids=refs.get(student_id, []),
-                    reasoning_summary="bounded assessment",
-                    confidence=Confidence.HIGH,
-                )],
-                furthest_conclusion=FurthestJustifiedConclusion(statement="bounded conclusion", confidence=Confidence.HIGH),
+                violation_assessments=[
+                    ViolationAssessment(
+                        violation_id="V1",
+                        status=statuses[student_id],
+                        supporting_node_ids=refs.get(student_id, []),
+                        reasoning_summary="bounded assessment",
+                        confidence=Confidence.HIGH,
+                    )
+                ],
+                furthest_conclusion=FurthestJustifiedConclusion(
+                    statement="bounded conclusion", confidence=Confidence.HIGH
+                ),
             )
             for student_id in sorted(students())
         ],
@@ -82,12 +91,18 @@ def run_input(sources: dict[str, Source]) -> VNextRunInput:
 
 
 def test_identifier_matching_is_normalized_exact_and_never_creates_students() -> None:
-    configured = {"A": AssessmentSubject(subject_id="A", display_name="Candidate A"), "B": AssessmentSubject(subject_id="B", display_name="Candidate B")}
-    index = build_source_applicability({
-        "S1": source("S1", "candidate-a_report.md", "The record names Candidate A."),
-        "S2": source("S2", "candidate-A-and-B.md", "Candidate A and Candidate B are both named."),
-        "S3": source("S3", "annex.md", "Candidate Annex only."),
-    }, configured)
+    configured = {
+        "A": AssessmentSubject(subject_id="A", display_name="Candidate A"),
+        "B": AssessmentSubject(subject_id="B", display_name="Candidate B"),
+    }
+    index = build_source_applicability(
+        {
+            "S1": source("S1", "candidate-a_report.md", "The record names Candidate A."),
+            "S2": source("S2", "candidate-A-and-B.md", "Candidate A and Candidate B are both named."),
+            "S3": source("S3", "annex.md", "Candidate Annex only."),
+        },
+        configured,
+    )
     assert normalize_identifier("Candidate-A") == "candidate a"
     assert index["S1"].matched_student_ids == ["A"]
     assert index["S2"].matched_student_ids == ["A", "B"]
@@ -98,35 +113,62 @@ def test_identifier_matching_is_normalized_exact_and_never_creates_students() ->
 
 def test_duplicate_normalized_configured_identifiers_are_rejected() -> None:
     with pytest.raises(ValueError, match="ambiguous"):
-        build_source_applicability({}, {
-            "A": AssessmentSubject(subject_id="A", display_name="Candidate-A"),
-            "B": AssessmentSubject(subject_id="B", display_name="candidate A"),
-        })
+        build_source_applicability(
+            {},
+            {
+                "A": AssessmentSubject(subject_id="A", display_name="Candidate-A"),
+                "B": AssessmentSubject(subject_id="B", display_name="candidate A"),
+            },
+        )
 
 
 def test_single_student_default_and_trusted_subject_scope_are_internal_categories() -> None:
     one = {"A": AssessmentSubject(subject_id="A", display_name="Student 1")}
     default = build_source_applicability({"S1": source("S1", "notes.md", "No configured name")}, one)
     assert default["S1"].classification.value == "single_student_default"
-    trusted = build_source_applicability({"S2": source("S2", "private.md", "private", scope={"scope_type": "subject", "subject_id": "A", "relationship_id": None, "relationship_ref": None})}, one)
+    trusted = build_source_applicability(
+        {
+            "S2": source(
+                "S2",
+                "private.md",
+                "private",
+                scope={"scope_type": "subject", "subject_id": "A", "relationship_id": None, "relationship_ref": None},
+            )
+        },
+        one,
+    )
     assert trusted["S2"].classification.value == "student_specific"
     assert trusted["S2"].basis == "trusted_internal_scope"
 
 
 def test_relationship_is_run_local_deterministic_and_requires_one_joint_source() -> None:
     sources = {
-        "S1": source("S1", "combined.md", "Candidate A and Candidate B were recorded together."),
+        "S1": source("S1", "joint-case.md", "Case-wide record of the shared seating and exam window."),
         "S2": source("S2", "a.md", "Candidate A only."),
         "S3": source("S3", "b.md", "Candidate B only."),
     }
     relationship = {"local_ref": "R1", "student_ids": ["A", "B"], "basis_source_ids": ["S1"]}
-    graph_proposal = proposal([
-        {"operation": "add_evidence", "local_ref": "ab", "statement": "Jointly recorded material.", "source_ids": ["S1"], "scope": {"scope_type": "relationship", "relationship_ref": "R1"}, "reason": "record joint source"},
-    ], [relationship])
+    graph_proposal = proposal(
+        [
+            {
+                "operation": "add_evidence",
+                "local_ref": "ab",
+                "statement": "Jointly recorded material.",
+                "source_ids": ["S1"],
+                "scope": {"scope_type": "relationship", "relationship_ref": "R1"},
+                "reason": "record joint source",
+            },
+        ],
+        [relationship],
+    )
     output = assessment_for(
         proposal_value=graph_proposal,
-        refs={"A": ["ab"], "B": ["ab"]},
-        statuses={"A": AssessmentStatus.SUPPORTED, "B": AssessmentStatus.PARTIALLY_SUPPORTED, "C": AssessmentStatus.NOT_CURRENTLY_SUPPORTED},
+        refs={},
+        statuses={
+            "A": AssessmentStatus.NOT_CURRENTLY_SUPPORTED,
+            "B": AssessmentStatus.NOT_CURRENTLY_SUPPORTED,
+            "C": AssessmentStatus.NOT_CURRENTLY_SUPPORTED,
+        },
     )
     run = VNextInvestigationRunner(lambda _: output).run(run_input(sources))
     relationship_id = deterministic_relationship_id("case-scope", ["A", "B"])
@@ -134,46 +176,126 @@ def test_relationship_is_run_local_deterministic_and_requires_one_joint_source()
     assert run.metadata.relationship_scope_ids == {"R1": relationship_id}
     assert run_input(sources).subject_relationships == {}
 
-    stitched = proposal([{"operation": "add_evidence", "local_ref": "ab", "statement": "stitched", "source_ids": ["S2"], "scope": {"scope_type": "relationship", "relationship_ref": "R1"}, "reason": "test"}], [
-        {"local_ref": "R1", "student_ids": ["A", "B"], "basis_source_ids": ["S2", "S3"]},
-    ])
+    stitched = proposal(
+        [
+            {
+                "operation": "add_evidence",
+                "local_ref": "ab",
+                "statement": "stitched",
+                "source_ids": ["S2"],
+                "scope": {"scope_type": "relationship", "relationship_ref": "R1"},
+                "reason": "test",
+            }
+        ],
+        [
+            {"local_ref": "R1", "student_ids": ["A", "B"], "basis_source_ids": ["S2", "S3"]},
+        ],
+    )
     with pytest.raises(WardenValidationError, match="joint source"):
-        GraphWarden(CaseGraph(case_id="case-scope", nodes={"S0": GraphNode(id="S0", node_type=GraphNodeType.SOURCE, statement="source")}, edges={}), sources, subjects=students()).apply(stitched)
+        GraphWarden(
+            CaseGraph(
+                case_id="case-scope",
+                nodes={"S0": GraphNode(id="S0", node_type=GraphNodeType.SOURCE, statement="source")},
+                edges={},
+            ),
+            sources,
+            subjects=students(),
+        ).apply(stitched)
 
 
-@pytest.mark.parametrize("bad_declaration", [
-    {"local_ref": "R1", "student_ids": ["A"], "basis_source_ids": ["S1"]},
-    {"local_ref": "R1", "student_ids": ["A", "Z"], "basis_source_ids": ["S1"]},
-    {"local_ref": "R1", "student_ids": ["A", "B"], "basis_source_ids": ["S9"]},
-])
+@pytest.mark.parametrize(
+    "bad_declaration",
+    [
+        {"local_ref": "R1", "student_ids": ["A"], "basis_source_ids": ["S1"]},
+        {"local_ref": "R1", "student_ids": ["A", "Z"], "basis_source_ids": ["S1"]},
+        {"local_ref": "R1", "student_ids": ["A", "B"], "basis_source_ids": ["S9"]},
+    ],
+)
 def test_relationship_declarations_reject_bad_participants_or_sources(bad_declaration: dict) -> None:
     sources = {"S1": source("S1", "combined.md", "Candidate A and Candidate B")}
     with pytest.raises((WardenValidationError, ValueError)):
-        GraphWarden(CaseGraph(case_id="case-scope", nodes={"S0": GraphNode(id="S0", node_type=GraphNodeType.SOURCE, statement="source")}, edges={}), sources, subjects=students()).apply(proposal([
-            {"operation": "add_evidence", "local_ref": "ab", "statement": "joint", "source_ids": ["S1"], "scope": {"scope_type": "relationship", "relationship_ref": "R1"}, "reason": "record"},
-        ], [bad_declaration]))
+        GraphWarden(
+            CaseGraph(
+                case_id="case-scope",
+                nodes={"S0": GraphNode(id="S0", node_type=GraphNodeType.SOURCE, statement="source")},
+                edges={},
+            ),
+            sources,
+            subjects=students(),
+        ).apply(
+            proposal(
+                [
+                    {
+                        "operation": "add_evidence",
+                        "local_ref": "ab",
+                        "statement": "joint",
+                        "source_ids": ["S1"],
+                        "scope": {"scope_type": "relationship", "relationship_ref": "R1"},
+                        "reason": "record",
+                    },
+                ],
+                [bad_declaration],
+            )
+        )
 
 
 def test_warden_is_atomic_for_invalid_relationship_batch_and_direct_model_id() -> None:
     sources = {"S1": source("S1", "combined.md", "Candidate A and Candidate B")}
-    graph = CaseGraph(case_id="case-scope", nodes={"S0": GraphNode(id="S0", node_type=GraphNodeType.SOURCE, statement="source")}, edges={})
+    graph = CaseGraph(
+        case_id="case-scope",
+        nodes={"S0": GraphNode(id="S0", node_type=GraphNodeType.SOURCE, statement="source")},
+        edges={},
+    )
     warden = GraphWarden(graph, sources, subjects=students())
     before_graph = graph.model_dump(mode="json")
     with pytest.raises(WardenValidationError):
-        warden.apply(proposal([
-            {"operation": "add_evidence", "local_ref": "ab", "statement": "joint", "source_ids": ["S1"], "scope": {"scope_type": "relationship", "relationship_ref": "R1"}, "reason": "record"},
-            {"operation": "add_support", "source_node_id": "missing", "target_node_id": "missing", "reason": "fail"},
-        ], [{"local_ref": "R1", "student_ids": ["A", "B"], "basis_source_ids": ["S1"]}]))
+        warden.apply(
+            proposal(
+                [
+                    {
+                        "operation": "add_evidence",
+                        "local_ref": "ab",
+                        "statement": "joint",
+                        "source_ids": ["S1"],
+                        "scope": {"scope_type": "relationship", "relationship_ref": "R1"},
+                        "reason": "record",
+                    },
+                    {
+                        "operation": "add_support",
+                        "source_node_id": "missing",
+                        "target_node_id": "missing",
+                        "reason": "fail",
+                    },
+                ],
+                [{"local_ref": "R1", "student_ids": ["A", "B"], "basis_source_ids": ["S1"]}],
+            )
+        )
     assert graph.model_dump(mode="json") == before_graph
     assert warden.subject_relationships == {}
     with pytest.raises(WardenValidationError, match="relationship_ref"):
-        GraphWarden(graph, sources, subjects=students(), relationship_refs={"R1": "persisted"}, strict_relationship_refs=True).apply(proposal([
-            {"operation": "add_hypothesis", "local_ref": "h", "statement": "h", "scope": {"scope_type": "relationship", "relationship_id": "persisted"}, "reason": "test"},
-        ]))
+        GraphWarden(
+            graph, sources, subjects=students(), relationship_refs={"R1": "persisted"}, strict_relationship_refs=True
+        ).apply(
+            proposal(
+                [
+                    {
+                        "operation": "add_hypothesis",
+                        "local_ref": "h",
+                        "statement": "h",
+                        "scope": {"scope_type": "relationship", "relationship_id": "persisted"},
+                        "reason": "test",
+                    },
+                ]
+            )
+        )
 
 
 def test_directional_scope_matrix_does_not_widen_private_material() -> None:
-    relationship = {"AB": SubjectRelationship(relationship_id="AB", subject_ids=["A", "B"], relationship_type="joint", source_ids=["S1"])}
+    relationship = {
+        "AB": SubjectRelationship(
+            relationship_id="AB", subject_ids=["A", "B"], relationship_type="joint", source_ids=["S1"]
+        )
+    }
     case = GraphScope(scope_type=GraphScopeType.CASE)
     student_a = GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id="A")
     student_b = GraphScope(scope_type=GraphScopeType.SUBJECT, subject_id="B")
@@ -196,13 +318,23 @@ def test_public_http_upload_cannot_supply_trusted_scope_or_relationship_endpoint
     def request(path: str, payload: dict) -> int:
         body = json.dumps(payload).encode()
         try:
-            with urllib.request.urlopen(urllib.request.Request(base + path, data=body, method="POST", headers={"Content-Type": "application/json"})) as response:
+            with urllib.request.urlopen(
+                urllib.request.Request(
+                    base + path, data=body, method="POST", headers={"Content-Type": "application/json"}
+                )
+            ) as response:
                 return response.status
         except urllib.error.HTTPError as error:
             return error.code
 
     try:
-        assert request("/api/cases/case-000001/sources", {"fileName": "x.md", "content": "x", "assessment_scope": {"scope_type": "subject", "subject_id": "A"}}) == 422
+        assert (
+            request(
+                "/api/cases/case-000001/sources",
+                {"fileName": "x.md", "content": "x", "assessment_scope": {"scope_type": "subject", "subject_id": "A"}},
+            )
+            == 422
+        )
         assert request("/api/cases/case-000001/relationships", {}) == 404
     finally:
         server.shutdown()
@@ -217,6 +349,12 @@ def test_public_samples_keep_their_explicit_student_sets(tmp_path: Path) -> None
     law = workflow.repository.load("law-working")
     multi = workflow.repository.load("multi-working")
     assert [item.display_name for item in law.subjects.values()] == ["Candidate A"]
-    assert [item.display_name for item in multi.subjects.values()] == ["Candidate A", "Candidate B", "Candidate C", "Candidate D", "Candidate E"]
+    assert [item.display_name for item in multi.subjects.values()] == [
+        "Candidate A",
+        "Candidate B",
+        "Candidate C",
+        "Candidate D",
+        "Candidate E",
+    ]
     assert len(law.sources) == 17
     assert len(multi.sources) == 14

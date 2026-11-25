@@ -1,2 +1,1 @@
 """Controlled investigation smoke experiments."""
-
