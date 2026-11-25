@@ -89,7 +89,11 @@ export default function CasesPage() {
         <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-black">Create a new case</h2>
           <form onSubmit={submit} className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <label htmlFor="new-case-name" className="sr-only">
+              Case name
+            </label>
             <input
+              id="new-case-name"
               required
               value={name}
               onChange={(event) => setName(event.target.value)}

@@ -25,6 +25,37 @@ def resolve_run_handle(workflow: Any, case_id: str, handle: str) -> str:
     raise KeyError("Assessment run not found")
 
 
+GENERIC_FAILURE_MESSAGE = (
+    "The assessment could not be completed. Run it again; if it keeps failing, download the trace."
+)
+
+
+_CONFIGURATION_FAILURE_MESSAGE = (
+    "The model provider is not configured. Check the provider settings and API key, then run the assessment again."
+)
+_CONFIGURATION_CATEGORIES = {
+    "AnthropicConfigurationError",
+    "BedrockConfigurationError",
+    "ModelProviderConfigurationError",
+    "ORCHESTRATION_CONFIGURATION_FAILURE",
+}
+_INTERRUPTED_MESSAGE = "The assessment was interrupted when the service restarted."
+
+
+def public_failure_message(final_error: Any) -> str:
+    """Show only fixed sentences; raw validation and provider errors name internal students and rules."""
+    if not isinstance(final_error, dict):
+        return ""
+    category = final_error.get("failure_category")
+    if category == "PROVIDER_TIMEOUT":
+        return str(final_error.get("message") or "")
+    if category == "PROCESS_RESTART":
+        return _INTERRUPTED_MESSAGE
+    if category in _CONFIGURATION_CATEGORIES:
+        return _CONFIGURATION_FAILURE_MESSAGE
+    return GENERIC_FAILURE_MESSAGE
+
+
 def assessment_view(workflow: Any, case_id: str) -> dict[str, Any]:
     state = workflow.repository.require_case(case_id)
     workflow.recover_interrupted_run(case_id)
@@ -59,9 +90,7 @@ def assessment_view(workflow: Any, case_id: str) -> dict[str, Any]:
             "startedAt": item.get("started_at"),
             "endedAt": item.get("ended_at"),
             "traceReady": item.get("trace_finalized") is True,
-            "message": (item.get("final_error") or {}).get("message", "")
-            if isinstance(item.get("final_error"), dict)
-            else "",
+            "message": public_failure_message(item.get("final_error")),
         }
 
     return {

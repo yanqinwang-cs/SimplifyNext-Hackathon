@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { getReport } from "../../../lib/case-service";
 import type { ReportResponse } from "../../../lib/types";
 
@@ -48,21 +48,31 @@ export default function ReportPage() {
   const assessment = searchParams.get("assessment") ?? undefined;
   const [report, setReport] = useState<ReportResponse | null>(null);
   const [error, setError] = useState(false);
-  const load = useCallback(() => {
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    // Ignore a response that arrives after the address changed, so one report is never shown under another's address.
+    const controller = new AbortController();
     setError(false);
     setReport(null);
-    void getReport(caseId, assessment)
-      .then(setReport)
-      .catch(() => setError(true));
-  }, [caseId, assessment]);
-  useEffect(load, [load]);
+    getReport(caseId, assessment, controller.signal)
+      .then((next) => {
+        if (!controller.signal.aborted) setReport(next);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setError(true);
+      });
+    return () => controller.abort();
+  }, [caseId, assessment, attempt]);
   if (error)
     return (
       <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
         <article className="mx-auto max-w-3xl rounded-2xl border bg-white p-8 shadow-sm">
           <p className="font-bold">This report could not be loaded.</p>
           <div className="mt-5 flex gap-4">
-            <button className="rounded bg-blue-700 px-4 py-2 font-bold text-white" onClick={load}>
+            <button
+              className="rounded bg-blue-700 px-4 py-2 font-bold text-white"
+              onClick={() => setAttempt((value) => value + 1)}
+            >
               Retry
             </button>
             <Link
@@ -150,7 +160,8 @@ export default function ReportPage() {
                         <div className="flex flex-wrap justify-between gap-3">
                           <strong>{item.label}</strong>
                           <span className="text-xs font-bold uppercase">
-                            {statusLabels[item.status] ?? item.status.replaceAll("_", " ")}
+                            {statusLabels[item.status.toUpperCase()] ??
+                              item.status.replaceAll("_", " ")}
                           </span>
                         </div>
                         <p className="mt-2 text-sm leading-6">{item.reasoningSummary}</p>

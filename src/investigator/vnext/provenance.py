@@ -14,7 +14,7 @@ def source_ancestry(graph: CaseGraph, node_id: str) -> set[str]:
         seen.add(current)
         node = graph.nodes[current]
         if node.node_type is GraphNodeType.SOURCE:
-            sources.add(node_id)
+            sources.add(current)
         sources.update(item for item in node.metadata.get("source_ids", []) if isinstance(item, str))
         pending.extend(edge.target_id for edge in graph.outgoing(current, EdgeRelation.DERIVED_FROM))
     return sources

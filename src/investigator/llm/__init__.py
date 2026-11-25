@@ -7,6 +7,7 @@ from investigator.llm.base import (
     ModelTextBlock,
     ModelToolUse,
     ModelParseError,
+    ModelOutputTruncated,
     normalize_json_text,
 )
 from investigator.llm.mock import MockModelClient
@@ -38,6 +39,7 @@ __all__ = [
     "ModelTextBlock",
     "ModelToolUse",
     "ModelParseError",
+    "ModelOutputTruncated",
     "MockModelClient",
     "normalize_json_text",
     "AnthropicConfigurationError",

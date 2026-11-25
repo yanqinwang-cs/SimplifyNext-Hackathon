@@ -24,9 +24,14 @@ def normalize_json_text(raw_text: str) -> str:
 class ModelParseError(ValueError):
     """Raised when a model response cannot be validated against its schema."""
 
-    def __init__(self, message: str, raw_output: Any = None) -> None:
+    def __init__(self, message: str, raw_output: Any = None, metadata: "ModelCallMetadata | None" = None) -> None:
         super().__init__(message)
         self.raw_output = raw_output
+        self.metadata = metadata
+
+
+class ModelOutputTruncated(ModelParseError):
+    """The reply hit the output token limit; repeating the same call would be cut off at the same place."""
 
 
 class ModelCallMetadata(BaseModel):

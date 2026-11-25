@@ -5,21 +5,29 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from copy import deepcopy
 from copy import copy
+import threading
 from datetime import datetime, timezone
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from investigator.llm import AnthropicModelClient, ModelClient, ModelToolUse, create_model_client, configured_provider
 from investigator.services.evidence_requests import HumanEvidenceWorkflow
 from investigator.help import product_guide
 from investigator.runtime_settings import effective_model, record_help_model_use
-from investigator.llm.bedrock import BedrockModelClient, redact_sensitive_text
+from investigator.llm.bedrock import BedrockModelClient, is_provider_timeout, redact_sensitive_text
 
 
 class WorkspaceChatRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     message: str = Field(min_length=1)
+
+    @field_validator("message")
+    @classmethod
+    def _not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Workspace message must not be empty")
+        return value
 
 
 @dataclass(frozen=True)
@@ -107,6 +115,12 @@ class WorkspaceAgent:
         self.client = client
         self.session_store = session_store or WorkspaceSessionStore()
         self.model_spec = effective_model("workspace_help")
+        self._case_locks: dict[str, threading.Lock] = {}
+        self._case_locks_guard = threading.Lock()
+
+    def _case_lock(self, case_id: str) -> threading.Lock:
+        with self._case_locks_guard:
+            return self._case_locks.setdefault(case_id, threading.Lock())
 
     def invoke_tool(self, case_id: str, request: WorkspaceToolRequest | dict[str, Any]) -> dict[str, Any]:
         request = request if isinstance(request, WorkspaceToolRequest) else WorkspaceToolRequest.model_validate(request)
@@ -120,6 +134,14 @@ class WorkspaceAgent:
 
     def chat(self, case_id: str, message: str) -> WorkspaceChatResponse:
         self.workflow.repository.require_case(case_id)
+        if not message.strip():
+            raise ValueError("Workspace message must not be empty")
+        # One turn at a time per case: an interleaved turn would leave a tool call without its result in the shared
+        # history, and every later message would then fail the pairing check.
+        with self._case_lock(case_id):
+            return self._chat_locked(case_id, message)
+
+    def _chat_locked(self, case_id: str, message: str) -> WorkspaceChatResponse:
         attempts = 2
         session = self.session_store.session(case_id)
         clean_conversation = deepcopy(session["conversation"])
@@ -131,8 +153,9 @@ class WorkspaceAgent:
             session["turns"] = deepcopy(clean_turns)
             try:
                 return self._chat_once(case_id, message)
-            except Exception:
-                if attempt + 1 == attempts:
+            except Exception as exc:
+                # A provider timeout already cost a full paid call; repeating it would bill the same wait twice.
+                if attempt + 1 == attempts or is_provider_timeout(exc):
                     session["conversation"] = deepcopy(clean_conversation)
                     session["chat_history"] = deepcopy(clean_chat_history)
                     session["turns"] = deepcopy(clean_turns)

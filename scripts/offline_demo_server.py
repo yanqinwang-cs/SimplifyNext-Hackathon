@@ -142,6 +142,7 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
+    args.repository.mkdir(parents=True, exist_ok=True)
     log_path = args.repository / ".stage7-provider-calls.json"
     default_spec = MODEL_REGISTRY["anthropic.claude-sonnet-4-5"]
     client = OfflineDemoModelClient(default_spec.invocation_id, default_spec.region, log_path=log_path)

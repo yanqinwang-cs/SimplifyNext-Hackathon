@@ -78,7 +78,7 @@ export default function Home() {
           >
             Skip introduction
           </button>
-          <div className="flex items-center gap-2" aria-label="Introduction progress">
+          <div className="flex items-center gap-2" role="group" aria-label="Introduction progress">
             {slides.map((item, index) => (
               <button
                 key={item[0]}
