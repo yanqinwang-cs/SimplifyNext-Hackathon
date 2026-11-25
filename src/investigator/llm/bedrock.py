@@ -18,6 +18,7 @@ from investigator.llm.base import (
     ModelNativeCall,
     ModelTextBlock,
     ModelToolUse,
+    ModelOutputTruncated,
     ModelParseError,
     normalize_json_text,
     parse_model_output,
@@ -160,22 +161,28 @@ class BedrockModelClient:
         raw_text = response["output"]["message"]["content"][0]["text"]
         metadata_response = response.get("usage", {})
         stop_reason = response.get("stopReason")
+
+        def _metadata(parse_success: bool) -> ModelCallMetadata:
+            return ModelCallMetadata(
+                provider="bedrock",
+                model=self.model_id,
+                input_tokens=metadata_response.get("inputTokens"),
+                output_tokens=metadata_response.get("outputTokens"),
+                latency_seconds=perf_counter() - started,
+                parse_success=parse_success,
+                finish_reason=stop_reason,
+            )
+
         try:
             parsed = parse_model_output(json.loads(normalize_json_text(raw_text)), output_schema)
         except (json.JSONDecodeError, ModelParseError) as exc:
-            raise ModelParseError(
+            error_type = ModelOutputTruncated if stop_reason == "max_tokens" else ModelParseError
+            raise error_type(
                 f"Bedrock returned invalid structured output for {output_schema.__name__}: {exc}",
                 raw_output=raw_text,
+                metadata=_metadata(False),
             ) from exc
-        metadata = ModelCallMetadata(
-            provider="bedrock",
-            model=self.model_id,
-            input_tokens=metadata_response.get("inputTokens"),
-            output_tokens=metadata_response.get("outputTokens"),
-            latency_seconds=perf_counter() - started,
-            parse_success=True,
-            finish_reason=stop_reason,
-        )
+        metadata = _metadata(True)
         return ModelCallResult(parsed=parsed, metadata=metadata, raw_output=raw_text)
 
     def call_native(self, input_data: MessageInput, tools: list[dict[str, Any]]) -> ModelNativeCall:

@@ -132,7 +132,59 @@ def test_help_rejects_blank_message_and_unknown_case(api: Api) -> None:
     assert status == 404
 
 
-def test_ten_candidate_sample_opens_from_the_installed_package(api: Api) -> None:
+def test_ten_candidate_sample_is_read_from_the_installed_package(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
+    package_root = Path(http_api.__file__).resolve().parent / "public_samples"
+    loaded: list[Path] = []
+    real_loader = http_api.load_scale_fixture_case_state
+
+    def spy(root: Path):
+        loaded.append(Path(root).resolve())
+        return real_loader(root)
+
+    monkeypatch.setattr(http_api, "load_scale_fixture_case_state", spy)
     status, body = api.request("POST", "/api/samples/open", '{"sampleId":"multi-candidate-10"}', JSON_HEADERS)
     assert status == 200
     assert len(json.loads(body)["workspace"]["students"]) == 10
+    assert loaded == [package_root / "multi_candidate_10"]
+    assert "tests" not in loaded[0].relative_to(package_root.parent).parts
+
+
+def test_failed_run_status_route_shows_a_public_sentence_not_internal_ids(api: Api) -> None:
+    from investigator.public_views import GENERIC_FAILURE_MESSAGE, public_run_handle_for_instance
+
+    _, created = api.request("POST", "/api/cases", '{"title":"c"}', JSON_HEADERS)
+    case_id = json.loads(created)["caseId"]
+    run_dir = api.root / case_id / "runs" / "run_000001"
+    run_dir.mkdir(parents=True)
+    (run_dir / "run_result.json").write_text(
+        json.dumps(
+            {
+                "run_id": "run_000001",
+                "run_instance_id": "inst-1",
+                "started_at": "2026-01-01T00:00:00Z",
+                "outcome_type": "FAILED",
+                "final_error": {
+                    "failure_category": "SemanticValidationError",
+                    "message": "'subject_1'/V1 is supported only by case-wide or unattributed material",
+                },
+            }
+        )
+    )
+    handle = public_run_handle_for_instance(case_id, "run_000001", "inst-1")
+    status, body = api.request("GET", f"/api/cases/{case_id}/assessment-runs/{handle}")
+    assert status == 200 and json.loads(body)["message"] == GENERIC_FAILURE_MESSAGE
+    _, workspace = api.request("GET", f"/api/cases/{case_id}/workspace")
+    assert json.loads(workspace)["assessment"]["latestAttempt"]["message"] == GENERIC_FAILURE_MESSAGE
+    assert "subject_1" not in workspace
+
+
+def test_unexpected_server_error_is_logged_with_its_traceback(
+    api: Api, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("deliberate failure")
+
+    monkeypatch.setattr(http_api, "sample_cases", boom)
+    status, _ = api.request("GET", "/api/samples")
+    assert status == 500
+    assert any(record.exc_info and "deliberate failure" in str(record.exc_info[1]) for record in caplog.records)

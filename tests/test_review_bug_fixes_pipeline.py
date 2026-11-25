@@ -191,13 +191,18 @@ def test_student_name_with_a_backslash_is_inserted_literally() -> None:
     assert _humanize("subject_1 was seated alone.", snapshot) == r"A\Kim \1 was seated alone."
 
 
-def test_running_assessment_is_not_labelled_failed() -> None:
+@pytest.mark.parametrize(
+    ("outcome_type", "expected"),
+    [("RUNNING", "running"), (None, "running"), ("COMPLETED", "completed"), ("FAILED", "failed")],
+)
+def test_runtime_settings_labels_the_latest_run_by_its_recorded_outcome(
+    outcome_type: str | None, expected: str
+) -> None:
+    # Production writes outcome_type "RUNNING" when a run starts, so that value must read as running.
     model = APPROVED_MODELS[0]
-    workflow = SimpleNamespace(
-        get_runs=lambda _case: [{"model": MODEL_REGISTRY[model].invocation_id, "started_at": "t", "outcome_type": None}]
-    )
-    use, _ = _latest_investigator_use("case-1", workflow)
-    assert use["outcome"] == "running"
+    run = {"model": MODEL_REGISTRY[model].invocation_id, "started_at": "t", "outcome_type": outcome_type}
+    use, _ = _latest_investigator_use("case-1", SimpleNamespace(get_runs=lambda _case: [run]))
+    assert use["outcome"] == expected
 
 
 def test_provenance_reports_the_source_node_reached_not_the_start_node(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -289,3 +294,46 @@ def test_help_rejects_a_blank_message_without_calling_the_model(tmp_path) -> Non
 
     with pytest.raises(ValueError):
         WorkspaceAgent(workflow, client=Never()).chat(case_id, "   ")
+
+
+# --- bedrock parse failures, public failure text -----------------------------------------------------------------
+
+
+def _bedrock(stop_reason: str, text: str):
+    from investigator.llm.bedrock import BedrockModelClient
+
+    response = {
+        "output": {"message": {"content": [{"text": text}]}},
+        "usage": {"inputTokens": 21, "outputTokens": 9},
+        "stopReason": stop_reason,
+    }
+    return BedrockModelClient(model_id="m", client=SimpleNamespace(converse=lambda **_kwargs: response))
+
+
+def test_bedrock_parse_failure_keeps_usage_and_a_cut_off_reply_is_not_retried() -> None:
+    from investigator.llm import ModelOutputTruncated
+
+    with pytest.raises(ModelParseError) as raised:
+        _bedrock("end_turn", "not json").call("x", Answer)
+    assert (raised.value.metadata.input_tokens, raised.value.metadata.output_tokens) == (21, 9)
+    assert not isinstance(raised.value, ModelOutputTruncated)
+    with pytest.raises(ModelOutputTruncated) as truncated:
+        _bedrock("max_tokens", '{"answer": "unfin').call("x", Answer)
+    assert truncated.value.metadata.finish_reason == "max_tokens"
+    assert VNextProductionRunner._retryable(truncated.value) is False
+
+
+def test_public_failure_message_never_exposes_internal_ids() -> None:
+    from investigator.public_views import GENERIC_FAILURE_MESSAGE, public_failure_message
+
+    internal = {
+        "failure_category": "SemanticValidationError",
+        "message": "'subject_1'/V1 is supported only by case-wide or unattributed material",
+    }
+    assert public_failure_message(internal) == GENERIC_FAILURE_MESSAGE
+    assert public_failure_message({"failure_category": "RuntimeError", "message": "raw S3 detail"}) == (
+        GENERIC_FAILURE_MESSAGE
+    )
+    timeout = {"failure_category": "PROVIDER_TIMEOUT", "message": "The model provider did not respond in time."}
+    assert public_failure_message(timeout) == "The model provider did not respond in time."
+    assert public_failure_message(None) == ""

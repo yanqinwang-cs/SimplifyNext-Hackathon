@@ -42,13 +42,6 @@ const copy = (state: CaseWorkspaceState["assessment"]["state"]) =>
     stopped: "Assessment stopped. No new report was committed.",
   })[state];
 
-// Provider and validation failures can carry raw exception text; show those as the standard sentence instead.
-function readableFailure(message: string | undefined, fallback: string): string {
-  if (!message || message.includes("\n") || /validation error|Traceback|\[type=/i.test(message))
-    return fallback;
-  return message;
-}
-
 export default function CasePage() {
   const { caseId } = useParams<{ caseId: string }>();
   const [workspace, setWorkspace] = useState<CaseWorkspaceState | null>(null);
@@ -159,8 +152,7 @@ export default function CasePage() {
           if (next.state === "completed") {
             const nextReport = await getReport(caseId, undefined, controller.signal);
             if (token === generation.current) setReport(nextReport);
-          } else if (next.message && token === generation.current)
-            setStatusError(readableFailure(next.message, "The assessment could not be completed."));
+          } else if (next.message && token === generation.current) setStatusError(next.message);
           return;
         }
         await new Promise((resolve) => window.setTimeout(resolve, 1000));
@@ -326,10 +318,7 @@ export default function CasePage() {
   const locked = active || uploadBusy || studentBusy || resetBusy;
   const statusText =
     workspace.assessment.state.startsWith("failed") && workspace.assessment.latestAttempt?.message
-      ? readableFailure(
-          workspace.assessment.latestAttempt.message,
-          copy(workspace.assessment.state),
-        )
+      ? workspace.assessment.latestAttempt.message
       : copy(workspace.assessment.state);
   const traceReady = workspace.assessment.latestAttempt?.traceReady === true;
   return (

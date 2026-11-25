@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import logging
 import os
 import re
 import shutil
@@ -33,6 +34,7 @@ from investigator.public_views import (
     assessment_view,
     workspace_view,
     public_run_handle_for_instance,
+    public_failure_message,
     public_source_handle,
     public_student_handle,
     resolve_run_handle,
@@ -49,6 +51,7 @@ from investigator.runtime_settings import (
 from investigator.public_samples.scale import load_scale_fixture_case_state
 
 
+logger = logging.getLogger(__name__)
 MAX_REQUEST_BODY_BYTES = 10 * 1024 * 1024
 
 
@@ -316,6 +319,8 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
         except ValueError:
             self._write(422, {"error": "Invalid request"})
         except Exception:
+            # log_message is silenced, so this is the only place an unexpected server error leaves a traceback.
+            logger.exception("Unhandled error in %s %s", self.command, self.path)
             self._write(500, {"error": "The request could not be completed."})
 
     def do_GET(self) -> None:
@@ -444,9 +449,7 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                         "state": str(run.get("outcome_type") or "RUNNING").lower(),
                         "startedAt": run.get("started_at"),
                         "endedAt": run.get("ended_at"),
-                        "message": (run.get("final_error") or {}).get("message", "")
-                        if isinstance(run.get("final_error"), dict)
-                        else "",
+                        "message": public_failure_message(run.get("final_error")),
                         "reportAvailable": run.get("vnext_status") == "completed",
                         "reportStale": assessment_view(self.workflow, parts[2])["reportStale"],
                         "workspace": self._public_workspace(parts[2]),

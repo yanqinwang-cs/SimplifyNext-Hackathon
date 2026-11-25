@@ -99,9 +99,9 @@ test("new-case name input and evidence file input have accessible names", async 
   await expect(page.getByLabel("Evidence file")).toBeVisible();
 });
 
-test("a failed run shows plain words, not raw validation text", async ({ page }) => {
-  const raw =
-    "1 validation error for InvestigatorSemanticAssessment\nsubject_assessments.0.confidence\n  Field required [type=missing, input_value={}, input_type=dict]";
+test("a failed run shows the public sentence the API sends", async ({ page }) => {
+  const sentence =
+    "The assessment could not be completed. Run it again; if it keeps failing, download the trace.";
   const current = workspace({
     assessment: {
       state: "failed_no_report",
@@ -114,14 +114,13 @@ test("a failed run shows plain words, not raw validation text", async ({ page })
         startedAt: "2026-01-01T00:00:00Z",
         endedAt: "2026-01-01T00:01:00Z",
         traceReady: false,
-        message: raw,
+        message: sentence,
       },
     },
   });
   await mockCase(page, () => current);
   await page.goto("/cases/case-01");
-  await expect(page.getByText("Assessment failed before a report was produced.")).toBeVisible();
-  await expect(page.locator("body")).not.toContainText("validation error");
+  await expect(page.getByText(sentence)).toBeVisible();
 });
 
 test("a late Help refresh cannot overwrite a finished assessment", async ({ page }) => {
