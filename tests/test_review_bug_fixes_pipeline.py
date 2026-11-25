@@ -337,3 +337,14 @@ def test_public_failure_message_never_exposes_internal_ids() -> None:
     timeout = {"failure_category": "PROVIDER_TIMEOUT", "message": "The model provider did not respond in time."}
     assert public_failure_message(timeout) == "The model provider did not respond in time."
     assert public_failure_message(None) == ""
+    restart = {"failure_category": "PROCESS_RESTART", "message": "anything"}
+    assert public_failure_message(restart) == "The assessment was interrupted when the service restarted."
+    for category in (
+        "AnthropicConfigurationError",
+        "BedrockConfigurationError",
+        "ModelProviderConfigurationError",
+        "ORCHESTRATION_CONFIGURATION_FAILURE",
+    ):
+        message = public_failure_message({"failure_category": category, "message": "set ANTHROPIC_API_KEY sk-secret"})
+        assert "sk-secret" not in message
+        assert message.startswith("The model provider is not configured")

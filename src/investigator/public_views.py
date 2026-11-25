@@ -30,12 +30,29 @@ GENERIC_FAILURE_MESSAGE = (
 )
 
 
+_CONFIGURATION_FAILURE_MESSAGE = (
+    "The model provider is not configured. Check the provider settings and API key, then run the assessment again."
+)
+_CONFIGURATION_CATEGORIES = {
+    "AnthropicConfigurationError",
+    "BedrockConfigurationError",
+    "ModelProviderConfigurationError",
+    "ORCHESTRATION_CONFIGURATION_FAILURE",
+}
+_INTERRUPTED_MESSAGE = "The assessment was interrupted when the service restarted."
+
+
 def public_failure_message(final_error: Any) -> str:
-    """Show only text known to be safe; raw validation and provider errors name internal students and rules."""
+    """Show only fixed sentences; raw validation and provider errors name internal students and rules."""
     if not isinstance(final_error, dict):
         return ""
-    if final_error.get("failure_category") == "PROVIDER_TIMEOUT":
+    category = final_error.get("failure_category")
+    if category == "PROVIDER_TIMEOUT":
         return str(final_error.get("message") or "")
+    if category == "PROCESS_RESTART":
+        return _INTERRUPTED_MESSAGE
+    if category in _CONFIGURATION_CATEGORIES:
+        return _CONFIGURATION_FAILURE_MESSAGE
     return GENERIC_FAILURE_MESSAGE
 
 
