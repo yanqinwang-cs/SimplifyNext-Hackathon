@@ -90,7 +90,8 @@ def _latest_investigator_use(case_id: str | None, workflow: Any | None) -> tuple
         (name for name in APPROVED_MODELS if MODEL_REGISTRY[name].invocation_id == model or name == model), None
     )
     if logical:
-        outcome = "completed" if latest.get("outcome_type") == "COMPLETED" else "failed"
+        outcome_type = latest.get("outcome_type")
+        outcome = "completed" if outcome_type == "COMPLETED" else "failed" if outcome_type else "running"
         return {
             "model": logical,
             "label": _label(logical),

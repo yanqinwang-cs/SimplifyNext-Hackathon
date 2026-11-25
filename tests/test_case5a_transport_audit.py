@@ -49,7 +49,10 @@ def add_source(
 
 def wait_for(workflow: HumanEvidenceWorkflow, case_id: str = "case-01") -> None:
     for _ in range(200):
-        if workflow.get_workspace(case_id)["runtimeStatus"] in {"COMPLETED", "FAILED"}:
+        # The workspace status flips before the run record is finalised, so wait for the record too.
+        runs = workflow.get_runs(case_id)
+        finished = bool(runs) and runs[-1].get("outcome_type") in {"COMPLETED", "FAILED"}
+        if finished and workflow.get_workspace(case_id)["runtimeStatus"] in {"COMPLETED", "FAILED"}:
             return
         time.sleep(0.01)
     raise AssertionError("assessment did not reach a terminal state")

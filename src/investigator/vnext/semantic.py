@@ -311,7 +311,15 @@ def _scope_description(scope: GraphScope, run_input: VNextRunInput) -> str:
 
 
 def _source_scope(source_id: str, run_input: VNextRunInput) -> GraphScope:
-    applicability = run_input.source_applicability[source_id]
+    applicability = run_input.source_applicability.get(source_id)
+    if applicability is None:
+        raise SemanticValidationError(
+            f"basis_source_ids contains unknown source ID {source_id!r}",
+            retry_constraint=(
+                f"{source_id!r} is not an admitted source ID. Cite only the exact source_id values listed in the "
+                "admitted evidence sources."
+            ),
+        )
     trusted = applicability.trusted_scope
     if trusted is not None:
         if trusted.scope_type is GraphScopeType.CASE:
@@ -399,6 +407,19 @@ def semantic_item_has_source_ancestry(
     return all(semantic_item_has_source_ancestry(ref, items, seen.copy()) for ref in item.basis_item_refs)
 
 
+def _source_ids_behind(local_ref: str, items: dict[str, SemanticItemUnion], seen: set[str] | None = None) -> set[str]:
+    seen = seen if seen is not None else set()
+    item = items.get(local_ref)
+    if item is None or local_ref in seen:
+        return set()
+    seen.add(local_ref)
+    if isinstance(item, EvidenceStatementItem):
+        return set(item.basis_source_ids)
+    if isinstance(item, PropositionItem):
+        return {source_id for ref in item.basis_item_refs for source_id in _source_ids_behind(ref, items, seen)}
+    return set()
+
+
 def _dedupe_refs(values: list[str]) -> list[str]:
     return list(dict.fromkeys(values))
 
@@ -410,6 +431,8 @@ def _normalize_semantic_input(
     for item in assessment.semantic_items:
         if isinstance(item, PropositionItem):
             item = item.model_copy(update={"basis_item_refs": _dedupe_refs(item.basis_item_refs)})
+        elif isinstance(item, EvidenceStatementItem):
+            item = item.model_copy(update={"basis_source_ids": _dedupe_refs(item.basis_source_ids)})
         items.append(item)
     subjects: list[SemanticSubjectAssessment] = []
     for subject in assessment.subject_assessments:
@@ -550,6 +573,32 @@ def compile_semantic_assessment(
                         )
                     if field_name != "alternative_item_refs" and not semantic_item_has_source_ancestry(ref, by_ref):
                         raise SemanticValidationError(f"{field_name} {ref!r} has no admitted source ancestry")
+
+            if len(expected_subjects) > 1 and violation.status in {
+                AssessmentStatus.SUPPORTED,
+                AssessmentStatus.PARTIALLY_SUPPORTED,
+                AssessmentStatus.CONFLICTED,
+            }:
+                # Same rule the runner applies later; checking it here lets the model correct itself in a retry
+                # instead of the runner rejecting the identical reply after a second paid call.
+                supporting_scopes = [scopes[ref] for ref in violation.supporting_item_refs if ref in scopes]
+                attributed = any(
+                    run_input.source_applicability[source_id].classification.value != "case_shared"
+                    for ref in violation.supporting_item_refs
+                    for source_id in _source_ids_behind(ref, by_ref)
+                )
+                if (
+                    not any(scope.scope_type is not GraphScopeType.CASE for scope in supporting_scopes)
+                    or not attributed
+                ):
+                    raise SemanticValidationError(
+                        f"{subject_id!r}/{violation.violation_id} is supported only by case-wide or unattributed material",
+                        retry_constraint=(
+                            f"{subject_id!r}/{violation.violation_id} is marked {violation.status.value} using only "
+                            "case-wide material or sources that name no student. With several students, supporting "
+                            "material must come from a source tied to this student or relationship; otherwise choose an unsupported status."
+                        ),
+                    )
 
     updates: list[object] = []
     local_refs: dict[str, str] = {}

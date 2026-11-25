@@ -73,7 +73,10 @@ def _humanize(text: str, snapshot: Mapping[str, Any]) -> str:
     replacements.sort(key=lambda item: len(item[0]), reverse=True)
     result = str(text or "")
     for internal, replacement in replacements:
-        result = re.sub(rf"(?<![A-Za-z0-9_]){re.escape(internal)}(?![A-Za-z0-9_])", replacement, result)
+        # A callable keeps display names literal; a plain string would read a backslash in a name as an escape.
+        result = re.sub(
+            rf"(?<![A-Za-z0-9_]){re.escape(internal)}(?![A-Za-z0-9_])", lambda _match, text=replacement: text, result
+        )
     result = re.sub(r"(?<![A-Za-z0-9_])rel_[a-f0-9]{12,64}(?![A-Za-z0-9_])", "the relationship", result)
     return result
 

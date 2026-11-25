@@ -108,14 +108,7 @@ export default function MarkdownDocument({ text }: { text: string }) {
       paragraph.push(lines[index++]);
     blocks.push(
       <p key={index} className="leading-7">
-        {paragraph
-          .map((part, partIndex) => (
-            <span key={partIndex}>
-              {part}
-              {partIndex < paragraph.length - 1 ? " " : ""}
-            </span>
-          ))
-          .flatMap((part) => [part])}
+        {inline(paragraph.join(" "))}
       </p>,
     );
   }

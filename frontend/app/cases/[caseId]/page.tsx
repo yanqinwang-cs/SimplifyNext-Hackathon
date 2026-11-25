@@ -42,6 +42,13 @@ const copy = (state: CaseWorkspaceState["assessment"]["state"]) =>
     stopped: "Assessment stopped. No new report was committed.",
   })[state];
 
+// Provider and validation failures can carry raw exception text; show those as the standard sentence instead.
+function readableFailure(message: string | undefined, fallback: string): string {
+  if (!message || message.includes("\n") || /validation error|Traceback|\[type=/i.test(message))
+    return fallback;
+  return message;
+}
+
 export default function CasePage() {
   const { caseId } = useParams<{ caseId: string }>();
   const [workspace, setWorkspace] = useState<CaseWorkspaceState | null>(null);
@@ -60,14 +67,39 @@ export default function CasePage() {
   const [titleBusy, setTitleBusy] = useState(false);
   const [resetBusy, setResetBusy] = useState(false);
   const [traceDownloadBusy, setTraceDownloadBusy] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const handle = useRef<string | null>(null);
   const generation = useRef(0);
+  const workspaceVersion = useRef(0);
   const pollHandle = useRef<string | null>(null);
   const pollAbort = useRef<AbortController | null>(null);
   const helpTranscript = useRef<HTMLDivElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  // Every workspace write bumps the version so a slower, older response can be told apart and dropped.
+  function applyWorkspace(next: CaseWorkspaceState) {
+    workspaceVersion.current += 1;
+    setWorkspace(next);
+  }
+  function showError(text: string) {
+    setMessage(null);
+    setError(text);
+  }
+  function showMessage(text: string) {
+    setError(null);
+    setMessage(text);
+  }
+  useEffect(() => {
+    if (!error && !message) return;
+    const timer = window.setTimeout(() => {
+      setError(null);
+      setMessage(null);
+    }, 6000);
+    return () => window.clearTimeout(timer);
+  }, [error, message]);
 
   useEffect(() => {
     let mounted = true;
@@ -78,7 +110,7 @@ export default function CasePage() {
     ])
       .then(async ([next, nextReport]) => {
         if (!mounted) return;
-        setWorkspace(next);
+        applyWorkspace(next);
         setReport(nextReport);
         setDraftTitle(next.title);
         handle.current = next.assessment.activeRun?.runHandle ?? null;
@@ -87,12 +119,13 @@ export default function CasePage() {
         (exc) =>
           mounted &&
           !(exc instanceof DOMException && exc.name === "AbortError") &&
-          setError("Could not load this case."),
+          setLoadError("Could not load this case."),
       );
     return () => {
       mounted = false;
       controller.abort();
       generation.current += 1;
+      workspaceVersion.current += 1;
       pollAbort.current?.abort();
       pollAbort.current = null;
       pollHandle.current = null;
@@ -120,13 +153,14 @@ export default function CasePage() {
       while (Date.now() < deadline && token === generation.current) {
         const next = await getAssessmentRun(caseId, runHandle, controller.signal);
         if (token !== generation.current) return;
-        setWorkspace(next.workspace);
+        applyWorkspace(next.workspace);
         if (terminal.has(next.state)) {
           handle.current = null;
           if (next.state === "completed") {
             const nextReport = await getReport(caseId, undefined, controller.signal);
             if (token === generation.current) setReport(nextReport);
-          } else if (next.message && token === generation.current) setStatusError(next.message);
+          } else if (next.message && token === generation.current)
+            setStatusError(readableFailure(next.message, "The assessment could not be completed."));
           return;
         }
         await new Promise((resolve) => window.setTimeout(resolve, 1000));
@@ -161,10 +195,10 @@ export default function CasePage() {
     setError(null);
     try {
       const started = await runInvestigation(caseId);
-      setWorkspace(started.workspace);
+      applyWorkspace(started.workspace);
       await poll(started.run.runHandle);
     } catch (exc) {
-      setError(exc instanceof Error ? exc.message : "Could not start the assessment.");
+      showError(exc instanceof Error ? exc.message : "Could not start the assessment.");
     } finally {
       setRunBusy(false);
     }
@@ -179,10 +213,11 @@ export default function CasePage() {
         mediaType: file.type || "text/plain",
         caseRevision: workspace.caseRevision,
       });
-      setWorkspace(result.workspace);
+      applyWorkspace(result.workspace);
       setFile(null);
+      if (fileInput.current) fileInput.current.value = "";
     } catch (exc) {
-      setError(exc instanceof Error ? exc.message : "Could not add evidence.");
+      showError(exc instanceof Error ? exc.message : "Could not add evidence.");
     } finally {
       setUploadBusy(false);
     }
@@ -195,10 +230,10 @@ export default function CasePage() {
         displayName: studentName.trim(),
         caseRevision: workspace.caseRevision,
       });
-      setWorkspace(result.workspace);
+      applyWorkspace(result.workspace);
       setStudentName("");
     } catch (exc) {
-      setError(exc instanceof Error ? exc.message : "Could not add student.");
+      showError(exc instanceof Error ? exc.message : "Could not add student.");
     } finally {
       setStudentBusy(false);
     }
@@ -210,7 +245,9 @@ export default function CasePage() {
     try {
       await sendWorkspaceMessage(caseId, text.trim());
       setQuestion("");
-      setWorkspace(await getWorkspace(caseId));
+      const version = workspaceVersion.current;
+      const fresh = await getWorkspace(caseId);
+      if (version === workspaceVersion.current) applyWorkspace(fresh);
     } catch (exc) {
       setHelpError(exc instanceof Error ? exc.message : "Help is temporarily unavailable.");
     } finally {
@@ -223,12 +260,12 @@ export default function CasePage() {
     setError(null);
     try {
       const result = await updateCaseTitle(caseId, draftTitle);
-      setWorkspace(result.workspace);
+      applyWorkspace(result.workspace);
       setDraftTitle(result.workspace.title);
       setEditingTitle(false);
-      setMessage("Case name updated.");
+      showMessage("Case name updated.");
     } catch (exc) {
-      setError(exc instanceof Error ? exc.message : "Could not update the case name.");
+      showError(exc instanceof Error ? exc.message : "Could not update the case name.");
     } finally {
       setTitleBusy(false);
     }
@@ -238,11 +275,11 @@ export default function CasePage() {
     setResetBusy(true);
     try {
       const result = await resetSample(workspace.sample?.sampleId ?? "");
-      setWorkspace(result.workspace);
+      applyWorkspace(result.workspace);
       setReport(await getReport(caseId));
-      setMessage("Sample restored to its original evidence.");
+      showMessage("Sample restored to its original evidence.");
     } catch (exc) {
-      setError(exc instanceof Error ? exc.message : "Could not reset this sample.");
+      showError(exc instanceof Error ? exc.message : "Could not reset this sample.");
     } finally {
       setResetBusy(false);
     }
@@ -253,7 +290,7 @@ export default function CasePage() {
     try {
       await downloadTrace(caseId, runHandle);
     } catch (exc) {
-      setError(exc instanceof Error ? exc.message : "Could not download the trace.");
+      showError(exc instanceof Error ? exc.message : "Could not download the trace.");
     } finally {
       setTraceDownloadBusy(false);
     }
@@ -262,11 +299,11 @@ export default function CasePage() {
     if (!workspace || studentBusy) return;
     setStudentBusy(true);
     try {
-      setWorkspace(
+      applyWorkspace(
         (await renameSubject(caseId, handleValue, name, workspace.caseRevision)).workspace,
       );
     } catch (exc) {
-      setError(exc instanceof Error ? exc.message : "Could not rename student.");
+      showError(exc instanceof Error ? exc.message : "Could not rename student.");
     } finally {
       setStudentBusy(false);
     }
@@ -275,21 +312,24 @@ export default function CasePage() {
     if (!workspace || workspace.students.length === 1 || studentBusy) return;
     setStudentBusy(true);
     try {
-      setWorkspace(await removeSubject(caseId, handleValue, workspace.caseRevision));
+      applyWorkspace(await removeSubject(caseId, handleValue, workspace.caseRevision));
     } catch (exc) {
-      setError(exc instanceof Error ? exc.message : "Could not remove student.");
+      showError(exc instanceof Error ? exc.message : "Could not remove student.");
     } finally {
       setStudentBusy(false);
     }
   }
 
-  if (!workspace) return <main className="p-8">{error ?? "Loading workspace…"}</main>;
+  if (!workspace) return <main className="p-8">{loadError ?? "Loading workspace…"}</main>;
   const sample = workspace.caseKind === "sample";
   const active = workspace.assessment.state === "running" || polling;
   const locked = active || uploadBusy || studentBusy || resetBusy;
   const statusText =
     workspace.assessment.state.startsWith("failed") && workspace.assessment.latestAttempt?.message
-      ? workspace.assessment.latestAttempt.message
+      ? readableFailure(
+          workspace.assessment.latestAttempt.message,
+          copy(workspace.assessment.state),
+        )
       : copy(workspace.assessment.state);
   const traceReady = workspace.assessment.latestAttempt?.traceReady === true;
   return (
@@ -418,6 +458,7 @@ export default function CasePage() {
                   <>
                     <button
                       disabled={locked}
+                      aria-label={`Rename ${student.displayName}`}
                       onClick={() => {
                         const name = window.prompt("Student name", student.displayName);
                         if (name?.trim()) void rename(student.studentHandle, name.trim());
@@ -428,6 +469,7 @@ export default function CasePage() {
                     </button>
                     <button
                       disabled={locked || workspace.students.length === 1}
+                      aria-label={`Remove ${student.displayName}`}
                       onClick={() => void remove(student.studentHandle)}
                       className="text-xs text-red-700"
                     >
@@ -517,7 +559,12 @@ export default function CasePage() {
                 value={question}
                 onChange={(event) => setQuestion(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter") void ask();
+                  if (
+                    event.key === "Enter" &&
+                    !event.nativeEvent.isComposing &&
+                    event.keyCode !== 229
+                  )
+                    void ask();
                 }}
                 placeholder="Ask about the case or current assessment…"
                 className="min-w-0 flex-1 rounded border px-3 py-2"
@@ -535,7 +582,12 @@ export default function CasePage() {
             <section className="rounded-xl border bg-white p-5">
               <h2 className="text-xl font-black">Add evidence</h2>
               <p className="mt-1 text-sm text-slate-600">Add readable .txt or .md case material.</p>
+              <label htmlFor="evidence-file" className="sr-only">
+                Evidence file
+              </label>
               <input
+                id="evidence-file"
+                ref={fileInput}
                 disabled={locked}
                 type="file"
                 accept=".txt,.md"

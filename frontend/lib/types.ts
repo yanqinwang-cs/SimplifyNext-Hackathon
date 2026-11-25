@@ -93,7 +93,7 @@ export interface RuntimeModelUse {
   model: ApprovedModel;
   label: string;
   usedAt: string | null;
-  outcome: "completed" | "failed";
+  outcome: "completed" | "failed" | "running";
 }
 export interface RuntimeRoleSettings {
   effectiveModel: ApprovedModel;
@@ -115,10 +115,11 @@ export interface CaseWorkspaceState {
   caseId: string;
   caseRevision?: number;
   title: string;
-  status: WorkspaceStatus;
-  institutionalStatus: "Investigating" | "Paused" | "Closed";
-  currentFocus: string;
-  messages: WorkspaceMessage[];
+  // The API never sends status, institutionalStatus, currentFocus, messages or currentActor.
+  status?: WorkspaceStatus;
+  institutionalStatus?: "Investigating" | "Paused" | "Closed";
+  currentFocus?: string;
+  messages?: WorkspaceMessage[];
   caseStatus: "ACTIVE" | "HANDED_OFF" | "CLOSED";
   caseKind: "user" | "sample";
   sample: { sampleId: string; title: string } | null;
@@ -141,7 +142,7 @@ export interface CaseWorkspaceState {
     | "FAILED"
     | "STOPPED"
     | "PAUSED";
-  currentActor: "INVESTIGATOR" | "STEWARD" | "NONE";
+  currentActor?: "INVESTIGATOR" | "STEWARD" | "NONE";
   sources: PublicSource[];
   students: AssessmentSubject[];
   report: { state: string; assessmentIsStale: boolean };

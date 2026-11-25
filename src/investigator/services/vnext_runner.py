@@ -13,6 +13,7 @@ from typing import Any
 
 from investigator.llm import (
     ModelClient,
+    ModelOutputTruncated,
     ModelParseError,
     create_model_client,
     failure_category,
@@ -629,6 +630,9 @@ class VNextProductionRunner:
         # A read timeout may occur after Bedrock accepted the inference. Never
         # issue a fresh paid request for this ambiguous transport failure.
         if is_provider_timeout(exc):
+            return False
+        # A reply cut off at the output limit would be cut off again at the same limit.
+        if isinstance(exc, ModelOutputTruncated):
             return False
         return isinstance(
             exc,

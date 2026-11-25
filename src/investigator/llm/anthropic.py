@@ -13,6 +13,7 @@ from investigator.llm.base import (
     ModelCallResult,
     ModelClient,
     ModelNativeCall,
+    ModelOutputTruncated,
     ModelParseError,
     ModelTextBlock,
     ModelToolUse,
@@ -89,11 +90,12 @@ class AnthropicModelClient(ModelClient):
             return self.client
         try:
             import anthropic
+            import httpx
         except ImportError as exc:  # pragma: no cover - dependency is declared, guard is useful for source checkouts
             raise AnthropicConfigurationError("The anthropic package is required for direct Anthropic calls") from exc
         self.client = anthropic.Anthropic(
             api_key=self.api_key,
-            timeout=ANTHROPIC_READ_TIMEOUT_SECONDS,
+            timeout=httpx.Timeout(ANTHROPIC_READ_TIMEOUT_SECONDS, connect=ANTHROPIC_CONNECT_TIMEOUT_SECONDS),
             max_retries=0,
         )
         return self.client
@@ -188,7 +190,11 @@ class AnthropicModelClient(ModelClient):
         try:
             parsed = parse_model_output(raw_text, output_schema)
         except ModelParseError as exc:
-            raise ModelParseError("Anthropic returned invalid structured output", raw_output=raw_text) from exc
+            metadata = self._metadata(response, started).model_copy(update={"parse_success": False})
+            error_type = ModelOutputTruncated if metadata.finish_reason == "max_tokens" else ModelParseError
+            raise error_type(
+                "Anthropic returned invalid structured output", raw_output=raw_text, metadata=metadata
+            ) from exc
         return ModelCallResult(
             parsed=parsed, metadata=self._metadata(response, started), raw_output=_safe_value(response)
         )

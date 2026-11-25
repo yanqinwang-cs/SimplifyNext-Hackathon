@@ -18,9 +18,6 @@ class VNextInvestigatorModel:
         self.client = client
         self.last_call: ModelCallResult | None = None
 
-    def __call__(self, run_input: VNextRunInput) -> InvestigatorAssessment:
-        return self.call_prompt(build_prompt(run_input), InvestigatorAssessment)
-
     def call_prompt(
         self,
         prompt: str,
@@ -51,6 +48,7 @@ def build_prompt(run_input: VNextRunInput) -> str:
         "case_shared": [],
         "student_specific": {},
         "multi_student_candidate": [],
+        "mentions_multiple_students_unscoped": [],
     }
     for source_id, source in sorted(run_input.sources.items()):
         item = {"source_id": source_id, "filename": source.name, "content": source.content or ""}
@@ -60,6 +58,11 @@ def build_prompt(run_input: VNextRunInput) -> str:
         elif applicability.permitted_relationship_ids:
             sources["multi_student_candidate"].append(
                 {**item, "matched_student_ids": applicability.permitted_subject_ids}
+            )
+        elif not applicability.permitted_subject_ids:
+            # Names several students but carries no trusted scope: shown as context only, never as citable evidence.
+            sources["mentions_multiple_students_unscoped"].append(
+                {**item, "mentioned_student_ids": applicability.matched_student_ids}
             )
         else:
             for subject_id in applicability.permitted_subject_ids:
@@ -104,13 +107,14 @@ def build_prompt(run_input: VNextRunInput) -> str:
             "CORRECT: separate A-private and B-private observations; use one admitted joint source for a relationship proposition.\n"
             "INCORRECT: combine A-private + B-private observations into a relationship proposition because they are similar.",
             "\nCROSS-STUDENT SCOPE\nMulti-student evidence statements and propositions must obey current source and scope rules. A multi-student evidence statement or proposition requires a genuinely admitted relationship- or case-scoped basis; do not combine separately restricted student evidence. If separate private sources concern A and B, create separate semantic items for A and B. Do not summarize separate A and B sources into one evidence_statement. Cross-student similarity found only by comparing separately scoped sources remains separate student-scoped observations. Adjacency or case context does not convert private evidence into relationship evidence. A hypothesis about an existing exact relationship is a possibility, not an established proposition, and is not subject to the evidence-statement/proposition source-basis requirement.",
+            "Sources under mentions_multiple_students_unscoped name several students but have no established scope. Read them as background only: never cite them as basis_source_ids and never attribute their content to any student.",
             "Do not ask for more evidence, request human input, or produce a follow-up question.",
             "Missing evidence means NOT_CURRENTLY_SUPPORTED, not another enquiry.",
             "Return JSON only. Use exactly the current schema below. Do not add fields.",
             "\nCONFIGURED STUDENTS (REPORTING TARGETS ONLY)\n" + json.dumps(subjects, indent=2),
             "\nAPPLICABLE POLICY / CONFIGURED VIOLATIONS (NORMATIVE CONTEXT, NOT FACTUAL EVIDENCE)\n"
             + json.dumps(run_input.rule_preset.model_dump(mode="json"), indent=2),
-            "\nADMITTED EVIDENCE SOURCES — CASE-WIDE / STUDENT-SPECIFIC / MULTI-STUDENT CANDIDATE (SOURCE STATEMENTS ARE NOT AUTOMATICALLY TRUE)\n"
+            "\nADMITTED EVIDENCE SOURCES — CASE-WIDE / STUDENT-SPECIFIC / MULTI-STUDENT CANDIDATE / UNSCOPED MENTIONS (SOURCE STATEMENTS ARE NOT AUTOMATICALLY TRUE)\n"
             + json.dumps(sources, indent=2),
             "\nEXISTING MULTI-STUDENT RELATIONSHIP CONTEXTS (STRUCTURAL CONTEXT ONLY; NOT FINDINGS)\n"
             + json.dumps(relationships, indent=2),

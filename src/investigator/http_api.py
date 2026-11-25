@@ -7,6 +7,7 @@ import re
 import shutil
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 from urllib.parse import unquote, urlparse, parse_qs
@@ -48,6 +49,23 @@ from investigator.runtime_settings import (
 from investigator.public_samples.scale import load_scale_fixture_case_state
 
 
+MAX_REQUEST_BODY_BYTES = 10 * 1024 * 1024
+
+
+class RequestRejected(Exception):
+    """A request the server refuses before any handler work; deliberately not a ValueError so handlers cannot absorb it."""
+
+    def __init__(self, status: int, message: str) -> None:
+        super().__init__(message)
+        self.status = status
+        self.message = message
+
+
+def allowed_origins() -> set[str]:
+    configured = os.getenv("SIMPLIFYNEXT_ALLOWED_ORIGINS", "http://127.0.0.1:3000,http://localhost:3000")
+    return {item.strip() for item in configured.split(",") if item.strip()}
+
+
 def _safe_filename_token(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip(".-") or "run"
 
@@ -83,6 +101,15 @@ def create_case(workflow: HumanEvidenceWorkflow, payload: dict[str, Any]) -> dic
     assessment = payload.get("assessment") or {}
     if not title:
         raise ValueError("title is required")
+    with workflow._lock:
+        return _create_case_locked(workflow, title, assessment, payload)
+
+
+def _create_case_locked(
+    workflow: HumanEvidenceWorkflow, title: str, assessment: dict[str, Any], payload: dict[str, Any]
+) -> dict[str, Any]:
+    # Allocation and save must be one step: two requests that both see the same highest number would otherwise
+    # pick the same ID and the later save would overwrite the earlier case.
     case_id = allocate_case_id(workflow.repository)
     context_payload = {
         key: assessment.get(key)
@@ -274,8 +301,31 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
         view["chatHistory"] = self.workspace_agent.chat_history(case_id)
         return view
 
+    def _guarded(self, handler: Callable[[], None]) -> None:
+        """Run one request: refuse foreign origins before any work and turn escaped errors into JSON responses."""
+        origin = self.headers.get("Origin")
+        if origin and origin not in allowed_origins():
+            self._write(403, {"error": "Origin is not allowed"})
+            return
+        try:
+            handler()
+        except RequestRejected as exc:
+            self._write(exc.status, {"error": exc.message})
+        except KeyError:
+            self._write(404, {"error": "Not found"})
+        except ValueError:
+            self._write(422, {"error": "Invalid request"})
+        except Exception:
+            self._write(500, {"error": "The request could not be completed."})
+
     def do_GET(self) -> None:
+        self._guarded(self._get)
+
+    def _get(self) -> None:
         parts = self._parts()
+        if self._is_blocked_legacy_vnext_route(parts):
+            self._write(404, {"error": "Not found"})
+            return
         if parts == ["api", "runtime-settings"]:
             try:
                 case_id = parse_qs(urlparse(self.path).query).get("caseId", [None])[0]
@@ -471,17 +521,14 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
         self._write(404, {"error": "Not found"})
 
     def do_OPTIONS(self) -> None:
+        self._guarded(self._options)
+
+    def _options(self) -> None:
         if self._is_blocked_legacy_vnext_route(self._parts()):
             self._write(404, {"error": "Not found"})
             return
         origin = self.headers.get("Origin")
-        allowed = {
-            item.strip()
-            for item in os.getenv("SIMPLIFYNEXT_ALLOWED_ORIGINS", "http://127.0.0.1:3000,http://localhost:3000").split(
-                ","
-            )
-            if item.strip()
-        }
+        allowed = allowed_origins()
         if origin and origin not in allowed:
             self._write(403, {"error": "Origin is not allowed"})
             return
@@ -492,6 +539,9 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self) -> None:
+        self._guarded(self._post)
+
+    def _post(self) -> None:
         parts = self._parts()
         if self._is_blocked_legacy_vnext_route(parts):
             self._write(404, {"error": "Not found"})
@@ -736,7 +786,9 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
                 self._write(200, {"response": result.response, "actions": result.actions, "recovery": result.recovery})
             except WorkspaceToolAuthorizationError as exc:
                 self._write(403, {"error": str(exc)})
-            except (ValueError, KeyError, EvidenceRequestConflict) as exc:
+            except KeyError:
+                self._write(404, {"error": "Case not found"})
+            except (ValueError, EvidenceRequestConflict) as exc:
                 self._write(422, {"error": str(exc)})
             return
         if parts == ["api", "debug", "aws-credentials"]:
@@ -851,6 +903,9 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             self._write(409 if isinstance(exc, EvidenceRequestConflict) else 422, {"error": str(exc)})
 
     def do_DELETE(self) -> None:
+        self._guarded(self._delete)
+
+    def _delete(self) -> None:
         parts = self._parts()
         if self._is_blocked_legacy_vnext_route(parts):
             self._write(404, {"error": "Not found"})
@@ -925,6 +980,9 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
         self._write(200, credential_status())
 
     def do_PATCH(self) -> None:
+        self._guarded(self._patch)
+
+    def _patch(self) -> None:
         parts = self._parts()
         if len(parts) != 3 or parts[0:2] != ["api", "cases"]:
             self._write(404, {"error": "Not found"})
@@ -941,6 +999,9 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             self._write(422, {"error": str(exc), "code": "INVALID_CASE_NAME"})
 
     def do_PUT(self) -> None:
+        self._guarded(self._put)
+
+    def _put(self) -> None:
         self._write(404, {"error": "Not found"})
 
     def _parts(self) -> list[str]:
@@ -953,25 +1014,30 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
             len(parts) == 5 and parts[0:2] == ["api", "cases"] and parts[3] == "subjects",
             len(parts) == 6 and parts[0:2] == ["api", "cases"] and parts[3] == "subjects" and parts[5] == "rename",
         )
+        legacy_history = len(parts) == 4 and parts[0:2] == ["api", "cases"] and parts[3] in {"traces", "runs"}
         alternate_sample = len(parts) == 4 and parts[0:2] == ["api", "samples"] and parts[3] in {"open", "reset"}
-        return any(legacy_subjects) or alternate_sample
+        return any(legacy_subjects) or alternate_sample or legacy_history
 
     def _read_json(self) -> dict:
-        length = int(self.headers.get("Content-Length", "0"))
-        payload = json.loads(self.rfile.read(length) or b"{}")
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            raise RequestRejected(400, "Invalid Content-Length") from None
+        if length < 0:
+            raise RequestRejected(400, "Invalid Content-Length")
+        if length > MAX_REQUEST_BODY_BYTES:
+            raise RequestRejected(413, "Request body is too large")
+        try:
+            payload = json.loads(self.rfile.read(length) or b"{}")
+        except ValueError:
+            raise RequestRejected(400, "Request body must be valid JSON") from None
         if not isinstance(payload, dict):
-            raise ValueError("JSON request body must be an object")
+            raise RequestRejected(400, "JSON request body must be an object")
         return payload
 
     def _write(self, status: int, payload: dict) -> None:
         origin = self.headers.get("Origin")
-        allowed = {
-            item.strip()
-            for item in os.getenv("SIMPLIFYNEXT_ALLOWED_ORIGINS", "http://127.0.0.1:3000,http://localhost:3000").split(
-                ","
-            )
-            if item.strip()
-        }
+        allowed = allowed_origins()
         if origin and origin not in allowed:
             status, payload = 403, {"error": "Origin is not allowed"}
         encoded = json.dumps(payload).encode()
@@ -1002,19 +1068,18 @@ class InvestigatorApiHandler(BaseHTTPRequestHandler):
 
     def _cors_headers(self) -> None:
         origin = self.headers.get("Origin")
-        allowed = {
-            item.strip()
-            for item in os.getenv("SIMPLIFYNEXT_ALLOWED_ORIGINS", "http://127.0.0.1:3000,http://localhost:3000").split(
-                ","
-            )
-            if item.strip()
-        }
+        allowed = allowed_origins()
         if origin and origin in allowed:
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
 
     def log_message(self, *_args: object) -> None:
         return
+
+
+class _ApiServer(ThreadingHTTPServer):
+    # The default backlog of 5 resets connections when a browser opens a burst of parallel requests.
+    request_queue_size = 64
 
 
 def create_server(
@@ -1025,7 +1090,7 @@ def create_server(
     workflow.resume_callback = lambda case_id: workflow.start_run(case_id)
     InvestigatorApiHandler.workflow = workflow
     InvestigatorApiHandler.workspace_agent = WorkspaceAgent(workflow)
-    return ThreadingHTTPServer((host, port), InvestigatorApiHandler)
+    return _ApiServer((host, port), InvestigatorApiHandler)
 
 
 def main() -> None:
